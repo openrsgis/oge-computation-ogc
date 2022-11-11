@@ -1,0 +1,137 @@
+{
+    "2": {
+        "constantValue": "2018-12-31 00:00:00"
+    },
+    "3": {
+        "constantValue": "2018-01-01 00:00:00"
+    },
+    "4": {
+        "constantValue": "EPSG:32649"
+    },
+    "5": {
+        "constantValue": [
+            111.054,
+            27.8,
+            112.588,
+            28.774
+        ]
+    },
+    "6": {
+        "constantValue": "min"
+    },
+    "7": {
+        "constantValue": "LC08_L1TP_C01_T1"
+    },
+    "1": {
+        "functionInvocationValue": {
+            "functionName": "Image.load",
+            "arguments": {
+                "EndTime": {
+                    "valueReference": "2"
+                },
+                "StartTime": {
+                    "valueReference": "3"
+                },
+                "crs": {
+                    "valueReference": "4"
+                },
+                "geom": {
+                    "valueReference": "5"
+                },
+                "measurementName": {
+                    "constantValue": "Near-Infrared"
+                },
+                "method": {
+                    "valueReference": "6"
+                },
+                "productName": {
+                    "valueReference": "7"
+                }
+            }
+        }
+    },
+    "8": {
+        "functionInvocationValue": {
+            "functionName": "Image.load",
+            "arguments": {
+                "EndTime": {
+                    "valueReference": "2"
+                },
+                "StartTime": {
+                    "valueReference": "3"
+                },
+                "crs": {
+                    "valueReference": "4"
+                },
+                "geom": {
+                    "valueReference": "5"
+                },
+                "measurementName": {
+                    "constantValue": "Red"
+                },
+                "method": {
+                    "valueReference": "6"
+                },
+                "productName": {
+                    "valueReference": "7"
+                }
+            }
+        }
+    },
+    "0": {
+        "functionInvocationValue": {
+            "functionName": "Image.visualize",
+            "arguments": {
+                "image": {
+                    "functionInvocationValue": {
+                        "functionName": "Image.binarization",
+                        "arguments": {
+                            "image": {
+                                "functionInvocationValue": {
+                                    "functionName": "Image.divide",
+                                    "arguments": {
+                                        "image1": {
+                                            "functionInvocationValue": {
+                                                "functionName": "Image.subtract",
+                                                "arguments": {
+                                                    "image1": {
+                                                        "valueReference": "1"
+                                                    },
+                                                    "image2": {
+                                                        "valueReference": "8"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "image2": {
+                                            "functionInvocationValue": {
+                                                "functionName": "Image.add",
+                                                "arguments": {
+                                                    "image1": {
+                                                        "valueReference": "1"
+                                                    },
+                                                    "image2": {
+                                                        "valueReference": "8"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "threshold": {
+                                "constantValue": 0
+                            }
+                        }
+                    }
+                },
+                "max": {
+                    "constantValue": 255
+                },
+                "min": {
+                    "constantValue": 0
+                }
+            }
+        }
+    }
+}
