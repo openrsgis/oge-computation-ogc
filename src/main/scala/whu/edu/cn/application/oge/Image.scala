@@ -133,6 +133,7 @@ object Image {
     val crs = CRS.fromEpsgCode(firstTile.getCrs)
     val bounds = Bounds(SpaceTimeKey(colRowInstant._1, colRowInstant._2, colRowInstant._3), SpaceTimeKey(colRowInstant._4, colRowInstant._5, colRowInstant._6))
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+
     val rawtileRDD = tileRDDReP.map(t => {
       val tile = getTileBuf(t)
       t.setTile(deserializeTileData("", tile.getTilebuf, 256, tile.getDType))
@@ -142,20 +143,20 @@ object Image {
     val rawtileArray = rawtileRDD.collect()
     val RowSum = ld.tileLayout.layoutRows
     val ColSum = ld.tileLayout.layoutCols
-    println("RowSum = " + RowSum)
-    println("ColSum = " + ColSum)
     val tileBox = new ListBuffer[((Extent, SpaceTimeKey), List[RawTile])]
-    for (i <- 0 until ColSum) {
-      for (j <- 0 until RowSum) {
+    for (i <- 0 to ColSum - 1) {
+      for (j <- 0 to RowSum - 1) {
         val rawTiles = new ListBuffer[RawTile]
-        val tileExtent = new Extent(extents._1 + i * 256 * tileLayerMetadata.cellSize.width, extents._4 - (j + 1) * 256 * tileLayerMetadata.cellSize.height, extents._1 + (i + 1) * 256 * tileLayerMetadata.cellSize.width, extents._4 - j * 256 * tileLayerMetadata.cellSize.height)
+        val tileExtent = new Extent(extents._1 + i * 256 * firstTile.getResolution, extents._4 - (j + 1) * 256 * firstTile.getResolution, extents._1 + (i + 1) * 256 * firstTile.getResolution, extents._4 - j * 256 * firstTile.getResolution)
         for (rawtile <- rawtileArray) {
           if (Extent(rawtile.getP_bottom_leftX, rawtile.getP_bottom_leftY, rawtile.getP_upper_rightX, rawtile.getP_upper_rightY).intersects(tileExtent))
             rawTiles.append(rawtile)
         }
-        val now = "1000-01-01 00:00:00"
-        val date = sdf.parse(now).getTime
-        tileBox.append(((tileExtent, SpaceTimeKey(i, j, date)), rawTiles.toList))
+        if (rawTiles.length > 0) {
+          val now = "1000-01-01 00:00:00"
+          val date = sdf.parse(now).getTime
+          tileBox.append(((tileExtent, SpaceTimeKey(i, j, date)), rawTiles.toList))
+        }
       }
     }
     val TileRDDUnComputed = sc.parallelize(tileBox, tileBox.length)
@@ -163,54 +164,45 @@ object Image {
       case "min" => {
         val TileRDDComputed: RDD[(SpaceTimeBandKey, Tile)] = TileRDDUnComputed.map(t => {
           val mutableArrayTile = ByteArrayTile(Array.fill[Byte](256 * 256)(Byte.MinValue), 256, 256, ByteConstantNoDataCellType).mutable
-          if (t._2.length > 0) {
-            val sizeWidth = tileLayerMetadata.cellSize.width
-            val sizeHeight = tileLayerMetadata.cellSize.height
-            val measurementName = t._2(0).getMeasurement
-            for (rawtile <- t._2) {
-              for (i <- 0 to 255) {
-                for (j <- 0 to 255) {
-                  val y = Math.ceil((t._1._1.ymax - (rawtile.getP_upper_rightY - sizeHeight * i)) / sizeHeight).toInt
-                  val x = Math.ceil((rawtile.getP_bottom_leftX + sizeWidth * j - t._1._1.xmin) / sizeWidth).toInt
-                  val value = rawtile.getTile.get(j, i).toByte
-                  if (x >= 0 && x < 256 && y >= 0 && y < 256 && value > (-128) && value < 128 &&
-                    (mutableArrayTile.get(x, y) == Int.MinValue || mutableArrayTile.get(x, y) == 0 || (value != 0 && value < mutableArrayTile.get(x, y))))
-                    mutableArrayTile.set(x, y, value)
-                }
+          val size = t._2(0).getResolution
+          val sizeWidth = tileLayerMetadata.cellSize.width
+          val sizeHeight = tileLayerMetadata.cellSize.height
+
+          val measurementName = t._2(0).getMeasurement
+          for (rawtile <- t._2) {
+            for (i <- 0 to 255) {
+              for (j <- 0 to 255) {
+                val y = Math.ceil((t._1._1.ymax - (rawtile.getP_upper_rightY - size * i)) / size).toInt
+                val x = Math.ceil((rawtile.getP_bottom_leftX + size * j - t._1._1.xmin) / size).toInt
+                val value = rawtile.getTile.get(j, i).toByte
+                if (x >= 0 && x < 256 && y >= 0 && y < 256 && value > (-128) && value < 128 &&
+                  (mutableArrayTile.get(x, y) == Int.MinValue || mutableArrayTile.get(x, y) == 0 || (value != 0 && value < mutableArrayTile.get(x, y))))
+                  mutableArrayTile.set(x, y, value)
               }
             }
-            (entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
           }
-          else {
-            (entity.SpaceTimeBandKey(t._1._2, firstTile.getMeasurement), mutableArrayTile)
-          }
+          (entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
         })
         (TileRDDComputed, tileLayerMetadata)
       }
       case "max" => {
         val TileRDDComputed: RDD[(SpaceTimeBandKey, Tile)] = TileRDDUnComputed.map(t => {
           val mutableArrayTile = ByteArrayTile(Array.fill[Byte](256 * 256)(Byte.MinValue), 256, 256, ByteConstantNoDataCellType).mutable
-          if (t._2.length > 0) {
-            val sizeWidth = tileLayerMetadata.cellSize.width
-            val sizeHeight = tileLayerMetadata.cellSize.height
-            val measurementName = t._2(0).getMeasurement
-            for (rawtile <- t._2) {
-              for (i <- 0 to 255) {
-                for (j <- 0 to 255) {
-                  val y = Math.ceil((t._1._1.ymax - (rawtile.getP_upper_rightY - sizeHeight * i)) / sizeHeight).toInt
-                  val x = Math.ceil((rawtile.getP_bottom_leftX + sizeWidth * j - t._1._1.xmin) / sizeWidth).toInt
-                  val value = rawtile.getTile.get(j, i).toByte
-                  if (x >= 0 && x < 256 && y >= 0 && y < 256 && value > (-128) && value < 128 &&
-                    (mutableArrayTile.get(x, y) == Int.MinValue || mutableArrayTile.get(x, y) == 0 || (value != 0 && value > mutableArrayTile.get(x, y))))
-                    mutableArrayTile.set(x, y, value)
-                }
+          val size = t._2(0).getResolution
+          val measurementName = t._2(0).getMeasurement
+          for (rawtile <- t._2) {
+            for (i <- 0 to 255) {
+              for (j <- 0 to 255) {
+                val y = Math.ceil((t._1._1.ymax - (rawtile.getP_upper_rightY - size * i)) / size).toInt
+                val x = Math.ceil((rawtile.getP_bottom_leftX + size * j - t._1._1.xmin) / size).toInt
+                val value = rawtile.getTile.get(j, i).toByte
+                if (x >= 0 && x < 256 && y >= 0 && y < 256 && value > (-128) && value < 128 &&
+                  (mutableArrayTile.get(x, y) == Int.MinValue || mutableArrayTile.get(x, y) == 0 || (value != 0 && value > mutableArrayTile.get(x, y))))
+                  mutableArrayTile.set(x, y, value)
               }
             }
-            (entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
           }
-          else {
-            (entity.SpaceTimeBandKey(t._1._2, firstTile.getMeasurement), mutableArrayTile)
-          }
+          (entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
         })
         (TileRDDComputed, tileLayerMetadata)
       }
@@ -218,28 +210,22 @@ object Image {
         val TileRDDComputed: RDD[(SpaceTimeBandKey, Tile)] = TileRDDUnComputed.map(t => {
           val assignTimes = Array.fill[Byte](256, 256)(0)
           val mutableArrayTile = ByteArrayTile(Array.fill[Byte](256 * 256)(Byte.MinValue), 256, 256, ByteConstantNoDataCellType).mutable
-          if (t._2.length > 0) {
-            val sizeWidth = tileLayerMetadata.cellSize.width
-            val sizeHeight = tileLayerMetadata.cellSize.height
-            val measurementName = t._2(0).getMeasurement
-            for (rawtile <- t._2) {
-              for (i <- 0 to 255) {
-                for (j <- 0 to 255) {
-                  val y = Math.ceil((t._1._1.ymax - (rawtile.getP_upper_rightY - sizeHeight * i)) / sizeHeight).toInt
-                  val x = Math.ceil((rawtile.getP_bottom_leftX + sizeWidth * j - t._1._1.xmin) / sizeWidth).toInt
-                  val value = rawtile.getTile.get(j, i).toByte
-                  if (x >= 0 && x < 256 && y >= 0 && y < 256 && value > (-128) && value < 128 && value != 0) {
-                    mutableArrayTile.set(x, y, (1 / (assignTimes(y)(x) + 1) * value + assignTimes(y)(x) / (assignTimes(y)(x) + 1) * mutableArrayTile.get(x, y).toByte))
-                    assignTimes(y)(x) = (assignTimes(y)(x) + 1).toByte
-                  }
+          val size = t._2(0).getResolution
+          val measurementName = t._2(0).getMeasurement
+          for (rawtile <- t._2) {
+            for (i <- 0 to 255) {
+              for (j <- 0 to 255) {
+                val y = Math.ceil((t._1._1.ymax - (rawtile.getP_upper_rightY - size * i)) / size).toInt
+                val x = Math.ceil((rawtile.getP_bottom_leftX + size * j - t._1._1.xmin) / size).toInt
+                val value = rawtile.getTile.get(j, i).toByte
+                if (x >= 0 && x < 256 && y >= 0 && y < 256 && value > (-128) && value < 128 && value != 0) {
+                  mutableArrayTile.set(x, y, (1 / (assignTimes(y)(x) + 1) * value + assignTimes(y)(x) / (assignTimes(y)(x) + 1) * mutableArrayTile.get(x, y).toByte))
+                  assignTimes(y)(x) = (assignTimes(y)(x) + 1).toByte
                 }
               }
             }
-            (entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
           }
-          else {
-            (entity.SpaceTimeBandKey(t._1._2, firstTile.getMeasurement), mutableArrayTile)
-          }
+          (entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
         })
         (TileRDDComputed, tileLayerMetadata)
       }
