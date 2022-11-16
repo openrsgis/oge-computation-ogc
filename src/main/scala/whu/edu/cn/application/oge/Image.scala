@@ -576,6 +576,18 @@ object Image {
   }
 
   /**
+    * Computes the tangent of the input in radians.
+    *
+    * @param image the image rdd for operation
+    * @return
+    */
+  def tan(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Tan(t._2))
+    }), image._2)
+  }
+
+  /**
    * Computes the hyperbolic sine of the input in radians.
    *
    * @param image the image rdd for operation
@@ -596,6 +608,18 @@ object Image {
   def cosh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     (image._1.map(t => {
       (t._1, Cosh(t._2))
+    }), image._2)
+  }
+
+  /**
+    * Computes the hyperbolic tangent of the input in radians.
+    *
+    * @param image the image rdd for operation
+    * @return
+    */
+  def tanh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Tanh(t._2))
     }), image._2)
   }
 
@@ -689,6 +713,54 @@ object Image {
   }
 
   /**
+    * Computes the integer nearest to the input.
+    *
+    * @param image rdd for operation
+    * @return
+    */
+  def round(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Round(t._2))
+    }), image._2)
+  }
+
+  /**
+    * Computes the natural logarithm of the input.
+    *
+    * @param image rdd for operation
+    * @return
+    */
+  def log(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Log(t._2))
+    }), image._2)
+  }
+
+  /**
+    * Computes the base-10 logarithm of the input.
+    *
+    * @param image rdd for operation
+    * @return
+    */
+  def log10(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Log10(t._2))
+    }), image._2)
+  }
+
+  /**
+    * Computes the square root of the input.
+    *
+    * @param image rdd for operation
+    * @return
+    */
+  def sqrt(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Sqrt(t._2))
+    }), image._2)
+  }
+
+  /**
    * Returns 1 iff the first value is equal to the second for each matched pair of bands in image1 and image2.
    * if both have only 1 band, the 2 band will match
    *
@@ -717,7 +789,7 @@ object Image {
   }
 
   /**
-   * Returns 1 iff the first value is equal to the second for each matched pair of bands in image1 and image2.
+   * Returns 1 iff the first value is greater than the second for each matched pair of bands in image1 and image2.
    * if both have only 1 band, the 2 band will match
    *
    * @param image1 first image rdd to operate
@@ -745,7 +817,7 @@ object Image {
   }
 
   /**
-   * Returns 1 iff the first value is equal to the second for each matched pair of bands in image1 and image2.
+   * Returns 1 iff the first value is equal or greater to the second for each matched pair of bands in image1 and image2.
    * if both have only 1 band, the 2 band will match
    *
    * @param image1 first image rdd to operate
@@ -768,6 +840,62 @@ object Image {
       val matchRDD = image1._1.join(image2._1)
       (matchRDD.map(t => {
         (t._1, GreaterOrEqual(t._2._1, t._2._2))
+      }), image1._2)
+    }
+  }
+
+  /**
+    * Returns 1 iff the first value is less than the second for each matched pair of bands in image1 and image2.
+    * if both have only 1 band, the 2 band will match
+    *
+    * @param image1 first image rdd to operate
+    * @param image2 second image rdd to operate
+    * @return
+    */
+  def lt(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+         image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val bandNum1 = bandNames(image1).length
+    val bandNum2 = bandNames(image2).length
+    if (bandNum1 == 1 && bandNum2 == 1) {
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val gtRDD = image1NoBand.join(image2NoBand)
+      (gtRDD.map(t => {
+        (entity.SpaceTimeBandKey(t._1, "Lt"), Less(t._2._1._2, t._2._2._2))
+      }), image1._2)
+    }
+    else {
+      val matchRDD = image1._1.join(image2._1)
+      (matchRDD.map(t => {
+        (t._1, Less(t._2._1, t._2._2))
+      }), image1._2)
+    }
+  }
+
+  /**
+    * Returns 1 iff the first value is less or equal to the second for each matched pair of bands in image1 and image2.
+    * if both have only 1 band, the 2 band will match
+    *
+    * @param image1 first image rdd to operate
+    * @param image2 second image rdd to operate
+    * @return
+    */
+  def lte(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val bandNum1 = bandNames(image1).length
+    val bandNum2 = bandNames(image2).length
+    if (bandNum1 == 1 && bandNum2 == 1) {
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val gteRDD = image1NoBand.join(image2NoBand)
+      (gteRDD.map(t => {
+        (entity.SpaceTimeBandKey(t._1, "Lte"), LessOrEqual(t._2._1._2, t._2._2._2))
+      }), image1._2)
+    }
+    else {
+      val matchRDD = image1._1.join(image2._1)
+      (matchRDD.map(t => {
+        (t._1, LessOrEqual(t._2._1, t._2._2))
       }), image1._2)
     }
   }
@@ -814,6 +942,17 @@ object Image {
    */
   def bandNames(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): List[String] = {
     image._1.map(t => t._1._measurementName).distinct().collect().toList
+  }
+
+  /**
+    * get the target bands from original image
+    * @param image the image for operation
+    * @param targetBands the intersting bands
+    * @return
+    */
+  def select(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),targetBands:List[String])
+  :(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
+    (image._1.filter(t=>targetBands.contains(t._1._measurementName)),image._2)
   }
 
   def deepLearning(geom: String): Unit = {
