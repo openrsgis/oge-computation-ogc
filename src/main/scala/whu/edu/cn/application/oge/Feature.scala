@@ -13,17 +13,20 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
 
 object Feature {
-  def load(implicit sc: SparkContext, productName: String = null): Unit ={
+  def load(implicit sc: SparkContext, productName: String = null): RDD[(String,(Geometry, Map[String, Any]))] ={
     //RowKey  ProductKey_Geohash_ID
     val a : RDD[(String,(Geometry, Map[String, Any]))] = null
 
     //用户的定义的对象：用户ID_随机数
     //新几何对象：用户ID_随机数
     val metaData = query(productName)
+    println(metaData)
     val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
       .flatMap(t=>t)
-      .map(t=>(productName, getVector(t))).count()
+      .map(t=>(t, getVector(t)))
+    geometryRdd
   }
+
   def query(productName: String = null): ListBuffer[String] = {
     val metaData = ListBuffer.empty[String]
     val postgresqlUtil = new PostgresqlUtil("")
@@ -58,8 +61,8 @@ object Feature {
   def getVector(rowKey: String):(Geometry, Map[String, Any]) = {
     val meta = getVectorMeta("OGE_Vector_Fact_Table", rowKey, "vectorData", "metaData")
     val cell = getVectorCell("OGE_Vector_Fact_Table", rowKey, "vectorData", "geom")
-    println(meta)
-    println(cell)
+    //println(meta)
+    //println(cell)
     val jsonObject = JSON.parseObject(meta)
     val properties = jsonObject.getJSONArray("properties").getJSONObject(0)
     val propertiesOut = Map.empty[String, Any]
@@ -74,6 +77,17 @@ object Feature {
     (geometry, propertiesOut)
   }
 
+  /**
+    * get area of the feature RDD.
+    *
+    * @param featureRDD the feature RDD to compute
+    * @param crs the crs for compute area
+    * @return
+    */
+  def getArea(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):Double={
+    featureRDD.map(t=>Geometry.area(t._2._1,crs)).reduce((x,y)=>x+y)
+  }
+
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
@@ -82,6 +96,6 @@ object Feature {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-    load(sc, "Hubei_ADM_City_Vector")
+    val geomRDD=load(sc, "Hubei_ADM_City_Vector")
   }
 }
