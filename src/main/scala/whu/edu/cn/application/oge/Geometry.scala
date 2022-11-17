@@ -153,7 +153,7 @@ object Geometry {
       geom.getArea
     }
     else{
-      reproject(geom,crs).getArea
+      reproject(geom,srcCrsCode,crs).getArea
     }
   }
 
@@ -165,8 +165,7 @@ object Geometry {
     * @param tarCrsCode the target crs
     * @return
     */
-  def reproject(geom:Geometry,tarCrsCode:String):Geometry={
-    val srcCrsCode="EPSG:"+geom.getSRID
+  def reproject(geom:Geometry,srcCrsCode:String,tarCrsCode:String):Geometry={
     if(srcCrsCode.equals(tarCrsCode)){
       geom
     }
@@ -225,14 +224,17 @@ object Geometry {
     geom
   }
 
-  def main(args: Array[String]): Unit ={
-//    val coors="[[-109.05, 41], [-109.05, 37], [-102.05, 37], [-102.05, 41]]"
-    var coors="[[[119.283461766823521,35.113845473433457], [119.285033114198498,35.11405167501087]],  [[119.186893667167482,34.88690637041627], [119.186947247282234,34.890273599368562]]]"
-    //coors="[35.113845473433457,119.283461766823521]"
-    val geom=multiLineString(coors)
-
-    println(geom)
-    println(reproject(geom,"EPSG:3857"))
-  }
+//  def main(args: Array[String]): Unit ={
+////    val coors="[[-109.05, 41], [-109.05, 37], [-102.05, 37], [-102.05, 41]]"
+//    var coors="[[[119.283461766823521,35.113845473433457], [119.285033114198498,35.11405167501087]],  [[119.186893667167482,34.88690637041627], [119.186947247282234,34.890273599368562]]]"
+//    //coors="[35.113845473433457,119.283461766823521]"
+//    coors="[[[0,0],[0,20],[20,20],[20,0],[0,0]]]"
+//    val geom=polygon(coors)
+//
+//    println(geom)
+//    println(geom.getArea)
+//    println(reproject(geom,"EPSG:4326","EPSG:3857"))
+//    println(area(geom))
+//  }
 
 }
