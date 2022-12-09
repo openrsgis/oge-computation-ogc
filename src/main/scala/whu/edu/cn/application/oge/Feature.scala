@@ -85,7 +85,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -104,7 +104,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -123,7 +123,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -142,7 +142,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -161,7 +161,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -180,7 +180,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -199,7 +199,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param coors coordinates to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -218,7 +218,7 @@ object Feature {
     *
     * @param sc used to create RDD
     * @param gjson to create geometry
-    * @param properties properties for geometry
+    * @param properties properties for geometry,it is a json String
     * @param crs projection of geometry
     * @return
     */
@@ -255,15 +255,20 @@ object Feature {
     * @return
     */
   def getMapFromJsonStr(json:String):Map[String,Any]={
-    val jsonObject = JSON.parseObject(json)
     val map = Map.empty[String, Any]
-    val sIterator = jsonObject.keySet.iterator
-    while (sIterator.hasNext()) {
-      val key = sIterator.next();
-      val value = jsonObject.getString(key);
-      map += (key -> value)
+    if(json==null){
+      map
     }
-    map
+    else{
+      val jsonObject = JSON.parseObject(json)
+      val sIterator = jsonObject.keySet.iterator
+      while (sIterator.hasNext()) {
+        val key = sIterator.next()
+        val value = jsonObject.getString(key)
+        map += (key -> value)
+      }
+      map
+    }
   }
 
   /**
@@ -273,8 +278,8 @@ object Feature {
     * @param crs the crs for compute area
     * @return
     */
-  def area(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):Double={
-    featureRDD.map(t=>Geometry.area(t._2._1,crs)).reduce((x,y)=>x+y)
+  def area(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):List[Double]={
+    featureRDD.map(t=>Geometry.area(t._2._1,crs)).collect().toList
   }
 
   /**
@@ -333,8 +338,8 @@ object Feature {
     * @param featureRDD the featureRDD to operate
     * @return
     */
-  def coordinates(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[Array[Coordinate]]={
-    featureRDD.map(t=>{t._2._1.getCoordinates})
+  def coordinates(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[Array[Coordinate]]={
+    featureRDD.map(t=>{t._2._1.getCoordinates}).collect().toList
   }
 
   /**
@@ -356,13 +361,13 @@ object Feature {
     * @param featureRDD
     * @return
     */
-  def isUnbounded(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[Boolean]={
+  def isUnbounded(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[Boolean]={
     featureRDD.map(t=>{
       if(t._2._1.getBoundaryDimension<0)
         false
       else
         true
-    })
+    }).collect().toList
   }
 
   /**
@@ -371,8 +376,8 @@ object Feature {
     * @param featureRDD the featureRDD to opreate
     * @return
     */
-  def getType(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[String]={
-    featureRDD.map(t=>{t._2._1.getGeometryType})
+  def getType(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[String]={
+    featureRDD.map(t=>{t._2._1.getGeometryType}).collect().toList
   }
 
   /**
@@ -381,8 +386,8 @@ object Feature {
     * @param featureRDD the featureRDD to operate
     * @return
     */
-  def projection(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[Int]={
-    featureRDD.map(t=>{t._2._1.getSRID})
+  def projection(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[Int]={
+    featureRDD.map(t=>{t._2._1.getSRID}).collect().toList
   }
 
   /**
@@ -391,8 +396,8 @@ object Feature {
     * @param featureRDD the featureRDD to operate
     * @return
     */
-  def toGeoJSONString(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[String]={
-    featureRDD.map(t=>{Geometry.toGeoJSONString(t._2._1)})
+  def toGeoJSONString(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[String]={
+    featureRDD.map(t=>{Geometry.toGeoJSONString(t._2._1)}).collect().toList
   }
 
   /**
@@ -402,8 +407,8 @@ object Feature {
     * @param crs the crs for compute length
     * @return
     */
-  def getLength(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):RDD[Double]={
-    featureRDD.map(t=>{Geometry.length(t._2._1,crs)})
+  def getLength(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):List[Double]={
+    featureRDD.map(t=>{Geometry.length(t._2._1,crs)}).collect().toList
   }
 
   /**
@@ -509,11 +514,12 @@ object Feature {
     * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
     * @return
     */
-  def difference(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                 featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Geometry={
+  def difference(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
+                 featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
     val geom1=featureRDD1.first()._2._1
     val geom2=featureRDD2.first()._2._1
-    Geometry.difference(geom1,geom2,crs)
+    val res=Geometry.difference(geom1,geom2,crs)
+    feature(sc,res)
   }
 
   /**
@@ -525,11 +531,12 @@ object Feature {
     * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
     * @return
     */
-  def intersection(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                   featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Geometry={
+  def intersection(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
+                   featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
     val geom1=featureRDD1.first()._2._1
     val geom2=featureRDD2.first()._2._1
-    Geometry.intersection(geom1,geom2,crs)
+    val res=Geometry.intersection(geom1,geom2,crs)
+    feature(sc,res)
   }
 
   /**
@@ -557,11 +564,12 @@ object Feature {
     * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
     * @return
     */
-  def symmetricDifference(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                          featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Geometry={
+  def symmetricDifference(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
+                          featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
     val geom1=featureRDD1.first()._2._1
     val geom2=featureRDD2.first()._2._1
-    Geometry.symmetricDifference(geom1,geom2,crs)
+    val res=Geometry.symmetricDifference(geom1,geom2,crs)
+    feature(sc,res)
   }
 
   /**
@@ -573,11 +581,12 @@ object Feature {
     * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
     * @return
     */
-  def union(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-            featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Geometry={
+  def union(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
+            featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
     val geom1=featureRDD1.first()._2._1
     val geom2=featureRDD2.first()._2._1
-    Geometry.union(geom1,geom2,crs)
+    val res=Geometry.union(geom1,geom2,crs)
+    feature(sc,res)
   }
 
   /**
@@ -596,6 +605,112 @@ object Feature {
     val geom2=featureRDD2.first()._2._1
     Geometry.withDistance(geom1,geom2,distance,crs)
   }
+
+  /**
+    * Copies metadata properties from one element to another.
+    *
+    * @param featureRDD1 The object whose properties to override. it only has 1 element
+    * @param featureRDD2 The object from which to copy the properties. it only has 1 element
+    * @param properties The properties to copy. If omitted, all properties are copied.
+    * @return
+    */
+  def copyProperties(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
+  featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],properties:List[String]=null):RDD[(String,(Geometry, Map[String, Any]))]={
+    var destnation=featureRDD1.first()._2._2
+    var source=featureRDD2.first()._2._2
+    if(properties==null)
+      destnation=destnation++source
+    else{
+      for(property <- properties)
+        destnation+=(property->source(property))
+    }
+    featureRDD1.map(t=>(t._1,(t._2._1,destnation)))
+  }
+
+  /**
+    * Extract a property from a feature.
+    *
+    * @param featureRDD The feature to extract the property from.
+    * @param property The property to extract.
+    * @return
+    */
+  def get(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[Any]={
+    featureRDD.map(t=>t._2._2(property)).collect().toList
+  }
+
+  /**
+    * Extract a property from a feature. Return a number
+    *
+    * @param featureRDD The feature to extract the property from.
+    * @param property The property to extract.
+    * @return
+    */
+  def getNumber(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[Double]={
+    featureRDD.map(t=>t._2._2(property).asInstanceOf[String].toDouble).collect().toList
+  }
+
+  /**
+    * Extract a property from a feature. Return a string
+    *
+    * @param featureRDD The feature to extract the property from.
+    * @param property The property to extract.
+    * @return
+    */
+  def getString(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[String]={
+    featureRDD.map(t=>t._2._2(property).asInstanceOf[String]).collect().toList
+  }
+
+  /**
+    * Extract a property from a feature. Return a array, the element of array is String
+    *
+    * @param featureRDD The feature to extract the property from.
+    * @param property The property to extract.
+    * @return
+    */
+  def getArray(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[Array[String]]={
+    featureRDD.map(t=>{
+      t._2._2(property).asInstanceOf[String].replace("[","").replace("]","").split(",")
+    }).collect().toList
+  }
+
+  /**
+    * Returns the names of properties on this element.
+    *
+    * @param featureRDD the featureRDD to operate
+    * @return
+    */
+  def propertyNames(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[List[String]]={
+    featureRDD.map(t=> t._2._2.keySet.toList).collect().toList
+  }
+
+  /**
+    * Overrides one or more metadata properties of an Element.
+    *
+    * @param featureRDD the featureRDD to operate
+    * @param property the property to set. it is a json
+    * @return
+    */
+  def set(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):RDD[(String,(Geometry, Map[String, Any]))]={
+    featureRDD.map(t=>{
+      (t._1,(t._2._1,t._2._2++getMapFromJsonStr(property)))
+    })
+  }
+
+  /**
+    * Returns the feature, with the geometry replaced by the specified geometry.
+    *
+    * @param featureRDD the featureRDD to operate
+    * @param geom the property to set. it is a json
+    * @return
+    */
+  def setGeometry(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],
+  geom:RDD[(String,(Geometry, Map[String, Any]))]):RDD[(String,(Geometry, Map[String, Any]))]={
+    val geometry=geom.first()._2._1
+    featureRDD.map(t=>{
+      (t._1,(geometry,t._2._2))
+    })
+  }
+
 
 
 

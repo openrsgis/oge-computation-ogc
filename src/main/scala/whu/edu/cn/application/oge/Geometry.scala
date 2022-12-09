@@ -481,6 +481,7 @@ object Geometry {
     val geom=polygon(coors)
     val p=polygon("[[[0, 0], [40, 0], [40, 40], [0, 40], [0, 0]]]")
     val rp=reproject(p,"EPSG:3857")
+    val jsonStr="{\n\"name\":\"网站\",\n\"num\":3,\n\"sites\":[ \"Google\", \"Runoob\", \"Taobao\" ]\n}"
 
   }
 
