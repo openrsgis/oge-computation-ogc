@@ -2131,5 +2131,205 @@
         "description": "Filters"
       }
     ]
+  },
+  "Feature.point": {
+    "description": "create a Point",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.lineString": {
+    "description": "create a LineString",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.linearRing": {
+    "description": "create a LinearRing",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.polygon": {
+    "description": "create a Polygon",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiPoint": {
+    "description": "create a multiPoint",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiLineString": {
+    "description": "create a MultiLineString",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiPolygon": {
+    "description": "create a MultiPoint",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.geometry": {
+    "description": "create a geometry",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "gjson",
+        "type": "String",
+        "description": "geojson"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.area": {
+    "description": "compute area",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.bounds": {
+    "description": "compute area",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "Coordinates"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
   }
 }
