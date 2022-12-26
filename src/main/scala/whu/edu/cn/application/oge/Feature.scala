@@ -3,35 +3,71 @@ package whu.edu.cn.application.oge
 import com.alibaba.fastjson.JSON
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.{Coordinate, Geometry}
+import org.locationtech.jts.geom.{Coordinate, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.util.HbaseUtil._
 import whu.edu.cn.util.PostgresqlUtil
 import java.sql.ResultSet
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.{Date, UUID}
 
+import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, TileLayerMetadata}
+import geotrellis.proj4
+import geotrellis.raster.{DoubleCellType, RasterExtent, Tile, TileLayout}
+import geotrellis.vector
+import geotrellis.vector.interpolation.{NonLinearSemivariogram, Semivariogram, Spherical}
+import geotrellis.vector.{Extent, Point, PointFeature}
 import org.geotools.referencing.CRS
+import geotrellis.spark._
+import geotrellis.raster.interpolation._
+import geotrellis.raster.render.{ColorRamp, ColorRamps}
+import geotrellis.vector.interpolation
+import whu.edu.cn.core.entity
+import whu.edu.cn.core.entity.SpaceTimeBandKey
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
+import scala.math.{max, min}
 
 object Feature {
-  def load(implicit sc: SparkContext, productName: String = null): RDD[(String,(Geometry, Map[String, Any]))] ={
+  def load(implicit sc: SparkContext, productName: String = null,dataTime:String=null,crs:String="EPSG:4326"): RDD[(String,(Geometry, Map[String, Any]))] ={
     //RowKey  ProductKey_Geohash_ID
     val a : RDD[(String,(Geometry, Map[String, Any]))] = null
 
     //用户的定义的对象：用户ID_随机数
     //新几何对象：用户ID_随机数
-    val metaData = query(productName)
+    val queryRes=query(productName)
+    val metaData = queryRes._3
+    val hbaseTableName=queryRes._2
+    val productKey=queryRes._1
     println(metaData)
-    val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
-      .flatMap(t=>t)
-      .map(t=>(t, getVector(t)))
-    geometryRdd
+    println(hbaseTableName)
+    println(productKey)
+    if(dataTime==null){
+      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
+        .flatMap(t=>t)
+        .map(t=>(t, getVectorWithRowkey(hbaseTableName,t)))
+      geometryRdd.map(t=>{
+        t._2._1.setSRID(crs.split(":")(1).toInt)
+        t
+      })
+    }
+    else{
+      val prefix=productKey+"_"+dataTime
+      println(prefix)
+      val geometryRdd=getVectorWithPrefixFilter(sc,hbaseTableName,prefix)
+      geometryRdd.map(t=>{
+        t._2._1.setSRID(crs.split(":")(1).toInt)
+        t
+      })
+    }
   }
 
-  def query(productName: String = null): ListBuffer[String] = {
+  //返回productKey,hbaseTableName,rowkeyList
+  def query(productName: String = null): (String,String,ListBuffer[String]) = {
     val metaData = ListBuffer.empty[String]
+    var hbaseTableName=""
+    var productKey=""
     val postgresqlUtil = new PostgresqlUtil("")
     val conn = postgresqlUtil.getConnection()
     if (conn != null) {
@@ -41,7 +77,8 @@ object Feature {
 
         // Extent dimension
         val sql = new StringBuilder
-        sql ++= "select oge_data_resource_product.name, oge_vector_fact.fact_data_ids from oge_vector_fact join oge_data_resource_product " +
+        sql ++= "select oge_data_resource_product.name, oge_vector_fact.fact_data_ids, oge_vector_fact.table_name, oge_vector_fact.product_key " +
+          "from oge_vector_fact join oge_data_resource_product " +
           "on oge_vector_fact.product_key= oge_data_resource_product.id where "
         if(productName != "" && productName != null) {
           sql ++= "name = " + "'" + productName + "'"
@@ -53,19 +90,24 @@ object Feature {
         while (extentResults.next()) {
           val factDataIDs = extentResults.getString("fact_data_ids")
           metaData.append(factDataIDs)
+          productKey=extentResults.getString("product_key")
+          hbaseTableName=extentResults.getString("table_name")
+          println(metaData)
+          println(hbaseTableName)
+          println(productKey)
         }
       }
       finally {
         conn.close
       }
     } else throw new RuntimeException("connection failed")
-    metaData
+    (productKey,hbaseTableName,metaData)
   }
-  def getVector(rowKey: String):(Geometry, Map[String, Any]) = {
-    val meta = getVectorMeta("OGE_Vector_Fact_Table", rowKey, "vectorData", "metaData")
-    val cell = getVectorCell("OGE_Vector_Fact_Table", rowKey, "vectorData", "geom")
-    //println(meta)
-    //println(cell)
+  def getVectorWithRowkey(hbaseTableName:String,rowKey: String):(Geometry, Map[String, Any]) = {
+    val meta = getVectorMeta(hbaseTableName, rowKey, "vectorData", "metaData")
+    val cell = getVectorCell(hbaseTableName, rowKey, "vectorData", "geom")
+    println(meta)
+    println(cell)
     val jsonObject = JSON.parseObject(meta)
     val properties = jsonObject.getJSONArray("properties").getJSONObject(0)
     val propertiesOut = Map.empty[String, Any]
@@ -78,6 +120,22 @@ object Feature {
     val reader = new WKTReader()
     val geometry = reader.read(cell)
     (geometry, propertiesOut)
+  }
+
+  def getVectorWithPrefixFilter(implicit sc: SparkContext,hbaseTableName:String,prefix:String):RDD[(String,(Geometry, Map[String, Any]))] = {
+    val queryData=getVectorWithPrefix(hbaseTableName,prefix)
+    val rawRDD=sc.parallelize(queryData)
+    rawRDD.map(t=>{
+      val rowkey=t._1
+      val geomStr=t._2._1
+      val meta=t._2._2
+      val userData=t._2._3
+      val reader = new WKTReader()
+      val geometry = reader.read(geomStr)
+      val metaMap=getMapFromJsonStr(meta)
+      val userMap=getMapFromJsonStr(userData)
+      (rowkey,(geometry,metaMap++userMap))
+    })
   }
 
   /**
@@ -241,11 +299,13 @@ object Feature {
     })
   }
 
-  def featureCollection(implicit sc: SparkContext,featureList:List[(Geometry, Map[String, Any])]):RDD[(String,(Geometry, Map[String, Any]))]={
-    val featureRDD=sc.parallelize(featureList)
-    featureRDD.map(t=>{
-      (UUID.randomUUID().toString,t)
-    })
+  def featureCollection(implicit sc: SparkContext,featureList:List[RDD[(String,(Geometry, Map[String, Any]))]]):RDD[(String,(Geometry, Map[String, Any]))]={
+    val len=featureList.length
+    var featureCollectionRDD=featureList(0)
+    for(a <- 1 until len){
+      featureCollectionRDD=featureCollectionRDD.union(featureList(a))
+    }
+    featureCollectionRDD
   }
 
   /**
@@ -417,6 +477,7 @@ object Feature {
     * @param featureRDD the featureRDD to operate
     * @return
     */
+  //TODO:未写入json文件中
   def geometries(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[(String,(List[Geometry], Map[String, Any]))]={
     featureRDD.map(t=>{
       var geomList:List[Geometry]=List.empty
@@ -711,6 +772,106 @@ object Feature {
     })
   }
 
+  /**
+    * TODO: fix bug
+    *
+    * @param featureRDD
+    * @param propertyName
+    * @param modelType
+    * @return
+    */
+  //块金：nugget，基台：sill，变程：range
+ def simpleKriging(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],propertyName:String,modelType:String)={
+   //Kriging Interpolation for PointsRDD
+   val extents = featureRDD.map(t => {
+     val coor=t._2._1.getCoordinate
+     (coor.x,coor.y,coor.x,coor.y)
+   }).reduce((coor1,coor2)=>{
+     (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._3,coor2._3),max(coor1._4,coor2._4))
+   })
+   val extent=Extent(extents._1,extents._2,extents._3,extents._4)
+   val rows=256
+   val cols=256
+   val rasterExtent = RasterExtent(extent, cols, rows)
+   val points:Array[PointFeature[Double]]=featureRDD.map(t=>{
+     val p=vector.Point(t._2._1.getCoordinate)
+     var data=t._2._2(propertyName).asInstanceOf[String].toDouble
+     if(data<0){
+       data=100
+     }
+     PointFeature(p,data)
+   }).collect()
+   println()
+   val sv: Semivariogram = NonLinearSemivariogram(points, 30000, 0, Spherical)
+   val method=new SimpleKrigingMethods {
+     override def self: Traversable[PointFeature[Double]] = points
+   }
+   method.simpleKriging(rasterExtent,sv)
+ }
+
+  def inverseDistanceWeighted(implicit sc: SparkContext,featureRDD:RDD[(String,(Geometry, Map[String, Any]))],propertyName:String):(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
+    val extents = featureRDD.map(t => {
+      val coor=t._2._1.getCoordinate
+      (coor.x,coor.y,coor.x,coor.y)
+    }).reduce((coor1,coor2)=>{
+      (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._3,coor2._3),max(coor1._4,coor2._4))
+    })
+    val extent=Extent(extents._1,extents._2,extents._3,extents._4)
+    val rows=256
+    val cols=256
+    val rasterExtent = RasterExtent(extent, cols, rows)
+    val points:Array[PointFeature[Double]]=featureRDD.map(t=>{
+      val p=vector.Point(t._2._1.getCoordinate)
+      var data=t._2._2(propertyName).asInstanceOf[String].toDouble
+      if(data<0){
+        data=100
+      }
+      PointFeature(p,data)
+    }).collect()
+    val rasterTile=InverseDistanceWeighted(points,rasterExtent)
+
+    val tl=TileLayout(1,1,256,256)
+    val ld=LayoutDefinition(extent,tl)
+    val crs=geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
+    val time=System.currentTimeMillis()
+    val bounds=Bounds(SpaceTimeKey(0,0,time),SpaceTimeKey(0,0,time))
+    val cellType=rasterTile.tile.cellType
+    val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+
+    var list:List[Tile]=List.empty
+    list=list:+rasterTile.tile
+    val tileRDD=sc.parallelize(list)
+    val imageRDD=tileRDD.map(t=>{
+      val k = entity.SpaceTimeBandKey(SpaceTimeKey(0, 0, time), "interpolation")
+      val v=t
+      (k,v)
+    })
+    (imageRDD,tileLayerMetadata)
+  }
+
+  def rasterize(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],propertyName:String)={
+    val extents = featureRDD.map(t => {
+      val coorArray=t._2._1.getCoordinates
+      val coor=t._2._1.getCoordinate
+      for(item <- coorArray){
+
+      }
+      (coor.x,coor.y,coor.x,coor.y)
+    }).reduce((coor1,coor2)=>{
+      (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._1,coor2._1),max(coor1._2,coor2._2))
+    })
+    val extent=Extent(extents._1,extents._2,extents._3,extents._4)
+    //TODO:tileLayOut的定义
+    val tileLayout=TileLayout(10,10,256,256)
+    val layout=LayoutDefinition(extent,tileLayout)
+    val cellType=DoubleCellType
+    val featureRDDforRaster:RDD[vector.Feature[Geometry,Double]]=featureRDD.map(t=>{
+      val data=t._2._2(propertyName).asInstanceOf[Double]
+      val feature=new vector.Feature[Geometry,Double](t._2._1,data)
+      feature
+    })
+    featureRDDforRaster.rasterize(cellType,layout)
+  }
 
 
 
@@ -722,14 +883,16 @@ object Feature {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-    val geomRDD=load(sc, "Hubei_ADM_City_Vector")
-    val property="{\"name\":\"test\",\"city\":\"wuhan\",\"area\":23}"
-    val p=point(sc,"[119.283461766823521,35.113845473433457]",property)
-    p.map(t=>{
-      println(t._1)
-      println(t._2._1.toText)
-      println(t._2._2)
-    }).count()
-    println(area(p))
+//    query("China_EnvironmentMonitor_Vector")
+    val geomRDD1=load(sc, "Hubei_ADM_City_Vector")
+    val geomRDD2=load(sc, "China_EnvironmentMonitor_Vector","2015010301")
+
+//    val raster=inverseDistanceWeighted(geomRDD2,"PM2.5")
+    val path="D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\test.png"
+//    raster.tile.renderPng(ColorRamps.BlueToOrange).write(path)
+    val image=inverseDistanceWeighted(sc,geomRDD2,"PM2.5")
+    Image.visualize(image,null,0,255,"green")
+    println()
+
   }
 }

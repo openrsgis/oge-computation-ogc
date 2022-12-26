@@ -5,9 +5,11 @@ import java.util
 
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
-import org.apache.hadoop.hbase.filter.{RowFilter, SubstringComparator}
+import org.apache.hadoop.hbase.filter.{PrefixFilter, RowFilter, SubstringComparator}
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.{HBaseConfiguration, HColumnDescriptor, HConstants, HTableDescriptor, TableName}
+import org.apache.hadoop.hbase.{CellUtil, HBaseConfiguration, HColumnDescriptor, HConstants, HTableDescriptor, TableName}
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Some basic CRUD and extended operations in HBase.
@@ -322,6 +324,48 @@ object HbaseUtil {
     } else {
       throw new RuntimeException("No data of rowkey = " + rowKey + " in HBase!")
     }
+  }
+
+  /**
+    *
+    *
+    * @param tableName tableName for query
+    * @param prefix prefix used for filter
+    * @return
+    */
+  def getVectorWithPrefix(tableName:String,prefix:String):ListBuffer[(String,(String,String,String))]={
+    var resList=ListBuffer.empty[(String,(String,String,String))]
+    val table = connection.getTable(TableName.valueOf(tableName))
+    val scan:Scan=new Scan()
+    val filter=new PrefixFilter(Bytes.toBytes(prefix))
+    scan.setFilter(filter)
+    val scanner=table.getScanner(scan)
+    val it: util.Iterator[Result] = scanner.iterator()
+    while(it.hasNext){
+      val result: Result = it.next()
+      val cells=result.rawCells()
+      val rowkey=CellUtil.cloneRow(result.rawCells().last)
+      var geom=""
+      var meta=""
+      var userData=""
+      for(cell <- cells){
+        val family = CellUtil.cloneFamily(cell)
+        val qualifier = CellUtil.cloneQualifier(cell)
+        val value = CellUtil.cloneValue(cell)
+        if("geom".equals(Bytes.toString(qualifier))){
+          geom=Bytes.toString(value)
+        }
+        else if("metaData".equals(Bytes.toString(qualifier))){
+          meta=Bytes.toString(value)
+        }
+        else if("customExtension".equals(Bytes.toString(family))){
+          userData=Bytes.toString(value)
+        }
+      }
+      val kv=(Bytes.toString(rowkey),(geom,meta,userData))
+      resList.append(kv)
+    }
+    resList
   }
 
   /**

@@ -482,6 +482,9 @@ object Geometry {
     val p=polygon("[[[0, 0], [40, 0], [40, 40], [0, 40], [0, 0]]]")
     val rp=reproject(p,"EPSG:3857")
     val jsonStr="{\n\"name\":\"网站\",\n\"num\":3,\n\"sites\":[ \"Google\", \"Runoob\", \"Taobao\" ]\n}"
+    val p1=point("[10,10]")
+    val coordiantes=p1.getCoordinates
+    println("test")
 
   }
 
