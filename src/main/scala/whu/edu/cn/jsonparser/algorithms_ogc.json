@@ -2873,6 +2873,11 @@
         "name": "propertyName",
         "type": "String",
         "description": "the property to select"
+      },
+      {
+        "name": "maskGeom",
+        "type": "Feature",
+        "description": "feature"
       }
     ]
   }

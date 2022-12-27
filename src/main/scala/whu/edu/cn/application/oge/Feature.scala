@@ -3,7 +3,7 @@ package whu.edu.cn.application.oge
 import com.alibaba.fastjson.JSON
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.{Coordinate, Geometry, Point}
+import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.util.HbaseUtil._
 import whu.edu.cn.util.PostgresqlUtil
@@ -22,6 +22,7 @@ import geotrellis.spark._
 import geotrellis.raster.interpolation._
 import geotrellis.raster.render.{ColorRamp, ColorRamps}
 import geotrellis.vector.interpolation
+import geotrellis.raster.mask
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 
@@ -316,7 +317,7 @@ object Feature {
     */
   def getMapFromJsonStr(json:String):Map[String,Any]={
     val map = Map.empty[String, Any]
-    if(json==null){
+    if(json==null&&json==""){
       map
     }
     else{
@@ -809,7 +810,8 @@ object Feature {
    method.simpleKriging(rasterExtent,sv)
  }
 
-  def inverseDistanceWeighted(implicit sc: SparkContext,featureRDD:RDD[(String,(Geometry, Map[String, Any]))],propertyName:String):(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
+  def inverseDistanceWeighted(implicit sc: SparkContext,featureRDD:RDD[(String,(Geometry, Map[String, Any]))],
+                              propertyName:String,maskGeom:RDD[(String,(Geometry, Map[String, Any]))]):(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
     val extents = featureRDD.map(t => {
       val coor=t._2._1.getCoordinate
       (coor.x,coor.y,coor.x,coor.y)
@@ -817,6 +819,7 @@ object Feature {
       (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._3,coor2._3),max(coor1._4,coor2._4))
     })
     val extent=Extent(extents._1,extents._2,extents._3,extents._4)
+    println("extent:"+extent)
     val rows=256
     val cols=256
     val rasterExtent = RasterExtent(extent, cols, rows)
@@ -829,6 +832,11 @@ object Feature {
       PointFeature(p,data)
     }).collect()
     val rasterTile=InverseDistanceWeighted(points,rasterExtent)
+
+    val maskPolygon=maskGeom.map(t=>t._2._1).reduce((x,y)=>{Geometry.union(x,y)})
+    val maskRaster=rasterTile.mask(maskPolygon)
+
+    maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
 
     val tl=TileLayout(1,1,256,256)
     val ld=LayoutDefinition(extent,tl)
@@ -883,15 +891,16 @@ object Feature {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-//    query("China_EnvironmentMonitor_Vector")
-    val geomRDD1=load(sc, "Hubei_ADM_City_Vector")
+//    val geomRDD1=load(sc, "Hubei_ADM_City_Vector")
     val geomRDD2=load(sc, "China_EnvironmentMonitor_Vector","2015010301")
 
 //    val raster=inverseDistanceWeighted(geomRDD2,"PM2.5")
     val path="D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\test.png"
 //    raster.tile.renderPng(ColorRamps.BlueToOrange).write(path)
-    val image=inverseDistanceWeighted(sc,geomRDD2,"PM2.5")
-    Image.visualize(image,null,0,255,"green")
+    val geom=polygon(sc,"[[[80, 19], [120, 19], [110, 49], [80, 19]]]")
+    val maskGeom=load(sc,"China_ADM_Province_Vector")
+    val image=inverseDistanceWeighted(sc,geomRDD2,"PM2.5",maskGeom)
+//    Image.visualize(image,null,0,255,"green")
     println()
 
   }

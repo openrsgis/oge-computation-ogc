@@ -21,6 +21,16 @@ object FeatureTrigger {
     }
   }
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit ={
+    if(name=="Feature.load"){
+      if(argOrNot(args,"dateTime")!=null){
+        if(argOrNot(args,"crs")!=null)
+          rdd_list+=(UUID->Feature.load(sc,args("productName"),args("dateTime"), args("crs")))
+        else
+          rdd_list+=(UUID->Feature.load(sc,args("productName"),args("dateTime")))
+      }
+      else
+        rdd_list+=(UUID->Feature.load(sc,args("productName")))
+    }
     if(name=="Feature.point"){
       if(argOrNot(args,"crs")!=null)
         rdd_list+=(UUID->Feature.point(sc,args("coors"),args("properties"), args("crs")))
@@ -240,7 +250,14 @@ object FeatureTrigger {
       rdd_list+=(UUID->Feature.setGeometry(rdd_list(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
         rdd_list(args("geometry")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
     }
-
+    if(name=="Feature.setGeometry"){
+      rdd_list+=(UUID->Feature.setGeometry(rdd_list(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
+        rdd_list(args("geometry")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
+    }
+    if(name=="Feature.inverseDistanceWeighted"){
+      rdd_list+=(UUID->Feature.inverseDistanceWeighted(sc,rdd_list(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
+        args("propertyName"),rdd_list(args("maskGeom")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
+    }
 
   }
 
@@ -258,7 +275,7 @@ object FeatureTrigger {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/testVector.json").mkString
+    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/testInterpolation.json").mkString
     val jsonObject = JSON.parseObject(line)
     println(jsonObject.size())
     println(jsonObject)
