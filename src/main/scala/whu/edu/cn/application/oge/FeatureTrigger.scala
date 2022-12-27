@@ -22,7 +22,11 @@ object FeatureTrigger {
   }
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit ={
     if(name=="Feature.load"){
-      if(argOrNot(args,"dateTime")!=null){
+      var dateTime=argOrNot(args,"dateTime")
+      if(dateTime=="null")
+        dateTime=null
+      println("dateTime:"+dateTime)
+      if(dateTime!=null){
         if(argOrNot(args,"crs")!=null)
           rdd_list+=(UUID->Feature.load(sc,args("productName"),args("dateTime"), args("crs")))
         else
