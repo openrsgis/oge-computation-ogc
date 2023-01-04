@@ -4137,5 +4137,754 @@
         "description": "The table to download."
       }
     ]
+  },
+  "Feature.load": {
+    "description": "load data",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "productName",
+        "type": "String",
+        "description": "productName"
+      },
+      {
+        "name": "dateTime",
+        "type": "String",
+        "description": "dataTime",
+        "default": "null"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS",
+        "default": "EPSG:4326"
+      }
+    ]
+  },
+  "Feature.point": {
+    "description": "create a Point",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.lineString": {
+    "description": "create a LineString",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.linearRing": {
+    "description": "create a LinearRing",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.polygon": {
+    "description": "create a Polygon",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiPoint": {
+    "description": "create a multiPoint",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiLineString": {
+    "description": "create a MultiLineString",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiPolygon": {
+    "description": "create a MultiPoint",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.geometry": {
+    "description": "create a geometry",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "gjson",
+        "type": "String",
+        "description": "geojson"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.area": {
+    "description": "compute area",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.bounds": {
+    "description": "compute area",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "Coordinates"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.featureCollection": {
+    "description": "create a featureCollection",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureList",
+        "type": "List[Feature]",
+        "description": "featureList"
+      }
+    ]
+  },
+  "Feature.centroid": {
+    "description": "compute bounds",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.buffer": {
+    "description": "compute buffer",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "distance",
+        "type": "Double",
+        "description": "distance"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.convexHull": {
+    "description": "compute convexHull",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.coordinates": {
+    "description": "compute coordinates",
+    "returns": "List[Array[Coordinate]]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.reproject": {
+    "description": "reproject",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "tarCrsCode",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.isUnbounded": {
+    "description": "judge a geometry is unbounded",
+    "returns": "List[Boolean]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.getType": {
+    "description": "Returns the GeoJSON type of the geometry",
+    "returns": "List[String]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.projection": {
+    "description": "Returns the projection of the geometry.",
+    "returns": "List[Int]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.toGeoJSONString": {
+    "description": "Returns a GeoJSON string representation of the geometry.",
+    "returns": "List[String]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.length": {
+    "description": "compute length",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.dissolve": {
+    "description": "Computes the union of all the elements of this geometry.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.contains": {
+    "description": "Returns true iff one geometry contains the other.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.containedIn": {
+    "description": "Returns true iff one geometry is contained in the other.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.disjoint": {
+    "description": "Returns true iff the geometries are disjoint.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.distance": {
+    "description": "Returns the minimum distance between two geometries.",
+    "returns": "Double",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.difference": {
+    "description": "Returns the result of subtracting the 'right' geometry from the 'left' geometry.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.intersection": {
+    "description": "Returns the intersection of the two geometries.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.intersects": {
+    "description": "Returns true iff the geometries intersect.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.symmetricDifference": {
+    "description": "Returns the symmetric difference between two geometries.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.union": {
+    "description": "Returns the union of the two geometries.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.withDistance": {
+    "description": "Returns true iff the geometries are within a specified distance.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.copyProperties": {
+    "description": "Copies metadata properties from one element to another.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "properties",
+        "type": "List[String]",
+        "description": "The properties to copy. If omitted, all properties are copied."
+      }
+    ]
+  },
+  "Feature.get": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[Any]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.getNumber": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.getString": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[String]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.getArray": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[Array[String]]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.propertyNames": {
+    "description": "Returns the names of properties on this element.",
+    "returns": "List[List[String]]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.set": {
+    "description": "Overrides one or more metadata properties of an Element.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "the property to set. it is a json"
+      }
+    ]
+  },
+  "Feature.setGeometry": {
+    "description": "Returns the feature, with the geometry replaced by the specified geometry.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "geom",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.inverseDistanceWeighted": {
+    "description": "InverseDistanceWeighted Interpolation",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "propertyName",
+        "type": "String",
+        "description": "the property to select"
+      },
+      {
+        "name": "maskGeom",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
   }
 }
