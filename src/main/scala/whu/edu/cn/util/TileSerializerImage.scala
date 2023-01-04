@@ -98,7 +98,7 @@ object TileSerializerImage{
       val bytesArray: Array[Byte] = new Array[Byte](2)
       bytesArray(0) = tileBytes(subFirst(i))
       bytesArray(1) = tileBytes(subSecond(i))
-      cell(i) = ByteBuffer.wrap(bytesArray).getShort
+      cell(i) = ((bytesArray(0) & 0xff) | ((bytesArray(1) & 0xff) << 8)).toShort
     }
 
     cellType match {
@@ -131,7 +131,7 @@ object TileSerializerImage{
       _array(1) = tileBytes(subSecond(i))
       _array(2) = tileBytes(subThird(i))
       _array(3) = tileBytes(subFourth(i))
-      cell(i) = ByteBuffer.wrap(_array).getInt()
+      cell(i) = (_array(0) & 0xff) | ((_array(1) & 0xff) << 8) | ((_array(2) & 0xff) << 16) | ((_array(3) & 0xff) << 24)
     }
     cellType match {
       case IntCellType => IntArrayTile(cell, tileSize, tileSize, IntCellType)
@@ -162,67 +162,11 @@ object TileSerializerImage{
         _array(1) = tileBytes(subSecond(i))
         _array(2) = tileBytes(subThird(i))
         _array(3) = tileBytes(subFourth(i))
-        val asInt = (_array(0) & 0xFF) | ((_array(1) & 0xFF) << 8) | ((_array(2) & 0xFF) << 16) | ((_array(3) & 0xFF) << 24);
-        cell(i) = asInt.toFloat
+        val asInt: Int = (_array(0) & 0xFF) | ((_array(1) & 0xFF) << 8) | ((_array(2) & 0xFF) << 16) | ((_array(3) & 0xFF) << 24)
+        cell(i) = java.lang.Float.intBitsToFloat(asInt)
       }
       else{
         cell(i) = 0
-      }
-    }
-    cellType match {
-      case FloatCellType => FloatArrayTile(cell, tileSize, tileSize, FloatCellType)
-      case FloatConstantNoDataCellType => FloatArrayTile(cell, tileSize, tileSize, FloatConstantNoDataCellType)
-    }
-  }
-
-  /**
-   * Deserialize to float32raw or float32 tile using multi-threads technology.
-   *
-   * @param tileBytes
-   * @param tileSize
-   * @param cellType
-   *
-   * @return a FloatArrayTile of float32raw or float32 type
-   */
-  def parallelDeserialize2FloatType(tileBytes: Array[Byte], tileSize: Int, cellType: CellType): Tile = {
-    val rd = new RuntimeData(0, 16, 0)
-    if(tileSize * tileSize % rd.defThreadCount != 0)
-      new RuntimeException(tileSize * tileSize  + " cannot be divisible by thread num")
-
-    val bytesLenPerThread = tileSize * tileSize * 4 / rd.defThreadCount
-    val cellsLenPerThread = bytesLenPerThread / 4
-
-    val subFirst = ArrayBuffer.range(0, bytesLenPerThread, 4)
-    val subSecond = ArrayBuffer.range(1, bytesLenPerThread + 1, 4)
-    val subThird = ArrayBuffer.range(2, bytesLenPerThread + 2, 4)
-    val subFourth = ArrayBuffer.range(3, bytesLenPerThread + 3, 4)
-    val cell = new Array[Float](tileSize * tileSize)
-    val flag = Array.fill(rd.defThreadCount)(0)
-    for(i <- 0 until rd.defThreadCount){
-      new Thread(){
-        override def run(): Unit = {
-          for(j <- 0 until cellsLenPerThread){
-            val _array: Array[Byte] = new Array[Byte](4)
-            _array(0) = tileBytes(bytesLenPerThread * i + subFirst(j))
-            _array(1) = tileBytes(bytesLenPerThread * i + subSecond(j))
-            _array(2) = tileBytes(bytesLenPerThread * i + subThird(j))
-            _array(3) = tileBytes(bytesLenPerThread * i + subFourth(j))
-            val asInt = (_array(0) & 0xFF) | ((_array(1) & 0xFF) << 8) | ((_array(2) & 0xFF) << 16) | ((_array(3) & 0xFF) << 24);
-            cell(cellsLenPerThread * i + j) = asInt.toFloat
-          }
-          flag(i) = 1
-        }
-      }.start()
-    }
-
-    while (flag.contains(0)) {
-      try {
-        Thread.sleep(1)
-      }catch {
-        case ex: InterruptedException  => {
-          ex.printStackTrace()
-          System.err.println("exception===>: ...")
-        }
       }
     }
     cellType match {
@@ -260,7 +204,9 @@ object TileSerializerImage{
       _array(5) = tileBytes(subSixth(i))
       _array(6) = tileBytes(subSeventh(i))
       _array(7) = tileBytes(subEighth(i))
-      cell(i) = ByteBuffer.wrap(_array).getDouble()
+      val asLong: Long = (_array(0) & 0xFF) | ((_array(1) & 0xFF) << 8) | ((_array(2) & 0xFF) << 16) | ((_array(3) & 0xFF) << 24) |
+        ((_array(4) & 0xFF) << 32) | ((_array(5) & 0xFF) << 40) | ((_array(6) & 0xFF) << 48) | ((_array(7) & 0xFF) << 56)
+      cell(i) = java.lang.Double.longBitsToDouble(asLong)
     }
 
     cellType match {

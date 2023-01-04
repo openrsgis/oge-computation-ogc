@@ -12,6 +12,11 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <geotools.version>21.2</geotools.version>
+        <scala.version>2.11.12</scala.version>
+        <scala.compat.version>2.11</scala.compat.version>
+        <akka.actor.version>2.5.32</akka.actor.version>
+        <akka.http.version>10.1.15</akka.http.version>
+        <geotrellis.version>3.0.0</geotrellis.version>
     </properties>
 
     <repositories>
@@ -32,13 +37,48 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-actor_${scala.compat.version}</artifactId>
+            <version>${akka.actor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-stream_${scala.compat.version}</artifactId>
+            <version>${akka.actor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http-core_${scala.compat.version}</artifactId>
+            <version>${akka.http.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http_${scala.compat.version}</artifactId>
+            <version>${akka.http.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http-spray-json_${scala.compat.version}</artifactId>
+            <version>${akka.http.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.megard</groupId>
+            <artifactId>akka-http-cors_${scala.compat.version}</artifactId>
+            <version>0.4.2</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpasyncclient</artifactId>
             <version>4.1.5</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.11</artifactId>
+            <artifactId>spark-core_${scala.compat.version}</artifactId>
             <version>2.4.3</version>
         </dependency>
         <dependency>
@@ -94,23 +134,38 @@
         </dependency>
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-layer_2.11</artifactId>
-            <version>3.0.0</version>
+            <artifactId>geotrellis-layer_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
         </dependency>
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-spark_2.11</artifactId>
-            <version>3.0.0</version>
+            <artifactId>geotrellis-spark_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
         </dependency>
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-raster_2.11</artifactId>
-            <version>3.0.0</version>
+            <artifactId>geotrellis-raster_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
         </dependency>
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-store_2.11</artifactId>
-            <version>3.0.0</version>
+            <artifactId>geotrellis-store_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.locationtech.geotrellis</groupId>
+            <artifactId>geotrellis-proj4_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.locationtech.geotrellis</groupId>
+            <artifactId>geotrellis-util_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.locationtech.geotrellis</groupId>
+            <artifactId>geotrellis-spark-etl_${scala.compat.version}</artifactId>
+            <version>2.0.1</version>
         </dependency>
         <!--geotools-->
         <dependency>

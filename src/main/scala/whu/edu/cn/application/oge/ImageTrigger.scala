@@ -8,16 +8,26 @@ import org.apache.spark.{SparkConf, SparkContext}
 import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
+import org.locationtech.jts.geom._
+import whu.edu.cn.application.oge.WebAPI._
 
-import scala.collection.mutable.Map
+import scala.collection.mutable.{ListBuffer, Map}
 import scala.io.Source
 
 object ImageTrigger {
   var rdd_list_image: Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])] = Map.empty[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]
   var rdd_list_image_waitingForMosaic: Map[String, RDD[RawTile]] = Map.empty[String, RDD[RawTile]]
+  var rdd_list_table: Map[String, String] = Map.empty[String, String]
+  var rdd_list_feature_API: Map[String, String] = Map.empty[String, String]
   var imageLoad: Map[String, (String, String, String)] = Map.empty[String, (String, String, String)]
   var filterEqual: Map[String, (String, String)] = Map.empty[String, (String, String)]
   var filterAnd: Map[String, Array[String]] = Map.empty[String, Array[String]]
+  var level: Int = _
+  var windowRange: String = _
+  var layerID: Int = 0
+  var fileName: String = _
+  var oorB: Int = _
+
   def argOrNot(args: Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -30,7 +40,10 @@ object ImageTrigger {
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
     if (name == "Service.getCoverageCollection") {
       imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
-      }
+    }
+    if (name == "Service.getCoverage") {
+      imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+    }
     if (name == "Filter.equals") {
       filterEqual += (UUID -> (argOrNot(args, "leftField"), argOrNot(args, "rightValue")))
     }
@@ -38,10 +51,10 @@ object ImageTrigger {
       filterAnd += (UUID -> argOrNot(args, "filters").replace("[", "").replace("]", "").split(","))
     }
     if (name == "CoverageCollection.subCollection") {
-      var crs:String  = null
+      var crs: String = null
       var measurementName: String = null
       val filter = argOrNot(args, "filter")
-      if(filterAnd.contains(filter)) {
+      if (filterAnd.contains(filter)) {
         val filters = filterAnd(filter)
         for (i <- filters.indices) {
           if ("crs".equals(filterEqual(filters(i))._1)) {
@@ -52,7 +65,7 @@ object ImageTrigger {
           }
         }
       }
-      else if (filterEqual.contains(filter)){
+      else if (filterEqual.contains(filter)) {
         if ("crs".equals(filterEqual(filter)._1)) {
           crs = filterEqual(filter)._2
         }
@@ -60,14 +73,53 @@ object ImageTrigger {
           measurementName = filterEqual(filter)._2
         }
       }
-      val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args,"input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args,"input"))._2,
-        geom = imageLoad(argOrNot(args,"input"))._3, crs = crs)
-      rdd_list_image += (UUID -> loadInit._1)
-      rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
+      if (oorB == 0) {
+        val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
+          geom = windowRange, geom2 = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = level)
+        rdd_list_image += (UUID -> loadInit._1)
+        rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
+      }
+      else {
+        val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
+          geom = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = -1)
+        rdd_list_image += (UUID -> loadInit._1)
+        rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
+      }
     }
-    if(name == "CoverageCollection.mosaic") {
+    if (name == "CoverageCollection.mosaic") {
       rdd_list_image += (UUID -> Image.mosaic(sc, tileRDDReP = rdd_list_image_waitingForMosaic(argOrNot(args, "coverageCollection")), method = argOrNot(args, "method")))
     }
+    if (name == "Service.getTable") {
+      rdd_list_table += (UUID -> argOrNot(args, "productID"))
+    }
+    if (name == "Service.getFeatureCollection") {
+      rdd_list_feature_API += (UUID -> argOrNot(args, "productID"))
+    }
+
+    //Algorithm
+    if (name == "Algorithm.hargreaves") {
+      rdd_list_table += (UUID -> hargreaves(inputTemperature = rdd_list_table(argOrNot(args, "inputTemperature")), inputStation = rdd_list_feature_API(argOrNot(args, "inputStation")),
+        startTime = argOrNot(args, "startTime"), endTime = argOrNot(args, "endTime"), timeStep = argOrNot(args, "timeStep").toLong))
+    }
+    if (name == "Algorithm.topmodel") {
+      rdd_list_table += (UUID -> topModel(inputPrecipEvapFile = rdd_list_table(argOrNot(args, "inputPrecipEvapFile")), inputTopoIndex = rdd_list_table(argOrNot(args, "inputTopoIndex")),
+        startTime = argOrNot(args, "startTime"), endTime = argOrNot(args, "endTime"), timeStep = argOrNot(args, "timeStep").toLong,
+        rate = argOrNot(args, "rate").toDouble, recession = argOrNot(args, "recession").toInt, iterception = argOrNot(args, "iterception").toInt,
+        waterShedArea = argOrNot(args, "waterShedArea").toInt, tMax = argOrNot(args, "tMax").toInt))
+    }
+    if (name == "Algorithm.swmm") {
+      rdd_list_table += (UUID -> SWMM5(input = rdd_list_table(argOrNot(args, "input"))))
+    }
+
+    //Table
+    if (name == "Table.getDownloadUrl") {
+      Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
+    }
+    if (name == "Table.addStyles") {
+      Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
+    }
+
+    //Coverage
     if (name == "Coverage.subtract") {
       rdd_list_image += (UUID -> Image.subtract(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
     }
@@ -141,9 +193,19 @@ object ImageTrigger {
       println(bandNames)
       println(bandNames.length)
     }
+    if (name == "Coverage.slope") {
+      rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+    }
     if (name == "Coverage.addStyles") {
-      Image.visualize(image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-        method = argOrNot(args, "method"), palette = argOrNot(args, "palette"))
+      if (oorB == 0) {
+        Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
+          method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+        layerID = layerID + 1
+      }
+      else {
+        Image.visualizeBatch(sc, image = rdd_list_image(args("input")), layerID = layerID, fileName = fileName)
+        layerID = layerID + 1
+      }
     }
 
     //CoverageCollection
@@ -214,6 +276,36 @@ object ImageTrigger {
       val names: List[String] = List("B3")
       rdd_list_image += (UUID -> Image.addBands(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2")), names = names))
     }
+    if (name == "CoverageCollection.slope") {
+      rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+    }
+    if (name == "CoverageCollection.aspect") {
+      rdd_list_image += (UUID -> aspect(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+    }
+    if (name == "CoverageCollection.hillShade") {
+      rdd_list_image += (UUID -> hillShade(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble, Azimuth = argOrNot(args, "Azimuth").toDouble, Vertical_angle = argOrNot(args, "Vertical_angle").toDouble))
+    }
+    if (name == "CoverageCollection.relief") {
+      rdd_list_image += (UUID -> relief(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+    }
+    if (name == "CoverageCollection.ruggednessIndex") {
+      rdd_list_image += (UUID -> ruggednessIndex(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+    }
+    if (name == "CoverageCollection.cellBalance") {
+      rdd_list_image += (UUID -> cellBalance(sc, input = rdd_list_image(args("coverageCollection"))))
+    }
+    if (name == "CoverageCollection.flowAccumulationTD") {
+      rdd_list_image += (UUID -> flowAccumulationTD(sc, input = rdd_list_image(args("coverageCollection"))))
+    }
+    if (name == "CoverageCollection.flowPathLength") {
+      rdd_list_image += (UUID -> flowPathLength(sc, input = rdd_list_image(args("coverageCollection"))))
+    }
+    if (name == "CoverageCollection.slopeLength") {
+      rdd_list_image += (UUID -> slopeLength(sc, input = rdd_list_image(args("coverageCollection"))))
+    }
+    if (name == "CoverageCollection.calCrop") {
+      calCrop(year = argOrNot(args, "year"), quarter = argOrNot(args, "quarter"), sort = argOrNot(args, "sort"))
+    }
     if (name == "CoverageCollection.bandNames") {
       val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverageCollection")))
       println("******************test bandNames***********************")
@@ -221,8 +313,15 @@ object ImageTrigger {
       println(bandNames.length)
     }
     if (name == "CoverageCollection.addStyles") {
-      Image.visualize(image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-        method = argOrNot(args, "method"), palette = argOrNot(args, "palette"))
+      if (oorB == 0) {
+        Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
+          method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+        layerID = layerID + 1
+      }
+      else {
+        Image.visualizeBatch(sc, image = rdd_list_image(args("input")), layerID = layerID, fileName = fileName)
+        layerID = layerID + 1
+      }
     }
   }
 
@@ -235,6 +334,52 @@ object ImageTrigger {
   def main(args: Array[String]): Unit = {
     val time1 = System.currentTimeMillis()
     val conf = new SparkConf()
+      .setMaster("local[*]")
+      .setAppName("query")
+    val sc = new SparkContext(conf)
+
+    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/deepLearning.json")
+    fileName = "/home/geocube/oge/on-the-fly/out.txt"
+    val line: String = fileSource.mkString
+    fileSource.close()
+    val jsonObject = JSON.parseObject(line)
+    println(jsonObject.size())
+    println(jsonObject)
+
+    oorB = jsonObject.getString("oorB").toInt
+    if (oorB == 0) {
+      val map = jsonObject.getJSONObject("map")
+      level = map.getString("level").toInt
+      windowRange = map.getString("spatialRange")
+    }
+
+    val a = JsonToArgLocal.trans(jsonObject)
+    println(a.size)
+    a.foreach(println(_))
+
+    if (a.head._3.contains("productID")) {
+      if (a.head._3("productID") != "GF2") {
+        lamda(sc, a)
+      }
+      else {
+        if (oorB == 0) {
+          Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
+        }
+        else {
+          Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
+        }
+      }
+    }
+    else {
+      lamda(sc, a)
+    }
+
+    val time2 = System.currentTimeMillis()
+    println(time2 - time1)
+  }
+  /*def main(args: Array[String]): Unit = {
+    val time1 = System.currentTimeMillis()
+    val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
       .setMaster("local[*]")
       .setAppName("query")
@@ -242,23 +387,33 @@ object ImageTrigger {
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
 
-    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/testCOG.json").mkString
-    val jsonObject = JSON.parseObject(line)
-    println(jsonObject.size())
-    println(jsonObject)
+    var a: List[Tuple3[String, String, Map[String, String]]] = List.empty[Tuple3[String, String, Map[String, String]]]
+    a = a :+ Tuple3("00000", "Service.getCoverageCollection", Map("datetime" -> "[2000-01-01 00:00:00,2000-01-01 00:00:00]", "bbox" -> "[29.1,114.2,29.9,114.5]", "productID" -> "ASTER_GDEM_DEM30", "baseUrl" -> "http://localhost"))
+    a = a :+ Tuple3("00004", "Filter.equals", Map("rightValue" -> "EPSG:4326", "leftField" -> "crs"))
+    a = a :+ Tuple3("0000", "CoverageCollection.subCollection", Map("filter" -> "00004", "input" -> "00000"))
+    a = a :+ Tuple3("000", "CoverageCollection.mosaic", Map("method" -> "min", "coverageCollection" -> "0000"))
+//    a = a :+ Tuple3("00", "CoverageCollection.slope", Map("Z_factor" -> "1", "coverageCollection" -> "000"))
+    a = a :+ Tuple3("0", "CoverageCollection.addStyles", Map("input" -> "000", "max" -> "255", "min" -> "0"))
 
-    val a = JsonToArgLocal.trans(jsonObject)
     println(a.size)
     a.foreach(println(_))
-
-    if (a(0)._3("productID") != "GF2") {
-      lamda(sc, a)
+    fileName = "/home/geocube/oge/on-the-fly/out.txt"
+    level = 11
+    windowRange = "[113.17588,30.379332,114.573944,30.71761]"
+    if(a(0)._3.contains("productID")) {
+      if (a(0)._3("productID") != "GF2") {
+        lamda(sc, a)
+      }
+      else {
+        Image.deepLearning(sc, a(0)._3("bbox"))
+      }
     }
-    else {
-      Image.deepLearning(a(0)._3("bbox"))
+    else{
+      lamda(sc, a)
     }
 
     val time2 = System.currentTimeMillis()
     println(time2 - time1)
-  }
+    sc.stop()
+  }*/
 }
