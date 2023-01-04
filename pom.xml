@@ -194,6 +194,11 @@
             <version>${geotools.version}</version>
         </dependency>
         <!--geotools-->
+        <dependency>
+            <groupId>org.apache.zeppelin</groupId>
+            <artifactId>zeppelin-spark-dependencies_${scala.compat.version}</artifactId>
+            <version>0.7.3</version>
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
