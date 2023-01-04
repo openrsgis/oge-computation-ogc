@@ -1,5 +1,7 @@
 package whu.edu.cn.application.oge
 
+import java.io.FileWriter
+
 import com.alibaba.fastjson.JSON
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
@@ -11,9 +13,10 @@ import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 
+import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, TileLayerMetadata}
 import geotrellis.proj4
-import geotrellis.raster.{DoubleCellType, RasterExtent, Tile, TileLayout}
+import geotrellis.raster.{DoubleCellType, Raster, RasterExtent, Tile, TileLayout, mask}
 import geotrellis.vector
 import geotrellis.vector.interpolation.{NonLinearSemivariogram, Semivariogram, Spherical}
 import geotrellis.vector.{Extent, Point, PointFeature}
@@ -22,9 +25,9 @@ import geotrellis.spark._
 import geotrellis.raster.interpolation._
 import geotrellis.raster.render.{ColorRamp, ColorRamps}
 import geotrellis.vector.interpolation
-import geotrellis.raster.mask
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
+import org.apache.commons.lang3.StringUtils
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
@@ -32,36 +35,40 @@ import scala.math.{max, min}
 
 object Feature {
   def load(implicit sc: SparkContext, productName: String = null,dataTime:String=null,crs:String="EPSG:4326"): RDD[(String,(Geometry, Map[String, Any]))] ={
-    //RowKey  ProductKey_Geohash_ID
-    val a : RDD[(String,(Geometry, Map[String, Any]))] = null
-
-    //用户的定义的对象：用户ID_随机数
-    //新几何对象：用户ID_随机数
+    val t1=System.currentTimeMillis()
     val queryRes=query(productName)
+    val t2=System.currentTimeMillis()
+    println("查询元数据的时间："+(t2-t1)/1000)
     val metaData = queryRes._3
     val hbaseTableName=queryRes._2
     val productKey=queryRes._1
     println(metaData)
     println(hbaseTableName)
     println(productKey)
+//    if(dataTime==null){
+//      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
+//        .flatMap(t=>t)
+//        .map(t=>(t, getVectorWithRowkey(hbaseTableName,t)))
+//      geometryRdd.map(t=>{
+//        t._2._1.setSRID(crs.split(":")(1).toInt)
+//        t
+//      })
+//    }
+    var prefix=""
     if(dataTime==null){
-      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
-        .flatMap(t=>t)
-        .map(t=>(t, getVectorWithRowkey(hbaseTableName,t)))
-      geometryRdd.map(t=>{
-        t._2._1.setSRID(crs.split(":")(1).toInt)
-        t
-      })
+      prefix=productKey
     }
     else{
-      val prefix=productKey+"_"+dataTime
-      println(prefix)
-      val geometryRdd=getVectorWithPrefixFilter(sc,hbaseTableName,prefix)
-      geometryRdd.map(t=>{
-        t._2._1.setSRID(crs.split(":")(1).toInt)
-        t
-      })
+      prefix=productKey+"_"+dataTime
     }
+    val t4=System.currentTimeMillis()
+    val geometryRdd=getVectorWithPrefixFilter(sc,hbaseTableName,prefix).map(t=>{
+      t._2._1.setSRID(crs.split(":")(1).toInt)
+      t
+    })
+    val t5=System.currentTimeMillis()
+    println("从hbase加载数据的时间："+(t5-t4)/1000)
+    geometryRdd
   }
 
   //返回productKey,hbaseTableName,rowkeyList
@@ -93,9 +100,6 @@ object Feature {
           metaData.append(factDataIDs)
           productKey=extentResults.getString("product_key")
           hbaseTableName=extentResults.getString("table_name")
-          println(metaData)
-          println(hbaseTableName)
-          println(productKey)
         }
       }
       finally {
@@ -105,10 +109,13 @@ object Feature {
     (productKey,hbaseTableName,metaData)
   }
   def getVectorWithRowkey(hbaseTableName:String,rowKey: String):(Geometry, Map[String, Any]) = {
+    val t1=System.currentTimeMillis()
     val meta = getVectorMeta(hbaseTableName, rowKey, "vectorData", "metaData")
     val cell = getVectorCell(hbaseTableName, rowKey, "vectorData", "geom")
-    println(meta)
+//    println(meta)
     println(cell)
+    val t2=System.currentTimeMillis()
+    println("根据rowkey取数据时间："+(t2-t1)/1000)
     val jsonObject = JSON.parseObject(meta)
     val properties = jsonObject.getJSONArray("properties").getJSONObject(0)
     val propertiesOut = Map.empty[String, Any]
@@ -124,7 +131,11 @@ object Feature {
   }
 
   def getVectorWithPrefixFilter(implicit sc: SparkContext,hbaseTableName:String,prefix:String):RDD[(String,(Geometry, Map[String, Any]))] = {
+    val t1=System.currentTimeMillis()
     val queryData=getVectorWithPrefix(hbaseTableName,prefix)
+    val t2=System.currentTimeMillis()
+    println("取数据执行了！")
+    println("getVectorWithPrefix时间："+(t2-t1)/1000)
     val rawRDD=sc.parallelize(queryData)
     rawRDD.map(t=>{
       val rowkey=t._1
@@ -315,12 +326,25 @@ object Feature {
     * @param json the json to operate
     * @return
     */
+//  def getMapFromJsonStr(json:String):Map[String,Any]={
+//    val map = Map.empty[String, Any]
+//    if(json==null&&json==""){
+//      map
+//    }
+//    else{
+//      val jsonObject = JSON.parseObject(json)
+//      val sIterator = jsonObject.keySet.iterator
+//      while (sIterator.hasNext()) {
+//        val key = sIterator.next()
+//        val value = jsonObject.getString(key)
+//        map += (key -> value)
+//      }
+//      map
+//    }
+//  }
   def getMapFromJsonStr(json:String):Map[String,Any]={
     val map = Map.empty[String, Any]
-    if(json==null&&json==""){
-      map
-    }
-    else{
+    if(StringUtils.isNotEmpty(json) && !json.equals("")){
       val jsonObject = JSON.parseObject(json)
       val sIterator = jsonObject.keySet.iterator
       while (sIterator.hasNext()) {
@@ -328,8 +352,8 @@ object Feature {
         val value = jsonObject.getString(key)
         map += (key -> value)
       }
-      map
     }
+    map
   }
 
   /**
@@ -812,6 +836,7 @@ object Feature {
 
   def inverseDistanceWeighted(implicit sc: SparkContext,featureRDD:RDD[(String,(Geometry, Map[String, Any]))],
                               propertyName:String,maskGeom:RDD[(String,(Geometry, Map[String, Any]))]):(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
+    val t1=System.currentTimeMillis()
     val extents = featureRDD.map(t => {
       val coor=t._2._1.getCoordinate
       (coor.x,coor.y,coor.x,coor.y)
@@ -824,18 +849,26 @@ object Feature {
     val cols=256
     val rasterExtent = RasterExtent(extent, cols, rows)
     val points:Array[PointFeature[Double]]=featureRDD.map(t=>{
-      val p=vector.Point(t._2._1.getCoordinate)
+//      val p=vector.Point(t._2._1.getCoordinate)
+      val p=t._2._1.asInstanceOf[Point]
       var data=t._2._2(propertyName).asInstanceOf[String].toDouble
       if(data<0){
         data=100
       }
       PointFeature(p,data)
     }).collect()
+    val t6=System.currentTimeMillis()
     val rasterTile=InverseDistanceWeighted(points,rasterExtent)
+    val t2=System.currentTimeMillis()
+    println("调用IDW的时间："+(t2-t6)/1000)
+    println("空间插值的时间："+(t2-t1)/1000)
 
     val maskPolygon=maskGeom.map(t=>t._2._1).reduce((x,y)=>{Geometry.union(x,y)})
+    val t3=System.currentTimeMillis()
+    println("加载中国国界的时间："+(t3-t2)/1000)
     val maskRaster=rasterTile.mask(maskPolygon)
-
+    val t4=System.currentTimeMillis()
+    println("裁剪的时间："+(t4-t3)/1000)
     maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
 
     val tl=TileLayout(1,1,256,256)
@@ -843,17 +876,20 @@ object Feature {
     val crs=geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
     val time=System.currentTimeMillis()
     val bounds=Bounds(SpaceTimeKey(0,0,time),SpaceTimeKey(0,0,time))
-    val cellType=rasterTile.tile.cellType
+    val cellType=maskRaster.tile.cellType
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     var list:List[Tile]=List.empty
-    list=list:+rasterTile.tile
+    list=list:+maskRaster.tile
     val tileRDD=sc.parallelize(list)
     val imageRDD=tileRDD.map(t=>{
       val k = entity.SpaceTimeBandKey(SpaceTimeKey(0, 0, time), "interpolation")
       val v=t
       (k,v)
     })
+    val t5=System.currentTimeMillis()
+    println("构造ImageRDD时间："+(t5-t4)/1000)
+    println("IDW函数时间："+(t5-t1)/1000)
     (imageRDD,tileLayerMetadata)
   }
 
@@ -884,6 +920,7 @@ object Feature {
 
 
   def main(args: Array[String]): Unit = {
+    val t1=System.currentTimeMillis()
     val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
       .setMaster("local[*]")
@@ -891,17 +928,36 @@ object Feature {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-//    val geomRDD1=load(sc, "Hubei_ADM_City_Vector")
-    val geomRDD2=load(sc, "China_EnvironmentMonitor_Vector","2015010301")
+    val points=load(sc, "China_EnvironmentMonitor_Vector","2015010301")
+    val maskGeom=load(sc,"China_ADM_Country_Vector")
+    val t4=System.currentTimeMillis()
+    println("启动spark时间:"+(t4-t1)/1000)
+    val image=inverseDistanceWeighted(sc,points,"PM2.5",maskGeom)
+    val t2=System.currentTimeMillis()
+    println("空间插值时间:"+(t2-t1)/1000)
+    val tileLayerArray = image._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    }).collect()
+    val layout = image._2.layout
+    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
+    val stitchedTile = Raster(tile, layout.extent)
+    stitchedTile.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testRDD.png")
+    val t3=System.currentTimeMillis()
+    println("生成png时间:"+(t3-t2)/1000)
 
-//    val raster=inverseDistanceWeighted(geomRDD2,"PM2.5")
-    val path="D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\test.png"
-//    raster.tile.renderPng(ColorRamps.BlueToOrange).write(path)
-    val geom=polygon(sc,"[[[80, 19], [120, 19], [110, 49], [80, 19]]]")
-    val maskGeom=load(sc,"China_ADM_Province_Vector")
-    val image=inverseDistanceWeighted(sc,geomRDD2,"PM2.5",maskGeom)
-//    Image.visualize(image,null,0,255,"green")
-    println()
-
+//    val t1=System.currentTimeMillis()
+//    val conf = new SparkConf()
+//      //        .setMaster("spark://gisweb1:7077")
+//      .setMaster("local[*]")
+//      .setAppName("query")
+//    //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+//    //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
+//    val sc = new SparkContext(conf)
+//    val maskGeom=load(sc,"China_ADM_Country_Vector")
+//    val t2=System.currentTimeMillis()
+//    println("启动spark、查元数据的时间:"+(t2-t1)/1000)
+//    val mask=maskGeom.first()
+//    val t3=System.currentTimeMillis()
+//    println("从hbase中取数据的时间:"+(t3-t2)/1000)
   }
 }
