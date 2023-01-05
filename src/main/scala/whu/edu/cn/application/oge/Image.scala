@@ -943,6 +943,20 @@ object Image {
     (image._1.filter(t => targetBands.contains(t._1._measurementName)), image._2)
   }
 
+  /**
+   * Returns a map of the image's band types.
+   *
+   * @param image
+   * @return The image from which the left operand bands are taken.
+   */
+  def bandTypes(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
+    val bandTypesArray = image._1.map(t => (t._1.measurementName, t._2.cellType)).distinct().collect()
+    var bandTypesMap = Map[String, String]()
+    for (band <- bandTypesArray) {
+      bandTypesMap = bandTypesMap + (band._1 -> band._2.toString())
+    }
+    bandTypesMap
+  }
   def deepLearning(implicit sc: SparkContext, geom: String, fileName: String): Unit = {
     val metaData = Preprocessing.queryGF2()
     val time = Preprocessing.load(sc, metaData._1, metaData._2, geom)
