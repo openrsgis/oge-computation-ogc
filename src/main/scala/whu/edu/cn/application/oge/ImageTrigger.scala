@@ -338,7 +338,7 @@ object ImageTrigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/deepLearning.json")
+    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/NDBI.json")
     fileName = "/home/geocube/oge/on-the-fly/out.txt"
     val line: String = fileSource.mkString
     fileSource.close()

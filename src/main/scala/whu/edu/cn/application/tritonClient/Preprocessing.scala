@@ -22,6 +22,7 @@ import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.sql.ResultSet
+import scala.collection.JavaConversions.asScalaBuffer
 import scala.collection.immutable.Range
 import scala.collection.mutable.ListBuffer
 
@@ -155,48 +156,54 @@ object Preprocessing {
     println("crs = " + crs)
     val tilesMetaData = Tiffheader_parse_DL.tileQuery(level, path, null, crs, null, query_extent)
     println(tilesMetaData.size())
-    val tile_srch: ListBuffer[(Array[Float], Int, Int, Array[Double], Array[Double])] = new ListBuffer[(Array[Float], Int, Int, Array[Double], Array[Double])]
-    for (i <- Range(0, tilesMetaData.size(), 3)) {
-      val tile1 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i))
-      val tile2 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 1))
-      val tile3 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 2))
-      println("tile1.getTilebuf.length=" + tile1.getTilebuf.length)
-      println("tile1.getTilebuf.size=" + tile1.getTilebuf.size)
-      val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
-      tile_srch += Tuple5(tileResult, tile1.getRow, tile1.getCol, tile1.getP_bottom_left, tile1.getP_upper_right)
-      println("tileResult.size=" + tileResult.size)
-    }
+    val tilesRdd = sc.makeRDD(asScalaBuffer(tilesMetaData))
+      .groupBy(t => (t.getRow, t.getCol))
+    val tile_srch = tilesRdd.map(t => {
+      val tileArray = t._2.toArray
+      if (tileArray.length == 3) {
+        val tile1 = Tiffheader_parse_DL.getTileBuf(tileArray(0))
+        val tile2 = Tiffheader_parse_DL.getTileBuf(tileArray(1))
+        val tile3 = Tiffheader_parse_DL.getTileBuf(tileArray(2))
+        val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
+        (tileResult, tile1.getRow, tile1.getCol, tile1.getP_bottom_left, tile1.getP_upper_right)
+      }
+      else {
+        null
+      }
+    })
     writePNGOnTheFly(sc, tile_srch, fileName)
   }
 
-  def writePNGOnTheFly(implicit sc: SparkContext, tile_srch: ListBuffer[(Array[Float], Int, Int, Array[Double], Array[Double])], fileName: String): Unit = {
+  def writePNGOnTheFly(implicit sc: SparkContext, tile_srch: RDD[(Array[Float], Int, Int, Array[Double], Array[Double])], fileName: String): Unit = {
     val time = System.currentTimeMillis()
-    var tileArray: Array[(SpatialKey, Tile)] = Array.empty[(SpatialKey, Tile)]
-    for (i <- tile_srch.indices) {
-      for (j <- tile_srch.head._2 to tile_srch.last._2) {
-        if (tile_srch(i)._2 == j) {
-          val band = new Array[Byte](512 * 512)
-          for (k <- 0 until 512 * 512) {
-            if (tile_srch(i)._1(k) > tile_srch(i)._1(k + 512 * 512)) band(k) = 0
-            else band(k) = -1
-          }
-
-          val tile = deserializeTileData("", band, 256, "uint8")
-          val k = SpatialKey(tile_srch(i)._3 - tile_srch.head._3, tile_srch(i)._2 - tile_srch.head._2)
-          tileArray = tileArray :+ Tuple2(k, tile)
-        }
+    val tileMetaB = tile_srch.map(t => (t._2, t._3, t._4(0), t._4(1), t._5(0), t._5(1)))
+    val tileMetaMinB = tileMetaB.reduce((a, b) => {
+      (Math.min(a._1, b._1), Math.min(a._2, b._2), Math.min(a._3, b._3), Math.min(a._4, b._4), Math.min(a._5, b._5), Math.min(a._6, b._6))
+    })
+    val tileMetaMin = (tileMetaMinB._1, tileMetaMinB._2, Math.min(tileMetaMinB._3, tileMetaMinB._5), Math.min(tileMetaMinB._4, tileMetaMinB._6))
+    val tileMetaMaxB = tileMetaB.reduce((a, b) => {
+      (Math.max(a._1, b._1), Math.max(a._2, b._2), Math.max(a._3, b._3), Math.max(a._4, b._4), Math.max(a._5, b._5), Math.max(a._6, b._6))
+    })
+    val tileMetaMax = (tileMetaMaxB._1, tileMetaMaxB._2, Math.max(tileMetaMaxB._3, tileMetaMaxB._5), Math.max(tileMetaMaxB._4, tileMetaMaxB._6))
+    val tiled = tile_srch.map(t => {
+      val band = new Array[Byte](512 * 512)
+      for (k <- 0 until 512 * 512) {
+        if (t._1(k) > t._1(k + 512 * 512)) band(k) = 0
+        else band(k) = -1
       }
-    }
+      val tile = deserializeTileData("", band, 256, "uint8")
+      val k = SpatialKey(t._3 - tileMetaMin._2, t._2 - tileMetaMin._1)
+      (k, tile)
+    })
 
-    val tiled = sc.makeRDD(tileArray)
     val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
 
-    val extent = geotrellis.vector.Extent(tile_srch.last._4(1), tile_srch.head._4(0), tile_srch.head._5(1), tile_srch.last._5(0))
-    val tl = TileLayout(tile_srch.last._3 - tile_srch.head._3 + 1, tile_srch.last._2 - tile_srch.head._2 + 1, 512, 512)
+    val extent = geotrellis.vector.Extent(tileMetaMin._4, tileMetaMin._3, tileMetaMax._4, tileMetaMax._3)
+    val tl = TileLayout(tileMetaMax._2 - tileMetaMin._2 + 1, tileMetaMax._1 - tileMetaMin._1 + 1, 512, 512)
     val ld = LayoutDefinition(extent, tl)
     val cellType = CellType.fromName("uint8")
     val crs = CRS.fromEpsgCode(4490)
-    val bounds = Bounds(SpatialKey(0, 0), SpatialKey(tile_srch.last._3 - tile_srch.head._3, tile_srch.last._2 - tile_srch.head._2))
+    val bounds = Bounds(SpatialKey(0, 0), SpatialKey(tileMetaMax._2 - tileMetaMin._2, tileMetaMax._1 - tileMetaMin._1))
     val rasterMetaData = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     val (zoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
@@ -212,7 +219,7 @@ object Preprocessing {
     val layerIDAll = appID + "-layer-" + time + "_" + "origin" + "-" + "0" + "-" + "255"
     // Pyramiding up the zoom levels, write our tiles out to the local file system.
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      if (z >= zoom - 2) {
+      if (z == zoom) {
         val layerId = LayerId(layerIDAll, z)
         // If the layer exists already, delete it out before writing
         if (attributeStore.layerExists(layerId)) {
@@ -221,10 +228,9 @@ object Preprocessing {
         writer.write(layerId, rdd, ZCurveKeyIndexMethod)
       }
     }
-    sc.stop()
     val writeFile = new File(fileName)
     val writerOutput = new BufferedWriter(new FileWriter(writeFile))
-    val outputString = "{\"table\":[], \"vector\":[], \"raster\":[{\"url\":\"http://oge.whu.edu.cn/api/oge-tms/" + layerIDAll + "/{z}/{x}/{y}\"}]}"
+    val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[], \"vector\":[], \"raster\":[{\"url\":\"http://oge.whu.edu.cn/api/oge-tms/" + layerIDAll + "/{z}/{x}/{y}\"}]}"
     writerOutput.write(outputString)
     writerOutput.close()
   }

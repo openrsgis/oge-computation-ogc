@@ -705,4 +705,63 @@ object Trigger {
     val time2 = System.currentTimeMillis()
     println(time2 - time1)
   }
+
+  def runMain(implicit sc: SparkContext, s1: String, s2: String): Unit ={
+    val time1 = System.currentTimeMillis()
+    //清空全局变量
+    rdd_list_image = Map.empty[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]
+    rdd_list_image_waitingForMosaic = Map.empty[String, RDD[RawTile]]
+    rdd_list_table = Map.empty[String, String]
+    rdd_list_feature_API = Map.empty[String, String]
+    rdd_list_feature = Map.empty[String, Any]
+    imageLoad = Map.empty[String, (String, String, String)]
+    filterEqual = Map.empty[String, (String, String)]
+    filterAnd = Map.empty[String, Array[String]]
+
+    rdd_list_cube = Map.empty[String, Map[String, Any]]
+    cubeLoad = Map.empty[String, (String, String, String)]
+
+    layerID = 0
+
+
+    val fileSource = Source.fromFile(s1)
+    fileName = s2
+    val line: String = fileSource.mkString
+    fileSource.close()
+    val jsonObject = JSON.parseObject(line)
+    println(jsonObject.size())
+    println(jsonObject)
+
+    oorB = jsonObject.getString("oorB").toInt
+    if (oorB == 0) {
+      val map = jsonObject.getJSONObject("map")
+      level = map.getString("level").toInt
+      windowRange = map.getString("spatialRange")
+    }
+
+    JsonToArg.arg = List.empty[Tuple3[String, String, Map[String,String]]]
+    val a = JsonToArg.trans(jsonObject)
+    println(a.size)
+    a.foreach(println(_))
+
+    if (a.head._3.contains("productID")) {
+      if (a.head._3("productID") != "GF2") {
+        lamda(sc, a)
+      }
+      else {
+        if (oorB == 0) {
+          Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
+        }
+        else {
+          Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
+        }
+      }
+    }
+    else {
+      lamda(sc, a)
+    }
+
+    val time2 = System.currentTimeMillis()
+    println(time2 - time1)
+  }
 }
