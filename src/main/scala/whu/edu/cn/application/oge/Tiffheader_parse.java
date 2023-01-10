@@ -345,6 +345,7 @@ public class Tiffheader_parse {
                 resolutionTMS = 0.149291;
             }
             level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2));
+            level = level + 1;
             System.out.println("level = " + level);
             if (level > TileOffsets.size() - 1) {
                 throw new RuntimeException("Level is too small!");

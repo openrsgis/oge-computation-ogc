@@ -227,7 +227,7 @@ public class Tiffheader_parse_DL {
     private static ArrayList<RawTile> getTiles(int level, double[] query_extent, String crs, String in_path, String time, String measurement) {
         int l;
         double resolutionTMS = 0.0;
-        double resolutionOrigin = 10.0;
+        double resolutionOrigin = 0.8559114702712672;
         if (level == -1) {
             l = 0;
         } else {
@@ -302,6 +302,9 @@ public class Tiffheader_parse_DL {
             if (l < 0) {
                 throw new RuntimeException("Level is too big!");
             }
+            //if (l != 0) {
+            //    throw new RuntimeException("Level is not origin resolution!");
+            //}
         }
 
         double lower_left_long = query_extent[0];

@@ -222,13 +222,15 @@ object Cube {
    * @param products 要显示的产品列表
    * @return cube data map
    */
-  def visualize(implicit sc: SparkContext, cube: mutable.Map[String, Any], products: String) = {
+  def visualize(implicit sc: SparkContext, cube: mutable.Map[String, Any], products: String, fileName: String = null) = {
     implicit val formats = Serialization.formats(NoTypeHints)
     val result = mutable.Map[String, Any]()
-    val vectorList = new ArrayBuffer[Map[String, Any]]()
+    val vectorCubeList = new ArrayBuffer[Map[String, Any]]()
+    val rasterCubeList = new ArrayBuffer[Map[String, Any]]()
     val rasterList = new ArrayBuffer[Map[String, Any]]()
-//    val executorOutputDir = "D:/"
-    val executorOutputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/ogedemooutput/"
+    val vectorList = new ArrayBuffer[Map[String, Any]]()
+    val tableList = new ArrayBuffer[Map[String, Any]]()
+    val executorOutputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/ogeoutput/"
     val productList = products.replace("[", "").replace("]", "").split(",")
     val time = System.currentTimeMillis();
     for (product <- productList) {
@@ -238,7 +240,7 @@ object Cube {
           val affectedFeatures = affectedGeoObjectRdd.map(x => x.feature).collect()
           val outputVectorPath = executorOutputDir + "oge_flooded_" + time + ".geojson"
           saveAsGeojson(affectedFeatures, outputVectorPath)
-          vectorList.append(Map("url" -> ("http://125.220.153.26:8093/ogedemooutput/" + "oge_flooded_" + time + ".geojson")))
+          vectorCubeList.append(Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "oge_flooded_" + time + ".geojson")))
         }
         case changedRdd: RasterRDD => {
           if (product == "Change_Product") {
@@ -268,7 +270,7 @@ object Cube {
             val stitched = changedStitchRdd.stitch()
             val extentRet = stitched.extent
             val outputRasterPath = executorOutputDir + "oge_flooded_" + time + ".png"
-            rasterList.append(Map("url" -> ("http://125.220.153.26:8093/ogedemooutput/" + "oge_flooded_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
+            rasterCubeList.append(Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "oge_flooded_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
             stitched.tile.renderPng(colorMap).write(outputRasterPath)
           }
           if (product == "Binarization_Product") {
@@ -320,25 +322,21 @@ object Cube {
               val extentRet = t._3
               val outputRasterPath = executorOutputDir + "ndwi_" + str + "_" + time + ".png"
               t._1.write(outputRasterPath)
-              rasterList.append(mutable.Map("url" -> ("http://125.220.153.26:8093/ogedemooutput/" + "ndwi_" + str + "_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
+              rasterCubeList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "ndwi_" + str + "_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
             })
           }
         }
       }
     }
-    result += ("vector" -> vectorList)
-    result += ("raster" -> rasterList)
+    result += ("vectorCube" -> vectorCubeList)
+    result += ("rasterCube" -> rasterCubeList)
+    result += ("raster" -> rasterCubeList)
+    result += ("vector" -> rasterCubeList)
+    result += ("table" -> rasterCubeList)
     val jsonStr: String = write(result)
-    writeFile(jsonStr, "/home/geocube/oge/oge-server/dag-boot/")
-//    writeFile(jsonStr, "D:/")
-    println(jsonStr)
-//    SaveToMinIO.save()
-  }
-
-  def writeFile(resultJson: String, fileRootPath: String): Unit = {
-    val writeFile = new File(fileRootPath + "output.txt")
+    val writeFile = new File(fileName)
     val writer = new BufferedWriter(new FileWriter(writeFile))
-    writer.write(resultJson)
+    writer.write(jsonStr)
     writer.close()
   }
 }
