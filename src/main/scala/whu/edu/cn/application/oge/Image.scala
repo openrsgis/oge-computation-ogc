@@ -946,8 +946,8 @@ object Image {
   /**
    * Returns a map of the image's band types.
    *
-   * @param image
-   * @return The image from which the left operand bands are taken.
+   * @param image The image from which the left operand bands are taken.
+   * @return
    */
   def bandTypes(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
     val bandTypesArray = image._1.map(t => (t._1.measurementName, t._2.cellType)).distinct().collect()
@@ -957,6 +957,84 @@ object Image {
     }
     bandTypesMap
   }
+
+  /**
+   * Computes the absolute value of the input.
+   *
+   * @param image The image to which the operation is applied.
+   * @return
+   */
+  def abs(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Abs(t._2))
+    }), image._2)
+  }
+
+  /**
+   * Returns 1 iff the first value is not equal to the second for each matched pair of bands in image1 and image2.
+   *
+   * @param image1 The image from which the left operand bands are taken.
+   * @param image2 The image from which the right operand bands are taken.
+   * @return
+   */
+  def neq(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val bandNum1 = bandNames(image1).length
+    val bandNum2 = bandNames(image2).length
+    if (bandNum1 == 1 && bandNum2 == 1) {
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val eqRDD = image1NoBand.join(image2NoBand)
+      (eqRDD.map(t => {
+        (entity.SpaceTimeBandKey(t._1, "Ueq"), Unequal(t._2._1._2, t._2._2._2))
+      }), image1._2)
+    }
+    else {
+      val matchRDD = image1._1.join(image2._1)
+      (matchRDD.map(t => {
+        (t._1, Unequal(t._2._1, t._2._2))
+      }), image1._2)
+    }
+  }
+
+  /**
+   * Computes the signum function (sign) of the input; zero if the input is zero, 1 if the input is greater than zero, -1 if the input is less than zero.
+   *
+   * @param image The image to which the operation is applied.
+   * @return
+   */
+  def signum(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.map(u => {
+        if (u > 0) 1
+        else if (u < 0) -1
+        else 0
+      }))
+    }), image._2)
+  }
+
+  /**
+   * Rename the bands of an image.Returns the renamed image.
+   *
+   * @param image The coverage to which to apply the operations.
+   * @param name  The new names for the bands. Must match the number of bands in the Image.
+   * @return
+   */
+  def rename(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+             name: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val nameList = name.replace("[", "").replace("]", "").split(",")
+    val bandnames = bandNames(image)
+    if (bandnames.length == nameList.length) {
+      val namesMap = (bandnames zip nameList).toMap
+      (image._1.map(t => {
+        (SpaceTimeBandKey(t._1.spaceTimeKey, namesMap(t._1.measurementName)), t._2)
+      }), image._2)
+    }
+    else {
+      image
+    }
+  }
+
   def deepLearning(implicit sc: SparkContext, geom: String, fileName: String): Unit = {
     val metaData = Preprocessing.queryGF2()
     val time = Preprocessing.load(sc, metaData._1, metaData._2, geom)
