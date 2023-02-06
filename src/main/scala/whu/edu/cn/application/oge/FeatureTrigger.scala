@@ -272,6 +272,7 @@ object FeatureTrigger {
   }
 
   def main(args: Array[String]): Unit ={
+    val t1=System.currentTimeMillis()
     val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
       .setMaster("local[*]")
@@ -279,7 +280,7 @@ object FeatureTrigger {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/testInterpolation.json").mkString
+    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/testInterpolation.json").mkString
     val jsonObject = JSON.parseObject(line)
     println(jsonObject.size())
     println(jsonObject)
@@ -288,7 +289,8 @@ object FeatureTrigger {
     println(a.size)
     a.foreach(println(_))
     lamda(sc, a)
-
+    val t2=System.currentTimeMillis()
+    println("main函数中完整空间插值过程的时间："+(t2-t1)/1000)
 
     //    var properties="{\"name\":\"haha\",\"value\":10}"
     //    var properties2="{\n\"name\":\"网站\",\n\"num\":3,\n\"sites\":[ \"Google\", \"Runoob\", \"Taobao\" ]\n}"

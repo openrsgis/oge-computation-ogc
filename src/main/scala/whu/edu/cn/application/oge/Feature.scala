@@ -28,6 +28,7 @@ import geotrellis.vector.interpolation
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import org.apache.commons.lang3.StringUtils
+import org.apache.commons.logging.{Log, LogFactory}
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
@@ -38,7 +39,7 @@ object Feature {
     val t1=System.currentTimeMillis()
     val queryRes=query(productName)
     val t2=System.currentTimeMillis()
-    println("查询元数据的时间："+(t2-t1)/1000)
+    println("从pgsql查询元数据的时间："+(t2-t1)/1000)
     val metaData = queryRes._3
     val hbaseTableName=queryRes._2
     val productKey=queryRes._1
@@ -829,6 +830,8 @@ object Feature {
       (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._3,coor2._3),max(coor1._4,coor2._4))
     })
     val extent=Extent(extents._1,extents._2,extents._3,extents._4)
+    val t2=System.currentTimeMillis()
+    println("获取点数据extent的时间："+(t2-t1)/1000)
     println("extent:"+extent)
     val rows=256
     val cols=256
@@ -842,21 +845,23 @@ object Feature {
       }
       PointFeature(p,data)
     }).collect()
-    val t6=System.currentTimeMillis()
-    val rasterTile=InverseDistanceWeighted(points,rasterExtent)
-    val t2=System.currentTimeMillis()
-    println("调用IDW的时间："+(t2-t6)/1000)
-    println("空间插值的时间："+(t2-t1)/1000)
-
-    val maskPolygon=maskGeom.map(t=>t._2._1).reduce((x,y)=>{Geometry.union(x,y)})
     val t3=System.currentTimeMillis()
-    println("加载中国国界的时间："+(t3-t2)/1000)
+    println("构建PointFeature[]的时间："+(t3-t2)/1000)
+    val rasterTile=InverseDistanceWeighted(points,rasterExtent)
+    val t4=System.currentTimeMillis()
+    println("调用Geotrellis提供的IDW函数的时间："+(t4-t3)/1000)
+    println("初步空间插值的时间（结果未剪裁）："+(t4-t1)/1000)
+
+//    val maskPolygon=maskGeom.map(t=>t._2._1).reduce((x,y)=>{Geometry.union(x,y)})
+    val maskPolygon=maskGeom.map(t=>t._2._1).first()
+    val t5=System.currentTimeMillis()
+    println("从RDD获取中国国界的时间："+(t5-t4)/1000)
     val maskRaster=rasterTile.mask(maskPolygon)
 
 //    maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
-    val t4=System.currentTimeMillis()
-    println("裁剪的时间："+(t4-t3)/1000)
-    maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
+    val t6=System.currentTimeMillis()
+    println("裁剪结果的时间："+(t6-t5)/1000)
+    //maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
 
 
     val tl=TileLayout(1,1,256,256)
@@ -875,9 +880,9 @@ object Feature {
       val v=t
       (k,v)
     })
-    val t5=System.currentTimeMillis()
-    println("构造ImageRDD时间："+(t5-t4)/1000)
-    println("IDW函数时间："+(t5-t1)/1000)
+    val t7=System.currentTimeMillis()
+    println("构造ImageRDD时间："+(t7-t6)/1000)
+    println("完整空间插值函数的时间："+(t7-t1)/1000)
     (imageRDD,tileLayerMetadata)
   }
 

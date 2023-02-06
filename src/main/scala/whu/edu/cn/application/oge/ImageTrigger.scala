@@ -9,7 +9,6 @@ import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import org.locationtech.jts.geom._
-import geotrellis.raster.mapalgebra.focal.Kernel
 import whu.edu.cn.application.oge.WebAPI._
 
 import scala.collection.mutable.{ListBuffer, Map}
@@ -20,7 +19,6 @@ object ImageTrigger {
   var rdd_list_image_waitingForMosaic: Map[String, RDD[RawTile]] = Map.empty[String, RDD[RawTile]]
   var rdd_list_table: Map[String, String] = Map.empty[String, String]
   var rdd_list_feature_API: Map[String, String] = Map.empty[String, String]
-  var list_kernel: Map[String, Kernel] = Map.empty[String, Kernel]
   var imageLoad: Map[String, (String, String, String)] = Map.empty[String, (String, String, String)]
   var filterEqual: Map[String, (String, String)] = Map.empty[String, (String, String)]
   var filterAnd: Map[String, Array[String]] = Map.empty[String, Array[String]]
@@ -314,53 +312,6 @@ object ImageTrigger {
       println(bandNames)
       println(bandNames.length)
     }
-    if (name == "Kernel.fixed") {
-      val kernel = Kernel.fixed(weights = args("weights"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.square") {
-      val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.prewitt") {
-      val kernel = Kernel.prewitt(axis = args("axis"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.kirsch") {
-      val kernel = Kernel.kirsch(axis = args("axis"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.sobel") {
-      val kernel = Kernel.sobel(axis = args("axis"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.laplacian4") {
-      val kernel = Kernel.laplacian4()
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.laplacian8") {
-      val kernel = Kernel.laplacian8()
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.laplacian8") {
-      val kernel = Kernel.laplacian8()
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.add") {
-      val kernel = Kernel.add(kernel1 = list_kernel(args("kernel1")), kernel2 = list_kernel(args("kernel2")))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-
-
     if (name == "CoverageCollection.addStyles") {
       if (oorB == 0) {
         Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
@@ -387,7 +338,7 @@ object ImageTrigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/testCOG.json")
+    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/NDBI.json")
     fileName = "/home/geocube/oge/on-the-fly/out.txt"
     val line: String = fileSource.mkString
     fileSource.close()

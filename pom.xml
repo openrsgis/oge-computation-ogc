@@ -36,11 +36,11 @@
     </repositories>
 
     <dependencies>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.scala-lang</groupId>-->
+<!--            <artifactId>scala-library</artifactId>-->
+<!--            <version>${scala.version}</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-actor_${scala.compat.version}</artifactId>
@@ -196,8 +196,13 @@
         <!--geotools-->
         <dependency>
             <groupId>org.apache.zeppelin</groupId>
-            <artifactId>zeppelin-spark-dependencies_${scala.compat.version}</artifactId>
-            <version>0.7.3</version>
+            <artifactId>zeppelin-client</artifactId>
+            <version>0.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.zeppelin</groupId>
+            <artifactId>spark-scala-2.11</artifactId>
+            <version>0.10.1</version>
         </dependency>
     </dependencies>
     <build>

@@ -296,7 +296,7 @@ object Image {
 
         while (extentResults.next()) {
           val path = if (measurementName != "" && measurementName != null) {
-            if (productName.equals("ASTER_GDEM_DEM30") || productName.equals("LJ01_L2")) {
+            if (productName.equals("ASTER_GDEM_DEM30") || productName.equals("LJ01_L2") || productName.equals("LE07_L1TP_C01_T1")) {
               extentResults.getString("path") + "/" + extentResults.getString("image_identification") + "_" + extentResults.getString("band_num") + ".tif"
             }
             else {
@@ -304,7 +304,7 @@ object Image {
             }
           }
           else {
-            if (productName.equals("ASTER_GDEM_DEM30") || productName.equals("LJ01_L2")) {
+            if (productName.equals("ASTER_GDEM_DEM30") || productName.equals("LJ01_L2") || productName.equals("LE07_L1TP_C01_T1")) {
               extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".tif"
             }
             else {
@@ -963,14 +963,14 @@ object Image {
     val writeFile = new File(fileName)
     val writer = new BufferedWriter(new FileWriter(writeFile))
     val path_img = "http://oge.whu.edu.cn/api/oge-python/ogeoutput/DL_" + time + ".png"
-    val outputString = "{\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}";
+    val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}";
     writer.write(outputString)
     writer.close()
   }
 
   def deepLearningOnTheFly(implicit sc: SparkContext, level: Int, geom: String, geom2: String = null, fileName: String): Unit = {
     val metaData = Preprocessing.queryGF2()
-    Preprocessing.loadOnTheFly(sc, level, metaData._1, metaData._2, geom, fileName)
+    Preprocessing.loadOnTheFly(sc, level, metaData._1, metaData._2, geom2, fileName)
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
@@ -1006,7 +1006,7 @@ object Image {
         val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
         // Pyramiding up the zoom levels, write our tiles out to the local file system.
         Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-          if (z >= zoom - 2) {
+          if (z == zoom) {
             val layerId = LayerId(layerIDAll, z)
             // If the layer exists already, delete it out before writing
             if (attributeStore.layerExists(layerId)) {
@@ -1017,7 +1017,6 @@ object Image {
         }
         TMSList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-tms/" + layerIDAll + "/{z}/{x}/{y}")))
       })
-      sc.stop()
       //      Serve.runTMS(outputPath)
       val writeFile = new File(fileName)
       val writerOutput = new BufferedWriter(new FileWriter(writeFile))
@@ -1025,6 +1024,10 @@ object Image {
       result += ("raster" -> TMSList)
       result += ("vector" -> ArrayBuffer.empty[mutable.Map[String, Any]])
       result += ("table" -> ArrayBuffer.empty[mutable.Map[String, Any]])
+      val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      result += ("rasterCube" -> rasterCubeList)
+      result += ("vectorCube" -> vectorCubeList)
       implicit val formats = DefaultFormats
       val jsonStr: String = Serialization.write(result)
       writerOutput.write(jsonStr)
@@ -1071,7 +1074,7 @@ object Image {
       val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
       // Pyramiding up the zoom levels, write our tiles out to the local file system.
       Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-        if (z >= zoom - 2) {
+        if (z == zoom) {
           val layerId = LayerId(layerIDAll, z)
           // If the layer exists already, delete it out before writing
           if (attributeStore.layerExists(layerId)) {
@@ -1080,10 +1083,9 @@ object Image {
           writer.write(layerId, rdd, ZCurveKeyIndexMethod)
         }
       }
-      sc.stop()
       val writeFile = new File(fileName)
       val writerOutput = new BufferedWriter(new FileWriter(writeFile))
-      val outputString = "{\"table\":[], \"vector\":[], \"raster\":[{\"url\":\"http://oge.whu.edu.cn/api/oge-tms/" + layerIDAll + "/{z}/{x}/{y}\"}]}"
+      val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[], \"vector\":[], \"raster\":[{\"url\":\"http://oge.whu.edu.cn/api/oge-tms/" + layerIDAll + "/{z}/{x}/{y}\"}]}"
       writerOutput.write(outputString)
       writerOutput.close()
       //            Serve.runTMS(outputPath)
@@ -1106,7 +1108,7 @@ object Image {
       val path_img = "http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "oge_" + time + ".tif"
       GeoTiff(stitchedTile, image._2.crs).write(path)
       val writer = new BufferedWriter(new FileWriter(writeFile))
-      val outputString = "{\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}";
+      val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}";
       writer.write(outputString)
       writer.close()
     }
@@ -1115,6 +1117,8 @@ object Image {
       val tableList = new ArrayBuffer[mutable.Map[String, Any]]()
       val vectorList = new ArrayBuffer[mutable.Map[String, Any]]()
       val rasterList = new ArrayBuffer[mutable.Map[String, Any]]()
+      val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
       val time = System.currentTimeMillis();
 
       val writer = new BufferedWriter(new FileWriter(writeFile))
@@ -1136,6 +1140,8 @@ object Image {
       result += ("table" -> tableList)
       result += ("vector" -> vectorList)
       result += ("raster" -> rasterList)
+      result += ("rasterCube" -> rasterCubeList)
+      result += ("vectorCube" -> vectorCubeList)
       implicit val formats = DefaultFormats
       val jsonStr: String = Serialization.write(result)
       writer.write(jsonStr)
