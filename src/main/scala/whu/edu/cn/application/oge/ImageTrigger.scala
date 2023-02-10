@@ -250,7 +250,7 @@ object ImageTrigger {
       rdd_list_image += (UUID -> Image.neq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
     }
     if (name == "Coverage.signum") {
-      rdd_list_image += (UUID -> Image.abs(image = rdd_list_image(args("coverage"))))
+      rdd_list_image += (UUID -> Image.signum(image = rdd_list_image(args("coverage"))))
     }
     if (name == "Coverage.bandTypes") {
       val bandTypes: immutable.Map[String, String] = Image.bandTypes(image = rdd_list_image(args("coverage")))
