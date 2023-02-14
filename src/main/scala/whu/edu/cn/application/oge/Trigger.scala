@@ -3,6 +3,7 @@ package whu.edu.cn.application.oge
 import com.alibaba.fastjson.JSON
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.Tile
+import geotrellis.raster.mapalgebra.focal.Kernel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
@@ -12,6 +13,7 @@ import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.JsonToArg
 
 import scala.collection.mutable.Map
+import scala.collection.immutable
 import scala.io.Source
 
 object Trigger {
@@ -19,6 +21,7 @@ object Trigger {
   var rdd_list_image_waitingForMosaic: Map[String, RDD[RawTile]] = Map.empty[String, RDD[RawTile]]
   var rdd_list_table: Map[String, String] = Map.empty[String, String]
   var rdd_list_feature_API: Map[String, String] = Map.empty[String, String]
+  var list_kernel: Map[String, Kernel] = Map.empty[String, Kernel]
   var rdd_list_feature: Map[String, Any] = Map.empty[String, Any]
   var imageLoad: Map[String, (String, String, String)] = Map.empty[String, (String, String, String)]
   var filterEqual: Map[String, (String, String)] = Map.empty[String, (String, String)]
@@ -229,8 +232,68 @@ object Trigger {
       println(bandNames)
       println(bandNames.length)
     }
-    if (name == "Coverage.slope") {
-      rdd_list_image += (UUID -> WebAPI.slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+    if (name == "Kernel.fixed") {
+      val kernel = Kernel.fixed(weights = args("weights"))
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.square") {
+      val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.prewitt") {
+      val kernel = Kernel.prewitt(axis = args("axis"))
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.kirsch") {
+      val kernel = Kernel.kirsch(axis = args("axis"))
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.sobel") {
+      val kernel = Kernel.sobel(axis = args("axis"))
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+
+    if (name == "Kernel.laplacian4") {
+      val kernel = Kernel.laplacian4()
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.laplacian8") {
+      val kernel = Kernel.laplacian8()
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.laplacian8") {
+      val kernel = Kernel.laplacian8()
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Kernel.add") {
+      val kernel = Kernel.add(kernel1 = list_kernel(args("kernel1")), kernel2 = list_kernel(args("kernel2")))
+      list_kernel += (UUID -> kernel)
+      print(kernel.tile.asciiDraw())
+    }
+    if (name == "Coverage.abs") {
+      rdd_list_image += (UUID -> Image.abs(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.neq") {
+      rdd_list_image += (UUID -> Image.neq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+    }
+    if (name == "Coverage.signum") {
+      rdd_list_image += (UUID -> Image.abs(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.bandTypes") {
+      val bandTypes: immutable.Map[String, String] = Image.bandTypes(image = rdd_list_image(args("coverage")))
+      println(bandTypes)
+      println(bandTypes.size)
+    }
+    if (name == "Coverage.rename") {
+      rdd_list_image += (UUID -> Image.rename(image = rdd_list_image(args("coverage")), name = args("name")))
     }
     if (name == "Coverage.addStyles") {
       if (oorB == 0) {
@@ -341,6 +404,9 @@ object Trigger {
     }
     if (name == "CoverageCollection.calCrop") {
       calCrop(year = argOrNot(args, "year"), quarter = argOrNot(args, "quarter"), sort = argOrNot(args, "sort"))
+    }
+    if (name == "CoverageCollection.PAP") {
+      rdd_list_image += (UUID -> Image.PAP(image = rdd_list_image(args("coverageCollection")), time = argOrNot(args, "time"), n = argOrNot(args, "n").toInt))
     }
     if (name == "CoverageCollection.bandNames") {
       val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverageCollection")))

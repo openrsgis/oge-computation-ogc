@@ -15,6 +15,7 @@ import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.rdd._
 import whu.edu.cn.util.{HbaseUtil, TileUtil}
+import scala.io.Source
 
 /**
  * In the GeoCube, raster data is segmented into tiles physically
@@ -77,7 +78,6 @@ object Ingestor extends java.io.Serializable {
    */
   def ingestGlobalCustomTiles(implicit sc: SparkContext, jobExecutor: ExecutorService, configPath: String,hbaseTableName:String,
                               gridDimX:Int, gridDimY:Int, minX:Int, minY:Int, maxX:Int, maxY:Int): Unit = {
-    import scala.io.Source
     //read parameters in config file
     val source = Source.fromFile(configPath, "UTF-8")
     val lines = source.getLines().toArray

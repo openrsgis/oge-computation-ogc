@@ -64,7 +64,7 @@ object CubeTrigger {
       .set("spark.rpc.message.maxSize", "1024")
     val sc = new SparkContext(conf)
 
-    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/floodCube.json").mkString
+    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/cubeOrigin.json").mkString
 //    val line: String = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/testJsonCubeFloodAnalysis.json").mkString
     val jsonObject = JSON.parseObject(line)
     println(jsonObject.size())

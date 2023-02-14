@@ -1,1 +1,102 @@
-{"1": {"constantValue": "LC08_L1TP_ARD_EO"}, "2": {"constantValue": "NDWI_Product"}, "3": {"constantValue": "Binarization_Product"}, "0": {"functionInvocationValue": {"functionName": "Cube.addStyles", "arguments": {"cube": {"functionInvocationValue": {"functionName": "Cube.binarization", "arguments": {"input": {"functionInvocationValue": {"functionName": "Cube.NDWI", "arguments": {"input": {"functionInvocationValue": {"functionName": "Collections.toCube", "arguments": {"bands": {"constantValue": ["Green", "Near-Infrared"]}, "input": {"functionInvocationValue": {"functionName": "Service.getCollections", "arguments": {"baseUrl": {"constantValue": "http://localhost"}, "bbox": {"constantValue": [113.0149404672, 30.0734572226, 113.918116574, 30.9597805439]}, "datetime": {"constantValue": ["2014-10-01 00:00:00", "2016-10-01 00:00:00"]}, "productIDs": {"arrayValue": {"values": [{"valueReference": "1"}]}}}}}}}}, "name": {"valueReference": "2"}, "product": {"valueReference": "1"}}}}, "name": {"valueReference": "3"}, "product": {"valueReference": "2"}, "threshold": {"constantValue": 0}}}}, "products": {"arrayValue": {"values": [{"valueReference": "3"}]}}}}}}
+{
+  "1": {
+    "constantValue": "LC08_L1TP_ARD_EO"
+  },
+  "2": {
+    "constantValue": "NDWI_Product"
+  },
+  "3": {
+    "constantValue": "Binarization_Product"
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Cube.addStyles",
+      "arguments": {
+        "cube": {
+          "functionInvocationValue": {
+            "functionName": "Cube.binarization",
+            "arguments": {
+              "input": {
+                "functionInvocationValue": {
+                  "functionName": "Cube.NDWI",
+                  "arguments": {
+                    "input": {
+                      "functionInvocationValue": {
+                        "functionName": "Collections.toCube",
+                        "arguments": {
+                          "bands": {
+                            "constantValue": [
+                              "Green",
+                              "Near-Infrared"
+                            ]
+                          },
+                          "input": {
+                            "functionInvocationValue": {
+                              "functionName": "Service.getCollections",
+                              "arguments": {
+                                "baseUrl": {
+                                  "constantValue": "http://localhost"
+                                },
+                                "bbox": {
+                                  "constantValue": [
+                                    113.0149404672,
+                                    30.0734572226,
+                                    113.918116574,
+                                    30.9597805439
+                                  ]
+                                },
+                                "datetime": {
+                                  "constantValue": [
+                                    "2017-10-01 00:00:00",
+                                    "2018-10-01 00:00:00"
+                                  ]
+                                },
+                                "productIDs": {
+                                  "arrayValue": {
+                                    "values": [
+                                      {
+                                        "valueReference": "1"
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "name": {
+                      "valueReference": "2"
+                    },
+                    "product": {
+                      "valueReference": "1"
+                    }
+                  }
+                }
+              },
+              "name": {
+                "valueReference": "3"
+              },
+              "product": {
+                "valueReference": "2"
+              },
+              "threshold": {
+                "constantValue": 0
+              }
+            }
+          }
+        },
+        "products": {
+          "arrayValue": {
+            "values": [
+              {
+                "valueReference": "3"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

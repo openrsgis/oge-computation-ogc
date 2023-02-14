@@ -374,6 +374,9 @@ object ImageTrigger {
     if (name == "CoverageCollection.calCrop") {
       calCrop(year = argOrNot(args, "year"), quarter = argOrNot(args, "quarter"), sort = argOrNot(args, "sort"))
     }
+    if (name == "CoverageCollection.PAP") {
+      rdd_list_image += (UUID -> Image.PAP(image = rdd_list_image(args("coverageCollection")), time = argOrNot(args, "time"), n = argOrNot(args, "n").toInt))
+    }
     if (name == "CoverageCollection.bandNames") {
       val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverageCollection")))
       println("******************test bandNames***********************")
@@ -406,7 +409,7 @@ object ImageTrigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/1228/NDBI.json")
+    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/climatepilot/PAP.json")
     fileName = "/home/geocube/oge/on-the-fly/out.txt"
     val line: String = fileSource.mkString
     fileSource.close()
@@ -456,7 +459,7 @@ object ImageTrigger {
     val sc = new SparkContext(conf)
 
     var a: List[Tuple3[String, String, Map[String, String]]] = List.empty[Tuple3[String, String, Map[String, String]]]
-    a = a :+ Tuple3("00000", "Service.getCoverageCollection", Map("datetime" -> "[2000-01-01 00:00:00,2000-01-01 00:00:00]", "bbox" -> "[29.1,114.2,29.9,114.5]", "productID" -> "ASTER_GDEM_DEM30", "baseUrl" -> "http://localhost"))
+    a = a :+ Tuple3("00000", "Service.getCoverageCollection", Map("productID" -> "ASTER_GDEM_DEM30", "baseUrl" -> "http://localhost"))
     a = a :+ Tuple3("00004", "Filter.equals", Map("rightValue" -> "EPSG:4326", "leftField" -> "crs"))
     a = a :+ Tuple3("0000", "CoverageCollection.subCollection", Map("filter" -> "00004", "input" -> "00000"))
     a = a :+ Tuple3("000", "CoverageCollection.mosaic", Map("method" -> "min", "coverageCollection" -> "0000"))

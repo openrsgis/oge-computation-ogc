@@ -77,6 +77,27 @@
       }
     ]
   },
+  "CoverageCollection.PAP": {
+    "description": "Get the PAP results of the input image",
+    "returns": "Coverage<unknown bands>",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection<unknown bands>",
+        "description": "The image of input."
+      },
+      {
+        "name": "time",
+        "type": "String",
+        "description": "The time of the PAP to calculated."
+      },
+      {
+        "name": "n",
+        "type": "Int",
+        "description": "The total years of the PAP."
+      }
+    ]
+  },
   "Coverage.deepLearning": {
     "description": "Get the deep learning results of the input image",
     "returns": "Coverage<unknown bands>",

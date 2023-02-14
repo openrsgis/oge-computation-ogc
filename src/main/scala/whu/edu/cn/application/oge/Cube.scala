@@ -1,6 +1,7 @@
 package whu.edu.cn.application.oge
 
 import geotrellis.layer.{Bounds, SpatialKey, TileLayerMetadata}
+import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.{ColorMap, ColorRamp, Raster, Tile}
 import geotrellis.raster.render.{Exact, Png, RGBA}
 import geotrellis.spark.{TileLayerRDD, _}
@@ -313,8 +314,8 @@ object Cube {
               val stitchedPng:Png = stitched.tile.renderPng(colorRamp)
               //stitched.tile.renderPng(colorRamp).write(outputRasterPath)
               //generate ndwi thematic product
-              //      val outputTiffPath = outputDir + uuid + "_ndwi_" + instant + ".TIF"
-              //      GeoTiff(stitched, crs).write(outputTiffPath)
+              val outputTiffPath = executorOutputDir  + "_ndwi_" + instant + ".TIF"
+              GeoTiff(stitched, crs).write(outputTiffPath)
               (stitchedPng, str, extentRet)
             })
             ndwiInfo.collect().foreach(t=>{
@@ -324,6 +325,26 @@ object Cube {
               t._1.write(outputRasterPath)
               rasterCubeList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "ndwi_" + str + "_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
             })
+          }
+          if (product == "LC08_L1TP_ARD_EO") {
+            val ndwiRdd = changedRdd.rddPrev.groupBy(_._1.spaceTimeKey.instant)
+            val ndwiInfo = ndwiRdd.map({x =>
+              //stitch extent-series tiles of each time instant to pngs
+              val metadata = changedRdd.meta.tileLayerMetadata
+              val layout = metadata.layout
+              val crs = metadata.crs
+              val instant = x._1
+              val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spaceTimeKey.spatialKey, ele._2))
+              val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
+
+              val sdf = new SimpleDateFormat("yyyy-MM-dd");
+              val str = sdf.format(instant);
+              System.out.println(str);
+              val outputTiffPath = executorOutputDir + str + "_ndwi_" + instant + ".TIF"
+              GeoTiff(stitched, crs).write(outputTiffPath)
+              str
+            })
+            ndwiInfo.count()
           }
         }
       }

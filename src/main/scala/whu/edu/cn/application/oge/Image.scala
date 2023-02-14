@@ -296,20 +296,10 @@ object Image {
 
         while (extentResults.next()) {
           val path = if (measurementName != "" && measurementName != null) {
-            if (productName.equals("ASTER_GDEM_DEM30") || productName.equals("LJ01_L2") || productName.equals("LE07_L1TP_C01_T1")) {
-              extentResults.getString("path") + "/" + extentResults.getString("image_identification") + "_" + extentResults.getString("band_num") + ".tif"
-            }
-            else {
-              extentResults.getString("path") + "/" + extentResults.getString("image_identification") + "_" + extentResults.getString("band_num") + ".TIF"
-            }
+            extentResults.getString("path") + "/" + extentResults.getString("image_identification") + "_" + extentResults.getString("band_num") + ".tif"
           }
           else {
-            if (productName.equals("ASTER_GDEM_DEM30") || productName.equals("LJ01_L2") || productName.equals("LE07_L1TP_C01_T1")) {
-              extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".tif"
-            }
-            else {
-              extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".TIF"
-            }
+            extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".tif"
           }
           println("path = " + path)
           val time = extentResults.getString("phenomenon_time")
@@ -1049,6 +1039,47 @@ object Image {
   def deepLearningOnTheFly(implicit sc: SparkContext, level: Int, geom: String, geom2: String = null, fileName: String): Unit = {
     val metaData = Preprocessing.queryGF2()
     Preprocessing.loadOnTheFly(sc, level, metaData._1, metaData._2, geom2, fileName)
+  }
+
+  //Precipitation Anomaly Percentage
+  def PAP(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), time: String, n: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var m = n
+    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    //val now = "1000-01-01 00:00:00"
+    val date = sdf.parse(time).getTime
+    val timeYear = time.substring(0, 4)
+    var timeBeginYear = timeYear.toInt - n
+    if (timeYear.toInt - n < 2000) {
+      timeBeginYear = 2000
+      m = timeYear.toInt - 2000
+    }
+    val timeBegin = timeBeginYear.toString + time.substring(4, 19)
+    val dateBegin = sdf.parse(timeBegin).getTime
+
+
+    val imageReduced = image._1.filter(t => {
+      val timeResult = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(t._1.spaceTimeKey.instant)
+      timeResult.substring(5, 7) == time.substring(5, 7)
+    })
+    val imageAverage = imageReduced.filter(t => {
+      t._1.spaceTimeKey.instant >= dateBegin && t._1.spaceTimeKey.instant < date
+    }).groupBy(t => t._1.spaceTimeKey.spatialKey)
+      .map(t => {
+        val tiles = t._2.map(x => x._2).reduce((a, b) => Add(a, b))
+        val tileAverage = tiles.mapDouble(x => {
+          x / t._2.size
+        })
+        (t._1, tileAverage)
+      })
+    val imageCal = imageReduced.filter(t => t._1.spaceTimeKey.instant == date).map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+    val PAP = imageAverage.join(imageCal).map(t => {
+      val divide = Divide(t._2._2, t._2._1)
+      val PAPTile = divide.mapDouble(x => {
+        x - 1.0
+      })
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), "PAP"), PAPTile)
+    })
+    (PAP, image._2)
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,

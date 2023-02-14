@@ -35,48 +35,48 @@ import scala.collection.mutable.Map
 import scala.math.{max, min}
 
 object Feature {
-  def load(implicit sc: SparkContext, productName: String = null,dataTime:String=null,crs:String="EPSG:4326"): RDD[(String,(Geometry, Map[String, Any]))] ={
-    val t1=System.currentTimeMillis()
-    val queryRes=query(productName)
-    val t2=System.currentTimeMillis()
-    println("从pgsql查询元数据的时间："+(t2-t1)/1000)
+  def load(implicit sc: SparkContext, productName: String = null, dataTime: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val t1 = System.currentTimeMillis()
+    val queryRes = query(productName)
+    val t2 = System.currentTimeMillis()
+    println("从pgsql查询元数据的时间：" + (t2 - t1) / 1000)
     val metaData = queryRes._3
-    val hbaseTableName=queryRes._2
-    val productKey=queryRes._1
+    val hbaseTableName = queryRes._2
+    val productKey = queryRes._1
     println(metaData)
     println(hbaseTableName)
     println(productKey)
-//    if(dataTime==null){
-//      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
-//        .flatMap(t=>t)
-//        .map(t=>(t, getVectorWithRowkey(hbaseTableName,t)))
-//      geometryRdd.map(t=>{
-//        t._2._1.setSRID(crs.split(":")(1).toInt)
-//        t
-//      })
-//    }
-    var prefix=""
-    if(dataTime==null){
-      prefix=productKey
+    //    if(dataTime==null){
+    //      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
+    //        .flatMap(t=>t)
+    //        .map(t=>(t, getVectorWithRowkey(hbaseTableName,t)))
+    //      geometryRdd.map(t=>{
+    //        t._2._1.setSRID(crs.split(":")(1).toInt)
+    //        t
+    //      })
+    //    }
+    var prefix = ""
+    if (dataTime == null) {
+      prefix = productKey
     }
-    else{
-      prefix=productKey+"_"+dataTime
+    else {
+      prefix = productKey + "_" + dataTime
     }
-    val t4=System.currentTimeMillis()
-    val geometryRdd=getVectorWithPrefixFilter(sc,hbaseTableName,prefix).map(t=>{
+    val t4 = System.currentTimeMillis()
+    val geometryRdd = getVectorWithPrefixFilter(sc, hbaseTableName, prefix).map(t => {
       t._2._1.setSRID(crs.split(":")(1).toInt)
       t
     })
-    val t5=System.currentTimeMillis()
-    println("从hbase加载数据的时间："+(t5-t4)/1000)
+    val t5 = System.currentTimeMillis()
+    println("从hbase加载数据的时间：" + (t5 - t4) / 1000)
     geometryRdd
   }
 
   //返回productKey,hbaseTableName,rowkeyList
-  def query(productName: String = null): (String,String,ListBuffer[String]) = {
+  def query(productName: String = null): (String, String, ListBuffer[String]) = {
     val metaData = ListBuffer.empty[String]
-    var hbaseTableName=""
-    var productKey=""
+    var hbaseTableName = ""
+    var productKey = ""
     val postgresqlUtil = new PostgresqlUtil("")
     val conn = postgresqlUtil.getConnection()
     if (conn != null) {
@@ -89,7 +89,7 @@ object Feature {
         sql ++= "select oge_data_resource_product.name, oge_vector_fact.fact_data_ids, oge_vector_fact.table_name, oge_vector_fact.product_key " +
           "from oge_vector_fact join oge_data_resource_product " +
           "on oge_vector_fact.product_key= oge_data_resource_product.id where "
-        if(productName != "" && productName != null) {
+        if (productName != "" && productName != null) {
           sql ++= "name = " + "'" + productName + "'"
         }
         println(sql)
@@ -99,25 +99,26 @@ object Feature {
         while (extentResults.next()) {
           val factDataIDs = extentResults.getString("fact_data_ids")
           metaData.append(factDataIDs)
-          productKey=extentResults.getString("product_key")
-          hbaseTableName=extentResults.getString("table_name")
+          productKey = extentResults.getString("product_key")
+          hbaseTableName = extentResults.getString("table_name")
         }
       }
       finally {
         conn.close
       }
     } else throw new RuntimeException("connection failed")
-    (productKey,hbaseTableName,metaData)
+    (productKey, hbaseTableName, metaData)
   }
-  def getVectorWithRowkey(hbaseTableName:String,rowKey: String):(Geometry, Map[String, Any]) = {
-    val t1=System.currentTimeMillis()
+
+  def getVectorWithRowkey(hbaseTableName: String, rowKey: String): (Geometry, Map[String, Any]) = {
+    val t1 = System.currentTimeMillis()
     val meta = getVectorMeta(hbaseTableName, rowKey, "vectorData", "metaData")
     val cell = getVectorCell(hbaseTableName, rowKey, "vectorData", "geom")
-//    println(meta)
-//    println(cell)
+    //    println(meta)
+    //    println(cell)
     println(cell)
-    val t2=System.currentTimeMillis()
-    println("根据rowkey取数据时间："+(t2-t1)/1000)
+    val t2 = System.currentTimeMillis()
+    println("根据rowkey取数据时间：" + (t2 - t1) / 1000)
     val jsonObject = JSON.parseObject(meta)
     val properties = jsonObject.getJSONArray("properties").getJSONObject(0)
     val propertiesOut = Map.empty[String, Any]
@@ -132,192 +133,192 @@ object Feature {
     (geometry, propertiesOut)
   }
 
-  def getVectorWithPrefixFilter(implicit sc: SparkContext,hbaseTableName:String,prefix:String):RDD[(String,(Geometry, Map[String, Any]))] = {
-    val t1=System.currentTimeMillis()
-    val queryData=getVectorWithPrefix(hbaseTableName,prefix)
-    val t2=System.currentTimeMillis()
+  def getVectorWithPrefixFilter(implicit sc: SparkContext, hbaseTableName: String, prefix: String): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val t1 = System.currentTimeMillis()
+    val queryData = getVectorWithPrefix(hbaseTableName, prefix)
+    val t2 = System.currentTimeMillis()
     println("取数据执行了！")
-    println("getVectorWithPrefix时间："+(t2-t1)/1000)
-    val rawRDD=sc.parallelize(queryData)
-    rawRDD.map(t=>{
-      val rowkey=t._1
-      val geomStr=t._2._1
-      val meta=t._2._2
-      val userData=t._2._3
+    println("getVectorWithPrefix时间：" + (t2 - t1) / 1000)
+    val rawRDD = sc.parallelize(queryData)
+    rawRDD.map(t => {
+      val rowkey = t._1
+      val geomStr = t._2._1
+      val meta = t._2._2
+      val userData = t._2._3
       val reader = new WKTReader()
       val geometry = reader.read(geomStr)
-      val metaMap=getMapFromJsonStr(meta)
-      val userMap=getMapFromJsonStr(userData)
-      (rowkey,(geometry,metaMap++userMap))
+      val metaMap = getMapFromJsonStr(meta)
+      val userMap = getMapFromJsonStr(userData)
+      (rowkey, (geometry, metaMap ++ userMap))
     })
   }
 
   /**
    * create a Point, and take the point in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def point(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.point(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def point(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.point(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a LineString, and take the LineString in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def lineString(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.lineString(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def lineString(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.lineString(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a LinearRing, and take the LinearRing in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def linearRing(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.linearRing(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def linearRing(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.linearRing(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a Polygon, and take the Polygon in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def polygon(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.polygon(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def polygon(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.polygon(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a MultiPoint, and take the MultiPoint in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def multiPoint(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.multiPoint(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def multiPoint(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.multiPoint(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a MultiLineString, and take the MultiLineString in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def multiLineString(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.multiLineString(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def multiLineString(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.multiLineString(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a MultiPolygon, and take the MultiPolygon in RDD
    *
-   * @param sc used to create RDD
-   * @param coors coordinates to create geometry
+   * @param sc         used to create RDD
+   * @param coors      coordinates to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def multiPolygon(implicit sc: SparkContext, coors:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.multiPolygon(coors,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def multiPolygon(implicit sc: SparkContext, coors: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.multiPolygon(coors, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
   /**
    * create a geometry, and take the geometry in RDD
    *
-   * @param sc used to create RDD
-   * @param gjson to create geometry
+   * @param sc         used to create RDD
+   * @param gjson      to create geometry
    * @param properties properties for geometry,it is a json String
-   * @param crs projection of geometry
+   * @param crs        projection of geometry
    * @return
    */
-  def geometry(implicit sc: SparkContext, gjson:String, properties:String=null, crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom=Geometry.geometry(gjson,crs)
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def geometry(implicit sc: SparkContext, gjson: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom = Geometry.geometry(gjson, crs)
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
-  def feature(implicit sc: SparkContext,geom:Geometry, properties:String=null):RDD[(String,(Geometry, Map[String, Any]))]={
-    var list:List[Geometry]=List.empty
-    list=list:+geom
-    val geomRDD=sc.parallelize(list)
-    geomRDD.map(t=>{
-      (UUID.randomUUID().toString,(t,getMapFromJsonStr(properties)))
+  def feature(implicit sc: SparkContext, geom: Geometry, properties: String = null): RDD[(String, (Geometry, Map[String, Any]))] = {
+    var list: List[Geometry] = List.empty
+    list = list :+ geom
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
     })
   }
 
-  def featureCollection(implicit sc: SparkContext,featureList:List[RDD[(String,(Geometry, Map[String, Any]))]]):RDD[(String,(Geometry, Map[String, Any]))]={
-    val len=featureList.length
-    var featureCollectionRDD=featureList(0)
-    for(a <- 1 until len){
-      featureCollectionRDD=featureCollectionRDD.union(featureList(a))
+  def featureCollection(implicit sc: SparkContext, featureList: List[RDD[(String, (Geometry, Map[String, Any]))]]): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val len = featureList.length
+    var featureCollectionRDD = featureList(0)
+    for (a <- 1 until len) {
+      featureCollectionRDD = featureCollectionRDD.union(featureList(a))
     }
     featureCollectionRDD
   }
@@ -328,9 +329,9 @@ object Feature {
    * @param json the json to operate
    * @return
    */
-  def getMapFromJsonStr(json:String):Map[String,Any]={
+  def getMapFromJsonStr(json: String): Map[String, Any] = {
     val map = Map.empty[String, Any]
-    if(StringUtils.isNotEmpty(json) && !json.equals("")){
+    if (StringUtils.isNotEmpty(json) && !json.equals("")) {
       val jsonObject = JSON.parseObject(json)
       val sIterator = jsonObject.keySet.iterator
       while (sIterator.hasNext()) {
@@ -346,24 +347,23 @@ object Feature {
    * get area of the feature RDD.
    *
    * @param featureRDD the feature RDD to compute
-   * @param crs the crs for compute area
+   * @param crs        the crs for compute area
    * @return
    */
-  def area(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):List[Double]={
-    featureRDD.map(t=>Geometry.area(t._2._1,crs)).collect().toList
+  def area(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): List[Double] = {
+    featureRDD.map(t => Geometry.area(t._2._1, crs)).collect().toList
   }
 
   /**
    * Returns the bounding rectangle of the geometry.
    *
-   *
    * @param featureRDD the featureRDD to operate
-   * @param crs If specified, the result will be in this projection. Otherwise it will be in WGS84.
+   * @param crs        If specified, the result will be in this projection. Otherwise it will be in WGS84.
    * @return
    */
-  def bounds(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{
-      (UUID.randomUUID().toString,(Geometry.bounds(t._2._1,crs),t._2._2))
+  def bounds(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (UUID.randomUUID().toString, (Geometry.bounds(t._2._1, crs), t._2._2))
     })
   }
 
@@ -371,24 +371,26 @@ object Feature {
    * Returns the centroid of geometry
    *
    * @param featureRDD the featureRDD to operate
-   * @param crs If specified, the result will be in this projection. Otherwise it will be in WGS84.
+   * @param crs        If specified, the result will be in this projection. Otherwise it will be in WGS84.
    * @return
    */
-  def centroid(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{(UUID.randomUUID().toString,(Geometry.centroid(t._2._1,crs),t._2._2))})
+  def centroid(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (UUID.randomUUID().toString, (Geometry.centroid(t._2._1, crs), t._2._2))
+    })
   }
 
   /**
    * Returns the input buffered by a given distance.
    *
    * @param featureRDD the featureRDD to operate
-   * @param distance The distance of the buffering, which may be negative. If no projection is specified, the unit is meters.
-   * @param crs If specified, the buffering will be performed in this projection and the distance will be interpreted as units of the coordinate system of this projection.
+   * @param distance   The distance of the buffering, which may be negative. If no projection is specified, the unit is meters.
+   * @param crs        If specified, the buffering will be performed in this projection and the distance will be interpreted as units of the coordinate system of this projection.
    * @return
    */
-  def buffer(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],distance:Double,crs:String="EPSG:3857"):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{
-      (UUID.randomUUID().toString,(Geometry.buffer(t._2._1,distance,crs),t._2._2))
+  def buffer(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], distance: Double, crs: String = "EPSG:3857"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (UUID.randomUUID().toString, (Geometry.buffer(t._2._1, distance, crs), t._2._2))
     })
   }
 
@@ -396,21 +398,25 @@ object Feature {
    * Returns the convex hull of the given geometry.
    *
    * @param featureRDD featureRDD to operate
-   * @param crs If specified, the result will be in this projection. Otherwise it will be in WGS84.
+   * @param crs        If specified, the result will be in this projection. Otherwise it will be in WGS84.
    * @return
    */
-  def convexHull(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{(UUID.randomUUID().toString,(Geometry.convexHull(t._2._1,crs),t._2._2))})
+  def convexHull(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (UUID.randomUUID().toString, (Geometry.convexHull(t._2._1, crs), t._2._2))
+    })
   }
 
   /**
-   *Returns a GeoJSON-style array of the geometry's coordinates
+   * Returns a GeoJSON-style array of the geometry's coordinates
    *
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def coordinates(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[Array[Coordinate]]={
-    featureRDD.map(t=>{t._2._1.getCoordinates}).collect().toList
+  def coordinates(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[Array[Coordinate]] = {
+    featureRDD.map(t => {
+      t._2._1.getCoordinates
+    }).collect().toList
   }
 
   /**
@@ -420,8 +426,10 @@ object Feature {
    * @param tarCrsCode target CRS
    * @return
    */
-  def reproject(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],tarCrsCode:String):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{(UUID.randomUUID().toString,(Geometry.reproject(t._2._1,tarCrsCode),t._2._2))})
+  def reproject(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], tarCrsCode: String): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (UUID.randomUUID().toString, (Geometry.reproject(t._2._1, tarCrsCode), t._2._2))
+    })
   }
 
   /**
@@ -432,9 +440,9 @@ object Feature {
    * @param featureRDD
    * @return
    */
-  def isUnbounded(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[Boolean]={
-    featureRDD.map(t=>{
-      if(t._2._1.getBoundaryDimension<0)
+  def isUnbounded(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[Boolean] = {
+    featureRDD.map(t => {
+      if (t._2._1.getBoundaryDimension < 0)
         false
       else
         true
@@ -447,8 +455,10 @@ object Feature {
    * @param featureRDD the featureRDD to opreate
    * @return
    */
-  def getType(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[String]={
-    featureRDD.map(t=>{t._2._1.getGeometryType}).collect().toList
+  def getType(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[String] = {
+    featureRDD.map(t => {
+      t._2._1.getGeometryType
+    }).collect().toList
   }
 
   /**
@@ -457,29 +467,35 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def projection(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[Int]={
-    featureRDD.map(t=>{t._2._1.getSRID}).collect().toList
+  def projection(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[Int] = {
+    featureRDD.map(t => {
+      t._2._1.getSRID
+    }).collect().toList
   }
 
   /**
-   *Returns a GeoJSON string representation of the geometry.
+   * Returns a GeoJSON string representation of the geometry.
    *
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def toGeoJSONString(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[String]={
-    featureRDD.map(t=>{Geometry.toGeoJSONString(t._2._1)}).collect().toList
+  def toGeoJSONString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[String] = {
+    featureRDD.map(t => {
+      Geometry.toGeoJSONString(t._2._1)
+    }).collect().toList
   }
 
   /**
    * get length of the feature RDD.
    *
    * @param featureRDD the feature RDD to compute
-   * @param crs the crs for compute length
+   * @param crs        the crs for compute length
    * @return
    */
-  def getLength(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):List[Double]={
-    featureRDD.map(t=>{Geometry.length(t._2._1,crs)}).collect().toList
+  def getLength(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): List[Double] = {
+    featureRDD.map(t => {
+      Geometry.length(t._2._1, crs)
+    }).collect().toList
   }
 
   /**
@@ -489,15 +505,15 @@ object Feature {
    * @return
    */
   //TODO:未写入json文件中
-  def geometries(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):RDD[(String,(List[Geometry], Map[String, Any]))]={
-    featureRDD.map(t=>{
-      var geomList:List[Geometry]=List.empty
-      val geomNum=t._2._1.getNumGeometries
-      var i=0
-      for(i <- 0 until  geomNum){
-        geomList=geomList:+t._2._1.getGeometryN(i)
+  def geometries(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): RDD[(String, (List[Geometry], Map[String, Any]))] = {
+    featureRDD.map(t => {
+      var geomList: List[Geometry] = List.empty
+      val geomNum = t._2._1.getNumGeometries
+      var i = 0
+      for (i <- 0 until geomNum) {
+        geomList = geomList :+ t._2._1.getGeometryN(i)
       }
-      (UUID.randomUUID().toString,(geomList,t._2._2))
+      (UUID.randomUUID().toString, (geomList, t._2._2))
     })
   }
 
@@ -506,11 +522,13 @@ object Feature {
    * only for GeometryCollection
    *
    * @param featureRDD the featureRDD to operate
-   * @param crs If specified, the result will be in this projection. Otherwise it will be in WGS84.
+   * @param crs        If specified, the result will be in this projection. Otherwise it will be in WGS84.
    * @return
    */
-  def dissolve(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{(UUID.randomUUID().toString,(Geometry.dissolve(t._2._1,crs),t._2._2))})
+  def dissolve(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (UUID.randomUUID().toString, (Geometry.dissolve(t._2._1, crs), t._2._2))
+    })
   }
 
   /**
@@ -519,14 +537,14 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def contains(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-               featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Boolean={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    Geometry.contains(geom1,geom2,crs)
+  def contains(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    Geometry.contains(geom1, geom2, crs)
   }
 
   /**
@@ -535,14 +553,14 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def containedIn(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                  featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Boolean={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    Geometry.containedIn(geom1,geom2,crs)
+  def containedIn(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                  featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    Geometry.containedIn(geom1, geom2, crs)
   }
 
   /**
@@ -551,14 +569,14 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def disjoint(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-               featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Boolean={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    Geometry.disjoint(geom1,geom2,crs)
+  def disjoint(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    Geometry.disjoint(geom1, geom2, crs)
   }
 
   /**
@@ -567,14 +585,14 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:3857
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:3857
    * @return
    */
-  def distance(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-               featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:3857"):Double={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    Geometry.distance(geom1,geom2,crs)
+  def distance(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): Double = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    Geometry.distance(geom1, geom2, crs)
   }
 
   /**
@@ -583,15 +601,15 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def difference(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                 featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    val res=Geometry.difference(geom1,geom2,crs)
-    feature(sc,res)
+  def difference(implicit sc: SparkContext, featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                 featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    val res = Geometry.difference(geom1, geom2, crs)
+    feature(sc, res)
   }
 
   /**
@@ -600,15 +618,15 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def intersection(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                   featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    val res=Geometry.intersection(geom1,geom2,crs)
-    feature(sc,res)
+  def intersection(implicit sc: SparkContext, featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                   featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    val res = Geometry.intersection(geom1, geom2, crs)
+    feature(sc, res)
   }
 
   /**
@@ -617,14 +635,14 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def intersects(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                 featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):Boolean={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    Geometry.intersects(geom1,geom2,crs)
+  def intersects(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                 featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    Geometry.intersects(geom1, geom2, crs)
   }
 
   /**
@@ -633,15 +651,15 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def symmetricDifference(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                          featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    val res=Geometry.symmetricDifference(geom1,geom2,crs)
-    feature(sc,res)
+  def symmetricDifference(implicit sc: SparkContext, featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                          featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    val res = Geometry.symmetricDifference(geom1, geom2, crs)
+    feature(sc, res)
   }
 
   /**
@@ -650,15 +668,15 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def union(implicit sc: SparkContext,featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-            featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],crs:String="EPSG:4326"):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    val res=Geometry.union(geom1,geom2,crs)
-    feature(sc,res)
+  def union(implicit sc: SparkContext, featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+            featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    val res = Geometry.union(geom1, geom2, crs)
+    feature(sc, res)
   }
 
   /**
@@ -667,15 +685,15 @@ object Feature {
    *
    * @param featureRDD1 the left featureRDD, it only has 1 element
    * @param featureRDD2 the right featureRDD, it only has 1 element
-   * @param distance he distance threshold.
-   * @param crs The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
+   * @param distance    he distance threshold.
+   * @param crs         The projection in which to perform the operation.  If not specified, the operation will be performed in EPSG:4326
    * @return
    */
-  def withDistance(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                   featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],distance:Double,crs:String="EPSG:3857"):Boolean={
-    val geom1=featureRDD1.first()._2._1
-    val geom2=featureRDD2.first()._2._1
-    Geometry.withDistance(geom1,geom2,distance,crs)
+  def withDistance(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                   featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], distance: Double, crs: String = "EPSG:3857"): Boolean = {
+    val geom1 = featureRDD1.first()._2._1
+    val geom2 = featureRDD2.first()._2._1
+    Geometry.withDistance(geom1, geom2, distance, crs)
   }
 
   /**
@@ -683,65 +701,65 @@ object Feature {
    *
    * @param featureRDD1 The object whose properties to override. it only has 1 element
    * @param featureRDD2 The object from which to copy the properties. it only has 1 element
-   * @param properties The properties to copy. If omitted, all properties are copied.
+   * @param properties  The properties to copy. If omitted, all properties are copied.
    * @return
    */
-  def copyProperties(featureRDD1:RDD[(String,(Geometry, Map[String, Any]))],
-                     featureRDD2:RDD[(String,(Geometry, Map[String, Any]))],properties:List[String]=null):RDD[(String,(Geometry, Map[String, Any]))]={
-    var destnation=featureRDD1.first()._2._2
-    var source=featureRDD2.first()._2._2
-    if(properties==null)
-      destnation=destnation++source
-    else{
-      for(property <- properties)
-        destnation+=(property->source(property))
+  def copyProperties(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
+                     featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], properties: List[String] = null): RDD[(String, (Geometry, Map[String, Any]))] = {
+    var destnation = featureRDD1.first()._2._2
+    var source = featureRDD2.first()._2._2
+    if (properties == null)
+      destnation = destnation ++ source
+    else {
+      for (property <- properties)
+        destnation += (property -> source(property))
     }
-    featureRDD1.map(t=>(t._1,(t._2._1,destnation)))
+    featureRDD1.map(t => (t._1, (t._2._1, destnation)))
   }
 
   /**
    * Extract a property from a feature.
    *
    * @param featureRDD The feature to extract the property from.
-   * @param property The property to extract.
+   * @param property   The property to extract.
    * @return
    */
-  def get(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[Any]={
-    featureRDD.map(t=>t._2._2(property)).collect().toList
+  def get(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[Any] = {
+    featureRDD.map(t => t._2._2(property)).collect().toList
   }
 
   /**
    * Extract a property from a feature. Return a number
    *
    * @param featureRDD The feature to extract the property from.
-   * @param property The property to extract.
+   * @param property   The property to extract.
    * @return
    */
-  def getNumber(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[Double]={
-    featureRDD.map(t=>t._2._2(property).asInstanceOf[String].toDouble).collect().toList
+  def getNumber(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[Double] = {
+    featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect().toList
   }
 
   /**
    * Extract a property from a feature. Return a string
    *
    * @param featureRDD The feature to extract the property from.
-   * @param property The property to extract.
+   * @param property   The property to extract.
    * @return
    */
-  def getString(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[String]={
-    featureRDD.map(t=>t._2._2(property).asInstanceOf[String]).collect().toList
+  def getString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[String] = {
+    featureRDD.map(t => t._2._2(property).asInstanceOf[String]).collect().toList
   }
 
   /**
    * Extract a property from a feature. Return a array, the element of array is String
    *
    * @param featureRDD The feature to extract the property from.
-   * @param property The property to extract.
+   * @param property   The property to extract.
    * @return
    */
-  def getArray(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):List[Array[String]]={
-    featureRDD.map(t=>{
-      t._2._2(property).asInstanceOf[String].replace("[","").replace("]","").split(",")
+  def getArray(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[Array[String]] = {
+    featureRDD.map(t => {
+      t._2._2(property).asInstanceOf[String].replace("[", "").replace("]", "").split(",")
     }).collect().toList
   }
 
@@ -751,20 +769,20 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def propertyNames(featureRDD:RDD[(String,(Geometry, Map[String, Any]))]):List[List[String]]={
-    featureRDD.map(t=> t._2._2.keySet.toList).collect().toList
+  def propertyNames(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[List[String]] = {
+    featureRDD.map(t => t._2._2.keySet.toList).collect().toList
   }
 
   /**
    * Overrides one or more metadata properties of an Element.
    *
    * @param featureRDD the featureRDD to operate
-   * @param property the property to set. it is a json
+   * @param property   the property to set. it is a json
    * @return
    */
-  def set(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],property:String):RDD[(String,(Geometry, Map[String, Any]))]={
-    featureRDD.map(t=>{
-      (t._1,(t._2._1,t._2._2++getMapFromJsonStr(property)))
+  def set(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): RDD[(String, (Geometry, Map[String, Any]))] = {
+    featureRDD.map(t => {
+      (t._1, (t._2._1, t._2._2 ++ getMapFromJsonStr(property)))
     })
   }
 
@@ -772,14 +790,14 @@ object Feature {
    * Returns the feature, with the geometry replaced by the specified geometry.
    *
    * @param featureRDD the featureRDD to operate
-   * @param geom the property to set. it is a json
+   * @param geom       the property to set. it is a json
    * @return
    */
-  def setGeometry(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],
-                  geom:RDD[(String,(Geometry, Map[String, Any]))]):RDD[(String,(Geometry, Map[String, Any]))]={
-    val geometry=geom.first()._2._1
-    featureRDD.map(t=>{
-      (t._1,(geometry,t._2._2))
+  def setGeometry(featureRDD: RDD[(String, (Geometry, Map[String, Any]))],
+                  geom: RDD[(String, (Geometry, Map[String, Any]))]): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val geometry = geom.first()._2._1
+    featureRDD.map(t => {
+      (t._1, (geometry, t._2._2))
     })
   }
 
@@ -792,128 +810,127 @@ object Feature {
    * @return
    */
   //块金：nugget，基台：sill，变程：range
-  def simpleKriging(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],propertyName:String,modelType:String)={
+  def simpleKriging(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], propertyName: String, modelType: String) = {
     //Kriging Interpolation for PointsRDD
     val extents = featureRDD.map(t => {
-      val coor=t._2._1.getCoordinate
-      (coor.x,coor.y,coor.x,coor.y)
-    }).reduce((coor1,coor2)=>{
-      (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._3,coor2._3),max(coor1._4,coor2._4))
+      val coor = t._2._1.getCoordinate
+      (coor.x, coor.y, coor.x, coor.y)
+    }).reduce((coor1, coor2) => {
+      (min(coor1._1, coor2._1), min(coor1._2, coor2._2), max(coor1._3, coor2._3), max(coor1._4, coor2._4))
     })
-    val extent=Extent(extents._1,extents._2,extents._3,extents._4)
-    val rows=256
-    val cols=256
+    val extent = Extent(extents._1, extents._2, extents._3, extents._4)
+    val rows = 256
+    val cols = 256
     val rasterExtent = RasterExtent(extent, cols, rows)
-    val points:Array[PointFeature[Double]]=featureRDD.map(t=>{
-      val p=vector.Point(t._2._1.getCoordinate)
-      var data=t._2._2(propertyName).asInstanceOf[String].toDouble
-      if(data<0){
-        data=100
+    val points: Array[PointFeature[Double]] = featureRDD.map(t => {
+      val p = vector.Point(t._2._1.getCoordinate)
+      var data = t._2._2(propertyName).asInstanceOf[String].toDouble
+      if (data < 0) {
+        data = 100
       }
-      PointFeature(p,data)
+      PointFeature(p, data)
     }).collect()
     println()
     val sv: Semivariogram = NonLinearSemivariogram(points, 30000, 0, Spherical)
-    val method=new SimpleKrigingMethods {
+    val method = new SimpleKrigingMethods {
       override def self: Traversable[PointFeature[Double]] = points
     }
-    method.simpleKriging(rasterExtent,sv)
+    method.simpleKriging(rasterExtent, sv)
   }
 
-  def inverseDistanceWeighted(implicit sc: SparkContext,featureRDD:RDD[(String,(Geometry, Map[String, Any]))],
-                              propertyName:String,maskGeom:RDD[(String,(Geometry, Map[String, Any]))]):(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
-    val t1=System.currentTimeMillis()
+  def inverseDistanceWeighted(implicit sc: SparkContext, featureRDD: RDD[(String, (Geometry, Map[String, Any]))],
+                              propertyName: String, maskGeom: RDD[(String, (Geometry, Map[String, Any]))]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val t1 = System.currentTimeMillis()
     val extents = featureRDD.map(t => {
-      val coor=t._2._1.getCoordinate
-      (coor.x,coor.y,coor.x,coor.y)
-    }).reduce((coor1,coor2)=>{
-      (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._3,coor2._3),max(coor1._4,coor2._4))
+      val coor = t._2._1.getCoordinate
+      (coor.x, coor.y, coor.x, coor.y)
+    }).reduce((coor1, coor2) => {
+      (min(coor1._1, coor2._1), min(coor1._2, coor2._2), max(coor1._3, coor2._3), max(coor1._4, coor2._4))
     })
-    val extent=Extent(extents._1,extents._2,extents._3,extents._4)
-    val t2=System.currentTimeMillis()
-    println("获取点数据extent的时间："+(t2-t1)/1000)
-    println("extent:"+extent)
-    val rows=256
-    val cols=256
+    val extent = Extent(extents._1, extents._2, extents._3, extents._4)
+    val t2 = System.currentTimeMillis()
+    println("获取点数据extent的时间：" + (t2 - t1) / 1000)
+    println("extent:" + extent)
+    val rows = 256
+    val cols = 256
     val rasterExtent = RasterExtent(extent, cols, rows)
-    val points:Array[PointFeature[Double]]=featureRDD.map(t=>{
-//      val p=vector.Point(t._2._1.getCoordinate)
-      val p=t._2._1.asInstanceOf[Point]
-      var data=t._2._2(propertyName).asInstanceOf[String].toDouble
-      if(data<0){
-        data=100
+    val points: Array[PointFeature[Double]] = featureRDD.map(t => {
+      //      val p=vector.Point(t._2._1.getCoordinate)
+      val p = t._2._1.asInstanceOf[Point]
+      var data = t._2._2(propertyName).asInstanceOf[String].toDouble
+      if (data < 0) {
+        data = 100
       }
-      PointFeature(p,data)
+      PointFeature(p, data)
     }).collect()
-    val t3=System.currentTimeMillis()
-    println("构建PointFeature[]的时间："+(t3-t2)/1000)
-    val rasterTile=InverseDistanceWeighted(points,rasterExtent)
-    val t4=System.currentTimeMillis()
-    println("调用Geotrellis提供的IDW函数的时间："+(t4-t3)/1000)
-    println("初步空间插值的时间（结果未剪裁）："+(t4-t1)/1000)
+    val t3 = System.currentTimeMillis()
+    println("构建PointFeature[]的时间：" + (t3 - t2) / 1000)
+    val rasterTile = InverseDistanceWeighted(points, rasterExtent)
+    val t4 = System.currentTimeMillis()
+    println("调用Geotrellis提供的IDW函数的时间：" + (t4 - t3) / 1000)
+    println("初步空间插值的时间（结果未剪裁）：" + (t4 - t1) / 1000)
 
-//    val maskPolygon=maskGeom.map(t=>t._2._1).reduce((x,y)=>{Geometry.union(x,y)})
-    val maskPolygon=maskGeom.map(t=>t._2._1).first()
-    val t5=System.currentTimeMillis()
-    println("从RDD获取中国国界的时间："+(t5-t4)/1000)
-    val maskRaster=rasterTile.mask(maskPolygon)
+    //    val maskPolygon=maskGeom.map(t=>t._2._1).reduce((x,y)=>{Geometry.union(x,y)})
+    val maskPolygon = maskGeom.map(t => t._2._1).first()
+    val t5 = System.currentTimeMillis()
+    println("从RDD获取中国国界的时间：" + (t5 - t4) / 1000)
+    val maskRaster = rasterTile.mask(maskPolygon)
 
-//    maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
-    val t6=System.currentTimeMillis()
-    println("裁剪结果的时间："+(t6-t5)/1000)
+    //    maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
+    val t6 = System.currentTimeMillis()
+    println("裁剪结果的时间：" + (t6 - t5) / 1000)
     //maskRaster.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testMask.png")
 
 
-    val tl=TileLayout(1,1,256,256)
-    val ld=LayoutDefinition(extent,tl)
-    val crs=geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
-    val time=System.currentTimeMillis()
-    val bounds=Bounds(SpaceTimeKey(0,0,time),SpaceTimeKey(0,0,time))
-    val cellType=maskRaster.tile.cellType
+    val tl = TileLayout(1, 1, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val crs = geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
+    val time = System.currentTimeMillis()
+    val bounds = Bounds(SpaceTimeKey(0, 0, time), SpaceTimeKey(0, 0, time))
+    val cellType = maskRaster.tile.cellType
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
-    var list:List[Tile]=List.empty
-    list=list:+maskRaster.tile
-    val tileRDD=sc.parallelize(list)
-    val imageRDD=tileRDD.map(t=>{
+    var list: List[Tile] = List.empty
+    list = list :+ maskRaster.tile
+    val tileRDD = sc.parallelize(list)
+    val imageRDD = tileRDD.map(t => {
       val k = entity.SpaceTimeBandKey(SpaceTimeKey(0, 0, time), "interpolation")
-      val v=t
-      (k,v)
+      val v = t
+      (k, v)
     })
-    val t7=System.currentTimeMillis()
-    println("构造ImageRDD时间："+(t7-t6)/1000)
-    println("完整空间插值函数的时间："+(t7-t1)/1000)
-    (imageRDD,tileLayerMetadata)
+    val t7 = System.currentTimeMillis()
+    println("构造ImageRDD时间：" + (t7 - t6) / 1000)
+    println("完整空间插值函数的时间：" + (t7 - t1) / 1000)
+    (imageRDD, tileLayerMetadata)
   }
 
-  def rasterize(featureRDD:RDD[(String,(Geometry, Map[String, Any]))],propertyName:String)={
+  def rasterize(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], propertyName: String) = {
     val extents = featureRDD.map(t => {
-      val coorArray=t._2._1.getCoordinates
-      val coor=t._2._1.getCoordinate
-      for(item <- coorArray){
+      val coorArray = t._2._1.getCoordinates
+      val coor = t._2._1.getCoordinate
+      for (item <- coorArray) {
 
       }
-      (coor.x,coor.y,coor.x,coor.y)
-    }).reduce((coor1,coor2)=>{
-      (min(coor1._1,coor2._1),min(coor1._2,coor2._2),max(coor1._1,coor2._1),max(coor1._2,coor2._2))
+      (coor.x, coor.y, coor.x, coor.y)
+    }).reduce((coor1, coor2) => {
+      (min(coor1._1, coor2._1), min(coor1._2, coor2._2), max(coor1._1, coor2._1), max(coor1._2, coor2._2))
     })
-    val extent=Extent(extents._1,extents._2,extents._3,extents._4)
+    val extent = Extent(extents._1, extents._2, extents._3, extents._4)
     //TODO:tileLayOut的定义
-    val tileLayout=TileLayout(10,10,256,256)
-    val layout=LayoutDefinition(extent,tileLayout)
-    val cellType=DoubleCellType
-    val featureRDDforRaster:RDD[vector.Feature[Geometry,Double]]=featureRDD.map(t=>{
-      val data=t._2._2(propertyName).asInstanceOf[Double]
-      val feature=new vector.Feature[Geometry,Double](t._2._1,data)
+    val tileLayout = TileLayout(10, 10, 256, 256)
+    val layout = LayoutDefinition(extent, tileLayout)
+    val cellType = DoubleCellType
+    val featureRDDforRaster: RDD[vector.Feature[Geometry, Double]] = featureRDD.map(t => {
+      val data = t._2._2(propertyName).asInstanceOf[Double]
+      val feature = new vector.Feature[Geometry, Double](t._2._1, data)
       feature
     })
-    featureRDDforRaster.rasterize(cellType,layout)
+    featureRDDforRaster.rasterize(cellType, layout)
   }
-
 
 
   def main(args: Array[String]): Unit = {
-    val t1=System.currentTimeMillis()
+    val t1 = System.currentTimeMillis()
     val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
       .setMaster("local[*]")
@@ -921,13 +938,13 @@ object Feature {
     //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
-    val points=load(sc, "China_EnvironmentMonitor_Vector","2015010301")
-    val maskGeom=load(sc,"China_ADM_Country_Vector")
-    val t4=System.currentTimeMillis()
-    println("启动spark时间:"+(t4-t1)/1000)
-    val image=inverseDistanceWeighted(sc,points,"PM2.5",maskGeom)
-    val t2=System.currentTimeMillis()
-    println("空间插值时间:"+(t2-t1)/1000)
+    val points = load(sc, "China_EnvironmentMonitor_Vector", "2015010301")
+    val maskGeom = load(sc, "China_ADM_Country_Vector")
+    val t4 = System.currentTimeMillis()
+    println("启动spark时间:" + (t4 - t1) / 1000)
+    val image = inverseDistanceWeighted(sc, points, "PM2.5", maskGeom)
+    val t2 = System.currentTimeMillis()
+    println("空间插值时间:" + (t2 - t1) / 1000)
     val tileLayerArray = image._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()
@@ -935,22 +952,22 @@ object Feature {
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
     val stitchedTile = Raster(tile, layout.extent)
     stitchedTile.tile.renderPng(ColorRamps.BlueToOrange).write("D:\\Apersonal\\PostStu\\Project\\luojiaEE\\stage2\\code2\\testRDD.png")
-    val t3=System.currentTimeMillis()
-    println("生成png时间:"+(t3-t2)/1000)
+    val t3 = System.currentTimeMillis()
+    println("生成png时间:" + (t3 - t2) / 1000)
 
-//    val t1=System.currentTimeMillis()
-//    val conf = new SparkConf()
-//      //        .setMaster("spark://gisweb1:7077")
-//      .setMaster("local[*]")
-//      .setAppName("query")
-//    //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-//    //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-//    val sc = new SparkContext(conf)
-//    val maskGeom=load(sc,"China_ADM_Country_Vector")
-//    val t2=System.currentTimeMillis()
-//    println("启动spark、查元数据的时间:"+(t2-t1)/1000)
-//    val mask=maskGeom.first()
-//    val t3=System.currentTimeMillis()
-//    println("从hbase中取数据的时间:"+(t3-t2)/1000)
+    //    val t1=System.currentTimeMillis()
+    //    val conf = new SparkConf()
+    //      //        .setMaster("spark://gisweb1:7077")
+    //      .setMaster("local[*]")
+    //      .setAppName("query")
+    //    //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    //    //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
+    //    val sc = new SparkContext(conf)
+    //    val maskGeom=load(sc,"China_ADM_Country_Vector")
+    //    val t2=System.currentTimeMillis()
+    //    println("启动spark、查元数据的时间:"+(t2-t1)/1000)
+    //    val mask=maskGeom.first()
+    //    val t3=System.currentTimeMillis()
+    //    println("从hbase中取数据的时间:"+(t3-t2)/1000)
   }
 }

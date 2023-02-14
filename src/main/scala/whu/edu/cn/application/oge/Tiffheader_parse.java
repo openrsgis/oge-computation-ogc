@@ -276,9 +276,6 @@ public class Tiffheader_parse {
         double resolutionOrigin = Double.parseDouble(resolution);
         if(l == -1){
             level = 0;
-            if("MOD13Q1_061".equals(productName)){
-                level = 3;
-            }
         }
         else {
             if (l == 0) {
@@ -418,7 +415,6 @@ public class Tiffheader_parse {
 
         //int l = 0;
         if ("MOD13Q1_061".equals(productName)) {
-            //l = 4;
             flagReader = true;
         }
         if ("LJ01_L2".equals(productName)) {
@@ -427,6 +423,10 @@ public class Tiffheader_parse {
         if ("ASTER_GDEM_DEM30".equals(productName)) {
             flagReader = true;
         }
+        if ("GPM_Precipitation_China_Month".equals(productName)) {
+            flagReader = true;
+        }
+
 
         //if ("LC08_L1TP_C01_T1".equals(productName)) {
         //    l = 2;
