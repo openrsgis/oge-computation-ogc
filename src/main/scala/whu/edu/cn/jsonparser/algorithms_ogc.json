@@ -2261,6 +2261,27 @@
       }
     ]
   },
+  "Coverage.focalMode": {
+    "description": "Applies a morphological mode filter to each band of an image using a named or custom kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "kernelType",
+        "type": "String",
+        "description": "The type of kernel to use."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to use."
+      }
+    ]
+  },
   "Coverage.focalMax": {
     "description": "Applies a morphological max filter to each band of an image using a named or custom kernel.",
     "returns": "Coverage",
@@ -2300,6 +2321,142 @@
         "name": "radius",
         "type": "Int",
         "description": "The radius of the kernel to use."
+      }
+    ]
+  },
+  "Coverage.histogram": {
+    "description": "Return the histogram of the image, a map of bin label value and its associated count.",
+    "returns": "Map",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to compute the histogram."
+      }
+    ]
+  },
+  "Coverage.projection": {
+    "description": "Returns the projection of an Image.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to get the projection."
+      }
+    ]
+  },
+  "Coverage.reproject": {
+    "description": "Force an image to be computed in a given projection",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to reproject."
+      },
+      {
+        "name": "crsCode",
+        "type": "Int",
+        "description": "The code of new projection."
+      }
+    ]
+  },
+  "Coverage.resample": {
+    "description": "Resample the image",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to resample."
+      },
+      {
+        "name": "level",
+        "type": "Int",
+        "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
+      },
+      {
+        "name": "mode",
+        "type": "String",
+        "description": "The interpolation mode to use"
+      }
+    ]
+  },
+  "Coverage.toInt8": {
+    "description": "Casts the input value to a signed 8-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toUint8": {
+    "description": "Casts the input value to a unsigned 8-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toInt16": {
+    "description": "Casts the input value to a signed 16-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toUint16": {
+    "description": "Casts the input value to a unsigned 16-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toInt32": {
+    "description": "Casts the input value to a signed 32-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toFloat": {
+    "description": "Casts the input value to a 32-bit float.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toDouble": {
+    "description": "Casts the input value to a 64-bit float.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
       }
     ]
   },
