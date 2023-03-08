@@ -1264,15 +1264,15 @@ object Image {
   }
 
   def visualizeBatch(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, layerID: Int, fileName: String = null): Unit = {
-    val executorOutputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/ogeoutput/"
+    val executorOutputDir = "datas/"  // TODO
     val writeFile = new File(fileName)
 
     if (method == null) {
       val tileLayerArray = image._1.map(t => {
         (t._1.spaceTimeKey.spatialKey, t._2)
-      }).collect()
+      }).collect() // TODO
       val layout = image._2.layout
-      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
+      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)  // TODO
       val stitchedTile = Raster(tile, layout.extent)
       val time = System.currentTimeMillis();
       val path = executorOutputDir + "oge_" + time + ".tif"
