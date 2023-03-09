@@ -412,7 +412,6 @@ object ImageTrigger {
       func(sc, list(i)._1, list(i)._2, list(i)._3)
     }
   }
-
   def main(args: Array[String]): Unit = {
     val time1 = System.currentTimeMillis()
     val conf = new SparkConf()
@@ -459,7 +458,7 @@ object ImageTrigger {
     val time2 = System.currentTimeMillis()
     println(time2 - time1)
   }
-  /*def main(args: Array[String]): Unit = {
+/*  def main(args: Array[String]): Unit = {
     val time1 = System.currentTimeMillis()
     val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
@@ -476,10 +475,10 @@ object ImageTrigger {
     a = a :+ Tuple3("000", "CoverageCollection.mosaic", Map("method" -> "min", "coverageCollection" -> "0000"))
 //    a = a :+ Tuple3("00", "CoverageCollection.slope", Map("Z_factor" -> "1", "coverageCollection" -> "000"))
     a = a :+ Tuple3("0", "CoverageCollection.addStyles", Map("input" -> "000", "max" -> "255", "min" -> "0"))
-
+ // TODO 函数？
     println(a.size)
     a.foreach(println(_))
-    fileName = "/home/geocube/oge/on-the-fly/out.txt"
+  fileName = "datas/out.txt" // TODO
     level = 11
     windowRange = "[113.17588,30.379332,114.573944,30.71761]"
     if(a(0)._3.contains("productID")) {
@@ -487,7 +486,7 @@ object ImageTrigger {
         lamda(sc, a)
       }
       else {
-        Image.deepLearning(sc, a(0)._3("bbox"))
+        Image.deepLearning(sc, a(0)._3("bbox"),fileName)
       }
     }
     else{
