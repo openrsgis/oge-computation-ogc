@@ -343,6 +343,7 @@ public class Tiffheader_parse {
                     resolutionTMS = 0.149291;
                     break;
                 default:
+
                     break;
             }
             level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2));
