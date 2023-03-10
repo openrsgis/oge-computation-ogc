@@ -260,6 +260,17 @@ object ImageTrigger {
     if (name == "Coverage.rename") {
       rdd_list_image += (UUID -> Image.rename(image = rdd_list_image(args("coverage")), name = args("name")))
     }
+    if (name == "Coverage.projection") {
+      val projection: String = Image.projection(image = rdd_list_image(args("coverage")))
+      println(projection)
+    }
+    if (name == "Coverage.histogram") {
+      val hist = Image.histogram(image = rdd_list_image(args("coverage")))
+      println(hist)
+    }
+    if (name == "Coverage.resample") {
+      rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
+    }
 
     if (name == "Coverage.slope") {
       rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))

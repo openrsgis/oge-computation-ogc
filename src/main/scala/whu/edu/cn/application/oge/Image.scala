@@ -7,7 +7,7 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.{ColorMap, Exact}
 import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, RGBA, Raster, Tile, TileLayout}
+import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, Histogram, RGBA, Raster, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
@@ -1024,6 +1024,68 @@ object Image {
       image
     }
   }
+
+
+  /**
+   * Return the histogram of the image, a map of bin label value and its associated count.
+   *
+   * @param image The coverage to which to compute the histogram.
+   * @return
+   */
+  def histogram(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
+    val histRDD: RDD[Histogram[Int]] = image._1.map(t => {
+      t._2.histogram
+    })
+    histRDD.reduce((a, b) => {
+      a.merge(b)
+    }).binCounts().toMap[Int, Long]
+  }
+
+  /**
+   * Returns the projection of an Image.
+   *
+   * @param image The coverage to which to get the projection.
+   * @return
+   */
+  def projection(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    image._2.crs.toString()
+  }
+
+  /**
+   * Resample the image
+   *
+   * @param image The coverage to resample
+   * @param level The resampling level. eg:1 for up-sampling and -1 for down-sampling.
+   * @param mode The interpolation mode to use
+   * @return
+   */
+  def resample(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), level: Int, mode: String
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val resampleMethod = mode match {
+      case "Bilinear" => geotrellis.raster.resample.Bilinear
+      case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
+      case _ => geotrellis.raster.resample.NearestNeighbor
+    }
+    if (level > 0 && level < 8) {
+      val imageResampled = image._1.map(t => {
+        (t._1, t._2.resample(t._2.cols * (level + 1), t._2.rows * (level + 1), resampleMethod))
+      })
+      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols * (level + 1),
+        image._2.tileRows * (level + 1))), image._2.extent, image._2.crs, image._2.bounds))
+    }
+    else if (level < 0 && level > (-8)) {
+      val imageResampled = image._1.map(t => {
+        val tileResampled = t._2.resample(t._2.cols / (-level + 1), t._2.rows / (-level + 1), resampleMethod)
+        (t._1, tileResampled)
+      })
+      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (-level + 1),
+        image._2.tileRows / (-level + 1))), image._2.extent, image._2.crs, image._2.bounds))
+    }
+    else {
+      image
+    }
+  }
+
 
   def deepLearning(implicit sc: SparkContext, geom: String, fileName: String): Unit = {
     val metaData = Preprocessing.queryGF2()
