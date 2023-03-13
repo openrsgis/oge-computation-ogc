@@ -271,6 +271,27 @@ object ImageTrigger {
     if (name == "Coverage.resample") {
       rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
     }
+    if (name == "Coverage.toInt8") {
+      rdd_list_image += (UUID -> Image.toInt8(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.toUint8") {
+      rdd_list_image += (UUID -> Image.toUint8(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.toInt16") {
+      rdd_list_image += (UUID -> Image.toInt16(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.toUint16") {
+      rdd_list_image += (UUID -> Image.toUint16(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.toInt32") {
+      rdd_list_image += (UUID -> Image.toInt32(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.toFloat") {
+      rdd_list_image += (UUID -> Image.toFloat(image = rdd_list_image(args("coverage"))))
+    }
+    if (name == "Coverage.toDouble") {
+      rdd_list_image += (UUID -> Image.toDouble(image = rdd_list_image(args("coverage"))))
+    }
 
     if (name == "Coverage.slope") {
       rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
