@@ -10,6 +10,7 @@ import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import org.locationtech.jts.geom._
+import whu.edu.cn.application.oge.ImageTrigger.fileName
 import whu.edu.cn.application.oge.WebAPI._
 
 import scala.collection.mutable.{ListBuffer, Map}
@@ -41,391 +42,374 @@ object ImageTrigger {
   }
 
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
-    if (name == "Service.getCoverageCollection") {
-      imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
-    }
-    if (name == "Service.getCoverage") {
-      imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
-    }
-    if (name == "Filter.equals") {
-      filterEqual += (UUID -> (argOrNot(args, "leftField"), argOrNot(args, "rightValue")))
-    }
-    if (name == "Filter.and") {
-      filterAnd += (UUID -> argOrNot(args, "filters").replace("[", "").replace("]", "").split(","))
-    }
-    if (name == "CoverageCollection.subCollection") {
-      var crs: String = null
-      var measurementName: String = null
-      val filter = argOrNot(args, "filter")
-      if (filterAnd.contains(filter)) {
-        val filters = filterAnd(filter)
-        for (i <- filters.indices) {
-          if ("crs".equals(filterEqual(filters(i))._1)) {
-            crs = filterEqual(filters(i))._2
+    name match {
+      case "Service.getCoverageCollection" => {
+        imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+      }
+      case "Service.getCoverage" => {
+        imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+      }
+      case "Filter.equals" => {
+        filterEqual += (UUID -> (argOrNot(args, "leftField"), argOrNot(args, "rightValue")))
+      }
+      case "Filter.and" => {
+        filterAnd += (UUID -> argOrNot(args, "filters").replace("[", "").replace("]", "").split(","))
+      }
+      case "CoverageCollection.subCollection" => {
+        var crs: String = null
+        var measurementName: String = null
+        val filter = argOrNot(args, "filter")
+        if (filterAnd.contains(filter)) {
+          val filters = filterAnd(filter)
+          for (i <- filters.indices) {
+            if ("crs".equals(filterEqual(filters(i))._1)) {
+              crs = filterEqual(filters(i))._2
+            }
+            if ("measurementName".equals(filterEqual(filters(i))._1)) {
+              measurementName = filterEqual(filters(i))._2
+            }
           }
-          if ("measurementName".equals(filterEqual(filters(i))._1)) {
-            measurementName = filterEqual(filters(i))._2
+        }
+        else if (filterEqual.contains(filter)) {
+          if ("crs".equals(filterEqual(filter)._1)) {
+            crs = filterEqual(filter)._2
+          }
+          if ("measurementName".equals(filterEqual(filter)._1)) {
+            measurementName = filterEqual(filter)._2
           }
         }
-      }
-      else if (filterEqual.contains(filter)) {
-        if ("crs".equals(filterEqual(filter)._1)) {
-          crs = filterEqual(filter)._2
+        if (oorB == 0) {
+          val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
+            geom = windowRange, geom2 = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = level)
+          rdd_list_image += (UUID -> loadInit._1)
+          rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
         }
-        if ("measurementName".equals(filterEqual(filter)._1)) {
-          measurementName = filterEqual(filter)._2
+        else {
+          val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
+            geom = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = -1)
+          rdd_list_image += (UUID -> loadInit._1)
+          rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
         }
       }
-      if (oorB == 0) {
-        val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
-          geom = windowRange, geom2 = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = level)
-        rdd_list_image += (UUID -> loadInit._1)
-        rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
+      case "CoverageCollection.mosaic" => {
+        rdd_list_image += (UUID -> Image.mosaic(sc, tileRDDReP = rdd_list_image_waitingForMosaic(argOrNot(args, "coverageCollection")), method = argOrNot(args, "method")))
       }
-      else {
-        val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
-          geom = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = -1)
-        rdd_list_image += (UUID -> loadInit._1)
-        rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
+      case "Service.getTable" => {
+        rdd_list_table += (UUID -> argOrNot(args, "productID"))
       }
-    }
-    if (name == "CoverageCollection.mosaic") {
-      rdd_list_image += (UUID -> Image.mosaic(sc, tileRDDReP = rdd_list_image_waitingForMosaic(argOrNot(args, "coverageCollection")), method = argOrNot(args, "method")))
-    }
-    if (name == "Service.getTable") {
-      rdd_list_table += (UUID -> argOrNot(args, "productID"))
-    }
-    if (name == "Service.getFeatureCollection") {
-      rdd_list_feature_API += (UUID -> argOrNot(args, "productID"))
-    }
-
-    //Algorithm
-    if (name == "Algorithm.hargreaves") {
-      rdd_list_table += (UUID -> hargreaves(inputTemperature = rdd_list_table(argOrNot(args, "inputTemperature")), inputStation = rdd_list_feature_API(argOrNot(args, "inputStation")),
-        startTime = argOrNot(args, "startTime"), endTime = argOrNot(args, "endTime"), timeStep = argOrNot(args, "timeStep").toLong))
-    }
-    if (name == "Algorithm.topmodel") {
-      rdd_list_table += (UUID -> topModel(inputPrecipEvapFile = rdd_list_table(argOrNot(args, "inputPrecipEvapFile")), inputTopoIndex = rdd_list_table(argOrNot(args, "inputTopoIndex")),
-        startTime = argOrNot(args, "startTime"), endTime = argOrNot(args, "endTime"), timeStep = argOrNot(args, "timeStep").toLong,
-        rate = argOrNot(args, "rate").toDouble, recession = argOrNot(args, "recession").toInt, iterception = argOrNot(args, "iterception").toInt,
-        waterShedArea = argOrNot(args, "waterShedArea").toInt, tMax = argOrNot(args, "tMax").toInt))
-    }
-    if (name == "Algorithm.swmm") {
-      rdd_list_table += (UUID -> SWMM5(input = rdd_list_table(argOrNot(args, "input"))))
-    }
-
-    //Table
-    if (name == "Table.getDownloadUrl") {
-      Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
-    }
-    if (name == "Table.addStyles") {
-      Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
-    }
-
-    //Coverage
-    if (name == "Coverage.subtract") {
-      rdd_list_image += (UUID -> Image.subtract(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.add") {
-      rdd_list_image += (UUID -> Image.add(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.divide") {
-      rdd_list_image += (UUID -> Image.divide(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.multiply") {
-      rdd_list_image += (UUID -> Image.multiply(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.binarization") {
-      rdd_list_image += (UUID -> Image.binarization(image = rdd_list_image(args("coverage")), threshold = args("threshold").toInt))
-    }
-    if (name == "Coverage.and") {
-      rdd_list_image += (UUID -> Image.and(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.or") {
-      rdd_list_image += (UUID -> Image.or(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.not") {
-      rdd_list_image += (UUID -> Image.not(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.ceil") {
-      rdd_list_image += (UUID -> Image.ceil(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.floor") {
-      rdd_list_image += (UUID -> Image.floor(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.sin") {
-      rdd_list_image += (UUID -> Image.sin(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.cos") {
-      rdd_list_image += (UUID -> Image.cos(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.sinh") {
-      rdd_list_image += (UUID -> Image.sinh(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.cosh") {
-      rdd_list_image += (UUID -> Image.cosh(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.asin") {
-      rdd_list_image += (UUID -> Image.asin(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.acos") {
-      rdd_list_image += (UUID -> Image.acos(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.atan") {
-      rdd_list_image += (UUID -> Image.atan(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.atan2") {
-      rdd_list_image += (UUID -> Image.atan2(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.eq") {
-      rdd_list_image += (UUID -> Image.eq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.gt") {
-      rdd_list_image += (UUID -> Image.gt(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.gte") {
-      rdd_list_image += (UUID -> Image.gte(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.addBands") {
-      val names: List[String] = List("B3")
-      rdd_list_image += (UUID -> Image.addBands(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2")), names = names))
-    }
-    if (name == "Coverage.bandNames") {
-      val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverage")))
-      println("******************test bandNames***********************")
-      println(bandNames)
-      println(bandNames.length)
-    }
-
-    if (name == "Kernel.fixed") {
-      val kernel = Kernel.fixed(weights = args("weights"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.square") {
-      val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.prewitt") {
-      val kernel = Kernel.prewitt(axis = args("axis"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.kirsch") {
-      val kernel = Kernel.kirsch(axis = args("axis"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.sobel") {
-      val kernel = Kernel.sobel(axis = args("axis"))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-
-    if (name == "Kernel.laplacian4") {
-      val kernel = Kernel.laplacian4()
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.laplacian8") {
-      val kernel = Kernel.laplacian8()
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.laplacian8") {
-      val kernel = Kernel.laplacian8()
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Kernel.add") {
-      val kernel = Kernel.add(kernel1 = list_kernel(args("kernel1")), kernel2 = list_kernel(args("kernel2")))
-      list_kernel += (UUID -> kernel)
-      print(kernel.tile.asciiDraw())
-    }
-    if (name == "Coverage.abs") {
-      rdd_list_image += (UUID -> Image.abs(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.neq") {
-      rdd_list_image += (UUID -> Image.neq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
-    }
-    if (name == "Coverage.signum") {
-      rdd_list_image += (UUID -> Image.signum(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.bandTypes") {
-      val bandTypes: immutable.Map[String, String] = Image.bandTypes(image = rdd_list_image(args("coverage")))
-      println(bandTypes)
-      println(bandTypes.size)
-    }
-    if (name == "Coverage.rename") {
-      rdd_list_image += (UUID -> Image.rename(image = rdd_list_image(args("coverage")), name = args("name")))
-    }
-    if (name == "Coverage.projection") {
-      val projection: String = Image.projection(image = rdd_list_image(args("coverage")))
-      println(projection)
-    }
-    if (name == "Coverage.histogram") {
-      val hist = Image.histogram(image = rdd_list_image(args("coverage")))
-      println(hist)
-    }
-    if (name == "Coverage.resample") {
-      rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
-    }
-    if (name == "Coverage.toInt8") {
-      rdd_list_image += (UUID -> Image.toInt8(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.toUint8") {
-      rdd_list_image += (UUID -> Image.toUint8(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.toInt16") {
-      rdd_list_image += (UUID -> Image.toInt16(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.toUint16") {
-      rdd_list_image += (UUID -> Image.toUint16(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.toInt32") {
-      rdd_list_image += (UUID -> Image.toInt32(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.toFloat") {
-      rdd_list_image += (UUID -> Image.toFloat(image = rdd_list_image(args("coverage"))))
-    }
-    if (name == "Coverage.toDouble") {
-      rdd_list_image += (UUID -> Image.toDouble(image = rdd_list_image(args("coverage"))))
-    }
-
-    if (name == "Coverage.slope") {
-      rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
-    }
-    if (name == "Coverage.addStyles") {
-      if (oorB == 0) {
-        Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-          method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
-        layerID = layerID + 1
+      case "Service.getFeatureCollection" => {
+        rdd_list_feature_API += (UUID -> argOrNot(args, "productID"))
       }
-      else {
-        Image.visualizeBatch(sc, image = rdd_list_image(args("input")), layerID = layerID, fileName = fileName)
-        layerID = layerID + 1
+
+      //Algorithm
+      case "Algorithm.hargreaves" => {
+        rdd_list_table += (UUID -> hargreaves(inputTemperature = rdd_list_table(argOrNot(args, "inputTemperature")), inputStation = rdd_list_feature_API(argOrNot(args, "inputStation")),
+          startTime = argOrNot(args, "startTime"), endTime = argOrNot(args, "endTime"), timeStep = argOrNot(args, "timeStep").toLong))
       }
+      case "Algorithm.topmodel" => {
+        rdd_list_table += (UUID -> topModel(inputPrecipEvapFile = rdd_list_table(argOrNot(args, "inputPrecipEvapFile")), inputTopoIndex = rdd_list_table(argOrNot(args, "inputTopoIndex")),
+          startTime = argOrNot(args, "startTime"), endTime = argOrNot(args, "endTime"), timeStep = argOrNot(args, "timeStep").toLong,
+          rate = argOrNot(args, "rate").toDouble, recession = argOrNot(args, "recession").toInt, iterception = argOrNot(args, "iterception").toInt,
+          waterShedArea = argOrNot(args, "waterShedArea").toInt, tMax = argOrNot(args, "tMax").toInt))
+      }
+      case "Algorithm.swmm" => {
+        rdd_list_table += (UUID -> SWMM5(input = rdd_list_table(argOrNot(args, "input"))))
+      }
+
+      //Table
+      case "Table.getDownloadUrl" => {
+        Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
+      }
+      case "Table.addStyles" => {
+        Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
+      }
+
+      //Coverage
+      case "Coverage.subtract" => {
+        rdd_list_image += (UUID -> Image.subtract(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.add" => {
+        rdd_list_image += (UUID -> Image.add(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.divide" => {
+        rdd_list_image += (UUID -> Image.divide(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.multiply" => {
+        rdd_list_image += (UUID -> Image.multiply(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.binarization" => {
+        rdd_list_image += (UUID -> Image.binarization(image = rdd_list_image(args("coverage")), threshold = args("threshold").toInt))
+      }
+      case "Coverage.and" => {
+        rdd_list_image += (UUID -> Image.and(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.or" => {
+        rdd_list_image += (UUID -> Image.or(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.not" => {
+        rdd_list_image += (UUID -> Image.not(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.ceil" => {
+        rdd_list_image += (UUID -> Image.ceil(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.floor" => {
+        rdd_list_image += (UUID -> Image.floor(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.sin" => {
+        rdd_list_image += (UUID -> Image.sin(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.cos" => {
+        rdd_list_image += (UUID -> Image.cos(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.sinh" => {
+        rdd_list_image += (UUID -> Image.sinh(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.cosh" => {
+        rdd_list_image += (UUID -> Image.cosh(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.asin" => {
+        rdd_list_image += (UUID -> Image.asin(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.acos" => {
+        rdd_list_image += (UUID -> Image.acos(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.atan" => {
+        rdd_list_image += (UUID -> Image.atan(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.atan2" => {
+        rdd_list_image += (UUID -> Image.atan2(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.eq" => {
+        rdd_list_image += (UUID -> Image.eq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.gt" => {
+        rdd_list_image += (UUID -> Image.gt(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.gte" => {
+        rdd_list_image += (UUID -> Image.gte(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.addBands" => {
+        val names: List[String] = List("B3")
+        rdd_list_image += (UUID -> Image.addBands(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2")), names = names))
+      }
+      case "Coverage.bandNames" => {
+        val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverage")))
+        println("******************test bandNames***********************")
+        println(bandNames)
+        println(bandNames.length)
+      }
+
+      case "Kernel.fixed" => {
+        val kernel = Kernel.fixed(weights = args("weights"))
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.square" => {
+        val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.prewitt" => {
+        val kernel = Kernel.prewitt(axis = args("axis"))
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.kirsch" => {
+        val kernel = Kernel.kirsch(axis = args("axis"))
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.sobel" => {
+        val kernel = Kernel.sobel(axis = args("axis"))
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+
+      case "Kernel.laplacian4" => {
+        val kernel = Kernel.laplacian4()
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.laplacian8" => {
+        val kernel = Kernel.laplacian8()
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.laplacian8" => {
+        val kernel = Kernel.laplacian8()
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Kernel.add" => {
+        val kernel = Kernel.add(kernel1 = list_kernel(args("kernel1")), kernel2 = list_kernel(args("kernel2")))
+        list_kernel += (UUID -> kernel)
+        print(kernel.tile.asciiDraw())
+      }
+      case "Coverage.abs" => {
+        rdd_list_image += (UUID -> Image.abs(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.neq" => {
+        rdd_list_image += (UUID -> Image.neq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.signum" => {
+        rdd_list_image += (UUID -> Image.signum(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.bandTypes" => {
+        val bandTypes: immutable.Map[String, String] = Image.bandTypes(image = rdd_list_image(args("coverage")))
+        println(bandTypes)
+        println(bandTypes.size)
+      }
+      case "Coverage.rename" => {
+        rdd_list_image += (UUID -> Image.rename(image = rdd_list_image(args("coverage")), name = args("name")))
+      }
+      case "Coverage.projection" => {
+        val projection: String = Image.projection(image = rdd_list_image(args("coverage")))
+        println(projection)
+      }
+      case "Coverage.histogram" => {
+        val hist = Image.histogram(image = rdd_list_image(args("coverage")))
+        println(hist)
+      }
+      case "Coverage.resample" => {
+        rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
+      }
+
+      case "Coverage.slope" => {
+        rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+      }
+      case "Coverage.addStyles" => {
+        if (oorB == 0) {
+          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
+            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+          layerID = layerID + 1
+        }
+        else {
+          Image.visualizeBatch(sc, image = rdd_list_image(args("input")), layerID = layerID, fileName = fileName)
+          layerID = layerID + 1
+        }
+      }
+
+      //CoverageCollection
+      case "CoverageCollection.subtract" => {
+        rdd_list_image += (UUID -> Image.subtract(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.add" => {
+        rdd_list_image += (UUID -> Image.add(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.divide" => {
+        rdd_list_image += (UUID -> Image.divide(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.multiply" => {
+        rdd_list_image += (UUID -> Image.multiply(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.binarization" => {
+        rdd_list_image += (UUID -> Image.binarization(image = rdd_list_image(args("coverageCollection")), threshold = args("threshold").toInt))
+      }
+      case "CoverageCollection.and" => {
+        rdd_list_image += (UUID -> Image.and(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.or" => {
+        rdd_list_image += (UUID -> Image.or(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.not" => {
+        rdd_list_image += (UUID -> Image.not(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.ceil" => {
+        rdd_list_image += (UUID -> Image.ceil(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.floor" => {
+        rdd_list_image += (UUID -> Image.floor(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.sin" => {
+        rdd_list_image += (UUID -> Image.sin(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.cos" => {
+        rdd_list_image += (UUID -> Image.cos(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.sinh" => {
+        rdd_list_image += (UUID -> Image.sinh(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.cosh" => {
+        rdd_list_image += (UUID -> Image.cosh(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.asin" => {
+        rdd_list_image += (UUID -> Image.asin(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.acos" => {
+        rdd_list_image += (UUID -> Image.acos(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.atan" => {
+        rdd_list_image += (UUID -> Image.atan(image = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.atan2" => {
+        rdd_list_image += (UUID -> Image.atan2(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.eq" => {
+        rdd_list_image += (UUID -> Image.eq(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.gt" => {
+        rdd_list_image += (UUID -> Image.gt(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.gte" => {
+        rdd_list_image += (UUID -> Image.gte(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
+      }
+      case "CoverageCollection.addBands" => {
+        val names: List[String] = List("B3")
+        rdd_list_image += (UUID -> Image.addBands(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2")), names = names))
+      }
+      case "CoverageCollection.slope" => {
+        rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+      }
+      case "CoverageCollection.aspect" => {
+        rdd_list_image += (UUID -> aspect(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+      }
+      case "CoverageCollection.hillShade" => {
+        rdd_list_image += (UUID -> hillShade(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble, Azimuth = argOrNot(args, "Azimuth").toDouble, Vertical_angle = argOrNot(args, "Vertical_angle").toDouble))
+      }
+      case "CoverageCollection.relief" => {
+        rdd_list_image += (UUID -> relief(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+      }
+      case "CoverageCollection.ruggednessIndex" => {
+        rdd_list_image += (UUID -> ruggednessIndex(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
+      }
+      case "CoverageCollection.cellBalance" => {
+        rdd_list_image += (UUID -> cellBalance(sc, input = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.flowAccumulationTD" => {
+        rdd_list_image += (UUID -> flowAccumulationTD(sc, input = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.flowPathLength" => {
+        rdd_list_image += (UUID -> flowPathLength(sc, input = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.slopeLength" => {
+        rdd_list_image += (UUID -> slopeLength(sc, input = rdd_list_image(args("coverageCollection"))))
+      }
+      case "CoverageCollection.calCrop" => {
+        calCrop(year = argOrNot(args, "year"), quarter = argOrNot(args, "quarter"), sort = argOrNot(args, "sort"))
+      }
+      case "CoverageCollection.PAP" => {
+        rdd_list_image += (UUID -> Image.PAP(image = rdd_list_image(args("coverageCollection")), time = argOrNot(args, "time"), n = argOrNot(args, "n").toInt))
+      }
+      case "CoverageCollection.bandNames" => {
+        val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverageCollection")))
+        println("******************test bandNames***********************")
+        println(bandNames)
+        println(bandNames.length)
+      }
+      case "CoverageCollection.addStyles" => {
+        if (oorB == 0) {
+          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
+            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+          layerID = layerID + 1
+        }
+        else {
+          Image.visualizeBatch(sc, image = rdd_list_image(args("input")), layerID = layerID, fileName = fileName)
+          layerID = layerID + 1
+        }
+      }
+
     }
 
-    //CoverageCollection
-    if (name == "CoverageCollection.subtract") {
-      rdd_list_image += (UUID -> Image.subtract(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.add") {
-      rdd_list_image += (UUID -> Image.add(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.divide") {
-      rdd_list_image += (UUID -> Image.divide(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.multiply") {
-      rdd_list_image += (UUID -> Image.multiply(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.binarization") {
-      rdd_list_image += (UUID -> Image.binarization(image = rdd_list_image(args("coverageCollection")), threshold = args("threshold").toInt))
-    }
-    if (name == "CoverageCollection.and") {
-      rdd_list_image += (UUID -> Image.and(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.or") {
-      rdd_list_image += (UUID -> Image.or(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.not") {
-      rdd_list_image += (UUID -> Image.not(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.ceil") {
-      rdd_list_image += (UUID -> Image.ceil(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.floor") {
-      rdd_list_image += (UUID -> Image.floor(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.sin") {
-      rdd_list_image += (UUID -> Image.sin(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.cos") {
-      rdd_list_image += (UUID -> Image.cos(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.sinh") {
-      rdd_list_image += (UUID -> Image.sinh(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.cosh") {
-      rdd_list_image += (UUID -> Image.cosh(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.asin") {
-      rdd_list_image += (UUID -> Image.asin(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.acos") {
-      rdd_list_image += (UUID -> Image.acos(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.atan") {
-      rdd_list_image += (UUID -> Image.atan(image = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.atan2") {
-      rdd_list_image += (UUID -> Image.atan2(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.eq") {
-      rdd_list_image += (UUID -> Image.eq(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.gt") {
-      rdd_list_image += (UUID -> Image.gt(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.gte") {
-      rdd_list_image += (UUID -> Image.gte(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2"))))
-    }
-    if (name == "CoverageCollection.addBands") {
-      val names: List[String] = List("B3")
-      rdd_list_image += (UUID -> Image.addBands(image1 = rdd_list_image(args("coverageCollection1")), image2 = rdd_list_image(args("coverageCollection2")), names = names))
-    }
-    if (name == "CoverageCollection.slope") {
-      rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
-    }
-    if (name == "CoverageCollection.aspect") {
-      rdd_list_image += (UUID -> aspect(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
-    }
-    if (name == "CoverageCollection.hillShade") {
-      rdd_list_image += (UUID -> hillShade(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble, Azimuth = argOrNot(args, "Azimuth").toDouble, Vertical_angle = argOrNot(args, "Vertical_angle").toDouble))
-    }
-    if (name == "CoverageCollection.relief") {
-      rdd_list_image += (UUID -> relief(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
-    }
-    if (name == "CoverageCollection.ruggednessIndex") {
-      rdd_list_image += (UUID -> ruggednessIndex(sc, input = rdd_list_image(args("coverageCollection")), Z_factor = argOrNot(args, "Z_factor").toDouble))
-    }
-    if (name == "CoverageCollection.cellBalance") {
-      rdd_list_image += (UUID -> cellBalance(sc, input = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.flowAccumulationTD") {
-      rdd_list_image += (UUID -> flowAccumulationTD(sc, input = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.flowPathLength") {
-      rdd_list_image += (UUID -> flowPathLength(sc, input = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.slopeLength") {
-      rdd_list_image += (UUID -> slopeLength(sc, input = rdd_list_image(args("coverageCollection"))))
-    }
-    if (name == "CoverageCollection.calCrop") {
-      calCrop(year = argOrNot(args, "year"), quarter = argOrNot(args, "quarter"), sort = argOrNot(args, "sort"))
-    }
-    if (name == "CoverageCollection.PAP") {
-      rdd_list_image += (UUID -> Image.PAP(image = rdd_list_image(args("coverageCollection")), time = argOrNot(args, "time"), n = argOrNot(args, "n").toInt))
-    }
-    if (name == "CoverageCollection.bandNames") {
-      val bandNames: List[String] = Image.bandNames(image = rdd_list_image(args("coverageCollection")))
-      println("******************test bandNames***********************")
-      println(bandNames)
-      println(bandNames.length)
-    }
-    if (name == "CoverageCollection.addStyles") {
-      if (oorB == 0) {
-        Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-          method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
-        layerID = layerID + 1
-      }
-      else {
-        Image.visualizeBatch(sc, image = rdd_list_image(args("input")), layerID = layerID, fileName = fileName)
-        layerID = layerID + 1
-      }
-    }
   }
 
   def lamda(implicit sc: SparkContext, list: List[Tuple3[String, String, Map[String, String]]]) = {
@@ -441,8 +425,8 @@ object ImageTrigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/climatepilot/PAP.json")
-    fileName = "/home/geocube/oge/on-the-fly/out.txt"
+    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+    fileName = "datas/out.txt" // TODO
     val line: String = fileSource.mkString
     fileSource.close()
     val jsonObject = JSON.parseObject(line)
@@ -462,7 +446,7 @@ object ImageTrigger {
 
     if (a.head._3.contains("productID")) {
       if (a.head._3("productID") != "GF2") {
-        lamda(sc, a)
+        lamda(sc, a) // TODO
       }
       else {
         if (oorB == 0) {

@@ -113,7 +113,7 @@ object Image {
       else {
         mutable.Buffer.empty[RawTile]
       }
-    }).persist()
+    }).persist()  // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
     val tileNum = tileRDDNoData.map(t => t.length).reduce((x, y) => {
       x + y
     })
@@ -161,7 +161,7 @@ object Image {
     (tileRDD, tileLayerMetadata)
   }
 
-  def mosaic(implicit sc: SparkContext, tileRDDReP: RDD[RawTile], method: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def mosaic(implicit sc: SparkContext, tileRDDReP: RDD[RawTile], method: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO
     val extents = tileRDDReP.map(t => {
       (t.getP_bottom_leftX, t.getP_bottom_leftY, t.getP_upper_rightX, t.getP_upper_rightY)
     }).reduce((a, b) => {
@@ -1060,7 +1060,7 @@ object Image {
    * @return
    */
   def resample(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), level: Int, mode: String
-              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO 重采样
     val resampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
@@ -1236,7 +1236,7 @@ object Image {
   def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
                         palette: String = null, layerID: Int, fileName: String = null): Unit = {
     val appID = sc.applicationId
-    val outputPath = "/home/geocube/oge/on-the-fly"
+    val outputPath = "datas/on-the-fly" // TODO datas/on-the-fly
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
       val timeList = image._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
@@ -1409,6 +1409,15 @@ object Image {
     }
   }
 
+  /**
+   * backup
+   * @param sc
+   * @param image
+   * @param method
+   * @param min
+   * @param max
+   * @param palette
+   */
   def visualizeBak(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
                    palette: String = null): Unit = {
     val executorOutputDir = "D:/"

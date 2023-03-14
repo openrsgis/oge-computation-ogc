@@ -278,68 +278,73 @@ public class Tiffheader_parse {
             level = 0;
         }
         else {
-            if (l == 0) {
-                resolutionTMS = 156543.033928;
-            }
-            if (l == 1) {
-                resolutionTMS = 78271.516964;
-            }
-            if (l == 2) {
-                resolutionTMS = 39135.758482;
-            }
-            if (l == 3) {
-                resolutionTMS = 19567.879241;
-            }
-            if (l == 4) {
-                resolutionTMS = 9783.939621;
-            }
-            if (l == 5) {
-                resolutionTMS = 4891.969810;
-            }
-            if (l == 6) {
-                resolutionTMS = 2445.984905;
-            }
-            if (l == 7) {
-                resolutionTMS = 1222.992453;
-            }
-            if (l == 8) {
-                resolutionTMS = 611.496226;
-            }
-            if (l == 9) {
-                resolutionTMS = 305.748113;
-            }
-            if (l == 10) {
-                resolutionTMS = 152.874057;
-            }
-            if (l == 11) {
-                resolutionTMS = 76.437028;
-            }
-            if (l == 12) {
-                resolutionTMS = 38.218514;
-            }
-            if (l == 13) {
-                resolutionTMS = 19.109257;
-            }
-            if (l == 14) {
-                resolutionTMS = 9.554629;
-            }
-            if (l == 15) {
-                resolutionTMS = 4.777314;
-            }
-            if (l == 16) {
-                resolutionTMS = 2.388657;
-            }
-            if (l == 17) {
-                resolutionTMS = 1.194329;
-            }
-            if (l == 18) {
-                resolutionTMS = 0.597164;
-            }
-            if (l == 19) {
-                resolutionTMS = 0.298582;
-            }
-            if (l == 20) {
-                resolutionTMS = 0.149291;
+            switch (l){
+                case 0:
+                    resolutionTMS = 156543.033928;
+                    break;
+                case 1:
+                    resolutionTMS = 78271.516964;
+                    break;
+                case 2:
+                    resolutionTMS = 39135.758482;
+                    break;
+                case 3:
+                    resolutionTMS = 19567.879241;
+                    break;
+                case 4:
+                    resolutionTMS = 9783.939621;
+                    break;
+                case 5:
+                    resolutionTMS = 4891.969810;
+                    break;
+                case 6:
+                    resolutionTMS = 2445.984905;
+                    break;
+                case 7:
+                    resolutionTMS = 1222.992453;
+                    break;
+                case 8:
+                    resolutionTMS = 611.496226;
+                    break;
+                case 9:
+                    resolutionTMS = 305.748113;
+                    break;
+                case 10:
+                    resolutionTMS = 152.874057;
+                    break;
+                case 11:
+                    resolutionTMS = 76.437028;
+                    break;
+                case 12:
+                    resolutionTMS = 38.218514;
+                    break;
+                case 13:
+                    resolutionTMS = 19.109257;
+                    break;
+                case 14:
+                    resolutionTMS = 9.554629;
+                    break;
+                case 15:
+                    resolutionTMS = 4.777314;
+                    break;
+                case 16:
+                    resolutionTMS = 2.388657;
+                    break;
+                case 17:
+                    resolutionTMS = 1.194329;
+                    break;
+                case 18:
+                    resolutionTMS = 0.597164;
+                    break;
+                case 19:
+                    resolutionTMS = 0.298582;
+                    break;
+                case 20:
+                    resolutionTMS = 0.149291;
+                    break;
+                default:
+
+                    break;
             }
             level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2));
             level = level + 1;
@@ -378,9 +383,8 @@ public class Tiffheader_parse {
                 CoordinateReferenceSystem crsTarget = CRS.decode(crs);
                 if (crsTarget instanceof ProjectedCRS) {
                     flag = true;
-                } else if (crsTarget instanceof GeographicCRS) {
-                    flag = false;
                 }
+
                 MathTransform transform = CRS.findMathTransform(crsSource, crsTarget);
                 JTS.transform(pointLower, pointLowerReprojected, transform);
                 JTS.transform(pointUpper, pointUpperReprojected, transform);
@@ -388,8 +392,8 @@ public class Tiffheader_parse {
         } catch (FactoryException | TransformException e) {
             e.printStackTrace();
         }
-        double pmin[] = new double[2];
-        double pmax[] = new double[2];
+        double[] pmin = new double[2];
+        double[] pmax = new double[2];
         pmin[0] = pointLowerReprojected.getX();
         pmin[1] = pointLowerReprojected.getY();
         pmax[0] = pointUpperReprojected.getX();
@@ -414,7 +418,7 @@ public class Tiffheader_parse {
         ArrayList<RawTile> tile_srch = new ArrayList<>();
 
         //int l = 0;
-        if ("MOD13Q1_061".equals(productName)) {
+/*        if ("MOD13Q1_061".equals(productName)) {
             flagReader = true;
         }
         if ("LJ01_L2".equals(productName)) {
@@ -425,6 +429,17 @@ public class Tiffheader_parse {
         }
         if ("GPM_Precipitation_China_Month".equals(productName)) {
             flagReader = true;
+        }*/
+        switch (productName){
+            case "MOD13Q1_061":
+            case "LJ01_L2":
+            case "ASTER_GDEM_DEM30":
+            case "GPM_Precipitation_China_Month":
+                flagReader = true;
+                break;
+            default:
+                break;
+
         }
 
 
@@ -454,8 +469,12 @@ public class Tiffheader_parse {
             p_right = (int) ((xmax - pmin[0]) / (256 * h_src * (int) Math.pow(2, level)));
         }
         if (!flagReader) {
-            for (int i = (p_lower < 0 ? 0 : p_lower); i <= (p_upper >= TileOffsets.get(level).size() ? TileOffsets.get(level).size() - 1 : p_upper); i++) {
-                for (int j = (p_left < 0 ? 0 : p_left); j <= (p_right >= TileOffsets.get(level).get(i).size() ? TileOffsets.get(level).get(i).size() - 1 : p_right); j++) {
+            for (int i = (Math.max(p_lower, 0));
+                 i <= (p_upper >= TileOffsets.get(level).size() ? TileOffsets.get(level).size() - 1 : p_upper);
+                 i++) {
+                for (int j = (Math.max(p_left, 0));
+                     j <= (p_right >= TileOffsets.get(level).get(i).size() ? TileOffsets.get(level).get(i).size() - 1 : p_right);
+                     j++) {
                     RawTile t = new RawTile();
                     t.offset[0] = TileOffsets.get(level).get(i).get(j);
                     t.offset[1] = TileByteCounts.get(level).get(i).get(j) + t.offset[0];
@@ -479,8 +498,12 @@ public class Tiffheader_parse {
                 }
             }
         } else {
-            for (int i = (p_left < 0 ? 0 : p_left); i <= (p_right >= TileOffsets.get(level).size() ? TileOffsets.get(level).size() - 1 : p_right); i++) {
-                for (int j = (p_lower < 0 ? 0 : p_lower); j <= (p_upper >= TileOffsets.get(level).get(i).size() ? TileOffsets.get(level).get(i).size() - 1 : p_upper); j++) {
+            for (int i = (Math.max(p_left, 0));
+                 i <= (p_right >= TileOffsets.get(level).size() ? TileOffsets.get(level).size() - 1 : p_right);
+                 i++) {
+                for (int j = (Math.max(p_lower, 0));
+                     j <= (p_upper >= TileOffsets.get(level).get(i).size() ? TileOffsets.get(level).get(i).size() - 1 : p_upper);
+                     j++) {
                     RawTile t = new RawTile();
                     double xmax = xmin;
                     double ymin = ymax;
