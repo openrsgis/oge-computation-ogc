@@ -6,7 +6,7 @@ import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.{ColorMap, Exact}
-import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
 import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, Histogram, RGBA, Raster, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -38,6 +38,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.math._
 
 object Image {
+
   /**
    * load the images
    *
@@ -113,7 +114,7 @@ object Image {
       else {
         mutable.Buffer.empty[RawTile]
       }
-    }).persist()  // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+    }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
     val tileNum = tileRDDNoData.map(t => t.length).reduce((x, y) => {
       x + y
     })
@@ -193,15 +194,15 @@ object Image {
     val RowSum = ld.tileLayout.layoutRows
     val ColSum = ld.tileLayout.layoutCols
     val tileBox = new ListBuffer[((Extent, SpaceTimeKey), List[RawTile])]
-    for (i <- 0 to ColSum - 1) {
-      for (j <- 0 to RowSum - 1) {
+    for (i <- 0 until ColSum) {
+      for (j <- 0 until RowSum) {
         val rawTiles = new ListBuffer[RawTile]
         val tileExtent = new Extent(extents._1 + i * 256 * firstTile.getResolution, extents._4 - (j + 1) * 256 * firstTile.getResolution, extents._1 + (i + 1) * 256 * firstTile.getResolution, extents._4 - j * 256 * firstTile.getResolution)
         for (rawtile <- rawtileArray) {
           if (Extent(rawtile.getP_bottom_leftX, rawtile.getP_bottom_leftY, rawtile.getP_upper_rightX, rawtile.getP_upper_rightY).intersects(tileExtent))
             rawTiles.append(rawtile)
         }
-        if (rawTiles.length > 0) {
+        if (rawTiles.nonEmpty) {
           val now = "1000-01-01 00:00:00"
           val date = sdf.parse(now).getTime
           tileBox.append(((tileExtent, SpaceTimeKey(i, j, date)), rawTiles.toList))
@@ -223,7 +224,7 @@ object Image {
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
 
         // Extent dimension
-        val sql = new StringBuilder
+        val sql = new mutable.StringBuilder
         sql ++= "select oge_image.*, oge_data_resource_product.name, oge_data_resource_product.dtype"
         sql ++= ", oge_product_measurement.band_num, oge_product_measurement.resolution"
         sql ++= " from oge_image "
@@ -1052,11 +1053,49 @@ object Image {
   }
 
   /**
+   * 重采样！！
+   *
+   * @param image
+   * @param sourceZoom
+   * @param targetZoom
+   * @param mode
+   * @return
+   */
+  def resample(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), sourceZoom: Int, targetZoom: Int,
+               mode: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val resampleMethod = mode match {
+      case "Bilinear" => geotrellis.raster.resample.Bilinear
+      case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
+      case _ => geotrellis.raster.resample.NearestNeighbor
+    }
+    val level: Int = targetZoom - sourceZoom
+    if (level > 0 && level < 8) {
+      val imageResampled = image._1.map(t => {
+        (t._1, t._2.resample(t._2.cols * (level + 1), t._2.rows * (level + 1), resampleMethod))
+      })
+      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols * (level + 1),
+        image._2.tileRows * (level + 1))), image._2.extent, image._2.crs, image._2.bounds))
+    }
+    else if (level < 0 && level > (-8)) {
+      val imageResampled = image._1.map(t => {
+        val tileResampled = t._2.resample(t._2.cols / (-level + 1), t._2.rows / (-level + 1), resampleMethod)
+        (t._1, tileResampled)
+      })
+      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (-level + 1),
+        image._2.tileRows / (-level + 1))), image._2.extent, image._2.crs, image._2.bounds))
+    }
+    else {
+      image
+    }
+  }
+
+
+  /**
    * Resample the image
    *
    * @param image The coverage to resample
    * @param level The resampling level. eg:1 for up-sampling and -1 for down-sampling.
-   * @param mode The interpolation mode to use
+   * @param mode  The interpolation mode to use
    * @return
    */
   def resample(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), level: Int, mode: String
@@ -1147,21 +1186,25 @@ object Image {
   def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
                         palette: String = null, layerID: Int, fileName: String = null): Unit = {
     val appID = sc.applicationId
-    val outputPath = "datas/on-the-fly" // TODO datas/on-the-fly
+    val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
+    val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val timeList = image._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
-      image._1.persist()
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
+
+      println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
+      val timeList = resampledImage._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
+      resampledImage._1.persist()
       timeList.foreach(x => {
-        val tiled = image._1.filter(m => m._1.spaceTimeKey.instant == x).map(t => {
+        val tiled = resampledImage._1.filter(m => m._1.spaceTimeKey.instant == x).map(t => {
           (t._1.spaceTimeKey.spatialKey, t._2)
         })
         val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
-        val cellType = image._2.cellType
-        val srcLayout = image._2.layout
-        val srcExtent = image._2.extent
-        val srcCrs = image._2.crs
-        val srcBounds = image._2.bounds
+        val cellType = resampledImage._2.cellType
+        val srcLayout = resampledImage._2.layout
+        val srcExtent = resampledImage._2.extent
+        val srcCrs = resampledImage._2.crs
+        val srcBounds = resampledImage._2.bounds
         val newBounds = Bounds(srcBounds.get.minKey.spatialKey, srcBounds.get.maxKey.spatialKey)
         val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
 
@@ -1176,6 +1219,11 @@ object Image {
         val time = System.currentTimeMillis()
         val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
         // Pyramiding up the zoom levels, write our tiles out to the local file system.
+
+
+
+        println("zoom = " + zoom)
+
         Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
           if (z == zoom) {
             val layerId = LayerId(layerIDAll, z)
@@ -1186,8 +1234,13 @@ object Image {
             writer.write(layerId, rdd, ZCurveKeyIndexMethod)
           }
         }
+
+
         TMSList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-tms/" + layerIDAll + "/{z}/{x}/{y}")))
-      })
+      }
+      )
+
+      // 写入文件
       //      Serve.runTMS(outputPath)
       val writeFile = new File(fileName)
       val writerOutput = new BufferedWriter(new FileWriter(writeFile))
@@ -1204,6 +1257,7 @@ object Image {
       writerOutput.write(jsonStr)
       writerOutput.close()
     }
+
     else {
       val tiled = image._1.map(t => {
         (t._1.spaceTimeKey.spatialKey, t._2)
@@ -1320,15 +1374,7 @@ object Image {
     }
   }
 
-  /**
-   * backup
-   * @param sc
-   * @param image
-   * @param method
-   * @param min
-   * @param max
-   * @param palette
-   */
+
   def visualizeBak(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
                    palette: String = null): Unit = {
     val executorOutputDir = "D:/"
