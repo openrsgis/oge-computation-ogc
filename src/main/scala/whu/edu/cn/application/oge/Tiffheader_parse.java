@@ -417,7 +417,7 @@ public class Tiffheader_parse {
         // 图像范围
         // 东西方向空间分辨率  --->像素宽度
         double w_src = this.Cell.get(0);
-        // 南北方向空间分辨率 ---> 像素高度
+        // 南北方向空间分辨率 ---> 像素高度 // TODO
         double h_src = this.Cell.get(1);
         // 左上角x坐标,y坐标 ---> 影像 左上角 投影坐标
         double xmin;
