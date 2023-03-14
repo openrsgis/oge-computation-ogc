@@ -26,7 +26,7 @@ class PostgresqlUtil (sql: String){
 }
 
 object PostgresqlUtil{
-  val url = "jdbc:postgresql://125.220.153.28:31340/oge"
+  val url = "jdbc:postgresql://125.220.153.28:31340/oge" // TODO postgresqlUtil
   val driver = "org.postgresql.Driver"
   val user = "oge"
   val password = "ypfamily608"
