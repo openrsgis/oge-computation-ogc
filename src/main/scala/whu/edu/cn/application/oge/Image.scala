@@ -1125,6 +1125,95 @@ object Image {
     }
   }
 
+  /**
+   * Casts the input value to a signed 8-bit integer.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toInt8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+            ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("int8")))
+    }), image._2)
+  }
+
+  /**
+   * Casts the input value to a unsigned 8-bit integer.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toUint8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("uint8")))
+    }), image._2)
+  }
+
+  /**
+   * Casts the input value to a signed 16-bit integer.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toInt16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("int16")))
+    }), image._2)
+  }
+
+  /**
+   * Casts the input value to a unsigned 16-bit integer.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toUint16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("uint16")))
+    }), image._2)
+  }
+
+  /**
+   * Casts the input value to a signed 32-bit integer.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toInt32(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("int32")))
+    }), image._2)
+  }
+  /**
+   * Casts the input value to a 32-bit float.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toFloat(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("float32")))
+    }), image._2)
+  }
+
+  /**
+   * Casts the input value to a 64-bit float.
+   *
+   * @param image The coverage to which the operation is applied.
+   * @return
+   */
+  def toDouble(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, t._2.convert(CellType.fromName("float64")))
+    }), image._2)
+  }
 
   def deepLearning(implicit sc: SparkContext, geom: String, fileName: String): Unit = {
     val metaData = Preprocessing.queryGF2()
