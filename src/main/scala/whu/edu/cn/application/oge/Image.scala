@@ -1071,18 +1071,18 @@ object Image {
     val level: Int = targetZoom - sourceZoom
     if (level > 0 && level < 8) {
       val imageResampled = image._1.map(t => {
-        (t._1, t._2.resample(t._2.cols * (level + 1), t._2.rows * (level + 1), resampleMethod))
+        (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
       })
-      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols * (level + 1),
-        image._2.tileRows * (level + 1))), image._2.extent, image._2.crs, image._2.bounds))
+      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols * (1 << level),
+        image._2.tileRows * (1 << level))), image._2.extent, image._2.crs, image._2.bounds))
     }
     else if (level < 0 && level > (-8)) {
       val imageResampled = image._1.map(t => {
-        val tileResampled = t._2.resample(t._2.cols / (-level + 1), t._2.rows / (-level + 1), resampleMethod)
+        val tileResampled = t._2.resample(t._2.cols / (1 << -level), t._2.rows / (1 << -level), resampleMethod)
         (t._1, tileResampled)
       })
-      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (-level + 1),
-        image._2.tileRows / (-level + 1))), image._2.extent, image._2.crs, image._2.bounds))
+      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (1 << -level),
+        image._2.tileRows / (1 << -level))), image._2.extent, image._2.crs, image._2.bounds))
     }
     else {
       image
@@ -1189,6 +1189,7 @@ object Image {
       (t._1, t._2.convert(CellType.fromName("int32")))
     }), image._2)
   }
+
   /**
    * Casts the input value to a 32-bit float.
    *
@@ -1407,7 +1408,7 @@ object Image {
   }
 
   def visualizeBatch(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, layerID: Int, fileName: String = null): Unit = {
-    val executorOutputDir = "datas/"  // TODO
+    val executorOutputDir = "datas/" // TODO
     val writeFile = new File(fileName)
 
     if (method == null) {
@@ -1415,7 +1416,7 @@ object Image {
         (t._1.spaceTimeKey.spatialKey, t._2)
       }).collect() // TODO
       val layout = image._2.layout
-      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)  // TODO
+      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray) // TODO
       val stitchedTile = Raster(tile, layout.extent)
       val time = System.currentTimeMillis();
       val path = executorOutputDir + "oge_" + time + ".tif"
