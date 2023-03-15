@@ -1053,13 +1053,13 @@ object Image {
   }
 
   /**
-   * 重采样！！
+   * 自定义重采样方法！
    *
-   * @param image
-   * @param sourceZoom
-   * @param targetZoom
-   * @param mode
-   * @return
+   * @param image   需要被重采样的图像
+   * @param sourceZoom   原图像的缩放等级
+   * @param targetZoom   输出图像的缩放等级
+   * @param mode   插值方法
+   * @return   和输入图像同类型的新图像
    */
   def resample(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), sourceZoom: Int, targetZoom: Int,
                mode: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
