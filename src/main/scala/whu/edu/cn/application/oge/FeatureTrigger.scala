@@ -11,256 +11,260 @@ import scala.collection.mutable.Map
 import scala.io.Source
 
 object FeatureTrigger {
-  var rdd_list_feature:Map[String, Any] = Map.empty[String, Any]
-  def argOrNot(args:Map[String, String],name:String):String = {
-    if(args.contains(name)){
+  var rdd_list_feature: Map[String, Any] = Map.empty[String, Any]
+
+  def argOrNot(args: Map[String, String], name: String): String = {
+    if (args.contains(name)) {
       args(name)
     }
-    else{
+    else {
       null
     }
   }
-  def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit ={
-    if(name=="Feature.load"){
-      var dateTime=argOrNot(args,"dateTime")
-      if(dateTime=="null")
-        dateTime=null
-      println("dateTime:"+dateTime)
-      if(dateTime!=null){
-        if(argOrNot(args,"crs")!=null)
-          rdd_list_feature+=(UUID->Feature.load(sc,args("productName"),args("dateTime"), args("crs")))
+
+  def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
+    name match {
+      case "Feature.load" => {
+        var dateTime = argOrNot(args, "dateTime")
+        if (dateTime == "null")
+          dateTime = null
+        println("dateTime:" + dateTime)
+        if (dateTime != null) {
+          if (argOrNot(args, "crs") != null)
+            rdd_list_feature += (UUID -> Feature.load(sc, args("productName"), args("dateTime"), args("crs")))
+          else
+            rdd_list_feature += (UUID -> Feature.load(sc, args("productName"), args("dateTime")))
+        }
         else
-          rdd_list_feature+=(UUID->Feature.load(sc,args("productName"),args("dateTime")))
+          rdd_list_feature += (UUID -> Feature.load(sc, args("productName")))
       }
-      else
-        rdd_list_feature+=(UUID->Feature.load(sc,args("productName")))
-    }
-    if(name=="Feature.point"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.point(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.point(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.lineString"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.lineString(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.lineString(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.linearRing"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.linearRing(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.linearRing(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.polygon"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.polygon(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.polygon(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.multiPoint"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.multiPoint(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.multiPoint(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.multiLineString"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.multiLineString(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.multiLineString(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.multiPolygon"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.multiPolygon(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.multiPolygon(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.geometry"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.geometry(sc,args("coors"),args("properties"), args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.geometry(sc,args("coors"),args("properties")))
-    }
-    if(name=="Feature.area"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.area(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.area(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.bounds"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.bounds(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.bounds(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.centroid"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.centroid(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.centroid(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.buffer"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.buffer(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("distance").toDouble, args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.buffer(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("distance").toDouble))
-    }
-    if(name=="Feature.convexHull"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.convexHull(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.convexHull(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.coordinates"){
-      rdd_list_feature+=(UUID->Feature.coordinates(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.reproject"){
-      rdd_list_feature+=(UUID->Feature.reproject(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("tarCrsCode")))
-    }
-    if(name=="Feature.isUnbounded"){
-      rdd_list_feature+=(UUID->Feature.isUnbounded(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.getType"){
-      rdd_list_feature+=(UUID->Feature.getType(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.projection"){
-      rdd_list_feature+=(UUID->Feature.projection(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.toGeoJSONString"){
-      rdd_list_feature+=(UUID->Feature.toGeoJSONString(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.getLength"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.getLength(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.getLength(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.geometries"){
-      rdd_list_feature+=(UUID->Feature.geometries(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.dissolve"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.dissolve(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.dissolve(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.contains"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.contains(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.contains(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.containedIn"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.containedIn(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.containedIn(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.disjoint"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.disjoint(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.disjoint(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.distance"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.distance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.distance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.difference"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.difference(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.difference(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.intersection"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.intersection(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.intersection(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.intersects"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.intersects(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.intersects(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.symmetricDifference"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.symmetricDifference(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.symmetricDifference(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.union"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.union(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.union(sc,rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.withDistance"){
-      if(argOrNot(args,"crs")!=null)
-        rdd_list_feature+=(UUID->Feature.withDistance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("distance").toDouble,args("crs")))
-      else
-        rdd_list_feature+=(UUID->Feature.withDistance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],args("distance").toDouble))
-    }
-    if(name=="Feature.copyProperties"){
-      val propertyList=args("properties").replace("[","").replace("]","")
-        .replace("\"","").split(",").toList
-      rdd_list_feature+=(UUID->Feature.copyProperties(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-        rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],propertyList))
-    }
-    if(name=="Feature.get"){
-      rdd_list_feature+=(UUID->Feature.get(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("property")))
-    }
-    if(name=="Feature.getNumber"){
-      rdd_list_feature+=(UUID->Feature.getNumber(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("property")))
-    }
-    if(name=="Feature.getString"){
-      rdd_list_feature+=(UUID->Feature.getString(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("property")))
-    }
-    if(name=="Feature.getArray"){
-      rdd_list_feature+=(UUID->Feature.getArray(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("property")))
-    }
-    if(name=="Feature.propertyNames"){
-      rdd_list_feature+=(UUID->Feature.propertyNames(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.set"){
-      rdd_list_feature+=(UUID->Feature.set(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]], args("property")))
-    }
-    if(name=="Feature.setGeometry"){
-      rdd_list_feature+=(UUID->Feature.setGeometry(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-        rdd_list_feature(args("geometry")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.setGeometry"){
-      rdd_list_feature+=(UUID->Feature.setGeometry(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-        rdd_list_feature(args("geometry")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
-    }
-    if(name=="Feature.inverseDistanceWeighted"){
-      rdd_list_feature+=(UUID->Feature.inverseDistanceWeighted(sc,rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]],
-        args("propertyName"),rdd_list_feature(args("maskGeom")).asInstanceOf[RDD[(String,(Geometry, Map[String, Any]))]]))
+      case "Feature.point" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.point(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.point(sc, args("coors"), args("properties")))
+      }
+      case "Feature.lineString" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.lineString(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.lineString(sc, args("coors"), args("properties")))
+      }
+      case "Feature.linearRing" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.linearRing(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.linearRing(sc, args("coors"), args("properties")))
+      }
+      case "Feature.polygon" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.polygon(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.polygon(sc, args("coors"), args("properties")))
+      }
+      case "Feature.multiPoint" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.multiPoint(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.multiPoint(sc, args("coors"), args("properties")))
+      }
+      case "Feature.multiLineString" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.multiLineString(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.multiLineString(sc, args("coors"), args("properties")))
+      }
+      case "Feature.multiPolygon" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties")))
+      }
+      case "Feature.geometry" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"), args("properties"), args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"), args("properties")))
+      }
+      case "Feature.area" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.area(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.area(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.bounds" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.bounds(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.bounds(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.centroid" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.centroid(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.centroid(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.buffer" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.buffer(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("distance").toDouble, args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.buffer(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("distance").toDouble))
+      }
+      case "Feature.convexHull" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.convexHull(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.convexHull(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.coordinates" => {
+        rdd_list_feature += (UUID -> Feature.coordinates(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.reproject" => {
+        rdd_list_feature += (UUID -> Feature.reproject(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("tarCrsCode")))
+      }
+      case "Feature.isUnbounded" => {
+        rdd_list_feature += (UUID -> Feature.isUnbounded(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.getType" => {
+        rdd_list_feature += (UUID -> Feature.getType(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.projection" => {
+        rdd_list_feature += (UUID -> Feature.projection(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.toGeoJSONString" => {
+        rdd_list_feature += (UUID -> Feature.toGeoJSONString(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.getLength" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.getLength(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.getLength(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.geometries" => {
+        rdd_list_feature += (UUID -> Feature.geometries(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.dissolve" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.dissolve(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.dissolve(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.contains" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.contains(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.contains(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.containedIn" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.containedIn(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.containedIn(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.disjoint" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.disjoint(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.disjoint(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.distance" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.distance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.distance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.difference" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.difference(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.difference(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.intersection" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.intersection(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.intersection(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.intersects" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.intersects(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.intersects(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.symmetricDifference" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.symmetricDifference(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.symmetricDifference(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.union" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.union(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.union(sc, rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.withDistance" => {
+        if (argOrNot(args, "crs") != null)
+          rdd_list_feature += (UUID -> Feature.withDistance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("distance").toDouble, args("crs")))
+        else
+          rdd_list_feature += (UUID -> Feature.withDistance(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+            rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("distance").toDouble))
+      }
+      case "Feature.copyProperties" => {
+        val propertyList = args("properties").replace("[", "").replace("]", "")
+          .replace("\"", "").split(",").toList
+        rdd_list_feature += (UUID -> Feature.copyProperties(rdd_list_feature(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+          rdd_list_feature(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], propertyList))
+      }
+      case "Feature.get" => {
+        rdd_list_feature += (UUID -> Feature.get(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("property")))
+      }
+      case "Feature.getNumber" => {
+        rdd_list_feature += (UUID -> Feature.getNumber(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("property")))
+      }
+      case "Feature.getString" => {
+        rdd_list_feature += (UUID -> Feature.getString(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("property")))
+      }
+      case "Feature.getArray" => {
+        rdd_list_feature += (UUID -> Feature.getArray(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("property")))
+      }
+      case "Feature.propertyNames" => {
+        rdd_list_feature += (UUID -> Feature.propertyNames(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.set" => {
+        rdd_list_feature += (UUID -> Feature.set(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("property")))
+      }
+      case "Feature.setGeometry" => {
+        rdd_list_feature += (UUID -> Feature.setGeometry(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+          rdd_list_feature(args("geometry")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.setGeometry" => {
+        rdd_list_feature += (UUID -> Feature.setGeometry(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+          rdd_list_feature(args("geometry")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
+      case "Feature.inverseDistanceWeighted" => {
+        rdd_list_feature += (UUID -> Feature.inverseDistanceWeighted(sc, rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+          args("propertyName"), rdd_list_feature(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      }
     }
 
   }
@@ -271,8 +275,8 @@ object FeatureTrigger {
     }
   }
 
-  def main(args: Array[String]): Unit ={
-    val t1=System.currentTimeMillis()
+  def main(args: Array[String]): Unit = {
+    val t1 = System.currentTimeMillis()
     val conf = new SparkConf()
       //        .setMaster("spark://gisweb1:7077")
       .setMaster("local[*]")
@@ -289,8 +293,8 @@ object FeatureTrigger {
     println(a.size)
     a.foreach(println(_))
     lamda(sc, a)
-    val t2=System.currentTimeMillis()
-    println("main函数中完整空间插值过程的时间："+(t2-t1)/1000)
+    val t2 = System.currentTimeMillis()
+    println("main函数中完整空间插值过程的时间：" + (t2 - t1) / 1000)
 
     //    var properties="{\"name\":\"haha\",\"value\":10}"
     //    var properties2="{\n\"name\":\"网站\",\n\"num\":3,\n\"sites\":[ \"Google\", \"Runoob\", \"Taobao\" ]\n}"
