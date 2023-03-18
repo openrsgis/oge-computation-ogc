@@ -29,6 +29,7 @@ import java.util.Objects;
 import static org.gdal.gdalconst.gdalconstConstants.GDT_Byte;
 
 public class Tiffheader_parse {
+    public static int nearestZoom = 0;
     public static class RawTile implements Serializable {
         String path;
         String time;
@@ -349,12 +350,27 @@ public class Tiffheader_parse {
             level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2));
             level = level + 1;
             System.out.println("level = " + level);
+            System.out.println("TileOffsets.size() = " + TileOffsets.size()); //TODO 为定值7,说明后端只有7层瓦片数据
+
+            // 正常情况下的换算关系
+            Tiffheader_parse.nearestZoom = 10 - ImageTrigger.level();
+            //TODO 这里我们认为数据库中金字塔的第0层对应了前端 zoom 的第10级
+//                        0 10
+//                        1 9
+//                        2 8
+//                        ...
+//                        6 4
             if (level > TileOffsets.size() - 1) {
-                throw new RuntimeException("Level is too small!");
-                //level = TileOffsets.size() - 1;
+                level = 6;
+                Tiffheader_parse.nearestZoom = 4;
+
+                // throw new RuntimeException("Level is too small!");
             }
             if (level < 0) {
-                throw new RuntimeException("Level is too big!");
+                level = 0;
+                Tiffheader_parse.nearestZoom = 10;
+
+                // throw new RuntimeException("Level is too big!");
             }
         }
         double lower_left_long = query_extent[0];
@@ -401,7 +417,7 @@ public class Tiffheader_parse {
         // 图像范围
         // 东西方向空间分辨率  --->像素宽度
         double w_src = this.Cell.get(0);
-        // 南北方向空间分辨率 ---> 像素高度
+        // 南北方向空间分辨率 ---> 像素高度 // TODO
         double h_src = this.Cell.get(1);
         // 左上角x坐标,y坐标 ---> 影像 左上角 投影坐标
         double xmin;
