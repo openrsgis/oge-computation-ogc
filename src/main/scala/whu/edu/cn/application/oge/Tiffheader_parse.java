@@ -362,7 +362,7 @@ public class Tiffheader_parse {
 //                        6 4
             if (level > TileOffsets.size() - 1) {
                 level = TileOffsets.size() - 1;
-                Tiffheader_parse.nearestZoom = 4;
+                Tiffheader_parse.nearestZoom = 10 - level;
 
                 // throw new RuntimeException("Level is too small!");
             }
