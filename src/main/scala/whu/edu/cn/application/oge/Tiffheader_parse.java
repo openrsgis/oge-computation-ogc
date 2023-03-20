@@ -275,6 +275,7 @@ public class Tiffheader_parse {
         int level;
         double resolutionTMS = 0.0;
         double resolutionOrigin = Double.parseDouble(resolution);
+        System.out.println("resolutionOrigin = " + resolutionOrigin);
         if(l == -1){
             level = 0;
         }
@@ -348,9 +349,9 @@ public class Tiffheader_parse {
                     break;
             }
             level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2));
-            level = level + 1;
+            level = level + 1; // 缩放等级？
             System.out.println("level = " + level);
-            System.out.println("TileOffsets.size() = " + TileOffsets.size()); //TODO 为定值7,说明后端只有7层瓦片数据
+            System.out.println("TileOffsets.size() = " + TileOffsets.size()); // 后端瓦片数
 
             // 正常情况下的换算关系
             Tiffheader_parse.nearestZoom = 10 - ImageTrigger.level();
@@ -360,6 +361,7 @@ public class Tiffheader_parse {
 //                        2 8
 //                        ...
 //                        6 4
+
             if (level > TileOffsets.size() - 1) {
                 level = TileOffsets.size() - 1;
                 Tiffheader_parse.nearestZoom = 10 - level;
