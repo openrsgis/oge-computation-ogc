@@ -30,6 +30,7 @@ import static org.gdal.gdalconst.gdalconstConstants.GDT_Byte;
 
 public class Tiffheader_parse {
     public static int nearestZoom = 0;
+
     public static class RawTile implements Serializable {
         String path;
         String time;
@@ -274,87 +275,54 @@ public class Tiffheader_parse {
     private ArrayList<RawTile> getTiles(int l, double[] query_extent, String crs, String in_path, String time, String measurement, String dType, String resolution, String productName) {
         int level;
         double resolutionTMS = 0.0;
+        double[] resolutionTMSArray = {
+                156543.033928,
+                78271.516964,
+                39135.758482,
+                19567.879241,
+                9783.939621,
+                4891.969810,
+                2445.984905,
+                1222.992453,
+                611.496226,
+                305.748113,
+                152.874057,
+                76.437028,
+                38.218514,
+                19.109257,
+                9.554629,
+                4.777314,
+                2.388657,
+                1.194329,
+                0.597164,
+                0.298582,
+                0.149291
+        };
         double resolutionOrigin = Double.parseDouble(resolution);
         System.out.println("resolutionOrigin = " + resolutionOrigin);
-        if(l == -1){
+        if (l == -1) {
             level = 0;
         }
         else {
-            switch (l){
-                case 0:
-                    resolutionTMS = 156543.033928;
-                    break;
-                case 1:
-                    resolutionTMS = 78271.516964;
-                    break;
-                case 2:
-                    resolutionTMS = 39135.758482;
-                    break;
-                case 3:
-                    resolutionTMS = 19567.879241;
-                    break;
-                case 4:
-                    resolutionTMS = 9783.939621;
-                    break;
-                case 5:
-                    resolutionTMS = 4891.969810;
-                    break;
-                case 6:
-                    resolutionTMS = 2445.984905;
-                    break;
-                case 7:
-                    resolutionTMS = 1222.992453;
-                    break;
-                case 8:
-                    resolutionTMS = 611.496226;
-                    break;
-                case 9:
-                    resolutionTMS = 305.748113;
-                    break;
-                case 10:
-                    resolutionTMS = 152.874057;
-                    break;
-                case 11:
-                    resolutionTMS = 76.437028;
-                    break;
-                case 12:
-                    resolutionTMS = 38.218514;
-                    break;
-                case 13:
-                    resolutionTMS = 19.109257;
-                    break;
-                case 14:
-                    resolutionTMS = 9.554629;
-                    break;
-                case 15:
-                    resolutionTMS = 4.777314;
-                    break;
-                case 16:
-                    resolutionTMS = 2.388657;
-                    break;
-                case 17:
-                    resolutionTMS = 1.194329;
-                    break;
-                case 18:
-                    resolutionTMS = 0.597164;
-                    break;
-                case 19:
-                    resolutionTMS = 0.298582;
-                    break;
-                case 20:
-                    resolutionTMS = 0.149291;
-                    break;
-                default:
-
-                    break;
-            }
+            resolutionTMS = resolutionTMSArray[l];
+            System.out.println(l);
             level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2));
             level = level + 1; // 缩放等级？
-            System.out.println("level = " + level);
+            int maxZoom = 0;
+            for (int i = 0; i < resolutionTMSArray.length; i++) {
+                if ((int) Math.ceil(Math.log(resolutionTMSArray[i] / resolutionOrigin) / Math.log(2)) + 1 == 0) {
+                    maxZoom = i;
+                    break;
+                }
+            }
+
+            System.out.println("maxZoom = " + maxZoom);
+
+            System.out.println("java.level = " + level);
             System.out.println("TileOffsets.size() = " + TileOffsets.size()); // 后端瓦片数
 
             // 正常情况下的换算关系
-            Tiffheader_parse.nearestZoom = 10 - ImageTrigger.level();
+            Tiffheader_parse.nearestZoom = ImageTrigger.level();
             //TODO 这里我们认为数据库中金字塔的第0层对应了前端 zoom 的第10级
 //                        0 10
 //                        1 9
@@ -364,17 +332,20 @@ public class Tiffheader_parse {
 
             if (level > TileOffsets.size() - 1) {
                 level = TileOffsets.size() - 1;
-                Tiffheader_parse.nearestZoom = 10 - level;
+                assert maxZoom > level;
+
+                Tiffheader_parse.nearestZoom = maxZoom - level;
 
                 // throw new RuntimeException("Level is too small!");
             }
             if (level < 0) {
                 level = 0;
-                Tiffheader_parse.nearestZoom = 10;
+                Tiffheader_parse.nearestZoom = maxZoom;
 
                 // throw new RuntimeException("Level is too big!");
             }
         }
+
         double lower_left_long = query_extent[0];
         double lower_left_lat = query_extent[1];
         double upper_right_long = query_extent[2];
@@ -407,9 +378,11 @@ public class Tiffheader_parse {
                 JTS.transform(pointLower, pointLowerReprojected, transform);
                 JTS.transform(pointUpper, pointUpperReprojected, transform);
             }
-        } catch (FactoryException | TransformException e) {
+        } catch (FactoryException |
+                 TransformException e) {
             e.printStackTrace();
         }
+
         double[] pmin = new double[2];
         double[] pmax = new double[2];
         pmin[0] = pointLowerReprojected.getX();
@@ -448,7 +421,7 @@ public class Tiffheader_parse {
         if ("GPM_Precipitation_China_Month".equals(productName)) {
             flagReader = true;
         }*/
-        switch (productName){
+        switch (productName) {
             case "MOD13Q1_061":
             case "LJ01_L2":
             case "ASTER_GDEM_DEM30":

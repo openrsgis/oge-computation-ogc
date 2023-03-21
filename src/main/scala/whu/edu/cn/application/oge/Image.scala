@@ -1068,7 +1068,38 @@ object Image {
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
       case _ => geotrellis.raster.resample.NearestNeighbor
     }
-    val level: Int = targetZoom - sourceZoom
+
+
+
+
+    val tiled = image._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
+    val cellType = image._2.cellType
+    val srcLayout = image._2.layout
+    val srcExtent = image._2.extent
+    val srcCrs = image._2.crs
+    val srcBounds = image._2.bounds
+    val newBounds = Bounds(srcBounds.get.minKey.spatialKey, srcBounds.get.maxKey.spatialKey)
+    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+
+    val (solvedSourceZoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+      TileLayerRDD(tiled, rasterMetaData)
+        .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
+
+
+
+
+
+
+
+    println("sourceZoom = " + sourceZoom + " and " + "solvedSourceZoom = " + solvedSourceZoom)
+
+
+
+
+    val level: Int = targetZoom - solvedSourceZoom
     if (level > 0 && level < 8) {
       val imageResampled = image._1.map(t => {
         (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
@@ -1281,6 +1312,7 @@ object Image {
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
       val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
+      image._1.map(t=>t._2)
 
       println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
       val timeList = resampledImage._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
