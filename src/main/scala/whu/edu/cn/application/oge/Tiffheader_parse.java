@@ -10,7 +10,6 @@ import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.Coordinate;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.crs.GeographicCRS;
 import org.opengis.referencing.crs.ProjectedCRS;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
@@ -24,7 +23,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static org.gdal.gdalconst.gdalconstConstants.GDT_Byte;
 
@@ -223,7 +221,10 @@ public class Tiffheader_parse {
     private int xPosition;
     private int yPosition;
 
-    public static ArrayList<RawTile> tileQuery(int level, String in_path, String time, String crs, String measurement, String dType, String resolution, String productName, double[] query_extent) {
+    public static ArrayList<RawTile> tileQuery(int level, String in_path,
+                                               String time, String crs, String measurement,
+                                               String dType, String resolution, String productName,
+                                               double[] query_extent) {
         try {
             MinioClient minioClient = new MinioClient("http://125.220.153.26:9006", "rssample", "ypfamily608");
             // 获取指定offset和length的"myobject"的输入流。
@@ -272,11 +273,26 @@ public class Tiffheader_parse {
         return null;
     }
 
-    private ArrayList<RawTile> getTiles(int l, double[] query_extent, String crs, String in_path, String time, String measurement, String dType, String resolution, String productName) {
+    /**
+     * @param l            json里的 level 字段，表征前端 Zoom
+     * @param query_extent
+     * @param crs
+     * @param in_path
+     * @param time
+     * @param measurement
+     * @param dType
+     * @param resolution   数据库中的原始影像分辨率
+     * @param productName
+     * @return
+     */
+    private ArrayList<RawTile> getTiles(int l, double[] query_extent,
+                                        String crs, String in_path, String time,
+                                        String measurement, String dType,
+                                        String resolution, String productName) {
         int level;
         double resolutionTMS = 0.0;
         double[] resolutionTMSArray = {
-                156543.033928,
+                156543.033928, /* 地图 zoom 为0时的分辨率，以下按zoom递增 */
                 78271.516964,
                 39135.758482,
                 19567.879241,
@@ -456,12 +472,122 @@ public class Tiffheader_parse {
             p_left = (int) ((xMin - pmax[0]) / (256 * h_src * (int) Math.pow(2, level)));
             p_right = (int) ((xMin - pmin[0]) / (256 * h_src * (int) Math.pow(2, level)));
         }
+
+/*
+
+        for (int i = (Math.max(!flagReader ? p_lower : p_left, 0));
+             i <= ((!flagReader ? p_upper : p_right) >= TileOffsets.get(level).size() ?
+                     TileOffsets.get(level).size() - 1 : (!flagReader ? p_upper : p_right));
+             i++
+        ) {
+            for (int j = (Math.max(!flagReader ? p_left : p_lower, 0));
+                 j <= ((!flagReader ? p_right : p_upper) >= TileOffsets.get(level).get(i).size() ?
+                         TileOffsets.get(level).get(i).size() - 1 : (!flagReader ? p_right : p_upper));
+                 j++) {
+                RawTile t = new RawTile();
+                t.offset[0] = TileOffsets.get(level).get(i).get(j);
+                t.offset[1] = TileByteCounts.get(level).get(i).get(j) + t.offset[0];
+                t.p_bottom_left[0] = j *
+                        (256 * (!flagReader ? w_src : h_src) * (int) Math.pow(2, level)) +
+                        (!flagReader ? xMin : yMax);
+                t.p_bottom_left[1] = (i + 1) *
+                        (256 * (!flagReader ? -h_src : -w_src) * (int) Math.pow(2, level)) +
+                        (!flagReader ? yMax : xMin);
+                t.p_upper_right[0] = (j + 1) *
+                        (256 * (!flagReader ? w_src : h_src) * (int) Math.pow(2, level)) +
+                        (!flagReader ? xMin : yMax);
+                t.p_upper_right[1] = i *
+                        (256 * (!flagReader ? -h_src : -w_src) * (int) Math.pow(2, level)) +
+                        (!flagReader ? yMax : xMin);
+                t.rotation = GeoTrans.get(5);
+                t.resolution = w_src * (int) Math.pow(2, level);
+                t.row_col[0] = i;
+                t.row_col[1] = j;
+                t.bitpersample = BitPerSample;
+                t.level = level;
+                t.path = in_path;
+                t.time = time;
+                t.measurement = measurement;
+                t.crs = Integer.parseInt(crs.replace("EPSG:", ""));
+                t.dType = dType;
+                t.product = productName;
+                tile_srch.add(t);
+            }
+        }
+
+
+*/
+
+
+
+        int []pCoordinate = null;
+        double[] srcSize = null;
+        double[] pRange = null;
+        if(!flagReader){
+            pCoordinate = new int[]{p_lower,p_upper,p_left,p_right};
+            srcSize = new double[]{w_src,h_src};
+            pRange = new double[]{xMin, yMax};
+        }
+        else {
+            pCoordinate = new int[]{p_left, p_right, p_lower, p_upper};
+            srcSize = new double[]{h_src,w_src};
+            pRange = new double[]{yMax, xMin};
+        }
+
+
+
+
+            for (int i = (Math.max(pCoordinate[0], 0));
+                 i <= (pCoordinate[1] >= TileOffsets.get(level).size() ?
+                         TileOffsets.get(level).size() - 1 : pCoordinate[1]);
+                 i++
+            ) {
+                for (int j = (Math.max(pCoordinate[2], 0));
+                     j <= (pCoordinate[3] >= TileOffsets.get(level).get(i).size() ?
+                             TileOffsets.get(level).get(i).size() - 1 : pCoordinate[3]);
+                     j++) {
+                    RawTile t = new RawTile();
+                    t.offset[0] = TileOffsets.get(level).get(i).get(j);
+                    t.offset[1] = TileByteCounts.get(level).get(i).get(j) + t.offset[0];
+                    t.p_bottom_left[0] = j *
+                            (256 * srcSize[0] * (int) Math.pow(2, level)) +
+                            pRange[0];
+                    t.p_bottom_left[1] = (i + 1) *
+                            (256 * -srcSize[1] * (int) Math.pow(2, level)) +
+                            pRange[1];
+                    t.p_upper_right[0] = (j + 1) *
+                            (256 * srcSize[0] * (int) Math.pow(2, level)) +
+                            pRange[0];
+                    t.p_upper_right[1] = i *
+                            (256 * -srcSize[1] * (int) Math.pow(2, level)) +
+                            pRange[1];
+                    t.rotation = GeoTrans.get(5);
+                    t.resolution = w_src * (int) Math.pow(2, level);
+                    t.row_col[0] = i;
+                    t.row_col[1] = j;
+                    t.bitpersample = BitPerSample;
+                    t.level = level;
+                    t.path = in_path;
+                    t.time = time;
+                    t.measurement = measurement;
+                    t.crs = Integer.parseInt(crs.replace("EPSG:", ""));
+                    t.dType = dType;
+                    t.product = productName;
+                    tile_srch.add(t);
+                }
+            }
+
+
+/*
         if (!flagReader) {
             for (int i = (Math.max(p_lower, 0));
-                 i <= (p_upper >= TileOffsets.get(level).size() ? TileOffsets.get(level).size() - 1 : p_upper);
-                 i++) {
+                 i <= (p_upper >= TileOffsets.get(level).size() ?
+                         TileOffsets.get(level).size() - 1 : p_upper);
+                 i++
+            ) {
                 for (int j = (Math.max(p_left, 0));
-                     j <= (p_right >= TileOffsets.get(level).get(i).size() ? TileOffsets.get(level).get(i).size() - 1 : p_right);
+                     j <= (p_right >= TileOffsets.get(level).get(i).size() ?
+                             TileOffsets.get(level).get(i).size() - 1 : p_right);
                      j++) {
                     RawTile t = new RawTile();
                     t.offset[0] = TileOffsets.get(level).get(i).get(j);
@@ -487,10 +613,12 @@ public class Tiffheader_parse {
             }
         } else {
             for (int i = (Math.max(p_left, 0));
-                 i <= (p_right >= TileOffsets.get(level).size() ? TileOffsets.get(level).size() - 1 : p_right);
+                 i <= (p_right >= TileOffsets.get(level).size() ?
+                         TileOffsets.get(level).size() - 1 : p_right);
                  i++) {
                 for (int j = (Math.max(p_lower, 0));
-                     j <= (p_upper >= TileOffsets.get(level).get(i).size() ? TileOffsets.get(level).get(i).size() - 1 : p_upper);
+                     j <= (p_upper >= TileOffsets.get(level).get(i).size() ?
+                             TileOffsets.get(level).get(i).size() - 1 : p_upper);
                      j++) {
                     RawTile t = new RawTile();
                     t.offset[0] = TileOffsets.get(level).get(i).get(j);
@@ -524,6 +652,8 @@ public class Tiffheader_parse {
                 }
             }
         }
+        */
+
         return tile_srch;
     }
 
@@ -555,7 +685,7 @@ public class Tiffheader_parse {
         return value;
     }
 
-    private double Getdouble(byte[] pd, int startPos, int Length) {
+    private double GetDouble(byte[] pd, int startPos, int Length) {
         long value = 0;
         for (int i = 0; i < Length; i++) {
             value |= ((long) (pd[startPos + i] & 0xff)) << (8 * i);
@@ -568,7 +698,7 @@ public class Tiffheader_parse {
 
     private void GetDoubleTrans(int startPos, int typeSize, int count) {
         for (int i = 0; i < count; i++) {
-            double v = this.Getdouble(this.header, (startPos + i * typeSize), typeSize);
+            double v = this.GetDouble(this.header, (startPos + i * typeSize), typeSize);
             this.GeoTrans.add(v);
         }
     }
@@ -576,7 +706,7 @@ public class Tiffheader_parse {
 
     private void GetDoubleCell(int startPos, int typeSize, int count) {
         for (int i = 0; i < count; i++) {
-            double v = this.Getdouble(this.header, (startPos + i * typeSize), typeSize);
+            double v = this.GetDouble(this.header, (startPos + i * typeSize), typeSize);
             this.Cell.add(v);
         }
     }
@@ -602,16 +732,16 @@ public class Tiffheader_parse {
     }
 
     private void GetTileBytesArray(int startPos, int typeSize, int count) {
-        ArrayList<ArrayList<Integer>> Stripbytes = new ArrayList<>();
+        ArrayList<ArrayList<Integer>> stripBytes = new ArrayList<>();
         for (int i = 0; i < (this.ImageLength / 256) + 1; i++) {
-            ArrayList<Integer> Tilebytes = new ArrayList<>();
+            ArrayList<Integer> tileBytes = new ArrayList<>();
             for (int j = 0; j < (this.ImageWidth / 256) + 1; j++) {
                 int v = this.GetIntII(this.header, (startPos + (int) (i * ((this.ImageWidth / 256) + 1) + j) * typeSize), typeSize);
-                Tilebytes.add(v);
+                tileBytes.add(v);
             }
-            Stripbytes.add(Tilebytes);
+            stripBytes.add(tileBytes);
         }
-        this.TileByteCounts.add(Stripbytes);
+        this.TileByteCounts.add(stripBytes);
     }
 
     private int DecodeIFH() {
@@ -645,39 +775,39 @@ public class Tiffheader_parse {
     }
 
     private void GetDEValue(int TagIndex, int TypeIndex, int Count, int pdata) {
-        int typesize = TypeArray[TypeIndex];
+        int typeSize = TypeArray[TypeIndex];
         switch (TagIndex) {
             case 256://ImageWidth
-                this.ImageWidth = GetIntII(this.header, pdata, typesize);
+                this.ImageWidth = GetIntII(this.header, pdata, typeSize);
                 this.ImageSize.add(this.ImageWidth);
                 break;
             case 257://ImageLength
-                this.ImageLength = GetIntII(this.header, pdata, typesize);
+                this.ImageLength = GetIntII(this.header, pdata, typeSize);
                 this.ImageSize.add(this.ImageLength);
                 break;
             case 258://ImageWidth
-                this.BitPerSample = GetIntII(this.header, pdata, typesize);
+                this.BitPerSample = GetIntII(this.header, pdata, typeSize);
                 break;
             case 286://XPosition
-                this.xPosition = GetIntII(this.header, pdata, typesize);
+                this.xPosition = GetIntII(this.header, pdata, typeSize);
                 break;
             case 287://YPosition
-                this.yPosition = GetIntII(this.header, pdata, typesize);
+                this.yPosition = GetIntII(this.header, pdata, typeSize);
                 break;
             case 324: //TileOffsets
-                this.GetOffsetArray(pdata, typesize, Count);
+                this.GetOffsetArray(pdata, typeSize, Count);
                 break;
             case 325: //TileByteCounts
-                this.GetTileBytesArray(pdata, typesize, Count);
+                this.GetTileBytesArray(pdata, typeSize, Count);
                 break;
             case 33550://  CellWidth
-                this.GetDoubleCell(pdata, typesize, Count);
+                this.GetDoubleCell(pdata, typeSize, Count);
                 break;
             case 33922: //GeoTransform
-                this.GetDoubleTrans(pdata, typesize, Count);
+                this.GetDoubleTrans(pdata, typeSize, Count);
                 break;
             case 34737: //Spatial reference
-                this.Srid = GetString(this.header, pdata, typesize * Count);
+                this.Srid = GetString(this.header, pdata, typeSize * Count);
                 break;
             default:
                 break;
@@ -700,7 +830,7 @@ public class Tiffheader_parse {
         return this.ImageSize;
     }
 
-    private ArrayList<Double> getGeotrans() {
+    private ArrayList<Double> getGeoTrans() {
         return this.GeoTrans;
     }
 
@@ -774,9 +904,9 @@ public class Tiffheader_parse {
         for (int i = 0; i < tile_srch.size(); i++) {
             for (int j = tile_srch.get(0).row_col[0]; j <= tile_srch.get(tile_srch.size() - 1).row_col[0]; j++) {
                 if (tile_srch.get(i).row_col[0] == j) {
-                    int yoff = (tile_srch.get(i).row_col[1] - tile_srch.get(0).row_col[1]) * 256;
-                    int xoff = (tile_srch.get(i).row_col[0] - tile_srch.get(0).row_col[0]) * 256;
-                    dm.GetRasterBand(1).WriteRaster(yoff, xoff, 256, 256, 256, 256, GDT_Byte, tile_srch.get(i).tilebuf);
+                    int yOff = (tile_srch.get(i).row_col[1] - tile_srch.get(0).row_col[1]) * 256;
+                    int xOff = (tile_srch.get(i).row_col[0] - tile_srch.get(0).row_col[0]) * 256;
+                    dm.GetRasterBand(1).WriteRaster(yOff, xOff, 256, 256, 256, 256, GDT_Byte, tile_srch.get(i).tilebuf);
                     //ds.GetRasterBand(1).WriteRaster(yoff, xoff, 256, 256, 256, 256, GDT_Byte, tile_srch.get(i).tilebuf);
                 }
             }
