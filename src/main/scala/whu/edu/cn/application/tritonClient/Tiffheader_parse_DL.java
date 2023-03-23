@@ -448,7 +448,7 @@ public class Tiffheader_parse_DL {
         return value;
     }
 
-    private static double Getdouble(byte[] pd, int startPos, int Length) {
+    private static double GetDouble(byte[] pd, int startPos, int Length) {
         long value = 0;
         for (int i = 0; i < Length; i++) {
             value |= ((long) (pd[startPos + i] & 0xff)) << (8 * i);
@@ -461,14 +461,14 @@ public class Tiffheader_parse_DL {
 
     private static void GetDoubleTrans(int startPos, int typeSize, int count) {
         for (int i = 0; i < count; i++) {
-            double v = Getdouble(header, (startPos + i * typeSize), typeSize);
+            double v = GetDouble(header, (startPos + i * typeSize), typeSize);
             GeoTrans.add(v);
         }
     }
 
     private static void GetDoubleCell(int startPos, int typeSize, int count) {
         for (int i = 0; i < count; i++) {
-            double v = Getdouble(header, (startPos + i * typeSize), typeSize);
+            double v = GetDouble(header, (startPos + i * typeSize), typeSize);
             Cell.add(v);
         }
     }
