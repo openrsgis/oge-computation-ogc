@@ -6,7 +6,7 @@ import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.{ColorMap, Exact}
-import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
+import geotrellis.raster.resample.{Bilinear, NearestNeighbor, PointResampleMethod}
 import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, Histogram, RGBA, Raster, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -17,6 +17,7 @@ import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import org.apache.spark.util.LongAccumulator
 import org.geotools.geometry.jts.JTS
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
@@ -1053,7 +1054,7 @@ object Image {
   }
 
   /**
-   * 自定义重采样方法！
+   * 自定义重采样方法
    *
    * @param image   需要被重采样的图像
    * @param sourceZoom   原图像的缩放等级
@@ -1061,28 +1062,30 @@ object Image {
    * @param mode   插值方法
    * @return   和输入图像同类型的新图像
    */
-  def resample(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), sourceZoom: Int, targetZoom: Int,
+  def resample(implicit sc: SparkContext,
+                image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               sourceZoom: Int, targetZoom: Int,
                mode: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val resampleMethod = mode match {
+    val resampleMethod: PointResampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
       case _ => geotrellis.raster.resample.NearestNeighbor
     }
 
 
-
-
-    val tiled = image._1.map(t => {
+    val tiled: RDD[(SpatialKey, Tile)] = image._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
-    val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
-    val cellType = image._2.cellType
-    val srcLayout = image._2.layout
-    val srcExtent = image._2.extent
-    val srcCrs = image._2.crs
-    val srcBounds = image._2.bounds
-    val newBounds = Bounds(srcBounds.get.minKey.spatialKey, srcBounds.get.maxKey.spatialKey)
-    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
+    val cellType: CellType = image._2.cellType
+    val srcLayout: LayoutDefinition = image._2.layout
+    val srcExtent: Extent = image._2.extent
+    val srcCrs: CRS = image._2.crs
+    val srcBounds: Bounds[SpaceTimeKey] = image._2.bounds
+    val newBounds: Bounds[SpatialKey] =
+      Bounds(srcBounds.get.minKey.spatialKey, srcBounds.get.maxKey.spatialKey)
+    val rasterMetaData: TileLayerMetadata[SpatialKey] =
+      TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
 
     val (solvedSourceZoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       TileLayerRDD(tiled, rasterMetaData)
@@ -1090,30 +1093,47 @@ object Image {
 
 
 
-
-
-
+    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
+//    println("srcAcc0 = " + myAcc2.value)
+    reprojected.map(t=>{
+      //          println("srcRows = " + t._2.rows) 256
+      //          println("srcRows = " + t._2.cols) 256
+      myAcc2.add(1)
+      t
+    }).collect()
+    println("srcNumOfTiles = " + myAcc2.value) // 234
 
     println("sourceZoom = " + sourceZoom + " and " + "solvedSourceZoom = " + solvedSourceZoom)
 
 
 
 
+
+
     val level: Int = targetZoom - solvedSourceZoom
-    if (level > 0 && level < 8) {
-      val imageResampled = image._1.map(t => {
+    if (level > 0 && level < 20) {
+      val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
       })
-      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols * (1 << level),
-        image._2.tileRows * (1 << level))), image._2.extent, image._2.crs, image._2.bounds))
+      (imageResampled,
+        TileLayerMetadata(image._2.cellType, LayoutDefinition(
+          image._2.extent,
+            TileLayout(image._2.layoutCols, image._2.layoutRows,
+              image._2.tileCols * (1 << level), image._2.tileRows * (1 << level))
+        ), image._2.extent, image._2.crs, image._2.bounds))
     }
-    else if (level < 0 && level > (-8)) {
-      val imageResampled = image._1.map(t => {
-        val tileResampled = t._2.resample(t._2.cols / (1 << -level), t._2.rows / (1 << -level), resampleMethod)
+    else if (level < 0 && level > (-20)) {
+      val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
+        val tileResampled: Tile = t._2.resample(Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt, Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt, resampleMethod)
         (t._1, tileResampled)
       })
-      (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (1 << -level),
-        image._2.tileRows / (1 << -level))), image._2.extent, image._2.crs, image._2.bounds))
+      println("image._2.tileCols.toDouble = " + image._2.tileCols.toDouble)
+      (imageResampled,
+        TileLayerMetadata(image._2.cellType, LayoutDefinition(
+          image._2.extent,
+          TileLayout(image._2.layoutCols, image._2.layoutRows,
+            Math.ceil(image._2.tileCols.toDouble / (1 << -level)).toInt, Math.ceil(image._2.tileRows.toDouble / (1 << -level)).toInt)),
+          image._2.extent, image._2.crs, image._2.bounds))
     }
     else {
       image
@@ -1311,7 +1331,7 @@ object Image {
     val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc,image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
       image._1.map(t=>t._2)
 
       println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
@@ -1334,6 +1354,17 @@ object Image {
           TileLayerRDD(tiled, rasterMetaData)
             .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
+        val myAcc: LongAccumulator = sc.longAccumulator("myAcc")
+//        println("targetAcc0 = " + myAcc.value)
+        reprojected.map(t=>{
+//          println("targetRows = " + t._2.rows) 256
+//          println("targetRows = " + t._2.cols) 256
+          myAcc.add(1)
+          t
+        }).collect()
+
+        println("targetNumOfTiles = " + myAcc.value)
+
         // Create the attributes store that will tell us information about our catalog.
         val attributeStore = FileAttributeStore(outputPath)
         // Create the writer that we will use to store the tiles in the local catalog.
@@ -1347,7 +1378,7 @@ object Image {
         println("zoom = " + zoom)
 
         Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-          if (z == zoom) {
+          if (z == levelFromJSON) {
             val layerId = LayerId(layerIDAll, z)
             // If the layer exists already, delete it out before writing
             if (attributeStore.layerExists(layerId)) {
