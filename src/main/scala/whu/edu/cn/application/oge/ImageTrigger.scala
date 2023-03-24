@@ -81,6 +81,9 @@ object ImageTrigger {
         if (oorB == 0) {
           val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
             geom = windowRange, geom2 = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = level)
+
+//          val loadInit=Image.load(sc,"LE07_L1TP_C01_T1",measurementName = "Near-Infrared",crs="EPSG:32650",
+//            dateTime ="[2016-07-01 00:00:00,2016-08-01 00:00:00]",geom = "[114.054,29.8,115.588,30.774]",geom2 = "[73.62,18.19,134.7601467382,53.54]",level = level)
           rdd_list_image += (UUID -> loadInit._1)
           rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
         }
