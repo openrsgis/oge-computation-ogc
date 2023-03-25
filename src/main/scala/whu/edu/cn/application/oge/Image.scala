@@ -33,6 +33,7 @@ import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 import java.io.{BufferedWriter, File, FileWriter}
 import java.sql.{ResultSet, Timestamp}
 import java.text.SimpleDateFormat
+import java.time.Instant
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -1053,6 +1054,41 @@ object Image {
     image._2.crs.toString()
   }
 
+  /**
+   * Force an image to be computed in a given projection
+   *
+   * @param image The coverage to reproject.
+   * @param newProjectionCode The code of new projection
+   * @param resolution The resolution of reprojected image
+   * @return
+   */
+  def reproject(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+                newProjectionCode: Int, resolution: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val band = image._1.first()._1.measurementName
+    val resampleTime = Instant.now.getEpochSecond
+    val imagetileRDD = image._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val extent = image._2.extent.reproject(image._2.crs, CRS.fromEpsgCode(newProjectionCode))
+    val tl = TileLayout(((extent.xmax - extent.xmin) / (resolution * 256)).toInt, ((extent.ymax - extent.ymin) / (resolution * 256)).toInt, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val cellType = image._2.cellType
+    val srcLayout = image._2.layout
+    val srcExtent = image._2.extent
+    val srcCrs = image._2.crs
+    val srcBounds = image._2.bounds
+    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
+    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    val imagetileLayerRDD = TileLayerRDD(imagetileRDD, rasterMetaData);
+    val (_, imagetileRDDWithMetadata) = imagetileLayerRDD.reproject(CRS.fromEpsgCode(newProjectionCode), ld, geotrellis.raster.resample.Bilinear)
+    val imageNoband = (imagetileRDDWithMetadata.mapValues(tile => tile: Tile), imagetileRDDWithMetadata.metadata)
+    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(imageNoband._2.tileLayout.layoutCols - 1, imageNoband._2.tileLayout.layoutRows - 1, resampleTime))
+    val newMetadata = TileLayerMetadata(imageNoband._2.cellType, imageNoband._2.layout, imageNoband._2.extent, imageNoband._2.crs, newBound)
+    val imageRDD = imageNoband.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
+    })
+    (imageRDD, newMetadata)
+  }
   /**
    * 自定义重采样方法
    *
