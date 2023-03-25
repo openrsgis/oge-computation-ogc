@@ -1378,7 +1378,7 @@ object Image {
         println("zoom = " + zoom)
 
         Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-          if (z == levelFromJSON) {
+          if (z == zoom) {
             val layerId = LayerId(layerIDAll, z)
             // If the layer exists already, delete it out before writing
             if (attributeStore.layerExists(layerId)) {

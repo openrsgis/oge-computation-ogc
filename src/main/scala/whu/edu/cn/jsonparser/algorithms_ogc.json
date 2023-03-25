@@ -2359,6 +2359,11 @@
         "name": "crsCode",
         "type": "Int",
         "description": "The code of new projection."
+      },
+      {
+        "name": "resolution",
+        "type": "Int",
+        "description": "The resolution of reprojected image."
       }
     ]
   },
