@@ -183,7 +183,7 @@ object Image {
     val ld = LayoutDefinition(extent, tl)
     val cellType = CellType.fromName(firstTile.getDType)
     val crs = CRS.fromEpsgCode(firstTile.getCrs)
-    val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
+    val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(tl.layoutCols - 1, tl.layoutRows - 1, colRowInstant._6))
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     val rawtileRDD = tileRDDReP.map(t => {
