@@ -26,7 +26,7 @@ import whu.edu.cn.application.oge.Tiffheader_parse._
 import whu.edu.cn.application.tritonClient.Preprocessing
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.util.{HttpUtil, PostgresqlUtil, SystemConstants}
 import whu.edu.cn.util.TileMosaicImage.tileMosaic
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
@@ -155,7 +155,7 @@ object Image {
       val measurement = tile.getMeasurement
       val rowNum = tile.getRow
       val colNum = tile.getCol
-      val Tile = deserializeTileData("", tile.getTilebuf, 256, tile.getDType)
+      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDType)
       val k = entity.SpaceTimeBandKey(SpaceTimeKey(colNum - colRowInstant._1, rowNum - colRowInstant._2, phenomenonTime), measurement)
       val v = Tile
       (k, v)
@@ -187,7 +187,7 @@ object Image {
 
     val rawtileRDD = tileRDDReP.map(t => {
       val tile = getTileBuf(t)
-      t.setTile(deserializeTileData("", tile.getTilebuf, 256, tile.getDType))
+      t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDType))
       t
     })
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -1056,14 +1056,14 @@ object Image {
   /**
    * 自定义重采样方法
    *
-   * @param image   需要被重采样的图像
-   * @param sourceZoom   原图像的缩放等级
-   * @param targetZoom   输出图像的缩放等级
-   * @param mode   插值方法
-   * @return   和输入图像同类型的新图像
+   * @param image      需要被重采样的图像
+   * @param sourceZoom 原图像的缩放等级
+   * @param targetZoom 输出图像的缩放等级
+   * @param mode       插值方法
+   * @return 和输入图像同类型的新图像
    */
   def resample(implicit sc: SparkContext,
-                image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                sourceZoom: Int, targetZoom: Int,
                mode: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val resampleMethod: PointResampleMethod = mode match {
@@ -1092,10 +1092,12 @@ object Image {
         .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
 
-
     val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
-//    println("srcAcc0 = " + myAcc2.value)
-    reprojected.map(t=>{
+    //    println("srcAcc0 = " + myAcc2.value)
+
+    reprojected.map(t => {
+
+
       //          println("srcRows = " + t._2.rows) 256
       //          println("srcRows = " + t._2.cols) 256
       myAcc2.add(1)
@@ -1106,10 +1108,6 @@ object Image {
     println("sourceZoom = " + sourceZoom + " and " + "solvedSourceZoom = " + solvedSourceZoom)
 
 
-
-
-
-
     val level: Int = targetZoom - solvedSourceZoom
     if (level > 0 && level < 20) {
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
@@ -1118,8 +1116,8 @@ object Image {
       (imageResampled,
         TileLayerMetadata(image._2.cellType, LayoutDefinition(
           image._2.extent,
-            TileLayout(image._2.layoutCols, image._2.layoutRows,
-              image._2.tileCols * (1 << level), image._2.tileRows * (1 << level))
+          TileLayout(image._2.layoutCols, image._2.layoutRows,
+            image._2.tileCols * (1 << level), image._2.tileRows * (1 << level))
         ), image._2.extent, image._2.crs, image._2.bounds))
     }
     else if (level < 0 && level > (-20)) {
@@ -1325,14 +1323,14 @@ object Image {
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
-                        palette: String = null, layerID: Int, fileName: String = null): Unit = {
+                         palette: String = null, layerID: Int, fileName: String = null): Unit = {
     val appID = sc.applicationId
     val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
     val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc,image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
-      image._1.map(t=>t._2)
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
+      image._1.map(t => t._2)
 
       println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
       val timeList = resampledImage._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
@@ -1355,10 +1353,10 @@ object Image {
             .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
         val myAcc: LongAccumulator = sc.longAccumulator("myAcc")
-//        println("targetAcc0 = " + myAcc.value)
-        reprojected.map(t=>{
-//          println("targetRows = " + t._2.rows) 256
-//          println("targetRows = " + t._2.cols) 256
+        //        println("targetAcc0 = " + myAcc.value)
+        reprojected.map(t => {
+          //          println("targetRows = " + t._2.rows) 256
+          //          println("targetRows = " + t._2.cols) 256
           myAcc.add(1)
           t
         }).collect()
@@ -1368,7 +1366,8 @@ object Image {
         // Create the attributes store that will tell us information about our catalog.
         val attributeStore = FileAttributeStore(outputPath)
         // Create the writer that we will use to store the tiles in the local catalog.
-        val writer = FileLayerWriter(attributeStore)
+        val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+
         val time = System.currentTimeMillis()
         val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
         // Pyramiding up the zoom levels, write our tiles out to the local file system.
@@ -1380,11 +1379,14 @@ object Image {
         Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
           if (z == levelFromJSON) {
             val layerId = LayerId(layerIDAll, z)
+            println(layerId)
             // If the layer exists already, delete it out before writing
             if (attributeStore.layerExists(layerId)) {
               new FileLayerManager(attributeStore).delete(layerId)
             }
             writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+
+
           }
         }
 
@@ -1393,22 +1395,56 @@ object Image {
       }
       )
 
+
+
+
+
+
+
+
+
+
+
+      //TODO 回调服务
+
+      val resultSet: Map[String, ArrayBuffer[mutable.Map[String, Any]]] = Map(
+        "raster" -> TMSList,
+        "vector" -> ArrayBuffer.empty[mutable.Map[String, Any]],
+        "table" -> ArrayBuffer.empty[mutable.Map[String, Any]],
+        "rasterCube" -> new ArrayBuffer[mutable.Map[String, Any]](),
+        "vectorCube" -> new ArrayBuffer[mutable.Map[String, Any]]()
+      )
+      implicit val formats = DefaultFormats
+      val jsonStr: String = Serialization.write(resultSet)
+      val deliverWordID:String = "{\"workID\":\"" + ImageTrigger.workID + "\"}"
+      HttpUtil.postResponse(SystemConstants.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
+
+
+
+
+
+
+
+
+
+
+
       // 写入文件
       //      Serve.runTMS(outputPath)
-      val writeFile = new File(fileName)
-      val writerOutput = new BufferedWriter(new FileWriter(writeFile))
-      val result = mutable.Map[String, Any]()
-      result += ("raster" -> TMSList)
-      result += ("vector" -> ArrayBuffer.empty[mutable.Map[String, Any]])
-      result += ("table" -> ArrayBuffer.empty[mutable.Map[String, Any]])
-      val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
-      result += ("rasterCube" -> rasterCubeList)
-      result += ("vectorCube" -> vectorCubeList)
-      implicit val formats = DefaultFormats
-      val jsonStr: String = Serialization.write(result)
-      writerOutput.write(jsonStr)
-      writerOutput.close()
+      //      val writeFile = new File(fileName)
+      //      val writerOutput = new BufferedWriter(new FileWriter(writeFile))
+      //      val result = mutable.Map[String, Any]()
+      //      result += ("raster" -> TMSList)
+      //      result += ("vector" -> ArrayBuffer.empty[mutable.Map[String, Any]])
+      //      result += ("table" -> ArrayBuffer.empty[mutable.Map[String, Any]])
+      //      val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      //      val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      //      result += ("rasterCube" -> rasterCubeList)
+      //      result += ("vectorCube" -> vectorCubeList)
+      //      implicit val formats = DefaultFormats
+      //      val jsonStr: String = Serialization.write(result)
+      //      writerOutput.write(jsonStr)
+      //      writerOutput.close()
     }
 
     else {
@@ -1453,7 +1489,7 @@ object Image {
       // Pyramiding up the zoom levels, write our tiles out to the local file system.
       Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
         if (z == zoom) {
-          val layerId = LayerId(layerIDAll, z)
+          val layerId: LayerId = LayerId(layerIDAll, z)
           // If the layer exists already, delete it out before writing
           if (attributeStore.layerExists(layerId)) {
             new FileLayerManager(attributeStore).delete(layerId)

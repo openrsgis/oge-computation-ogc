@@ -32,6 +32,10 @@ object ImageTrigger {
   var fileName: String = _
   var oorB: Int = _
 
+  var workID: String = _
+  /* 此次计算工作的唯一标识 */
+  var workTaskJSON: String = _ /* 此次计算工作的任务json */
+
   def argOrNot(args: Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -82,8 +86,8 @@ object ImageTrigger {
           val loadInit = Image.load(sc, productName = imageLoad(argOrNot(args, "input"))._1, measurementName = measurementName, dateTime = imageLoad(argOrNot(args, "input"))._2,
             geom = windowRange, geom2 = imageLoad(argOrNot(args, "input"))._3, crs = crs, level = level)
 
-//          val loadInit=Image.load(sc,"LE07_L1TP_C01_T1",measurementName = "Near-Infrared",crs="EPSG:32650",
-//            dateTime ="[2016-07-01 00:00:00,2016-08-01 00:00:00]",geom = "[114.054,29.8,115.588,30.774]",geom2 = "[73.62,18.19,134.7601467382,53.54]",level = level)
+          //          val loadInit=Image.load(sc,"LE07_L1TP_C01_T1",measurementName = "Near-Infrared",crs="EPSG:32650",
+          //            dateTime ="[2016-07-01 00:00:00,2016-08-01 00:00:00]",geom = "[114.054,29.8,115.588,30.774]",geom2 = "[73.62,18.19,134.7601467382,53.54]",level = level)
           rdd_list_image += (UUID -> loadInit._1)
           rdd_list_image_waitingForMosaic += (UUID -> loadInit._2)
         }
@@ -422,17 +426,30 @@ object ImageTrigger {
   }
 
   def main(args: Array[String]): Unit = {
+
+    // 从命令行参数取
+    // sc = args(....)
+    // workID = args(....)
+    //
+    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取
+
+    workTaskJSON =  {
+      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+      fileName = "datas/out.txt" // TODO
+      val line: String = fileSource.mkString
+      fileSource.close()
+      line
+    } // 任务要用的 JSON,应当由命令行参数获取
+
+
     val time1 = System.currentTimeMillis()
     val conf = new SparkConf()
       .setMaster("local[*]")
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
-    fileName = "datas/out.txt" // TODO
-    val line: String = fileSource.mkString
-    fileSource.close()
-    val jsonObject = JSON.parseObject(line)
+
+    val jsonObject = JSON.parseObject(workTaskJSON)
     println(jsonObject.size())
     println(jsonObject)
 
