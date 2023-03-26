@@ -38,8 +38,8 @@ public class Tiffheader_parse {
         double[] p_upper_right = new double[2];
         int[] row_col = new int[2];/* ranks of the tile*/
         long[] offset = new long[2];/* offsets of the tile*/
-        byte[] tilebuf;/* byte stream of the tile*/
-        int bitpersample;/* bit of the tile*/
+        byte[] tileBuf;/* byte stream of the tile*/
+        int bitPerSample;/* bit of the tile*/
         int level;/* level of the overview*/
         double rotation;
         double resolution;
@@ -103,12 +103,12 @@ public class Tiffheader_parse {
             return this.offset;
         }
 
-        public byte[] getTilebuf() {
-            return this.tilebuf;
+        public byte[] getTileBuf() {
+            return this.tileBuf;
         }
 
-        public int getBitpersample() {
-            return this.bitpersample;
+        public int getBitPerSample() {
+            return this.bitPerSample;
         }
 
         public int getLevel() {
@@ -175,12 +175,12 @@ public class Tiffheader_parse {
             this.offset = offset;
         }
 
-        public void setTilebuf(byte[] tilebuf) {
-            this.tilebuf = tilebuf;
+        public void setTileBuf(byte[] tileBuf) {
+            this.tileBuf = tileBuf;
         }
 
-        public void setBitpersample(int bitpersample) {
-            this.bitpersample = bitpersample;
+        public void setBitPerSample(int bitPerSample) {
+            this.bitPerSample = bitPerSample;
         }
 
         public void setLevel(int level) {
@@ -217,7 +217,7 @@ public class Tiffheader_parse {
     private int ImageLength;
     private ArrayList<Integer> ImageSize = new ArrayList<Integer>();
     private ArrayList<Double> Cell = new ArrayList<>();
-    private ArrayList<Double> GeoTrans = new ArrayList<>();
+    private ArrayList<Double> GeoTrans = new ArrayList<>();//TODO 经纬度
     private int xPosition;
     private int yPosition;
 
@@ -225,6 +225,19 @@ public class Tiffheader_parse {
                                                String time, String crs, String measurement,
                                                String dType, String resolution, String productName,
                                                double[] query_extent) {
+
+        // 判断redis 的范围和query_extent有什么差别(redis没范围则初始化)
+        // 把query_extent改成矩形
+        //
+
+        System.out.println("query_extent = " + query_extent[0]);
+        System.out.println("query_extent = " + query_extent[1]);
+        System.out.println("query_extent = " + query_extent[2]);
+        System.out.println("query_extent = " + query_extent[3]);
+        // 有差别，合起来的最大范围存redis
+        //
+
+
         try {
             MinioClient minioClient = new MinioClient("http://125.220.153.26:9006", "rssample", "ypfamily608");
             // 获取指定offset和length的"myobject"的输入流。
@@ -239,9 +252,16 @@ public class Tiffheader_parse {
             byte[] headerByte = outStream.toByteArray();
             inputStream.close();
             outStream.close();
-            Tiffheader_parse imageInfo = new Tiffheader_parse();
-            imageInfo.parse(headerByte);
-            return imageInfo.getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName);
+            Tiffheader_parse imageInfo = new Tiffheader_parse(); //TODO??new了一个？
+            imageInfo.parse(headerByte); //TODO private方法?
+            // 改为static，并设置为private
+
+//            myGetTiles(范围一)
+//            myGetTiles(范围二)
+//            最大是二
+
+            // return tile_srch？
+            return imageInfo.getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName);//TODO 也是private？
 
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             System.out.println("Error occurred: " + e);
@@ -263,7 +283,7 @@ public class Tiffheader_parse {
                 outStream.write(buffer, 0, len);
             }
             byte[] tilebuffer = outStream.toByteArray();
-            tile.tilebuf = tilebuffer;
+            tile.tileBuf = tilebuffer;
             inputStream.close();
             outStream.close();
             return tile;
@@ -398,12 +418,12 @@ public class Tiffheader_parse {
             e.printStackTrace();
         }
 
-        double[] pmin = new double[2];
-        double[] pmax = new double[2];
-        pmin[0] = pointLowerReprojected.getX();
-        pmin[1] = pointLowerReprojected.getY();
-        pmax[0] = pointUpperReprojected.getX();
-        pmax[1] = pointUpperReprojected.getY();
+        double[] pMin = new double[2];
+        double[] pMax = new double[2];
+        pMin[0] = pointLowerReprojected.getX();
+        pMin[1] = pointLowerReprojected.getY();
+        pMax[0] = pointUpperReprojected.getX();
+        pMax[1] = pointUpperReprojected.getY();
         // 图像范围
         // 东西方向空间分辨率  --->像素宽度
         double w_src = this.Cell.get(0);
@@ -422,7 +442,7 @@ public class Tiffheader_parse {
         }
 
         ArrayList<RawTile> tile_srch = new ArrayList<>();
-
+//TODO 放到类里，整个方法改成void
         //int l = 0;
 /*        if ("MOD13Q1_061".equals(productName)) {
             flagReader = true;
@@ -462,61 +482,16 @@ public class Tiffheader_parse {
         int p_lower;
         int p_upper;
         if (flag) {
-            p_left = (int) ((pmin[0] - xMin) / (256 * w_src * (int) Math.pow(2, level)));
-            p_right = (int) ((pmax[0] - xMin) / (256 * w_src * (int) Math.pow(2, level)));
-            p_lower = (int) ((yMax - pmax[1]) / (256 * h_src * (int) Math.pow(2, level)));
-            p_upper = (int) ((yMax - pmin[1]) / (256 * h_src * (int) Math.pow(2, level)));
+            p_left = (int) ((pMin[0] - xMin) / (256 * w_src * (int) Math.pow(2, level)));
+            p_right = (int) ((pMax[0] - xMin) / (256 * w_src * (int) Math.pow(2, level)));
+            p_lower = (int) ((yMax - pMax[1]) / (256 * h_src * (int) Math.pow(2, level)));
+            p_upper = (int) ((yMax - pMin[1]) / (256 * h_src * (int) Math.pow(2, level)));
         } else {
-            p_lower = (int) ((pmin[1] - yMax) / (256 * w_src * (int) Math.pow(2, level)));
-            p_upper = (int) ((pmax[1] - yMax) / (256 * w_src * (int) Math.pow(2, level)));
-            p_left = (int) ((xMin - pmax[0]) / (256 * h_src * (int) Math.pow(2, level)));
-            p_right = (int) ((xMin - pmin[0]) / (256 * h_src * (int) Math.pow(2, level)));
+            p_lower = (int) ((pMin[1] - yMax) / (256 * w_src * (int) Math.pow(2, level)));
+            p_upper = (int) ((pMax[1] - yMax) / (256 * w_src * (int) Math.pow(2, level)));
+            p_left = (int) ((xMin - pMax[0]) / (256 * h_src * (int) Math.pow(2, level)));
+            p_right = (int) ((xMin - pMin[0]) / (256 * h_src * (int) Math.pow(2, level)));
         }
-
-/*
-
-        for (int i = (Math.max(!flagReader ? p_lower : p_left, 0));
-             i <= ((!flagReader ? p_upper : p_right) >= TileOffsets.get(level).size() ?
-                     TileOffsets.get(level).size() - 1 : (!flagReader ? p_upper : p_right));
-             i++
-        ) {
-            for (int j = (Math.max(!flagReader ? p_left : p_lower, 0));
-                 j <= ((!flagReader ? p_right : p_upper) >= TileOffsets.get(level).get(i).size() ?
-                         TileOffsets.get(level).get(i).size() - 1 : (!flagReader ? p_right : p_upper));
-                 j++) {
-                RawTile t = new RawTile();
-                t.offset[0] = TileOffsets.get(level).get(i).get(j);
-                t.offset[1] = TileByteCounts.get(level).get(i).get(j) + t.offset[0];
-                t.p_bottom_left[0] = j *
-                        (256 * (!flagReader ? w_src : h_src) * (int) Math.pow(2, level)) +
-                        (!flagReader ? xMin : yMax);
-                t.p_bottom_left[1] = (i + 1) *
-                        (256 * (!flagReader ? -h_src : -w_src) * (int) Math.pow(2, level)) +
-                        (!flagReader ? yMax : xMin);
-                t.p_upper_right[0] = (j + 1) *
-                        (256 * (!flagReader ? w_src : h_src) * (int) Math.pow(2, level)) +
-                        (!flagReader ? xMin : yMax);
-                t.p_upper_right[1] = i *
-                        (256 * (!flagReader ? -h_src : -w_src) * (int) Math.pow(2, level)) +
-                        (!flagReader ? yMax : xMin);
-                t.rotation = GeoTrans.get(5);
-                t.resolution = w_src * (int) Math.pow(2, level);
-                t.row_col[0] = i;
-                t.row_col[1] = j;
-                t.bitpersample = BitPerSample;
-                t.level = level;
-                t.path = in_path;
-                t.time = time;
-                t.measurement = measurement;
-                t.crs = Integer.parseInt(crs.replace("EPSG:", ""));
-                t.dType = dType;
-                t.product = productName;
-                tile_srch.add(t);
-            }
-        }
-
-
-*/
 
 
 
@@ -565,7 +540,7 @@ public class Tiffheader_parse {
                     t.resolution = w_src * (int) Math.pow(2, level);
                     t.row_col[0] = i;
                     t.row_col[1] = j;
-                    t.bitpersample = BitPerSample;
+                    t.bitPerSample = BitPerSample;
                     t.level = level;
                     t.path = in_path;
                     t.time = time;
@@ -906,7 +881,7 @@ public class Tiffheader_parse {
                 if (tile_srch.get(i).row_col[0] == j) {
                     int yOff = (tile_srch.get(i).row_col[1] - tile_srch.get(0).row_col[1]) * 256;
                     int xOff = (tile_srch.get(i).row_col[0] - tile_srch.get(0).row_col[0]) * 256;
-                    dm.GetRasterBand(1).WriteRaster(yOff, xOff, 256, 256, 256, 256, GDT_Byte, tile_srch.get(i).tilebuf);
+                    dm.GetRasterBand(1).WriteRaster(yOff, xOff, 256, 256, 256, 256, GDT_Byte, tile_srch.get(i).tileBuf);
                     //ds.GetRasterBand(1).WriteRaster(yoff, xoff, 256, 256, 256, 256, GDT_Byte, tile_srch.get(i).tilebuf);
                 }
             }
