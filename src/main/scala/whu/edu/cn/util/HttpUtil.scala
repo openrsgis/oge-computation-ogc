@@ -8,9 +8,9 @@ import org.apache.http.util.EntityUtils
 
 object HttpUtil {
 
-  def postResponse(url: String, params: String = null, header: String = null): String ={
-    val httpClient: CloseableHttpClient = HttpClients.createDefault()    // 创建 client 实例
-    val post = new HttpPost(url)    // 创建 post 实例
+  def postResponse(url: String, params: String = null, header: String = null): String = {
+    val httpClient: CloseableHttpClient = HttpClients.createDefault() // 创建 client 实例
+    val post = new HttpPost(url) // 创建 post 实例
 
     // 设置 header
     if (header != null) {
@@ -24,8 +24,8 @@ object HttpUtil {
       post.setEntity(new StringEntity(params, "UTF-8"))
     }
 
-    val response: CloseableHttpResponse = httpClient.execute(post)    // 创建 client 实例
-    EntityUtils.toString(response.getEntity, "UTF-8")   // 获取返回结果
+    val response: CloseableHttpResponse = httpClient.execute(post) // 创建 client 实例
+    EntityUtils.toString(response.getEntity, "UTF-8") // 获取返回结果
   }
 
 

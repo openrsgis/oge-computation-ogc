@@ -1,5 +1,7 @@
 package whu.edu.cn.application.oge;
 
+import geotrellis.store.index.ZCurveKeyIndexMethod;
+import geotrellis.store.index.zcurve.Z3;
 import io.minio.MinioClient;
 import io.minio.errors.*;
 import org.gdal.gdal.Dataset;
@@ -14,6 +16,9 @@ import org.opengis.referencing.crs.ProjectedCRS;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import geotrellis.raster.Tile;
+import scala.Tuple2;
+import scala.collection.Seq;
+import scala.math.BigInt;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -238,8 +243,11 @@ public class Tiffheader_parse {
         //
 
 
+
+
+
         try {
-            MinioClient minioClient = new MinioClient("http://125.220.153.26:9006", "rssample", "ypfamily608");
+            MinioClient minioClient = new MinioClient("http://125.220.153.22:9006", "rssample", "ypfamily608");
             // 获取指定offset和length的"myobject"的输入流。
             InputStream inputStream = minioClient.getObject("oge", in_path, 0L, 262143L);
             ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -252,16 +260,14 @@ public class Tiffheader_parse {
             byte[] headerByte = outStream.toByteArray();
             inputStream.close();
             outStream.close();
-            Tiffheader_parse imageInfo = new Tiffheader_parse(); //TODO??new了一个？
-            imageInfo.parse(headerByte); //TODO private方法?
-            // 改为static，并设置为private
 
-//            myGetTiles(范围一)
-//            myGetTiles(范围二)
-//            最大是二
+            // 出于性能的考虑，静态变量序列化会比较慢
+            Tiffheader_parse imageInfo = new Tiffheader_parse();
+            imageInfo.parse(headerByte);
+
 
             // return tile_srch？
-            return imageInfo.getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName);//TODO 也是private？
+            return imageInfo.getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName);
 
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             System.out.println("Error occurred: " + e);
@@ -272,7 +278,7 @@ public class Tiffheader_parse {
 
     public static RawTile getTileBuf(RawTile tile) {
         try {
-            MinioClient minioClient = new MinioClient("http://125.220.153.26:9006", "rssample", "ypfamily608");
+            MinioClient minioClient = new MinioClient("http://125.220.153.22:9006", "rssample", "ypfamily608");
             InputStream inputStream = minioClient.getObject("oge", tile.path, tile.offset[0], tile.offset[1] - tile.offset[0]);
             int length = Math.toIntExact((tile.offset[1] - tile.offset[0]));
 
@@ -549,6 +555,8 @@ public class Tiffheader_parse {
                     t.dType = dType;
                     t.product = productName;
                     tile_srch.add(t);
+                    System.out.println("ZOrder = "+ lonLatToZCurve(t.p_bottom_left[0],t.p_bottom_left[1],9));
+                    System.out.println("ZOrder = "+ lonLatToZCurve(t.p_upper_right[0],t.p_upper_right[1],9));
                 }
             }
 
@@ -889,4 +897,42 @@ public class Tiffheader_parse {
         Dataset ds = dr.CreateCopy(path, dm);
         return "{\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\",\"extent\":[" + arrayList.get(0) + "," + arrayList.get(1) + "," + arrayList.get(2) + "," + arrayList.get(3) + "]}]}";
     }
+
+
+
+
+
+    private static String lonLatToZCurve(double lon, double lat, int zoom) {
+        double n = Math.pow(2, zoom);
+
+        double tileX = ((lon + 180) / 360) * n;
+        double tileY = (1 - (Math.log(Math.tan(Math.toRadians(lat)) +
+                (1 / Math.cos(Math.toRadians(lat)))) / Math.PI)) / 2 * n;
+        int[] xy = new int[]{
+                (int) Math.floor(tileY),
+                (int) Math.floor(tileX)
+
+
+        };
+        System.out.println(xy[0] + "??? "+ xy[1]);
+
+        return String.valueOf(xyToZCurve(zoom, xy));
+    }
+
+    private static int xyToZCurve(int zoom, int[] xy) {
+        // Calculate the z-order by bit shuffling
+        int res = 0;
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < zoom; ++j) {
+
+                int mask = 1 << j;
+                // Check whether the value in the position is 1
+                if ((xy[1 - i] & mask) != 0)
+                    // Do bit shuffling
+                    res |= 1 << (i + j * 2);
+            }
+        }
+        return res;
+    }
+
 }

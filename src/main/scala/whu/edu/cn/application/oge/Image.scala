@@ -33,6 +33,7 @@ import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 import java.io.{BufferedWriter, File, FileWriter}
 import java.sql.{ResultSet, Timestamp}
 import java.text.SimpleDateFormat
+import java.util
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -108,7 +109,7 @@ object Image {
 
     val imagePathRdd = sc.parallelize(metaData, metaData.length)
     val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
-      val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
+      val tiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
       if (tiles.size() > 0) {
         asScalaBuffer(tiles)
       }
@@ -1054,18 +1055,22 @@ object Image {
   }
 
   /**
-   * 自定义重采样方法
+   * 自定义重采样方法，功能有局限性，勿用
    *
    * @param image      需要被重采样的图像
-   * @param sourceZoom 原图像的缩放等级
-   * @param targetZoom 输出图像的缩放等级
+   * @param sourceZoom 原图像的 Zoom 层级
+   * @param targetZoom 输出图像的 Zoom 层级
    * @param mode       插值方法
+   * @param downSampling  是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理
    * @return 和输入图像同类型的新图像
    */
   def resample(implicit sc: SparkContext,
                image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                sourceZoom: Int, targetZoom: Int,
-               mode: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+               mode: String,
+               downSampling:Boolean = true
+              )
+  : (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val resampleMethod: PointResampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
@@ -1120,7 +1125,7 @@ object Image {
             image._2.tileCols * (1 << level), image._2.tileRows * (1 << level))
         ), image._2.extent, image._2.crs, image._2.bounds))
     }
-    else if (level < 0 && level > (-20)) {
+    else if (level < 0 && level > (-20) && downSampling) {
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         val tileResampled: Tile = t._2.resample(Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt, Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt, resampleMethod)
         (t._1, tileResampled)
@@ -1329,7 +1334,7 @@ object Image {
     val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear",downSampling = false)
       image._1.map(t => t._2)
 
       println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
