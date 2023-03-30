@@ -61,7 +61,7 @@ object Image {
            geom2: String = null, crs: String = null, level: Int = 0
            /* //TODO 把trigger算出来的前端瓦片编号集合传进来 */): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
     val zIndexStrArray: ArrayBuffer[String] = ImageTrigger.zIndexStrArray
-    if (geom2 != null)
+    if (geom2 != null) {
       println("geo2 = " + geom2)
 
       val lonLatOfBBox: ListBuffer[Double] = geom2.replace("[", "")
@@ -99,7 +99,7 @@ object Image {
         if (lonMinOfQueryExtent < lonMaxOfQueryExtent &&
           latMinOfQueryExtent < latMaxOfQueryExtent
         ) {
-        // 加入集合
+          // 加入集合
           queryExtent.append(
             Array(
               lonMinOfQueryExtent,
@@ -165,7 +165,7 @@ object Image {
 
         /*    .reduceByKey(_++_).filter(_._1 == 1).map(_._2).persist() // 暂存*/
 
-        .reduce(_ ++ _).distinct.map(t => { // 合并所有的元数据并去重
+        .reduce(_ ++ _).distinct.map(t => { // 合并所有的元数据（追加了范围）并去重
         val rawTiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7) // 根据元数据和范围查询后端瓦片
         if (rawTiles.size() > 0) {
           asScalaBuffer(rawTiles)
@@ -175,7 +175,7 @@ object Image {
         }
       })
       // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
-      val tileRDDNoData = sc.makeRDD(tileNoData)
+      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(tileNoData)
 
       val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
         x + y
@@ -188,7 +188,69 @@ object Image {
       }
       val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
       (noReSlice(sc, tileRDDReP), tileRDDReP)
+    }
+    else{ // geom2 == null，之前批处理使用的代码
 
+      val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
+        t.toDouble
+      }).to[ListBuffer]
+
+      val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+      val StartTime = if (dateTimeArray != null) {
+        if (dateTimeArray.length == 2) dateTimeArray(0) else null
+      } else null
+      val EndTime = if (dateTimeArray != null) {
+        if (dateTimeArray.length == 2) dateTimeArray(1) else null
+      } else null
+      var startTime = ""
+      if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
+      else startTime = StartTime
+      var endTime = ""
+      if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
+      else endTime = EndTime
+
+      var geom_str = ""
+      if (geomReplace != null && geomReplace.length == 4) {
+        val minx = geomReplace(0)
+        val miny = geomReplace(1)
+        val maxx = geomReplace(2)
+        val maxy = geomReplace(3)
+        geom_str = "POLYGON((" + minx + " " + miny + ", " + minx + " " + maxy + ", " + maxx + " " + maxy + ", " + maxx + " " + miny + "," + minx + " " + miny + "))"
+      }
+      val query_extent = new Array[Double](4)
+      query_extent(0) = geomReplace(0)
+      query_extent(1) = geomReplace(1)
+      query_extent(2) = geomReplace(2)
+      query_extent(3) = geomReplace(3)
+      val metaData = query(productName, sensorName, measurementName, startTime, endTime, geom_str, crs)
+      println("metadata.length = " + metaData.length)
+      if (metaData.isEmpty) {
+        throw new RuntimeException("No data to compute!")
+      }
+
+      val imagePathRdd = sc.parallelize(metaData, metaData.length)
+      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
+        val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
+        if (tiles.size() > 0) {
+          asScalaBuffer(tiles)
+        }
+        else {
+          mutable.Buffer.empty[RawTile]
+        }
+      }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+      val tileNum = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+        x + y
+      })
+      println("tileNum = " + tileNum)
+      val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
+      var repNum = tileNum
+      if (repNum > 90) {
+        repNum = 90
+      }
+      val tileRDDReP = tileRDDFlat.repartition(repNum).persist()
+      (noReSlice(sc, tileRDDReP), tileRDDReP)
+
+    }
 
 
 
