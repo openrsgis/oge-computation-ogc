@@ -26,7 +26,7 @@ import whu.edu.cn.application.oge.Tiffheader_parse._
 import whu.edu.cn.application.tritonClient.Preprocessing
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.util.{HttpUtil, PostgresqlUtil, SystemConstants}
+import whu.edu.cn.util.{HttpUtil, PostgresqlUtil, SystemConstants, ZCurveUtil}
 import whu.edu.cn.util.TileMosaicImage.tileMosaic
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
@@ -35,8 +35,10 @@ import java.sql.{ResultSet, Timestamp}
 import java.text.SimpleDateFormat
 import java.util
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.postfixOps
 import scala.math._
 
 object Image {
@@ -53,32 +55,149 @@ object Image {
    * @param crs             crs of the images to query
    * @return ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
-  def load(implicit sc: SparkContext, productName: String = null, sensorName: String = null, measurementName: String = null, dateTime: String = null, geom: String = null, geom2: String = null, crs: String = null, level: Int = 0): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
-    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
-      t.toDouble
-    }).to[ListBuffer]
-    if (geom2 != null) {
-      val geom2Replace = geom2.replace("[", "").replace("]", "").split(",").map(t => {
-        t.toDouble
-      }).to[ListBuffer]
-      if (geom2Replace(0) > geomReplace(0)) {
-        geomReplace(0) = geom2Replace(0)
+  def load(implicit sc: SparkContext, productName: String = null,
+           sensorName: String = null, measurementName: String = null,
+           dateTime: String = null, geom: String = null /* // TODO geom 可以去掉了 */ ,
+           geom2: String = null, crs: String = null, level: Int = 0
+           /* //TODO 把trigger算出来的前端瓦片编号集合传进来 */): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
+    val zIndexStrArray: ArrayBuffer[String] = ImageTrigger.zIndexStrArray
+    if (geom2 != null)
+      println("geo2 = " + geom2)
+
+      val lonLatOfBBox: ListBuffer[Double] = geom2.replace("[", "")
+        .replace("]", "")
+        .split(",").map(_.toDouble).to[ListBuffer]
+
+      val queryExtent = new ArrayBuffer[Array[Double]]()
+
+
+      // TODO 通过传进来的前端瓦片编号反算出它们各自对应的经纬度范围 V
+      for (zIndexStr <- zIndexStrArray) {
+        val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+
+
+        val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+        val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+        val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+        val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+
+        // TODO: 改成用所有前端瓦片范围  和  bbox 的交集
+        val lonMinOfQueryExtent: Double =
+          if (lonLatOfBBox.head > lonMinOfTile) lonLatOfBBox.head else lonMinOfTile
+
+        val latMinOfQueryExtent: Double =
+          if (lonLatOfBBox(1) > latMinOfTile) lonLatOfBBox(1) else latMinOfTile
+
+        val lonMaxOfQueryExtent: Double =
+          if (lonLatOfBBox(2) < lonMaxOfTile) lonLatOfBBox(2) else lonMaxOfTile
+
+        val latMaxOfQueryExtent: Double =
+          if (lonLatOfBBox.last < latMaxOfTile) lonLatOfBBox(3) else latMaxOfTile
+        // TODO 这里不一定是矩形了,可能是六个顶点的L形
+
+
+        if (lonMinOfQueryExtent < lonMaxOfQueryExtent &&
+          latMinOfQueryExtent < latMaxOfQueryExtent
+        ) {
+        // 加入集合
+          queryExtent.append(
+            Array(
+              lonMinOfQueryExtent,
+              latMinOfQueryExtent,
+              lonMaxOfQueryExtent,
+              latMaxOfQueryExtent
+            )
+          )
+        }
+      } // end for
+
+
+      val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+      val StartTime: String = if (dateTimeArray != null) {
+        if (dateTimeArray.length == 2) dateTimeArray(0) else null
+      } else null
+      val EndTime: String = if (dateTimeArray != null) {
+        if (dateTimeArray.length == 2) dateTimeArray(1) else null
+      } else null
+      var startTime = ""
+      if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
+      else startTime = StartTime
+      var endTime = ""
+      if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
+      else endTime = EndTime
+
+
+      val queryMetaDataAndTiles = new ArrayBuffer[(String, Array[Double])]()
+
+      for (extent <- queryExtent) {
+        val minX: Double = extent(0)
+        val minY: Double = extent(1)
+        val maxX: Double = extent(2)
+        val maxY: Double = extent(3)
+
+
+        var polygonStr = ""
+        polygonStr = "POLYGON((" + minX + " " + minY + ", " +
+          minX + " " + maxY + ", " + maxX + " " + maxY + ", " +
+          maxX + " " + minY + "," + minX + " " + minY + "))"
+        queryMetaDataAndTiles.append((polygonStr, extent))
+
+
       }
-      if (geom2Replace(1) > geomReplace(1)) {
-        geomReplace(1) = geom2Replace(1)
+
+
+      // 元数据应当是所有范围交集并去重后的集合，要合并
+      // 每一组元数据都对应一个唯一的矩形范围
+
+
+      val queryMetaDataAndTilesRDD: RDD[(String, Array[Double])] =
+        sc.makeRDD(queryMetaDataAndTiles)
+
+      val tileNoData: ListBuffer[mutable.Buffer[RawTile]] = queryMetaDataAndTilesRDD.map(x => {
+        query(productName, sensorName, measurementName,
+          startTime, endTime, x._1, crs).map(
+          metaData =>
+            (metaData._1, metaData._2, metaData._3,
+              metaData._4, metaData._5, metaData._6,
+              x._2)
+        ) // 把query得到的元数据集合 和之前 与元数据集合对应的查询范围 合并到一个元组中
+      }).persist() // 暂存
+
+        /*    .reduceByKey(_++_).filter(_._1 == 1).map(_._2).persist() // 暂存*/
+
+        .reduce(_ ++ _).distinct.map(t => { // 合并所有的元数据并去重
+        val rawTiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7) // 根据元数据和范围查询后端瓦片
+        if (rawTiles.size() > 0) {
+          asScalaBuffer(rawTiles)
+        }
+        else {
+          mutable.Buffer.empty[RawTile]
+        }
+      })
+      // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+      val tileRDDNoData = sc.makeRDD(tileNoData)
+
+      val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+        x + y
+      })
+      println("tileNum = " + tileNum)
+      val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
+      var repNum: Int = tileNum
+      if (repNum > 90) {
+        repNum = 90
       }
-      if (geom2Replace(2) < geomReplace(2)) {
-        geomReplace(2) = geom2Replace(2)
-      }
-      if (geom2Replace(3) < geomReplace(3)) {
-        geomReplace(3) = geom2Replace(3)
-      }
-    }
-    val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-    val StartTime = if (dateTimeArray != null) {
+      val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
+      (noReSlice(sc, tileRDDReP), tileRDDReP)
+
+
+
+
+    // if geo2!=null
+    /*val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+    val StartTime: String = if (dateTimeArray != null) {
       if (dateTimeArray.length == 2) dateTimeArray(0) else null
     } else null
-    val EndTime = if (dateTimeArray != null) {
+    val EndTime: String = if (dateTimeArray != null) {
       if (dateTimeArray.length == 2) dateTimeArray(1) else null
     } else null
     var startTime = ""
@@ -88,7 +207,7 @@ object Image {
     if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
     else endTime = EndTime
 
-    var geom_str = ""
+
     if (geomReplace != null && geomReplace.length == 4) {
       val minx = geomReplace(0)
       val miny = geomReplace(1)
@@ -101,7 +220,9 @@ object Image {
     query_extent(1) = geomReplace(1)
     query_extent(2) = geomReplace(2)
     query_extent(3) = geomReplace(3)
-    val metaData = query(productName, sensorName, measurementName, startTime, endTime, geom_str, crs)
+
+
+    val metaData: ListBuffer[(String, String, String, String, String, String)] = query(productName, sensorName, measurementName, startTime, endTime, geom_str, crs)
     println("metadata.length = " + metaData.length)
     if (metaData.isEmpty) {
       throw new RuntimeException("No data to compute!")
@@ -110,6 +231,8 @@ object Image {
     val imagePathRdd = sc.parallelize(metaData, metaData.length)
     val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
       val tiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
+
+
       if (tiles.size() > 0) {
         asScalaBuffer(tiles)
       }
@@ -117,17 +240,17 @@ object Image {
         mutable.Buffer.empty[RawTile]
       }
     }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
-    val tileNum = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+    val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
       x + y
     })
     println("tileNum = " + tileNum)
     val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
-    var repNum = tileNum
+    var repNum: Int = tileNum
     if (repNum > 90) {
       repNum = 90
     }
-    val tileRDDReP = tileRDDFlat.repartition(repNum).persist()
-    (noReSlice(sc, tileRDDReP), tileRDDReP)
+    val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
+    (noReSlice(sc, tileRDDReP), tileRDDReP)*/
   }
 
   def noReSlice(implicit sc: SparkContext, tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -1057,18 +1180,18 @@ object Image {
   /**
    * 自定义重采样方法，功能有局限性，勿用
    *
-   * @param image      需要被重采样的图像
-   * @param sourceZoom 原图像的 Zoom 层级
-   * @param targetZoom 输出图像的 Zoom 层级
-   * @param mode       插值方法
-   * @param downSampling  是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理
+   * @param image        需要被重采样的图像
+   * @param sourceZoom   原图像的 Zoom 层级
+   * @param targetZoom   输出图像的 Zoom 层级
+   * @param mode         插值方法
+   * @param downSampling 是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理
    * @return 和输入图像同类型的新图像
    */
   def resample(implicit sc: SparkContext,
                image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                sourceZoom: Int, targetZoom: Int,
                mode: String,
-               downSampling:Boolean = true
+               downSampling: Boolean = true
               )
   : (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val resampleMethod: PointResampleMethod = mode match {
@@ -1328,13 +1451,13 @@ object Image {
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
-                         palette: String = null, layerID: Int, fileName: String = null): Unit = {
+                        palette: String = null, layerID: Int, fileName: String = null): Unit = {
     val appID = sc.applicationId
     val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
     val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear",downSampling = false)
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear", downSampling = false)
       image._1.map(t => t._2)
 
       println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
@@ -1421,7 +1544,7 @@ object Image {
       )
       implicit val formats = DefaultFormats
       val jsonStr: String = Serialization.write(resultSet)
-      val deliverWordID:String = "{\"workID\":\"" + ImageTrigger.workID + "\"}"
+      val deliverWordID: String = "{\"workID\":\"" + ImageTrigger.workID + "\"}"
       HttpUtil.postResponse(SystemConstants.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
 
 

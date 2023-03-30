@@ -1,9 +1,8 @@
 package whu.edu.cn.application.oge;
 
-import geotrellis.store.index.ZCurveKeyIndexMethod;
-import geotrellis.store.index.zcurve.Z3;
 import io.minio.MinioClient;
 import io.minio.errors.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.gdal.gdal.Dataset;
 import org.gdal.gdal.Driver;
 import org.gdal.gdal.gdal;
@@ -16,9 +15,8 @@ import org.opengis.referencing.crs.ProjectedCRS;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import geotrellis.raster.Tile;
-import scala.Tuple2;
-import scala.collection.Seq;
-import scala.math.BigInt;
+import redis.clients.jedis.Jedis;
+import whu.edu.cn.util.JedisConnectionFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,9 +25,13 @@ import java.io.Serializable;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.gdal.gdalconst.gdalconstConstants.GDT_Byte;
+import static whu.edu.cn.util.SystemConstants.*;
+
+
 
 public class Tiffheader_parse {
     public static int nearestZoom = 0;
@@ -230,24 +232,8 @@ public class Tiffheader_parse {
                                                String time, String crs, String measurement,
                                                String dType, String resolution, String productName,
                                                double[] query_extent) {
-
-        // 判断redis 的范围和query_extent有什么差别(redis没范围则初始化)
-        // 把query_extent改成矩形
-        //
-
-        System.out.println("query_extent = " + query_extent[0]);
-        System.out.println("query_extent = " + query_extent[1]);
-        System.out.println("query_extent = " + query_extent[2]);
-        System.out.println("query_extent = " + query_extent[3]);
-        // 有差别，合起来的最大范围存redis
-        //
-
-
-
-
-
         try {
-            MinioClient minioClient = new MinioClient("http://125.220.153.22:9006", "rssample", "ypfamily608");
+            MinioClient minioClient = new MinioClient(MINIO_URL, MINIO_KEY, MINIO_PWD);
             // 获取指定offset和length的"myobject"的输入流。
             InputStream inputStream = minioClient.getObject("oge", in_path, 0L, 262143L);
             ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -264,9 +250,6 @@ public class Tiffheader_parse {
             // 出于性能的考虑，静态变量序列化会比较慢
             Tiffheader_parse imageInfo = new Tiffheader_parse();
             imageInfo.parse(headerByte);
-
-
-            // return tile_srch？
             return imageInfo.getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName);
 
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
@@ -278,7 +261,7 @@ public class Tiffheader_parse {
 
     public static RawTile getTileBuf(RawTile tile) {
         try {
-            MinioClient minioClient = new MinioClient("http://125.220.153.22:9006", "rssample", "ypfamily608");
+            MinioClient minioClient = new MinioClient(MINIO_URL, MINIO_KEY, MINIO_PWD);
             InputStream inputStream = minioClient.getObject("oge", tile.path, tile.offset[0], tile.offset[1] - tile.offset[0]);
             int length = Math.toIntExact((tile.offset[1] - tile.offset[0]));
 
@@ -448,7 +431,7 @@ public class Tiffheader_parse {
         }
 
         ArrayList<RawTile> tile_srch = new ArrayList<>();
-//TODO 放到类里，整个方法改成void
+
         //int l = 0;
 /*        if ("MOD13Q1_061".equals(productName)) {
             flagReader = true;
@@ -500,65 +483,61 @@ public class Tiffheader_parse {
         }
 
 
-
-        int []pCoordinate = null;
+        int[] pCoordinate = null;
         double[] srcSize = null;
         double[] pRange = null;
-        if(!flagReader){
-            pCoordinate = new int[]{p_lower,p_upper,p_left,p_right};
-            srcSize = new double[]{w_src,h_src};
+        if (!flagReader) {
+            pCoordinate = new int[]{p_lower, p_upper, p_left, p_right};
+            srcSize = new double[]{w_src, h_src};
             pRange = new double[]{xMin, yMax};
-        }
-        else {
+        } else {
             pCoordinate = new int[]{p_left, p_right, p_lower, p_upper};
-            srcSize = new double[]{h_src,w_src};
+            srcSize = new double[]{h_src, w_src};
             pRange = new double[]{yMax, xMin};
         }
 
 
+        for (int i = (Math.max(pCoordinate[0], 0));
+             i <= (pCoordinate[1] >= TileOffsets.get(level).size() ?
+                     TileOffsets.get(level).size() - 1 : pCoordinate[1]);
+             i++
+        ) {
+            for (int j = (Math.max(pCoordinate[2], 0));
+                 j <= (pCoordinate[3] >= TileOffsets.get(level).get(i).size() ?
+                         TileOffsets.get(level).get(i).size() - 1 : pCoordinate[3]);
+                 j++) {
+                RawTile t = new RawTile();
+                t.offset[0] = TileOffsets.get(level).get(i).get(j);
+                t.offset[1] = TileByteCounts.get(level).get(i).get(j) + t.offset[0];
+                t.p_bottom_left[0] = j *
+                        (256 * srcSize[0] * (int) Math.pow(2, level)) +
+                        pRange[0];
+                t.p_bottom_left[1] = (i + 1) *
+                        (256 * -srcSize[1] * (int) Math.pow(2, level)) +
+                        pRange[1];
+                t.p_upper_right[0] = (j + 1) *
+                        (256 * srcSize[0] * (int) Math.pow(2, level)) +
+                        pRange[0];
+                t.p_upper_right[1] = i *
+                        (256 * -srcSize[1] * (int) Math.pow(2, level)) +
+                        pRange[1];
+                t.rotation = GeoTrans.get(5);
+                t.resolution = w_src * (int) Math.pow(2, level);
+                t.row_col[0] = i;
+                t.row_col[1] = j;
+                t.bitPerSample = BitPerSample;
+                t.level = level;
+                t.path = in_path;
+                t.time = time;
+                t.measurement = measurement;
+                t.crs = Integer.parseInt(crs.replace("EPSG:", ""));
+                t.dType = dType;
+                t.product = productName;
+                tile_srch.add(t);
 
 
-            for (int i = (Math.max(pCoordinate[0], 0));
-                 i <= (pCoordinate[1] >= TileOffsets.get(level).size() ?
-                         TileOffsets.get(level).size() - 1 : pCoordinate[1]);
-                 i++
-            ) {
-                for (int j = (Math.max(pCoordinate[2], 0));
-                     j <= (pCoordinate[3] >= TileOffsets.get(level).get(i).size() ?
-                             TileOffsets.get(level).get(i).size() - 1 : pCoordinate[3]);
-                     j++) {
-                    RawTile t = new RawTile();
-                    t.offset[0] = TileOffsets.get(level).get(i).get(j);
-                    t.offset[1] = TileByteCounts.get(level).get(i).get(j) + t.offset[0];
-                    t.p_bottom_left[0] = j *
-                            (256 * srcSize[0] * (int) Math.pow(2, level)) +
-                            pRange[0];
-                    t.p_bottom_left[1] = (i + 1) *
-                            (256 * -srcSize[1] * (int) Math.pow(2, level)) +
-                            pRange[1];
-                    t.p_upper_right[0] = (j + 1) *
-                            (256 * srcSize[0] * (int) Math.pow(2, level)) +
-                            pRange[0];
-                    t.p_upper_right[1] = i *
-                            (256 * -srcSize[1] * (int) Math.pow(2, level)) +
-                            pRange[1];
-                    t.rotation = GeoTrans.get(5);
-                    t.resolution = w_src * (int) Math.pow(2, level);
-                    t.row_col[0] = i;
-                    t.row_col[1] = j;
-                    t.bitPerSample = BitPerSample;
-                    t.level = level;
-                    t.path = in_path;
-                    t.time = time;
-                    t.measurement = measurement;
-                    t.crs = Integer.parseInt(crs.replace("EPSG:", ""));
-                    t.dType = dType;
-                    t.product = productName;
-                    tile_srch.add(t);
-                    System.out.println("ZOrder = "+ lonLatToZCurve(t.p_bottom_left[0],t.p_bottom_left[1],9));
-                    System.out.println("ZOrder = "+ lonLatToZCurve(t.p_upper_right[0],t.p_upper_right[1],9));
-                }
             }
+        }
 
 
 /*
@@ -757,40 +736,40 @@ public class Tiffheader_parse {
         this.GetDEValue(TagIndex, TypeIndex, Count, pData);
     }
 
-    private void GetDEValue(int TagIndex, int TypeIndex, int Count, int pdata) {
-        int typeSize = TypeArray[TypeIndex];
-        switch (TagIndex) {
+    private void GetDEValue(int tagIndex, int typeIndex, int count, int pData) {
+        int typeSize = TypeArray[typeIndex];
+        switch (tagIndex) {
             case 256://ImageWidth
-                this.ImageWidth = GetIntII(this.header, pdata, typeSize);
+                this.ImageWidth = GetIntII(this.header, pData, typeSize);
                 this.ImageSize.add(this.ImageWidth);
                 break;
             case 257://ImageLength
-                this.ImageLength = GetIntII(this.header, pdata, typeSize);
+                this.ImageLength = GetIntII(this.header, pData, typeSize);
                 this.ImageSize.add(this.ImageLength);
                 break;
             case 258://ImageWidth
-                this.BitPerSample = GetIntII(this.header, pdata, typeSize);
+                this.BitPerSample = GetIntII(this.header, pData, typeSize);
                 break;
             case 286://XPosition
-                this.xPosition = GetIntII(this.header, pdata, typeSize);
+                this.xPosition = GetIntII(this.header, pData, typeSize);
                 break;
             case 287://YPosition
-                this.yPosition = GetIntII(this.header, pdata, typeSize);
+                this.yPosition = GetIntII(this.header, pData, typeSize);
                 break;
             case 324: //TileOffsets
-                this.GetOffsetArray(pdata, typeSize, Count);
+                this.GetOffsetArray(pData, typeSize, count);
                 break;
             case 325: //TileByteCounts
-                this.GetTileBytesArray(pdata, typeSize, Count);
+                this.GetTileBytesArray(pData, typeSize, count);
                 break;
             case 33550://  CellWidth
-                this.GetDoubleCell(pdata, typeSize, Count);
+                this.GetDoubleCell(pData, typeSize, count);
                 break;
             case 33922: //GeoTransform
-                this.GetDoubleTrans(pdata, typeSize, Count);
+                this.GetDoubleTrans(pData, typeSize, count);
                 break;
             case 34737: //Spatial reference
-                this.Srid = GetString(this.header, pdata, typeSize * Count);
+                this.Srid = GetString(this.header, pData, typeSize * count);
                 break;
             default:
                 break;
@@ -900,39 +879,5 @@ public class Tiffheader_parse {
 
 
 
-
-
-    private static String lonLatToZCurve(double lon, double lat, int zoom) {
-        double n = Math.pow(2, zoom);
-
-        double tileX = ((lon + 180) / 360) * n;
-        double tileY = (1 - (Math.log(Math.tan(Math.toRadians(lat)) +
-                (1 / Math.cos(Math.toRadians(lat)))) / Math.PI)) / 2 * n;
-        int[] xy = new int[]{
-                (int) Math.floor(tileY),
-                (int) Math.floor(tileX)
-
-
-        };
-        System.out.println(xy[0] + "??? "+ xy[1]);
-
-        return String.valueOf(xyToZCurve(zoom, xy));
-    }
-
-    private static int xyToZCurve(int zoom, int[] xy) {
-        // Calculate the z-order by bit shuffling
-        int res = 0;
-        for (int i = 0; i < 2; ++i) {
-            for (int j = 0; j < zoom; ++j) {
-
-                int mask = 1 << j;
-                // Check whether the value in the position is 1
-                if ((xy[1 - i] & mask) != 0)
-                    // Do bit shuffling
-                    res |= 1 << (i + j * 2);
-            }
-        }
-        return res;
-    }
 
 }

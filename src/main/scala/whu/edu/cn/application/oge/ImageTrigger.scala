@@ -10,11 +10,15 @@ import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import org.locationtech.jts.geom._
+import redis.clients.jedis.Jedis
 import whu.edu.cn.application.oge.ImageTrigger.fileName
 import whu.edu.cn.application.oge.WebAPI._
+import whu.edu.cn.util.{JedisConnectionFactory, ZCurveUtil}
 
+import java.util
+import java.util.{ArrayList, Arrays}
 import scala.collection.mutable.{ListBuffer, Map}
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.io.Source
 
 object ImageTrigger {
@@ -34,7 +38,12 @@ object ImageTrigger {
 
   var workID: String = _
   /* 此次计算工作的唯一标识 */
-  var workTaskJSON: String = _ /* 此次计算工作的任务json */
+  var workTaskJSON: String = _
+  /* 此次计算工作的任务json */
+  var originTaskID: String = _ /* 用户点击run后生成的ID */
+
+  val zIndexStrArray = new mutable.ArrayBuffer[String]
+
 
   def argOrNot(args: Map[String, String], name: String): String = {
     if (args.contains(name)) {
@@ -433,13 +442,16 @@ object ImageTrigger {
     //
     workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取
 
-    workTaskJSON =  {
+    workTaskJSON = {
       val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
       fileName = "datas/out.txt" // TODO
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
+
+    originTaskID = "ogeDag:task:0000000000000"
+    // 点击整个run的唯一标识
 
 
     val time1 = System.currentTimeMillis()
@@ -456,71 +468,122 @@ object ImageTrigger {
     oorB = jsonObject.getString("oorB").toInt
     if (oorB == 0) {
       val map = jsonObject.getJSONObject("map")
-      level = map.getString("level").toInt
-      windowRange = map.getString("spatialRange")
+      level = map.getString("level").toInt //2
+      windowRange = map.getString("spatialRange") //1
+
+
+      //TODO   通过on the fly的范围1和层级2找到该层级包含的所有前端瓦片
+      println(windowRange)
+
+      val lonLatsOfWindow: Array[Double] = windowRange
+        .substring(1, windowRange.length - 1).split(",").map(_.toDouble)
+
+      println(lonLatsOfWindow.mkString("Array(", ", ", ")"))
+
+      val jedis: Jedis = JedisConnectionFactory.getJedis
+      val key: String = ImageTrigger.originTaskID + ":solvedTile"
+      jedis.select(1)
+
+
+      val xMinOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow.head, level)
+      val xMaxOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow(2), level)
+
+      val yMinOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow.last, level)
+      val yMaxOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow(1), level)
+      System.out.println(xMinOfTile + "-" + xMaxOfTile)
+      System.out.println(yMinOfTile + "-" + yMaxOfTile)
+
+      // z曲线编码后的索引字符串
+
+
+      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
+
+      // 等价于两层次循环
+      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
+           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+        // 排除 redis 已经存在的前端瓦片编码
+           ) { // redis里存在当前的索引
+
+        // Redis 里没有的前端瓦片编码
+        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+
+        zIndexStrArray.append(zIndexStr)
+
+        // 将这些新的瓦片编号存到 Redis
+        jedis.sadd(key, zIndexStr)
+
+      }
     }
+    println("***********************************************************")
 
-    val a = JsonToArgLocal.trans(jsonObject)
-    println(a.size)
-    a.foreach(println(_))
 
-    if (a.head._3.contains("productID")) {
-      if (a.head._3("productID") != "GF2") {
-        lamda(sc, a) // TODO
-      }
-      else {
-        if (oorB == 0) {
-          Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
-        }
-        else {
-          Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
-        }
-      }
+
+
+
+
+
+
+  val a = JsonToArgLocal.trans(jsonObject)
+  println(a.size)
+  a.foreach(println(_))
+
+  if (a.head._3.contains("productID")) {
+    if (a.head._3("productID") != "GF2") {
+      lamda(sc, a) // TODO
     }
     else {
-      lamda(sc, a)
-    }
-
-    val time2 = System.currentTimeMillis()
-    println(time2 - time1)
-  }
-  /*def main(args: Array[String]): Unit = {
-    val time1 = System.currentTimeMillis()
-    val conf = new SparkConf()
-      //        .setMaster("spark://gisweb1:7077")
-      .setMaster("local[*]")
-      .setAppName("query")
-    //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-    val sc = new SparkContext(conf)
-
-    var a: List[Tuple3[String, String, Map[String, String]]] = List.empty[Tuple3[String, String, Map[String, String]]]
-    a = a :+ Tuple3("00000", "Service.getCoverageCollection", Map("productID" -> "ASTER_GDEM_DEM30", "baseUrl" -> "http://localhost"))
-    a = a :+ Tuple3("00004", "Filter.equals", Map("rightValue" -> "EPSG:4326", "leftField" -> "crs"))
-    a = a :+ Tuple3("0000", "CoverageCollection.subCollection", Map("filter" -> "00004", "input" -> "00000"))
-    a = a :+ Tuple3("000", "CoverageCollection.mosaic", Map("method" -> "min", "coverageCollection" -> "0000"))
-//    a = a :+ Tuple3("00", "CoverageCollection.slope", Map("Z_factor" -> "1", "coverageCollection" -> "000"))
-    a = a :+ Tuple3("0", "CoverageCollection.addStyles", Map("input" -> "000", "max" -> "255", "min" -> "0"))
-
-    println(a.size)
-    a.foreach(println(_))
-    fileName = "/home/geocube/oge/on-the-fly/out.txt"
-    level = 11
-    windowRange = "[113.17588,30.379332,114.573944,30.71761]"
-    if(a(0)._3.contains("productID")) {
-      if (a(0)._3("productID") != "GF2") {
-        lamda(sc, a)
+      if (oorB == 0) {
+        Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
       }
       else {
-        Image.deepLearning(sc, a(0)._3("bbox"))
+        Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
       }
     }
-    else{
+  }
+  else {
+    lamda(sc, a)
+  }
+
+  val time2 = System.currentTimeMillis()
+  println(time2 - time1)
+}
+/*def main(args: Array[String]): Unit = {
+  val time1 = System.currentTimeMillis()
+  val conf = new SparkConf()
+    //        .setMaster("spark://gisweb1:7077")
+    .setMaster("local[*]")
+    .setAppName("query")
+  //    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+  //    .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
+  val sc = new SparkContext(conf)
+
+  var a: List[Tuple3[String, String, Map[String, String]]] = List.empty[Tuple3[String, String, Map[String, String]]]
+  a = a :+ Tuple3("00000", "Service.getCoverageCollection", Map("productID" -> "ASTER_GDEM_DEM30", "baseUrl" -> "http://localhost"))
+  a = a :+ Tuple3("00004", "Filter.equals", Map("rightValue" -> "EPSG:4326", "leftField" -> "crs"))
+  a = a :+ Tuple3("0000", "CoverageCollection.subCollection", Map("filter" -> "00004", "input" -> "00000"))
+  a = a :+ Tuple3("000", "CoverageCollection.mosaic", Map("method" -> "min", "coverageCollection" -> "0000"))
+//    a = a :+ Tuple3("00", "CoverageCollection.slope", Map("Z_factor" -> "1", "coverageCollection" -> "000"))
+  a = a :+ Tuple3("0", "CoverageCollection.addStyles", Map("input" -> "000", "max" -> "255", "min" -> "0"))
+
+  println(a.size)
+  a.foreach(println(_))
+  fileName = "/home/geocube/oge/on-the-fly/out.txt"
+  level = 11
+  windowRange = "[113.17588,30.379332,114.573944,30.71761]"
+  if(a(0)._3.contains("productID")) {
+    if (a(0)._3("productID") != "GF2") {
       lamda(sc, a)
     }
+    else {
+      Image.deepLearning(sc, a(0)._3("bbox"))
+    }
+  }
+  else{
+    lamda(sc, a)
+  }
 
-    val time2 = System.currentTimeMillis()
-    println(time2 - time1)
-    sc.stop()
-  }*/
+  val time2 = System.currentTimeMillis()
+  println(time2 - time1)
+  sc.stop()
+}*/
 }
