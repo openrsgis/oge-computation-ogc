@@ -440,7 +440,7 @@ object ImageTrigger {
     // sc = args(....)
     // workID = args(....)
     //
-    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取
+    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
     workTaskJSON = {
       val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
@@ -450,8 +450,9 @@ object ImageTrigger {
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
-    originTaskID = "ogeDag:task:0000000000000"
-    // 点击整个run的唯一标识
+
+    originTaskID = "ogeDag:task:0000000000000:"
+    // 点击整个run的唯一标识，来自boot
 
 
     val time1 = System.currentTimeMillis()
@@ -481,7 +482,7 @@ object ImageTrigger {
       println(lonLatsOfWindow.mkString("Array(", ", ", ")"))
 
       val jedis: Jedis = JedisConnectionFactory.getJedis
-      val key: String = ImageTrigger.originTaskID + ":solvedTile"
+      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
       jedis.select(1)
 
 
@@ -498,7 +499,7 @@ object ImageTrigger {
 
       //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
 
-      // 等价于两层次循环
+      // 等价于两层循环
       for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
            if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
         // 排除 redis 已经存在的前端瓦片编码
@@ -510,11 +511,22 @@ object ImageTrigger {
         zIndexStrArray.append(zIndexStr)
 
         // 将这些新的瓦片编号存到 Redis
-        jedis.sadd(key, zIndexStr)
+//        jedis.sadd(key, zIndexStr)
 
       }
     }
+    if (zIndexStrArray.isEmpty){
+//      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
+      println("窗口范围无明显变化，没有新的瓦片待计算")
+      return
+    }
     println("***********************************************************")
+
+
+
+
+
+
 
 
 

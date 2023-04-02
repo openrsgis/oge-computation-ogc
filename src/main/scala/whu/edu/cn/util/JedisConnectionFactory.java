@@ -7,7 +7,7 @@ import redis.clients.jedis.JedisPoolConfig;
 import static whu.edu.cn.util.SystemConstants.*;
 
 public class JedisConnectionFactory {
-    private static JedisPool jedisPool;
+    private static final JedisPool jedisPool;
     static {
         // 连接池
         JedisPoolConfig poolConfig = new JedisPoolConfig();

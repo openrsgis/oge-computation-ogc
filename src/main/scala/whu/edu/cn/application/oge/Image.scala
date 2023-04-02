@@ -22,11 +22,12 @@ import org.geotools.geometry.jts.JTS
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
+import redis.clients.jedis.Jedis
 import whu.edu.cn.application.oge.Tiffheader_parse._
 import whu.edu.cn.application.tritonClient.Preprocessing
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.util.{HttpUtil, PostgresqlUtil, SystemConstants, ZCurveUtil}
+import whu.edu.cn.util.{HttpUtil, JedisConnectionFactory, PostgresqlUtil, SystemConstants, ZCurveUtil}
 import whu.edu.cn.util.TileMosaicImage.tileMosaic
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
@@ -61,6 +62,26 @@ object Image {
            geom2: String = null, crs: String = null, level: Int = 0
            /* //TODO 把trigger算出来的前端瓦片编号集合传进来 */): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
     val zIndexStrArray: ArrayBuffer[String] = ImageTrigger.zIndexStrArray
+
+
+
+
+    val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+    val StartTime: String = if (dateTimeArray != null) {
+      if (dateTimeArray.length == 2) dateTimeArray(0) else null
+    } else null
+    val EndTime: String = if (dateTimeArray != null) {
+      if (dateTimeArray.length == 2) dateTimeArray(1) else null
+    } else null
+    var startTime = ""
+    if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
+    else startTime = StartTime
+    var endTime = ""
+    if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
+    else endTime = EndTime
+
+
+
     if (geom2 != null) {
       println("geo2 = " + geom2)
 
@@ -70,6 +91,10 @@ object Image {
 
       val queryExtent = new ArrayBuffer[Array[Double]]()
 
+
+      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
+      val jedis: Jedis = JedisConnectionFactory.getJedis
+      jedis.select(1)
 
       // TODO 通过传进来的前端瓦片编号反算出它们各自对应的经纬度范围 V
       for (zIndexStr <- zIndexStrArray) {
@@ -93,13 +118,13 @@ object Image {
 
         val latMaxOfQueryExtent: Double =
           if (lonLatOfBBox.last < latMaxOfTile) lonLatOfBBox(3) else latMaxOfTile
-        // TODO 这里不一定是矩形了,可能是六个顶点的L形
+        // TODO 解决方法是用每个瓦片分别和bbox取交集
 
 
         if (lonMinOfQueryExtent < lonMaxOfQueryExtent &&
           latMinOfQueryExtent < latMaxOfQueryExtent
         ) {
-          // 加入集合
+          // 加入集合，可以把存redis的步骤转移到这里，减轻redis压力
           queryExtent.append(
             Array(
               lonMinOfQueryExtent,
@@ -108,23 +133,13 @@ object Image {
               latMaxOfQueryExtent
             )
           )
-        }
+          jedis.sadd(key,zIndexStr)
+
+        } // end if
       } // end for
 
 
-      val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-      val StartTime: String = if (dateTimeArray != null) {
-        if (dateTimeArray.length == 2) dateTimeArray(0) else null
-      } else null
-      val EndTime: String = if (dateTimeArray != null) {
-        if (dateTimeArray.length == 2) dateTimeArray(1) else null
-      } else null
-      var startTime = ""
-      if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
-      else startTime = StartTime
-      var endTime = ""
-      if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
-      else endTime = EndTime
+
 
 
       val queryMetaDataAndTiles = new ArrayBuffer[(String, Array[Double])]()
@@ -155,7 +170,8 @@ object Image {
 
       val tileNoData: ListBuffer[mutable.Buffer[RawTile]] = queryMetaDataAndTilesRDD.map(x => {
         query(productName, sensorName, measurementName,
-          startTime, endTime, x._1, crs).map(
+          startTime, endTime, x._1, crs).distinct // 查询元数据并去重
+          .map(
           metaData =>
             (metaData._1, metaData._2, metaData._3,
               metaData._4, metaData._5, metaData._6,
@@ -165,8 +181,9 @@ object Image {
 
         /*    .reduceByKey(_++_).filter(_._1 == 1).map(_._2).persist() // 暂存*/
 
-        .reduce(_ ++ _).distinct.map(t => { // 合并所有的元数据（追加了范围）并去重
-        val rawTiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7) // 根据元数据和范围查询后端瓦片
+        .reduce(_ ++ _).map(t => { // 合并所有的元数据（追加了范围）
+        val rawTiles: util.ArrayList[RawTile] =
+          tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7) // 根据元数据和范围查询后端瓦片
         if (rawTiles.size() > 0) {
           asScalaBuffer(rawTiles)
         }
@@ -195,19 +212,6 @@ object Image {
         t.toDouble
       }).to[ListBuffer]
 
-      val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-      val StartTime = if (dateTimeArray != null) {
-        if (dateTimeArray.length == 2) dateTimeArray(0) else null
-      } else null
-      val EndTime = if (dateTimeArray != null) {
-        if (dateTimeArray.length == 2) dateTimeArray(1) else null
-      } else null
-      var startTime = ""
-      if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
-      else startTime = StartTime
-      var endTime = ""
-      if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
-      else endTime = EndTime
 
       var geom_str = ""
       if (geomReplace != null && geomReplace.length == 4) {
@@ -253,66 +257,6 @@ object Image {
     }
 
 
-
-    // if geo2!=null
-    /*val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-    val StartTime: String = if (dateTimeArray != null) {
-      if (dateTimeArray.length == 2) dateTimeArray(0) else null
-    } else null
-    val EndTime: String = if (dateTimeArray != null) {
-      if (dateTimeArray.length == 2) dateTimeArray(1) else null
-    } else null
-    var startTime = ""
-    if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
-    else startTime = StartTime
-    var endTime = ""
-    if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
-    else endTime = EndTime
-
-
-    if (geomReplace != null && geomReplace.length == 4) {
-      val minx = geomReplace(0)
-      val miny = geomReplace(1)
-      val maxx = geomReplace(2)
-      val maxy = geomReplace(3)
-      geom_str = "POLYGON((" + minx + " " + miny + ", " + minx + " " + maxy + ", " + maxx + " " + maxy + ", " + maxx + " " + miny + "," + minx + " " + miny + "))"
-    }
-    val query_extent = new Array[Double](4)
-    query_extent(0) = geomReplace(0)
-    query_extent(1) = geomReplace(1)
-    query_extent(2) = geomReplace(2)
-    query_extent(3) = geomReplace(3)
-
-
-    val metaData: ListBuffer[(String, String, String, String, String, String)] = query(productName, sensorName, measurementName, startTime, endTime, geom_str, crs)
-    println("metadata.length = " + metaData.length)
-    if (metaData.isEmpty) {
-      throw new RuntimeException("No data to compute!")
-    }
-
-    val imagePathRdd = sc.parallelize(metaData, metaData.length)
-    val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
-      val tiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
-
-
-      if (tiles.size() > 0) {
-        asScalaBuffer(tiles)
-      }
-      else {
-        mutable.Buffer.empty[RawTile]
-      }
-    }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
-    val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
-      x + y
-    })
-    println("tileNum = " + tileNum)
-    val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
-    var repNum: Int = tileNum
-    if (repNum > 90) {
-      repNum = 90
-    }
-    val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
-    (noReSlice(sc, tileRDDReP), tileRDDReP)*/
   }
 
   def noReSlice(implicit sc: SparkContext, tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
