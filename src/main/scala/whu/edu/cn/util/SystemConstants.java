@@ -10,5 +10,8 @@ public class SystemConstants {
     public static final String MINIO_PWD = "ypfamily608";
 
     public static final String WORK_PREFIX = "oge:computation_ogc:existedTiles:";
+    public static final int HEAD_SIZE = 262143;
+
+    private byte[] header = new byte[HEAD_SIZE];
 
 }

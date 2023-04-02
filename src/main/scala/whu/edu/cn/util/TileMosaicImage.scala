@@ -4,7 +4,7 @@ import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.{ByteArrayTile, ByteCellType, ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleCellType, DoubleConstantNoDataCellType, FloatArrayTile, FloatCellType, FloatConstantNoDataCellType, IntArrayTile, IntCellType, IntConstantNoDataCellType, MutableArrayTile, ShortArrayTile, ShortCellType, ShortConstantNoDataCellType, Tile, UByteArrayTile, UByteCellType, UByteConstantNoDataCellType, UShortArrayTile, UShortCellType, UShortConstantNoDataCellType}
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
+import whu.edu.cn.application.oge.RawTile
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 

@@ -23,7 +23,7 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
 import redis.clients.jedis.Jedis
-import whu.edu.cn.application.oge.Tiffheader_parse._
+import COGHeaderParse._
 import whu.edu.cn.application.tritonClient.Preprocessing
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
@@ -152,11 +152,11 @@ object Image {
 
 
         var polygonStr = ""
+
         polygonStr = "POLYGON((" + minX + " " + minY + ", " +
           minX + " " + maxY + ", " + maxX + " " + maxY + ", " +
           maxX + " " + minY + "," + minX + " " + minY + "))"
         queryMetaDataAndTiles.append((polygonStr, extent))
-
 
       }
 
@@ -168,31 +168,33 @@ object Image {
       val queryMetaDataAndTilesRDD: RDD[(String, Array[Double])] =
         sc.makeRDD(queryMetaDataAndTiles)
 
-      val tileNoData: ListBuffer[mutable.Buffer[RawTile]] = queryMetaDataAndTilesRDD.map(x => {
+      val tileDataTuple: ListBuffer[(String, String, String, String, String, String, Array[Double])] = queryMetaDataAndTilesRDD.map(x => {
         query(productName, sensorName, measurementName,
-          startTime, endTime, x._1, crs).distinct // 查询元数据并去重
+          startTime, endTime, x._1, crs) // 查询元数据并去重
           .map(
-          metaData =>
-            (metaData._1, metaData._2, metaData._3,
-              metaData._4, metaData._5, metaData._6,
-              x._2)
-        ) // 把query得到的元数据集合 和之前 与元数据集合对应的查询范围 合并到一个元组中
+            metaData =>
+              (metaData._1, metaData._2, metaData._3,
+                metaData._4, metaData._5, metaData._6,
+                x._2)
+          ) // 把query得到的元数据集合 和之前 与元数据集合对应的查询范围 合并到一个元组中
       }).persist() // 暂存
+        .reduce(_ ++ _) // 合并成大数组
 
-        /*    .reduceByKey(_++_).filter(_._1 == 1).map(_._2).persist() // 暂存*/
-
-        .reduce(_ ++ _).map(t => { // 合并所有的元数据（追加了范围）
-        val rawTiles: util.ArrayList[RawTile] =
-          tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7) // 根据元数据和范围查询后端瓦片
-        if (rawTiles.size() > 0) {
-          asScalaBuffer(rawTiles)
-        }
-        else {
-          mutable.Buffer.empty[RawTile]
-        }
-      })
+      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(tileDataTuple)
+        .map(t => { // 合并所有的元数据（追加了范围）
+          val rawTiles: util.ArrayList[RawTile] = {
+            tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7)
+          }
+          println(rawTiles.size() + "aaaaaaaaafdadagadgas")
+          // 根据元数据和范围查询后端瓦片
+          if (rawTiles.size() > 0) {
+            asScalaBuffer(rawTiles)
+          }
+          else {
+            mutable.Buffer.empty[RawTile]
+          }
+        }).distinct()
       // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
-      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(tileNoData)
 
       val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
         x + y
@@ -232,7 +234,7 @@ object Image {
         throw new RuntimeException("No data to compute!")
       }
 
-      val imagePathRdd = sc.parallelize(metaData, metaData.length)
+      val imagePathRdd: RDD[(String, String, String, String, String, String)] = sc.parallelize(metaData, metaData.length)
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
         val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
         if (tiles.size() > 0) {
@@ -1463,10 +1465,10 @@ object Image {
     val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear", downSampling = false)
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, COGHeaderParse.nearestZoom, levelFromJSON, "Bilinear", downSampling = false)
       image._1.map(t => t._2)
 
-      println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
+      println("Tiffheader_parse.nearestZoom = " + COGHeaderParse.nearestZoom)
       val timeList = resampledImage._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
       resampledImage._1.persist()
       timeList.foreach(x => {

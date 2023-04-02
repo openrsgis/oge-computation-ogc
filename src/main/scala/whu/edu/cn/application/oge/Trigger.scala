@@ -7,7 +7,6 @@ import geotrellis.raster.mapalgebra.focal.Kernel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.JsonToArg

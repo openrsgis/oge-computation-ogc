@@ -6,7 +6,7 @@ import geotrellis.raster.Tile
 import geotrellis.raster.mapalgebra.focal.Kernel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
+
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import org.locationtech.jts.geom._
