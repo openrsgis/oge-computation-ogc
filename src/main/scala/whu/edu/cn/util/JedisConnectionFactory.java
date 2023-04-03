@@ -8,6 +8,7 @@ import static whu.edu.cn.util.SystemConstants.*;
 
 public class JedisConnectionFactory {
     private static final JedisPool jedisPool;
+
     static {
         // 连接池
         JedisPoolConfig poolConfig = new JedisPoolConfig();
@@ -17,10 +18,10 @@ public class JedisConnectionFactory {
         poolConfig.setMaxWaitMillis(1000); // 最大等待时间
 
         jedisPool = new JedisPool(poolConfig, JEDIS_HOST,
-                JEDIS_PORT, 1000);
+                JEDIS_PORT, 1000, JEDIS_PWD);
     }
 
-    public static Jedis getJedis(){
+    public static Jedis getJedis() {
         return jedisPool.getResource();
     }
 }
