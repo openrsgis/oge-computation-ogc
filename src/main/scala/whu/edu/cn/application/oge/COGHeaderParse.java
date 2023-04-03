@@ -25,28 +25,29 @@ import static whu.edu.cn.util.SystemConstants.*;
 public class COGHeaderParse {
     public static int nearestZoom = 0;
     private static final int[] TypeArray = {//"???",
-            0,
-            1,//byte //8-bit unsigned integer
-            1,//ascii//8-bit byte that contains a 7-bit ASCII code; the last byte must be NUL (binary zero)
-            2, //short",2),//16-bit (2-byte) unsigned integer.
-            4,//  long",4),//32-bit (4-byte) unsigned integer.
-            8,//  rational",8),//Two LONGs: the first represents the numerator of a fraction; the second, the denominator.
-            1,//  sbyte",1),//An 8-bit signed (twos-complement) integer
-            1,//   undefined",1),//An 8-bit byte that may contain anything, depending on the definition of the field
-            2,//   sshort",1),//A 16-bit (2-byte) signed (twos-complement) integer.
-            4,//   slong",1),// A 32-bit (4-byte) signed (twos-complement) integer.
-            8,//    srational",1),//Two SLONG’s: the first represents the numerator of a fraction, the second the denominator.
-            4,//    float",4),//Single precision (4-byte) IEEE format
-            8//    double",8)//Double precision (8-byte) IEEE format
+            0,//
+            1,// byte //8-bit unsigned integer
+            1,// ascii//8-bit byte that contains a 7-bit ASCII code; the last byte must be NUL (binary zero)
+            2,// short",2),//16-bit (2-byte) unsigned integer.
+            4,// long",4),//32-bit (4-byte) unsigned integer.
+            8,// rational",8),//Two LONGs: the first represents the numerator of a fraction; the second, the denominator.
+            1,// sbyte",1),//An 8-bit signed (twos-complement) integer
+            1,// undefined",1),//An 8-bit byte that may contain anything, depending on the definition of the field
+            2,// sshort",1),//A 16-bit (2-byte) signed (twos-complement) integer.
+            4,// slong",1),// A 32-bit (4-byte) signed (twos-complement) integer.
+            8,// srational",1),//Two SLONG’s: the first represents the numerator of a fraction, the second the denominator.
+            4,// float",4),//Single precision (4-byte) IEEE format
+            8 // double",8)//Double precision (8-byte) IEEE format
     };
 
     /**
+     * 根据元数据查询 tile
      *
-     * @param level JSON中的level字段，前端层级
-     * @param in_path 获取tile的路径
+     * @param level        JSON中的level字段，前端层级
+     * @param in_path      获取tile的路径
      * @param time
      * @param crs
-     * @param measurement 影像的测量方式
+     * @param measurement  影像的测量方式
      * @param dType
      * @param resolution
      * @param productName
@@ -94,6 +95,13 @@ public class COGHeaderParse {
         return null;
     }
 
+
+    /**
+     * 获取 tile 影像本体
+     *
+     * @param tile tile相关数据
+     * @return
+     */
     public static RawTile getTileBuf(RawTile tile) {
         try {
             MinioClient minioClient = new MinioClient(MINIO_URL, MINIO_KEY, MINIO_PWD);
@@ -117,6 +125,8 @@ public class COGHeaderParse {
     }
 
     /**
+     * 获取 Tile 相关的一些数据，不包含tile影像本体
+     *
      * @param l            json里的 level 字段，表征前端 Zoom
      * @param query_extent
      * @param crs
@@ -135,8 +145,7 @@ public class COGHeaderParse {
                                                final ArrayList<ArrayList<ArrayList<Integer>>> tileOffsets,
                                                final ArrayList<Double> cell,
                                                final ArrayList<Double> geoTrans,
-                                               final ArrayList<ArrayList<ArrayList<Integer>>> tileByteCounts
-    ) {
+                                               final ArrayList<ArrayList<ArrayList<Integer>>> tileByteCounts) {
 
         int level;
         double resolutionTMS = 0.0;
@@ -458,95 +467,93 @@ public class COGHeaderParse {
     }
 
 
-
-
-
-
-
-
+    /**
+     * 解析参数，并修改一些数据
+     *
+     * @param header
+     * @param tileOffsets
+     * @param cell
+     * @param geoTrans
+     * @param tileByteCounts
+     * @param imageSize      图像尺寸
+     */
     private static void parse(byte[] header,
                               final ArrayList<ArrayList<ArrayList<Integer>>> tileOffsets,
                               final ArrayList<Double> cell,
                               final ArrayList<Double> geoTrans,
                               final ArrayList<ArrayList<ArrayList<Integer>>> tileByteCounts,
-                              final int[] imageSize
-    ) {
+                              final int[] imageSize) {
 
-        int pIFD = GetIntII(header, 4, 4);       // DecodeIFH
+        int pIFD = getIntII(header, 4, 4);       // DecodeIFH
 
         // DecodeIFD
         while (pIFD != 0) {
-            int DECount = GetIntII(header, pIFD, 2);
+            int DECount = getIntII(header, pIFD, 2);
             pIFD += 2;
             for (int i = 0; i < DECount; i++) {  // DecodeDE
 
-                int TagIndex = GetIntII(header, pIFD, 2);
-                int TypeIndex = GetIntII(header, pIFD + 2, 2);
-                int Count = GetIntII(header, pIFD + 4, 4);
+                int TagIndex = getIntII(header, pIFD, 2);
+                int TypeIndex = getIntII(header, pIFD + 2, 2);
+                int Count = getIntII(header, pIFD + 4, 4);
 
                 //先找到数据的位置
                 int pData = pIFD + 8;
                 int totalSize = TypeArray[TypeIndex] * Count;
                 if (totalSize > 4) {
-                    pData = GetIntII(header, pData, 4);
+                    pData = getIntII(header, pData, 4);
                 }
 
                 //再根据Tag把值读出并存起来，GetDEValue
-                GetDEValue(TagIndex, TypeIndex, Count, pData, header,
+                getDEValue(TagIndex, TypeIndex, Count, pData, header,
                         tileOffsets, cell, geoTrans, tileByteCounts, imageSize);
 
                 // 之前的
                 pIFD += 12;
 
             } // end for
-            pIFD = GetIntII(header, pIFD, 4);
+            pIFD = getIntII(header, pIFD, 4);
 
         } // end while
-    } // end parse
+    }
 
 
-
-
-
-    private static void GetDEValue(int tagIndex, int typeIndex, int count, int pData, byte[] header,
+    private static void getDEValue(int tagIndex, int typeIndex, int count, int pData, byte[] header,
                                    final ArrayList<ArrayList<ArrayList<Integer>>> tileOffsets,
                                    final ArrayList<Double> cell,
                                    final ArrayList<Double> geoTrans,
                                    final ArrayList<ArrayList<ArrayList<Integer>>> tileByteCounts,
-                                   final int[] imageSize
-
-    ) {
+                                   final int[] imageSize) {
         int typeSize = TypeArray[typeIndex];
         switch (tagIndex) {
             case 256://ImageWidth
-                imageSize[1] = GetIntII(header, pData, typeSize);
+                imageSize[1] = getIntII(header, pData, typeSize);
                 break;
             case 257://ImageLength
-                imageSize[0] = GetIntII(header, pData, typeSize);
+                imageSize[0] = getIntII(header, pData, typeSize);
                 break;
             case 258://ImageWidth
-                int BitPerSample = GetIntII(header, pData, typeSize);
+                int BitPerSample = getIntII(header, pData, typeSize);
                 break;
             case 286://XPosition
-                int xPosition = GetIntII(header, pData, typeSize);
+                int xPosition = getIntII(header, pData, typeSize);
                 break;
             case 287://YPosition
-                int yPosition = GetIntII(header, pData, typeSize);
+                int yPosition = getIntII(header, pData, typeSize);
                 break;
             case 324: //tileOffsets
-                GetOffsetArray(pData, typeSize, count, header, tileOffsets, imageSize);
+                getOffsetArray(pData, typeSize, header, tileOffsets, imageSize);
                 break;
             case 325: //tileByteCounts
-                GetTileBytesArray(pData, typeSize, count, header, tileByteCounts, imageSize);
+                getTileBytesArray(pData, typeSize, header, tileByteCounts, imageSize);
                 break;
             case 33550://  cellWidth
-                GetDoubleCell(pData, typeSize, count, header, cell);
+                getDoubleCell(pData, typeSize, count, header, cell);
                 break;
             case 33922: //geoTransform
-                GetDoubleTrans(pData, typeSize, count, header, geoTrans);
+                getDoubleTrans(pData, typeSize, count, header, geoTrans);
                 break;
             case 34737: //Spatial reference
-                String crs = GetString(header, pData, typeSize * count);
+                String crs = getString(header, pData, typeSize * count);
                 break;
             default:
                 break;
@@ -554,10 +561,7 @@ public class COGHeaderParse {
     }
 
 
-
-
-
-    private static int GetIntII(byte[] pd, int startPos, int Length) {
+    private static int getIntII(byte[] pd, int startPos, int Length) {
         int value = 0;
         for (int i = 0; i < Length; i++) {
             value |= pd[startPos + i] << i * 8;
@@ -568,7 +572,7 @@ public class COGHeaderParse {
         return value;
     }
 
-    private static double GetDouble(byte[] pd, int startPos, int Length) {
+    private static double getDouble(byte[] pd, int startPos, int Length) {
         long value = 0;
         for (int i = 0; i < Length; i++) {
             value |= ((long) (pd[startPos + i] & 0xff)) << (8 * i);
@@ -580,41 +584,39 @@ public class COGHeaderParse {
     }
 
 
-    private static void GetDoubleTrans(int startPos, int typeSize, int count, byte[] header,
+    private static void getDoubleTrans(int startPos, int typeSize, int count, byte[] header,
                                        final ArrayList<Double> geoTrans) {
         for (int i = 0; i < count; i++) {
-            double v = GetDouble(header, (startPos + i * typeSize), typeSize);
+            double v = getDouble(header, (startPos + i * typeSize), typeSize);
             geoTrans.add(v);
         }
     }
 
 
-    private static void GetDoubleCell(int startPos, int typeSize, int count, byte[] header,
-                                      final ArrayList<Double> cell
-    ) {
+    private static void getDoubleCell(int startPos, int typeSize, int count, byte[] header,
+                                      final ArrayList<Double> cell) {
         for (int i = 0; i < count; i++) {
-            double v = GetDouble(header, (startPos + i * typeSize), typeSize);
+            double v = getDouble(header, (startPos + i * typeSize), typeSize);
             cell.add(v);
         }
     }
 
 
-    private static String GetString(byte[] pd, int startPos, int Length) {
+    private static String getString(byte[] pd, int startPos, int Length) {
         byte[] dd = new byte[Length];
         System.arraycopy(pd, startPos, dd, 0, Length);
         return new String(dd);
     }
 
 
-    private static void GetOffsetArray(int startPos, int typeSize, int count, byte[] header,
+    private static void getOffsetArray(int startPos, int typeSize, byte[] header,
                                        final ArrayList<ArrayList<ArrayList<Integer>>> tileOffsets,
-                                       final int[] imageSize
-    ) {
+                                       final int[] imageSize) {
         ArrayList<ArrayList<Integer>> StripOffsets = new ArrayList<>();
         for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
             ArrayList<Integer> Offsets = new ArrayList<>();
             for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
-                int v = GetIntII(header, (startPos + (int) (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
+                int v = getIntII(header, (startPos + (int) (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
                 Offsets.add(v);
             }
             StripOffsets.add(Offsets);
@@ -622,14 +624,14 @@ public class COGHeaderParse {
         tileOffsets.add(StripOffsets);
     }
 
-    private static void GetTileBytesArray(int startPos, int typeSize, int count, byte[] header,
+    private static void getTileBytesArray(int startPos, int typeSize, byte[] header,
                                           final ArrayList<ArrayList<ArrayList<Integer>>> tileByteCounts,
                                           final int[] imageSize) {
         ArrayList<ArrayList<Integer>> stripBytes = new ArrayList<>();
         for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
             ArrayList<Integer> tileBytes = new ArrayList<>();
             for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
-                int v = GetIntII(header, (startPos + (int) (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
+                int v = getIntII(header, (startPos + (int) (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
                 tileBytes.add(v);
             }
             stripBytes.add(tileBytes);
