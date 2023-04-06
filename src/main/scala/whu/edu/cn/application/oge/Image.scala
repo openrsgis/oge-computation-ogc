@@ -134,6 +134,7 @@ object Image {
             )
           )
           jedis.sadd(key,zIndexStr)
+          jedis.expire(key,SystemConstants.REDIS_CACHE_TTL)
 
         } // end if
       } // end for
@@ -1505,7 +1506,8 @@ object Image {
         val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
         val time = System.currentTimeMillis()
-        val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
+//        val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
+        val layerIDAll: String = ImageTrigger.originTaskID
         // Pyramiding up the zoom levels, write our tiles out to the local file system.
 
 

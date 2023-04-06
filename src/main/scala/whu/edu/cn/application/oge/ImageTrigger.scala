@@ -435,28 +435,40 @@ object ImageTrigger {
   }
 
   def main(args: Array[String]): Unit = {
+    args.foreach(println)
+    /* sc,workTaskJson,workID,originTaskID */
+
+    if (args.length<4)return
+
+
+    workTaskJSON = args(1)
+    workID = args(2)
+    originTaskID = args(3)
+
+
 
     // 从命令行参数取
     // sc = args(....)
     // workID = args(....)
     //
-    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
-
-    workTaskJSON = {
-      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
-      fileName = "datas/out.txt" // TODO
-      val line: String = fileSource.mkString
-      fileSource.close()
-      line
-    } // 任务要用的 JSON,应当由命令行参数获取
+//    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
 
-    originTaskID = "ogeDag:task:0000000000000:"
+//    = {
+//      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+//      fileName = "datas/out.txt" // TODO
+//      val line: String = fileSource.mkString
+//      fileSource.close()
+//      line
+//    } // 任务要用的 JSON,应当由命令行参数获取
+
+
+//    originTaskID = "0000000000000"
     // 点击整个run的唯一标识，来自boot
 
 
-    val time1 = System.currentTimeMillis()
-    val conf = new SparkConf()
+    val time1: Long = System.currentTimeMillis()
+    val conf: SparkConf = new SparkConf()
       .setMaster("local[*]")
       .setAppName("query")
     val sc = new SparkContext(conf)

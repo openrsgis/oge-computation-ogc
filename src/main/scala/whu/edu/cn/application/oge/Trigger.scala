@@ -7,13 +7,18 @@ import geotrellis.raster.mapalgebra.focal.Kernel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
+import redis.clients.jedis.Jedis
+import whu.edu.cn.application.oge.ImageTrigger.{originTaskID, workID, workTaskJSON, zIndexStrArray}
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
+import whu.edu.cn.util.{JedisConnectionFactory, ZCurveUtil}
 
+import java.io.File
 import scala.collection.mutable.Map
 import scala.collection.immutable
 import scala.io.Source
+import scala.language.postfixOps
 
 object Trigger {
   var rdd_list_image: Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])] = Map.empty[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]
@@ -726,6 +731,7 @@ object Trigger {
     //
     //    val time2 = System.currentTimeMillis()
     //    println("算子运行时间为："+(time2 - time1))
+
     val time1 = System.currentTimeMillis()
     val conf = new SparkConf()
       .setAppName("OGE-Computation")
@@ -773,7 +779,144 @@ object Trigger {
     println(time2 - time1)
   }
 
-  def runMain(implicit sc: SparkContext, s1: String, s2: String): Unit = {
+  def runMain(sc: SparkContext,
+              curWorkTaskJSON: String,
+              curWorkID:String,
+              curOriginTaskID:String): Unit = {
+
+    /* sc,workTaskJson,workID,originTaskID */
+
+    workTaskJSON = curWorkTaskJSON
+    workID = curWorkID
+    originTaskID = curOriginTaskID
+
+
+
+    val file = new File("aa.txt")
+    val bool: Boolean = file.createNewFile()
+
+
+
+
+    // 从命令行参数取
+    // sc = args(....)
+    // workID = args(....)
+    //
+    //    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
+
+
+    //    = {
+    //      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+    //      fileName = "datas/out.txt" // TODO
+    //      val line: String = fileSource.mkString
+    //      fileSource.close()
+    //      line
+    //    } // 任务要用的 JSON,应当由命令行参数获取
+
+
+    //    originTaskID = "0000000000000"
+    // 点击整个run的唯一标识，来自boot
+
+
+    val time1: Long = System.currentTimeMillis()
+
+
+    val jsonObject = JSON.parseObject(workTaskJSON)
+    println(jsonObject.size())
+    println(jsonObject)
+
+    oorB = jsonObject.getString("oorB").toInt
+    if (oorB == 0) {
+      val map = jsonObject.getJSONObject("map")
+      level = map.getString("level").toInt //2
+      windowRange = map.getString("spatialRange") //1
+
+
+      //TODO   通过on the fly的范围1和层级2找到该层级包含的所有前端瓦片
+      println(windowRange)
+
+      val lonLatsOfWindow: Array[Double] = windowRange
+        .substring(1, windowRange.length - 1).split(",").map(_.toDouble)
+
+      println(lonLatsOfWindow.mkString("Array(", ", ", ")"))
+
+      val jedis: Jedis = JedisConnectionFactory.getJedis
+      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
+      jedis.select(1)
+
+
+      val xMinOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow.head, level)
+      val xMaxOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow(2), level)
+
+      val yMinOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow.last, level)
+      val yMaxOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow(1), level)
+      System.out.println(xMinOfTile + "-" + xMaxOfTile)
+      System.out.println(yMinOfTile + "-" + yMaxOfTile)
+
+      // z曲线编码后的索引字符串
+
+
+      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
+
+      // 等价于两层循环
+      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
+           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+        // 排除 redis 已经存在的前端瓦片编码
+           ) { // redis里存在当前的索引
+
+        // Redis 里没有的前端瓦片编码
+        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+
+        zIndexStrArray.append(zIndexStr)
+
+        // 将这些新的瓦片编号存到 Redis
+        //        jedis.sadd(key, zIndexStr)
+
+      }
+    }
+    if (zIndexStrArray.isEmpty){
+      //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
+      println("窗口范围无明显变化，没有新的瓦片待计算")
+      return
+    }
+    println("***********************************************************")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    val a = JsonToArgLocal.trans(jsonObject)
+    println(a.size)
+    a.foreach(println(_))
+
+    if (a.head._3.contains("productID")) {
+      if (a.head._3("productID") != "GF2") {
+        lamda(sc, a) // TODO
+      }
+      else {
+        if (oorB == 0) {
+          Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
+        }
+        else {
+          Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
+        }
+      }
+    }
+    else {
+      lamda(sc, a)
+    }
+
+    val time2 = System.currentTimeMillis()
+    println(time2 - time1)
 
   }
 }

@@ -96,6 +96,15 @@ public class COGHeaderParse {
     }
 
 
+
+
+
+
+
+
+
+
+
     /**
      * 获取 tile 影像本体
      *
@@ -611,16 +620,24 @@ public class COGHeaderParse {
 
     private static void getOffsetArray(int startPos, int typeSize, byte[] header,
                                        final ArrayList<ArrayList<ArrayList<Integer>>> tileOffsets,
-                                       final int[] imageSize) {
+                                       final int[] imageSize, int... bms) {
+
+        int bm = 1;
+        if (bms.length > 1) throw new RuntimeException("bm 最多传一个");
+        if (bms.length == 1) bm = bms[0];
+
         ArrayList<ArrayList<Integer>> StripOffsets = new ArrayList<>();
-        for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
-            ArrayList<Integer> Offsets = new ArrayList<>();
-            for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
-                int v = getIntII(header, (startPos + (int) (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
-                Offsets.add(v);
+
+        for (int k = 0; k < bm; k++)
+            for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
+                ArrayList<Integer> Offsets = new ArrayList<>();
+                for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
+                    int v = getIntII(header, (startPos +
+                            (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
+                    Offsets.add(v);
+                }
+                StripOffsets.add(Offsets);
             }
-            StripOffsets.add(Offsets);
-        }
         tileOffsets.add(StripOffsets);
     }
 
@@ -631,7 +648,8 @@ public class COGHeaderParse {
         for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
             ArrayList<Integer> tileBytes = new ArrayList<>();
             for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
-                int v = getIntII(header, (startPos + (int) (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
+                int v = getIntII(header, (startPos +
+                        (i * ((imageSize[1] / 256) + 1) + j) * typeSize), typeSize);
                 tileBytes.add(v);
             }
             stripBytes.add(tileBytes);
