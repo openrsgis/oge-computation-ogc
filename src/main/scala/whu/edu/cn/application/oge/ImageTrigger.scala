@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSON
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.Tile
 import geotrellis.raster.mapalgebra.focal.Kernel
+import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import org.locationtech.jts.geom._
@@ -550,6 +550,8 @@ object ImageTrigger {
   val a = JsonToArgLocal.trans(jsonObject)
   println(a.size)
   a.foreach(println(_))
+
+
 
   if (a.head._3.contains("productID")) {
     if (a.head._3("productID") != "GF2") {

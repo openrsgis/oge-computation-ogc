@@ -18,6 +18,7 @@ import org.gdal.gdal.gdal
 import org.gdal.gdalconst.gdalconstConstants.GDT_Byte
 import whu.edu.cn.application.tritonClient.examples.GF2Example
 import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.util.SystemConstants.{MINIO_KEY, MINIO_PWD, MINIO_URL}
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
 import java.io.{BufferedWriter, File, FileWriter}
@@ -143,6 +144,7 @@ object Preprocessing {
     dr.CreateCopy(dstPath, dm)
     time
   }
+
 
   def loadOnTheFly(implicit sc: SparkContext, level: Int, path: String, crs: String, geom: String, fileName: String): Unit = {
     val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
