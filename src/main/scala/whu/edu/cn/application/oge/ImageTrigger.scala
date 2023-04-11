@@ -296,7 +296,7 @@ object ImageTrigger {
       case "Coverage.addStyles" => {
         if (oorB == 0) {
           Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName, level = level)
           layerID = layerID + 1
         }
         else {
@@ -415,7 +415,7 @@ object ImageTrigger {
       case "CoverageCollection.addStyles" => {
         if (oorB == 0) {
           Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName,level = level)
           layerID = layerID + 1
         }
         else {
@@ -559,10 +559,10 @@ object ImageTrigger {
     }
     else {
       if (oorB == 0) {
-        Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
+
       }
       else {
-        Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
+
       }
     }
   }

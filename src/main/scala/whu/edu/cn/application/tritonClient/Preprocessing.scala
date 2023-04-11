@@ -29,6 +29,61 @@ import scala.collection.mutable.ListBuffer
 
 
 object Preprocessing {
+
+  def queryOPT(): (String, String) = {
+    var metaData: (String, String) = (null, null)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn = postgresqlUtil.getConnection()
+    if (conn != null) {
+      try {
+        // Configure to be Read Only
+        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+        // Extent dimension
+        val sql = new StringBuilder
+        sql ++= "select path, crs from oge_image where image_id = 505118"
+        println(sql)
+        val extentResults = statement.executeQuery(sql.toString())
+        while (extentResults.next()) {
+          val path = extentResults.getString("path")
+          val srcID = extentResults.getString("crs")
+          metaData = (path, srcID)
+        }
+      }
+      finally {
+        conn.close
+      }
+    } else throw new RuntimeException("connection failed")
+    metaData
+  }
+
+  def querySAR(): (String, String) = {
+    var metaData: (String, String) = (null, null)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn = postgresqlUtil.getConnection()
+    if (conn != null) {
+      try {
+        // Configure to be Read Only
+        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+        // Extent dimension
+        val sql = new StringBuilder
+        sql ++= "select path, crs from oge_image where image_id = 505117"
+        println(sql)
+        val extentResults = statement.executeQuery(sql.toString())
+        while (extentResults.next()) {
+          val path = extentResults.getString("path")
+          val srcID = extentResults.getString("crs")
+          metaData = (path, srcID)
+        }
+      }
+      finally {
+        conn.close
+      }
+    } else throw new RuntimeException("connection failed")
+    metaData
+  }
+
+
+
   def queryGF2(): (String, String) = {
     var metaData: (String, String) = (null, null)
     val postgresqlUtil = new PostgresqlUtil("")

@@ -46,7 +46,7 @@ object COGHeaderParse {
    * @param dType
    * @param resolution
    * @param productName  产品名
-   * @param query_extent 查询瓦片的矩形范围
+   * @param queryExtent 查询瓦片的矩形范围
    * @param bandCount    多波段
    * @param tileSize     瓦片尺寸
    * @return 后端瓦片
@@ -55,7 +55,7 @@ object COGHeaderParse {
                 time: String, crs: String,
                 measurement: String, dType: String,
                 resolution: String, productName: String,
-                query_extent: Array[Double],
+                queryExtent: Array[Double],
                 bandCount: Int = 1,
                 tileSize: Int = 256): util.ArrayList[RawTile] = {
 
@@ -94,7 +94,7 @@ object COGHeaderParse {
       parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
       System.out.println(cell)
 
-      getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
+      getTiles(level, queryExtent, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
 
     } finally if (inputStream != null) inputStream.close()
 
@@ -144,7 +144,7 @@ object COGHeaderParse {
    * 获取 Tile 相关的一些数据，不包含tile影像本体
    *
    * @param l          json里的 level 字段，表征前端 Zoom
-   * @param query_extent
+   * @param queryExtent
    * @param crs
    * @param in_path
    * @param time
@@ -154,7 +154,7 @@ object COGHeaderParse {
    * @param productName
    * @return
    */
-  private def getTiles(l: Int, query_extent: Array[Double],
+  private def getTiles(l: Int, queryExtent: Array[Double],
                        crs: String, in_path: String,
                        time: String, measurement: String,
                        dType: String, resolution: String,
@@ -235,10 +235,10 @@ object COGHeaderParse {
         // throw new RuntimeException("Level is too big!");
       }
     }
-    val lowerLeftLongitude: Double = query_extent(0)
-    val lowerLeftLatitude: Double = query_extent(1)
-    val upperRightLongitude: Double = query_extent(2)
-    val upperRightLatitude: Double = query_extent(3)
+    val lowerLeftLongitude: Double = queryExtent(0)
+    val lowerLeftLatitude: Double = queryExtent(1)
+    val upperRightLongitude: Double = queryExtent(2)
+    val upperRightLatitude: Double = queryExtent(3)
     val pointLower = new Coordinate
     val pointUpper = new Coordinate
     pointLower.setX(lowerLeftLatitude)
@@ -379,7 +379,12 @@ object COGHeaderParse {
           t.setLevel(level)
           t.setPath(in_path)
           t.setTime(time)
-          t.setMeasurement(measurement)
+          if(bandCount == 1) {
+            t.setMeasurement(measurement)
+          }
+          else{
+            t.setMeasurement(bandCount.toString)//TODO
+          }
           t.setCrs(crs.replace("EPSG:", "").toInt)
           t.setDataType(dType)
           t.setProduct(productName)

@@ -9,9 +9,9 @@ public class RawTile implements Serializable {
         private String time;
         private String measurement;
         private String product;
-        private double[] LngLatBottomLeft = new double[2];/* extent of the tile*/
-        private double[] LngLatUpperRight = new double[2];
-        private int[] rowCol = new int[2];/* ranks of the tile*/
+        private final double[] LngLatBottomLeft = new double[2];/* extent of the tile*/
+        private final double[] LngLatUpperRight = new double[2];
+        private final int[] rowCol = new int[2];/* ranks of the tile*/
         private final long[] offset = new long[2];/* offsets of the tile*/
 
         private byte[] tileBuf;/* byte stream of the tile*/
@@ -81,6 +81,16 @@ public class RawTile implements Serializable {
         this.rowCol[0] = row;
         this.rowCol[1] = col;
     }
+
+    public int getRow(){
+        return this.rowCol[0];
+    }
+
+    public int getCol(){
+        return this.rowCol[1];
+    }
+
+
 
     public long[] getOffset() {
         return offset;
