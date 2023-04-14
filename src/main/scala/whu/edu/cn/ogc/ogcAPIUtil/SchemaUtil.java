@@ -3,6 +3,10 @@ package whu.edu.cn.ogc.ogcAPIUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.ParserConfig;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import jnr.ffi.annotations.In;
+import jnr.ffi.annotations.Out;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.operation.TransformException;
 import whu.edu.cn.ogc.entity.coverage.Coverage;
@@ -27,7 +31,7 @@ public class SchemaUtil {
         return new Feature(id, null, null, "Feature", featureGeoJSon);
     }
 
-    public Coverage json2Coverage(JSONObject coverageObj){
+    public Coverage json2Coverage(JSONObject coverageObj, String baseUrl){
         String id = coverageObj.getString("id");
         JSONObject domainSet = null;
         if(coverageObj.containsKey("domainset")){
@@ -45,9 +49,10 @@ public class SchemaUtil {
         SpatialExtent spatialExtent = null;
         if(coverageObj.containsKey("extent")){
             if(coverageObj.getJSONObject("extent").containsKey("spatial")){
-                SpatialUtil spatialUtil = new SpatialUtil();
                 List<List<Float>> bbox = jsonArray2Bbox(coverageObj.getJSONObject("extent").getJSONObject("spatial").getJSONArray("bbox"));
-                bboxCrs = spatialUtil.crsUri2Crs(coverageObj.getJSONObject("extent").getJSONObject("spatial").getString("crs"));
+                if(coverageObj.getJSONObject("extent").getJSONObject("spatial").containsKey("crs")){
+                    bboxCrs = SpatialUtil.crsUri2Crs(coverageObj.getJSONObject("extent").getJSONObject("spatial").getString("crs"));
+                }
                 spatialExtent = new SpatialExtent(bbox, bboxCrs);
             }
         }
@@ -56,7 +61,9 @@ public class SchemaUtil {
         for(int index = 0; index < linksArr.size(); index++){
             JSONObject linkObj = linksArr.getJSONObject(index);
             if(linkObj.getString("rel").equals("http://www.opengis.net/def/rel/ogc/1.0/coverage")){
-                coverageLinks.add(json2Link(linkObj));
+                Link link = json2Link(linkObj);
+                link = link.fixLinkHref(baseUrl);
+                coverageLinks.add(link);
             }
         }
         return new Coverage(id, crs, null, "Coverage", spatialExtent, domainSet, rangeType, coverageLinks);
@@ -73,8 +80,7 @@ public class SchemaUtil {
         Extent extent = json2Extent(metaObj);
         String crs = null;
         if(metaObj.containsKey("crs")){
-            SpatialUtil spatialUtil = new SpatialUtil();
-            crs = spatialUtil.crsUri2Crs(metaObj.getString("crs"));
+            crs = SpatialUtil.crsUri2Crs(metaObj.getString("crs"));
         }
         String description = metaObj.getString("description");
         String itemType = "feature";
@@ -118,13 +124,14 @@ public class SchemaUtil {
     public Extent json2Extent(JSONObject collectionObj) {
         Extent extent = new Extent();
         List<List<Float>> bbox;
-        String bboxCrs;
+        String bboxCrs = null;
         List<List<String>> interval;
         if(collectionObj.containsKey("extent")){
             if(collectionObj.getJSONObject("extent").containsKey("spatial")){
-                SpatialUtil spatialUtil = new SpatialUtil();
                 bbox = jsonArray2Bbox(collectionObj.getJSONObject("extent").getJSONObject("spatial").getJSONArray("bbox"));
-                bboxCrs = spatialUtil.crsUri2Crs(collectionObj.getJSONObject("extent").getJSONObject("spatial").getString("crs"));
+                if(collectionObj.getJSONObject("extent").getJSONObject("spatial").containsKey("crs")){
+                    bboxCrs = SpatialUtil.crsUri2Crs(collectionObj.getJSONObject("extent").getJSONObject("spatial").getString("crs"));
+                }
                 extent.setSpatial(new SpatialExtent(bbox, bboxCrs));
             }
             if(collectionObj.getJSONObject("extent").containsKey("temporal")){
@@ -390,12 +397,58 @@ public class SchemaUtil {
         List<String> EPSGCrsList = new ArrayList<>();
         for(int index = 0 ; index < crsArray.size(); index ++ ){
             String crs = crsArray.getString(index);
-            SpatialUtil spatialUtil = new SpatialUtil();
-            EPSGCrsList.add(spatialUtil.crsUri2Crs(crs));
+            EPSGCrsList.add(SpatialUtil.crsUri2Crs(crs));
         }
         return EPSGCrsList;
     }
 
+    /**
+     * jsonObject转化为JobResponse
+     * @param jobObject json
+     * @return JobResponse
+     */
+    public JobResponse json2JobResponse(JSONObject jobObject){
+        JobResponse jobResponse = new JobResponse();
+        if(jobObject.containsKey("jobID")){
+            jobResponse.setJobID(jobObject.getString("jobID"));
+        }
+        if(jobObject.containsKey("type")){
+            jobResponse.setType(jobObject.getString("type"));
+        }
+        if(jobObject.containsKey("status")){
+            jobResponse.setStatus(jobObject.getString("status"));
+        }
+        if(jobObject.containsKey("processID")){
+            jobResponse.setProcessID(jobObject.getString("processID"));
+        }
+        if(jobObject.containsKey("message")){
+            jobResponse.setMessage(jobObject.getString("message"));
+        }
+        if(jobObject.containsKey("created")){
+            jobResponse.setCreated(jobObject.getString("created"));
+        }
+        if(jobObject.containsKey("started")){
+            jobResponse.setStarted(jobObject.getString("started"));
+        }
+        if(jobObject.containsKey("finished")){
+            jobResponse.setFinished(jobObject.getString("finished"));
+        }
+        if(jobObject.containsKey("updated")){
+            jobResponse.setUpdated(jobObject.getString("updated"));
+        }
+        if(jobObject.containsKey("progress")){
+            jobResponse.setProgress(jobObject.getInteger("progress"));
+        }
+        if(jobObject.containsKey("links")){
+            JSONArray linkArray = jobObject.getJSONArray("links");
+            List<Link> linkList = new ArrayList<>();
+            linkArray.forEach(linkObj -> {
+                linkList.add(json2Link((JSONObject) linkObj));
+            });
+            jobResponse.setLinks(linkList);
+        }
+        return jobResponse;
+    }
 
     /**
      * 根据Process的描述，组装Process的请求体
@@ -410,13 +463,80 @@ public class SchemaUtil {
         processInputs.forEach((key, input)->{
             // 如果输入的参数里也有这个参数，进行格式转换，因为目前输入的都是字符串
             if(inputParams.containsKey(key)){
-                inputsObj.put(key, transformationParam(key, input, inputParams.get(key)).get("value"));
+                inputsObj.putAll(transformationParam(key, input, inputParams.get(key)));
             }
         });
+        JSONObject outputsObj = assemblyRequestOutputs(process.getOutputs());
         processRequestBody.setInputs(inputsObj);
+        processRequestBody.setOutputs(outputsObj);
         return processRequestBody;
     }
 
+    /**
+     * 根据Process的描述，组装Process输出的请求体
+     * @param processOutputs process输出的描述
+     * @return JSONObject
+     */
+    public JSONObject assemblyRequestOutputs(Map<String, Output> processOutputs){
+        JSONObject outputsObj = new JSONObject();
+        processOutputs.forEach((key, output) -> {
+            // 遍历process描述中的输出
+            JSONObject outputObj = new JSONObject();
+            // 目前写死 只支持value形式的结果传输模式
+            outputObj.put("transmissionMode", "value");
+            outputsObj.put(key, outputObj);
+            // 先筛选一遍coverage 和 feature
+            JSONObject formatObj = setFormatOfRequestOutput(output.getSchema());
+            List<String> coverageTypeList = judgeCoverageBySchema(output.getSchema(), new ArrayList<String>());
+            List<String> featureTypeList = judgeFeatureBySchema(output.getSchema(), new ArrayList<String>());
+            if(coverageTypeList.size()!=0){
+                formatObj.put("mediaType", CoverageMediaType.sort(coverageTypeList));
+            }else if(featureTypeList.size()!=0){
+                formatObj.put("mediaType", FeatureMediaType.sort(featureTypeList));
+            }else{
+                formatObj = setFormatOfRequestOutput(output.getSchema());
+            }
+            if(!formatObj.isEmpty()){
+                outputObj.put("format", formatObj);
+            }
+        });
+        return outputsObj;
+    }
+
+    /**
+     * 获取输出的format
+     * @param schema 输出
+     * @return format 的jsonObject
+     */
+    public JSONObject setFormatOfRequestOutput(Schema schema){
+        JSONObject formatObj = new JSONObject();
+        if(schema.getAllOf() != null){
+            List<Schema> allOfSchemaList = schema.getAllOf();
+            Schema combinedSchema = new Schema();
+            //合并各个schema
+            for(Schema oneOfSchema : allOfSchemaList){
+                combinedSchema = combinedSchema.combineSchemas(combinedSchema, oneOfSchema);
+            }
+            return setFormatOfRequestOutput(combinedSchema);
+        }else if(schema.getOneOf() != null){
+            // 默认就是第一个 用第一个contentMediaType 和 contentEncoding
+            List<Schema> schemaList = schema.getOneOf();
+            for(Schema schemaObj: schemaList){
+                formatObj = setFormatOfRequestOutput(schemaObj);
+                if(!formatObj.isEmpty()){
+                    break;
+                }
+            }
+        }else{
+            if(schema.getContentMediaType() == null){
+                return null;
+            }else{
+                formatObj.put("mediaType", schema.getContentMediaType());
+                return formatObj;
+            }
+        }
+        return formatObj;
+    }
     /**
      * 根据输入的参数和对应的schema做必要的转换
      * @param inputName input的Name
@@ -442,14 +562,15 @@ public class SchemaUtil {
             List<Schema> schemaList = schema.getOneOf();
             // 问题就是如何判断、采用哪一个schema，现在采用的策略是将schemaList schema一一灌输进行，若返回的不是null，就直接使用
             for(Schema schemaObj: schemaList){
+                inputMeta.setSchema(schemaObj);
                 inputParamObj = transformationParamWithOneSchema(inputName, inputMeta, inputParam, true);
-                if(inputParamObj != null){
+                if(!inputParamObj.isEmpty()){
                     break;
                 }
             }
         }else{
             // 既没有allOf也没有oneOf 只有一个schema
-            inputParamObj = transformationParamWithOneSchema(inputName, inputMeta, inputParam, false);
+            inputParamObj.put(inputName, transformationParamWithOneSchema(inputName, inputMeta, inputParam, false));
 
         }
         return inputParamObj;
@@ -533,11 +654,7 @@ public class SchemaUtil {
             if(schema.getType() != null){
                 if(schema.getType().equals("string")){
                     // 对于binary类型
-                    if(contentEncoding.equals("binary")){
-                        // 不检验字节码是否符合要求了 直接拼装
-                        qualifiedValue.setValue(inputParam);
-                        qualifiedValue.setMediaType(contentMediaType);
-                    }else if(contentMediaType.contains("application/gml+xml")){
+                    if(contentMediaType.contains("application/gml+xml")){
                         // gml 字符串
                         // TODO 可以再次检查是否是gml
                         qualifiedValue.setValue(inputParam);
@@ -547,13 +664,98 @@ public class SchemaUtil {
                         //TODO 这里有个问题 是用href来表达影像还是用value
                         qualifiedValue.setValue(inputParam);
                         qualifiedValue.setMediaType(contentMediaType);
+                    }else if(contentEncoding.equals("binary")){
+                        // 不检验字节码是否符合要求了 直接拼装
+                        qualifiedValue.setHref(inputParam);
+                        qualifiedValue.setMediaType(contentMediaType);
+                    }
+                    inputParamObj.put(inputName, JSONObject.parseObject(JSON.toJSONString(qualifiedValue)));
+                }
+            }
+        }
+        return inputParamObj;
+    }
+    /**
+     * 根据输入参数返回具体支持的媒体类型列表
+     * @param schema 输入输出元数据的schema
+     * @return List<String> 支持的媒体类型列表
+     */
+    public List<String> judgeCoverageBySchema(Schema schema, List<String> typeList){
+        String contentMediaType = schema.getContentMediaType();
+        String contentEncoding= schema.getContentEncoding();
+        if(schema.getAllOf() != null){
+            List<Schema> allOfSchemaList = schema.getAllOf();
+            Schema combinedSchema = new Schema();
+            //合并各个schema
+            for(Schema oneOfSchema : allOfSchemaList){
+                combinedSchema = combinedSchema.combineSchemas(combinedSchema, oneOfSchema);
+            }
+            return judgeCoverageBySchema(combinedSchema, typeList);
+        }else if(schema.getOneOf() != null){
+            List<Schema> schemaList = schema.getOneOf();
+            // 遍历schemaList中所有的schema，是可以转换的放入数组
+            for(Schema schemaObj: schemaList){
+                typeList = judgeCoverageBySchema(schemaObj, typeList);
+            }
+        }else{
+            // 既没有allOf也没有oneOf 只有一个schema
+            if(schema.getType() != null){
+                if(schema.getType().equals("string")){
+                    // 对于binary类型
+                    if(contentEncoding == null && contentMediaType == null){
+                        // 如果没有任何的媒体类型 直接返回geotiff
+                        typeList.add("geotiff");
+                    }else if(contentEncoding!=null && contentEncoding.equals("binary")){
+                        // 不检验字节码是否符合要求了 直接拼装
+                        typeList.add("binary");
+                    } else if(contentMediaType != null && (contentMediaType.contains("application/tiff")||
+                            contentMediaType.contains("application/geotiff"))){
+                        typeList.add("geotiff");
+                    }else if(contentMediaType != null && (contentMediaType.contains("image/png"))){
+                        typeList.add("png");
                     }
                 }
             }
         }
-
-        return inputParamObj;
+       return typeList;
     }
+
+    public List<String> judgeFeatureBySchema(Schema schema, List<String> typeList){
+        String contentMediaType = schema.getContentMediaType();
+        if(schema.getAllOf() != null){
+            List<Schema> allOfSchemaList = schema.getAllOf();
+            Schema combinedSchema = new Schema();
+            //合并各个schema
+            for(Schema oneOfSchema : allOfSchemaList){
+                combinedSchema = combinedSchema.combineSchemas(combinedSchema, oneOfSchema);
+            }
+            return judgeFeatureBySchema(combinedSchema, typeList);
+        }else if(schema.getOneOf() != null){
+            List<Schema> schemaList = schema.getOneOf();
+            // 遍历schemaList中所有的schema，是可以转换的放入数组
+            for(Schema schemaObj: schemaList){
+                typeList = judgeFeatureBySchema(schemaObj, typeList);
+            }
+        }else{
+            // 既没有allOf也没有oneOf 只有一个schema
+            if(contentMediaType !=null ){
+                if(contentMediaType.contains("application/gml+xml")){
+                    typeList.add("gml");
+                }else if(contentMediaType.contains("application/geo+json")){
+                    typeList.add("geojson");
+                }
+            }
+
+            if(schema.getFormat() != null){
+                String format = schema.getFormat();
+                if(format.equals("geojson-feature-collection") || format.equals("geojson-feature") || format.equals("geojson-geometry")){
+                    typeList.add("geojson");
+                }
+            }
+        }
+        return typeList;
+    }
+
 
 //    public boolean isSchemaByValue(Schema schema, String inputParam){
 //        boolean flag = false;
@@ -614,13 +816,22 @@ public class SchemaUtil {
     }
 
     public  static void main(String [] args){
-        SchemaUtil schemaUtil = new SchemaUtil();
-//        System.out.println(schemaUtil.getDateFormat("2000-10-30T18:24:39+00:00"));
-        JSONObject obj = new JSONObject();
-        obj.put("name", null);
-        obj.put("a", "as");
-        String a = obj.getString("name");
-        String b = "1";
+//        SchemaUtil schemaUtil = new SchemaUtil();
+////        System.out.println(schemaUtil.getDateFormat("2000-10-30T18:24:39+00:00"));
+//        JSONObject obj = new JSONObject();
+//        obj.put("name", null);
+//        obj.put("a", "as");
+//        String a = obj.getString("name");
+//        String b = "1";
 //        System.out.println(schemaUtil.getDateFormat("2000-10-30 18:24:39"));
+        String jsonString = "{ \"outputs\": { \"contours\": { \"title\": \"Generated contours\", \"description\": \"Contours generated by the process\", \"schema\": { \"type\": \"object\", \"contentMediaType\": \"application/geo+json\", \"$ref\": \"https://geojson.org/schema/FeatureCollection.json\" } } } }";
+        //String jsonString = "{ \"outputs\": { \"contours\": { \"title\": \"Generated contours\", \"description\": \"Contours generated by the process\", \"schema\": { \"type\": \"object\", \"contentMediaType\": \"application/geo+json\" } } } }";
+//        ParserConfig config = ParserConfig.global;
+//        config.setAutoTypeSupport(false);
+//        ParserConfig config = new ParserConfig();
+//        config.setAutoTypeSupport(true);
+
+        JSONObject jsonObject = JSONObject.parseObject(jsonString, com.alibaba.fastjson.parser.Feature.DisableSpecialKeyDetect);
+        JSONObject schema = jsonObject.getJSONObject("outputs").getJSONObject("contours").getJSONObject("schema");
     }
 }

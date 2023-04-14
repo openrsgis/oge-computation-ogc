@@ -5,6 +5,7 @@ public class QualifiedValue {
     private String encoding;
     private Schema schema;
     private Object value;
+    private String href;
 
     public String getMediaType() {
         return mediaType;
@@ -36,5 +37,24 @@ public class QualifiedValue {
 
     public void setValue(Object value) {
         this.value = value;
+    }
+
+    public String getHref() {
+        return href;
+    }
+
+    public void setHref(String href) {
+        this.href = href;
+    }
+
+    @Override
+    public String toString() {
+        return "QualifiedValue{" +
+                "mediaType='" + mediaType + '\'' +
+                ", encoding='" + encoding + '\'' +
+                ", schema=" + schema +
+                ", value=" + value +
+                ", href='" + href + '\'' +
+                '}';
     }
 }

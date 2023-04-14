@@ -1,6 +1,7 @@
 package whu.edu.cn.application.oge
 
-import com.alibaba.fastjson.JSON
+import scala.collection.JavaConverters._
+import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.Tile
 import geotrellis.raster.mapalgebra.focal.Kernel
@@ -10,7 +11,13 @@ import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.ogc.entity.process.CoverageMediaType
+import whu.edu.cn.ogc.ogcAPIUtil.OgcAPI
 
+import java.util.{List => JList}
+import java.util
+import javax.swing.JList
+import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.collection.mutable.Map
 import scala.collection.immutable
 import scala.io.Source
@@ -28,7 +35,7 @@ object Trigger {
 
   var rdd_list_cube: Map[String, Map[String, Any]] = Map.empty[String, Map[String, Any]]
   var cubeLoad: Map[String, (String, String, String)] = Map.empty[String, (String, String, String)]
-
+  var process_result_list: Map[String, (String, JSONObject)] = Map.empty[String, (String, JSONObject)]
   var level: Int = _
   var windowRange: String = _
   var layerID: Int = 0
@@ -45,13 +52,82 @@ object Trigger {
   }
 
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
-    name match {
+    // args的key如果包含url,且包含ogc api,这个url是process完整的url,与getCoverage getCoverageCollection的baseUrl不同
+    if((!name.contains(".")) && args.contains("url") && (args("url").contains("collections") || args("url").contains("processes"))){
+      val ogcAPI = new OgcAPI;
+      // 首先排查args里面有没有RDD字眼
+      args.foreach{
+        case (key, value) => {
+          // 如果以RDD字符串开头，遍历各个数组，查看是属于哪种类型的RDD
+          if(value.startsWith("RDD")){
+            if(rdd_list_image.contains(value)){
+              // 参数中包含coverage，则将RDD转换为tif 然后作为参数传给executeProcess，返回的是一个ProcessResult，
+              // 首先判断这个key所表示的影像能否支持以tif落地
+              val coverageTypeList= ogcAPI.getTypeOfCoverageInput(args.toMap.asJava, key)
+              if(coverageTypeList.size()!=0){
+                val href = WebAPI.tileRDD2Tiff(rdd_list_image.apply(key), CoverageMediaType.sort(coverageTypeList))
+                args.update(key, href)
+                val processResult = ogcAPI.executeProcess(args.toMap.asJava)
+                if(!processResult.isEmpty){
+                  process_result_list += (UUID -> (args("url"), processResult))
+                }else{
+                  //TODO 怎么做异常处理的？
+                }
+              }
+            }else if(rdd_list_feature.contains(value)){
+              // 参数中包含Feature
+
+            }
+          }
+        }
+      }
+    }else{
+      name match {
+        //ProcessResult的方法
+        case "ProcessResult.getCoverage" => {
+          val processUrl = process_result_list(argOrNot(args, "input"))._1
+          val processResult:JSONObject = process_result_list(argOrNot(args, "input"))._2
+          rdd_list_image += (UUID ->  ProcessResult.getCoverage(sc, processUrl, argOrNot(args, "inputName"), processResult))
+        }
+        case "ProcessResult.getCoverageCollection" => {
+
+        }
+        case "ProcessResult.getFeature" => {
+
+        }
+        case "ProcessResult.getFeatureCollection" => {
+          val processUrl = process_result_list(argOrNot(args, "input"))._1
+          val processResult:JSONObject = process_result_list(argOrNot(args, "input"))._2
+          rdd_list_feature += (UUID ->  ProcessResult.getFeatureCollection( processUrl, argOrNot(args, "inputName"), processResult))
+        }
+        case "ProcessResult.getString" => {
+
+        }
+        case "ProcessResult.getNumber" => {
+
+        }
       case "map" => {
         level = argOrNot(args, "level").toInt
         windowRange = argOrNot(args, "windowRange")
       }
       case "Service.getCoverageCollection" => {
-        imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+        if(argOrNot(args, "url") != null){
+
+        }else{
+          imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+        }
+      }
+      case "Service.getCoverage" => {
+        if(argOrNot(args, "url") != null){
+          rdd_list_image += (UUID -> Service.getCoverage(sc, argOrNot(args, "baseUrl"), argOrNot(args, "productID"),
+            argOrNot(args, "coverageID"), argOrNot(args, "subset"), argOrNot(args, "properties")))
+        }
+      }
+      case "Service.getFeatureCollection" => {
+
+      }
+      case "Service.getFeature" => {
+
       }
       case "Filter.equals" => {
         filterEqual += (UUID -> (argOrNot(args, "leftField"), argOrNot(args, "rightValue")))
@@ -693,6 +769,7 @@ object Trigger {
       case "Cube.addStyles" => {
         Cube.visualize(sc, cube = rdd_list_cube(args("cube")), products = argOrNot(args, "products"))
       }
+    }
     }
   }
 
