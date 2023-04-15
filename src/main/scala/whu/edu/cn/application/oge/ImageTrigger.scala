@@ -455,7 +455,8 @@ object ImageTrigger {
 
 
     workTaskJSON = {
-      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+      val fileSource = Source.fromFile(
+        "src/main/scala/whu/edu/cn/application/oge/modis.json")
       fileName = "datas/out.txt" // TODO
       val line: String = fileSource.mkString
       fileSource.close()

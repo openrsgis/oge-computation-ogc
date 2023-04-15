@@ -8,7 +8,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-import whu.edu.cn.application.oge.ImageTrigger.{originTaskID, workID, workTaskJSON, zIndexStrArray}
+import whu.edu.cn.application.oge.ImageTrigger.{fileName, originTaskID, workID, workTaskJSON, zIndexStrArray}
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
@@ -707,75 +707,97 @@ object Trigger {
     }
   }
 
+
   def main(args: Array[String]): Unit = {
-    //    val time1 = System.currentTimeMillis()
-    //    val conf = new SparkConf()
-    //      .setAppName("GeoCube-Dianmu Hurrican Flood Analysis")
-    //      .setMaster("local[*]")
-    //      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    //      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-    //      .set("spark.kryoserializer.buffer.max", "512m")
-    //      .set("spark.rpc.message.maxSize", "1024")
-    //    val sc = new SparkContext(conf)
-    //
-    //    val line: String = Source.fromFile("C:\\Users\\dell\\Desktop\\testJsonCubeFloodAnalysis.json").mkString
-    //    val jsonObject = JSON.parseObject(line)
-    //    println(jsonObject.size())
-    //    println(jsonObject)
-    //
-    //    val a = JsonToArg.trans(jsonObject)
-    //    println(a.size)
-    //    a.foreach(println(_))
-    //
-    //    lamda(sc, a)
-    //
-    //    val time2 = System.currentTimeMillis()
-    //    println("算子运行时间为："+(time2 - time1))
+    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
-    val time1 = System.currentTimeMillis()
-    val conf = new SparkConf()
-      .setAppName("OGE-Computation")
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
+
+    workTaskJSON = {
+      val fileSource = Source.fromFile(
+        "src/main/scala/whu/edu/cn/application/oge/modis.json")
+      fileName = "datas/out.txt" // TODO
+      val line: String = fileSource.mkString
+      fileSource.close()
+      line
+    } // 任务要用的 JSON,应当由命令行参数获取
+
+
+    originTaskID = "0000000000000"
+    // 点击整个run的唯一标识，来自boot
+
+    val conf: SparkConf = new SparkConf()
+      .setMaster("local[*]")
+      .setAppName("query")
     val sc = new SparkContext(conf)
-
-    val fileSource = Source.fromFile(args(0))
-    fileName = args(1)
-    val line: String = fileSource.mkString
-    fileSource.close()
-    val jsonObject = JSON.parseObject(line)
-    println(jsonObject.size())
-    println(jsonObject)
-
-    oorB = jsonObject.getString("oorB").toInt
-    if (oorB == 0) {
-      val map = jsonObject.getJSONObject("map")
-      level = map.getString("level").toInt
-      windowRange = map.getString("spatialRange")
-    }
-
-    val a = JsonToArg.trans(jsonObject)
-    println(a.size)
-    a.foreach(println(_))
-
-    if (a.head._3.contains("productID")) {
-      if (a.head._3("productID") != "GF2") {
-        lamda(sc, a)
-      }
-      else {
-        if (oorB == 0) {
-
-        }
-        else {
-        }
-      }
-    }
-    else {
-      lamda(sc, a)
-    }
-
-    val time2 = System.currentTimeMillis()
-    println(time2 - time1)
+    runMain(sc,workTaskJSON,workID,originTaskID)
+//    //    val time1 = System.currentTimeMillis()
+//    //    val conf = new SparkConf()
+//    //      .setAppName("GeoCube-Dianmu Hurrican Flood Analysis")
+//    //      .setMaster("local[*]")
+//    //      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+//    //      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
+//    //      .set("spark.kryoserializer.buffer.max", "512m")
+//    //      .set("spark.rpc.message.maxSize", "1024")
+//    //    val sc = new SparkContext(conf)
+//    //
+//    //    val line: String = Source.fromFile("C:\\Users\\dell\\Desktop\\testJsonCubeFloodAnalysis.json").mkString
+//    //    val jsonObject = JSON.parseObject(line)
+//    //    println(jsonObject.size())
+//    //    println(jsonObject)
+//    //
+//    //    val a = JsonToArg.trans(jsonObject)
+//    //    println(a.size)
+//    //    a.foreach(println(_))
+//    //
+//    //    lamda(sc, a)
+//    //
+//    //    val time2 = System.currentTimeMillis()
+//    //    println("算子运行时间为："+(time2 - time1))
+//
+//    val time1 = System.currentTimeMillis()
+//    val conf = new SparkConf()
+//      .setAppName("OGE-Computation")
+//      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+//      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
+//    val sc = new SparkContext(conf)
+//
+//    val fileSource = Source.fromFile(args(0))
+//    fileName = args(1)
+//    val line: String = fileSource.mkString
+//    fileSource.close()
+//    val jsonObject = JSON.parseObject(line)
+//    println(jsonObject.size())
+//    println(jsonObject)
+//
+//    oorB = jsonObject.getString("oorB").toInt
+//    if (oorB == 0) {
+//      val map = jsonObject.getJSONObject("map")
+//      level = map.getString("level").toInt
+//      windowRange = map.getString("spatialRange")
+//    }
+//
+//    val a = JsonToArg.trans(jsonObject)
+//    println(a.size)
+//    a.foreach(println(_))
+//
+//    if (a.head._3.contains("productID")) {
+//      if (a.head._3("productID") != "GF2") {
+//        lamda(sc, a)
+//      }
+//      else {
+//        if (oorB == 0) {
+//
+//        }
+//        else {
+//        }
+//      }
+//    }
+//    else {
+//      lamda(sc, a)
+//    }
+//
+//    val time2 = System.currentTimeMillis()
+//    println(time2 - time1)
   }
 
   def runMain(sc: SparkContext,

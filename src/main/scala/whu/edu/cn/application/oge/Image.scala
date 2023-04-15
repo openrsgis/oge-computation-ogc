@@ -120,7 +120,6 @@ object Image {
           if (lonLatOfBBox.last < latMaxOfTile) lonLatOfBBox(3) else latMaxOfTile
         // 解决方法是用每个瓦片分别和bbox取交集
 
-
         if (lonMinOfQueryExtent < lonMaxOfQueryExtent &&
           latMinOfQueryExtent < latMaxOfQueryExtent
         ) {
@@ -1473,7 +1472,7 @@ object Image {
           res.iterator
         })
 
-    //TODO 返回rdd和 TileLayerMetadata
+    // 返回rdd和 TileLayerMetadata
 
     (
       // RDD

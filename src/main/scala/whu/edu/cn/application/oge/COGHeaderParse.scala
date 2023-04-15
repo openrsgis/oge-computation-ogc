@@ -96,7 +96,11 @@ object COGHeaderParse {
 
       getTiles(level, queryExtent, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
 
-    } finally if (inputStream != null) inputStream.close()
+
+    } finally {
+      if (inputStream != null) inputStream.close()
+      if (minioClient != null) minioClient.traceOff()
+    }
 
   }
 
@@ -137,8 +141,10 @@ object COGHeaderParse {
       outStream.close()
 
       tile
-    } finally if (inputStream != null) inputStream.close()
-
+    } finally {
+      if (inputStream != null) inputStream.close()
+      if (minioClient != null) minioClient.traceOff()
+    }
   }
 
   /**
