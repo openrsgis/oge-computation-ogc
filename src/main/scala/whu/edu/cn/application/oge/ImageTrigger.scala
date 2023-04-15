@@ -438,12 +438,12 @@ object ImageTrigger {
     args.foreach(println)
     /* sc,workTaskJson,workID,originTaskID */
 
-    if (args.length<4)return
-
-
-    workTaskJSON = args(1)
-    workID = args(2)
-    originTaskID = args(3)
+//    if (args.length<4)return
+//
+//
+//    workTaskJSON = args(1)
+//    workID = args(2)
+//    originTaskID = args(3)
 
 
 
@@ -451,19 +451,19 @@ object ImageTrigger {
     // sc = args(....)
     // workID = args(....)
     //
-//    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
+    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
 
-//    = {
-//      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
-//      fileName = "datas/out.txt" // TODO
-//      val line: String = fileSource.mkString
-//      fileSource.close()
-//      line
-//    } // 任务要用的 JSON,应当由命令行参数获取
+    workTaskJSON = {
+      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+      fileName = "datas/out.txt" // TODO
+      val line: String = fileSource.mkString
+      fileSource.close()
+      line
+    } // 任务要用的 JSON,应当由命令行参数获取
 
 
-//    originTaskID = "0000000000000"
+    originTaskID = "0000000000000"
     // 点击整个run的唯一标识，来自boot
 
 
@@ -569,6 +569,8 @@ object ImageTrigger {
   else {
     lamda(sc, a)
   }
+
+
 
   val time2 = System.currentTimeMillis()
   println(time2 - time1)

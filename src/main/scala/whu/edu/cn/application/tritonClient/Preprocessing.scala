@@ -114,36 +114,36 @@ object Preprocessing {
     metaData
   }
 
-  def load(implicit sc: SparkContext, path: String, crs: String, geom: String): Long = {
-    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
-      t.toDouble
-    }).to[ListBuffer]
-    val query_extent = new Array[Double](4)
-    query_extent(0) = geomReplace(0)
-    query_extent(1) = geomReplace(1)
-    query_extent(2) = geomReplace(2)
-    query_extent(3) = geomReplace(3)
-    println("crs = " + crs)
-    val tilesMetaData = Tiffheader_parse_DL.tileQuery(-1, path, null, crs, null, query_extent)
-    println(tilesMetaData.size())
-    val tile_srch: ListBuffer[(Array[Float], Int, Int)] = new ListBuffer[(Array[Float], Int, Int)]
-    val tile_srch_origin: ListBuffer[(Array[Byte], Int, Int)] = new ListBuffer[(Array[Byte], Int, Int)]
-    for (i <- Range(0, tilesMetaData.size(), 3)) {
-      val tile1 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i))
-      val tile2 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 1))
-      val tile3 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 2))
-      println("tile1.getTilebuf.length=" + tile1.getTilebuf.length)
-      println("tile1.getTilebuf.size=" + tile1.getTilebuf.size)
-      val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
-      tile_srch += Tuple3(tileResult, tile1.getRow, tile1.getCol)
-      println("tileResult.size=" + tileResult.size)
-      tile_srch_origin += Tuple3(tile1.getTilebuf, tile1.getRow, tile1.getCol)
-      tile_srch_origin += Tuple3(tile2.getTilebuf, tile2.getRow, tile2.getCol)
-      tile_srch_origin += Tuple3(tile3.getTilebuf, tile3.getRow, tile3.getCol)
-    }
-    writePNG(tile_srch)
-    //    writePNGOrigin(tile_srch_origin)
-  }
+//  def load(implicit sc: SparkContext, path: String, crs: String, geom: String): Long = {
+//    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
+//      t.toDouble
+//    }).to[ListBuffer]
+//    val query_extent = new Array[Double](4)
+//    query_extent(0) = geomReplace(0)
+//    query_extent(1) = geomReplace(1)
+//    query_extent(2) = geomReplace(2)
+//    query_extent(3) = geomReplace(3)
+//    println("crs = " + crs)
+//    val tilesMetaData = Tiffheader_parse_DL.tileQuery(-1, path, null, crs, null, query_extent)
+//    println(tilesMetaData.size())
+//    val tile_srch: ListBuffer[(Array[Float], Int, Int)] = new ListBuffer[(Array[Float], Int, Int)]
+//    val tile_srch_origin: ListBuffer[(Array[Byte], Int, Int)] = new ListBuffer[(Array[Byte], Int, Int)]
+//    for (i <- Range(0, tilesMetaData.size(), 3)) {
+//      val tile1 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i))
+//      val tile2 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 1))
+//      val tile3 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 2))
+//      println("tile1.getTilebuf.length=" + tile1.getTilebuf.length)
+//      println("tile1.getTilebuf.size=" + tile1.getTilebuf.size)
+//      val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
+//      tile_srch += Tuple3(tileResult, tile1.getRow, tile1.getCol)
+//      println("tileResult.size=" + tileResult.size)
+//      tile_srch_origin += Tuple3(tile1.getTilebuf, tile1.getRow, tile1.getCol)
+//      tile_srch_origin += Tuple3(tile2.getTilebuf, tile2.getRow, tile2.getCol)
+//      tile_srch_origin += Tuple3(tile3.getTilebuf, tile3.getRow, tile3.getCol)
+//    }
+//    writePNG(tile_srch)
+//    //    writePNGOrigin(tile_srch_origin)
+//  }
 
   def writePNGOrigin(tile_srch: ListBuffer[(Array[Byte], Int, Int)]): Unit = {
     val cols = (tile_srch.last._3 - tile_srch.head._3 + 1) * 512
@@ -201,35 +201,35 @@ object Preprocessing {
   }
 
 
-  def loadOnTheFly(implicit sc: SparkContext, level: Int, path: String, crs: String, geom: String, fileName: String): Unit = {
-    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
-      t.toDouble
-    }).to[ListBuffer]
-    val query_extent = new Array[Double](4)
-    query_extent(0) = geomReplace(0)
-    query_extent(1) = geomReplace(1)
-    query_extent(2) = geomReplace(2)
-    query_extent(3) = geomReplace(3)
-    println("crs = " + crs)
-    val tilesMetaData = Tiffheader_parse_DL.tileQuery(level, path, null, crs, null, query_extent)
-    println(tilesMetaData.size())
-    val tilesRdd = sc.makeRDD(asScalaBuffer(tilesMetaData))
-      .groupBy(t => (t.getRow, t.getCol))
-    val tile_srch = tilesRdd.map(t => {
-      val tileArray = t._2.toArray
-      if (tileArray.length == 3) {
-        val tile1 = Tiffheader_parse_DL.getTileBuf(tileArray(0))
-        val tile2 = Tiffheader_parse_DL.getTileBuf(tileArray(1))
-        val tile3 = Tiffheader_parse_DL.getTileBuf(tileArray(2))
-        val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
-        (tileResult, tile1.getRow, tile1.getCol, tile1.getP_bottom_left, tile1.getP_upper_right)
-      }
-      else {
-        null
-      }
-    })
-    writePNGOnTheFly(sc, tile_srch, fileName)
-  }
+//  def loadOnTheFly(implicit sc: SparkContext, level: Int, path: String, crs: String, geom: String, fileName: String): Unit = {
+//    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
+//      t.toDouble
+//    }).to[ListBuffer]
+//    val query_extent = new Array[Double](4)
+//    query_extent(0) = geomReplace(0)
+//    query_extent(1) = geomReplace(1)
+//    query_extent(2) = geomReplace(2)
+//    query_extent(3) = geomReplace(3)
+//    println("crs = " + crs)
+//    val tilesMetaData = Tiffheader_parse_DL.tileQuery(level, path, null, crs, null, query_extent)
+//    println(tilesMetaData.size())
+//    val tilesRdd = sc.makeRDD(asScalaBuffer(tilesMetaData))
+//      .groupBy(t => (t.getRow, t.getCol))
+//    val tile_srch = tilesRdd.map(t => {
+//      val tileArray = t._2.toArray
+//      if (tileArray.length == 3) {
+//        val tile1 = Tiffheader_parse_DL.getTileBuf(tileArray(0))
+//        val tile2 = Tiffheader_parse_DL.getTileBuf(tileArray(1))
+//        val tile3 = Tiffheader_parse_DL.getTileBuf(tileArray(2))
+//        val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
+//        (tileResult, tile1.getRow, tile1.getCol, tile1.getP_bottom_left, tile1.getP_upper_right)
+//      }
+//      else {
+//        null
+//      }
+//    })
+//    writePNGOnTheFly(sc, tile_srch, fileName)
+//  }
 
   def writePNGOnTheFly(implicit sc: SparkContext, tile_srch: RDD[(Array[Float], Int, Int, Array[Double], Array[Double])], fileName: String): Unit = {
     val time = System.currentTimeMillis()

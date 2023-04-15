@@ -23,12 +23,14 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
 import redis.clients.jedis.Jedis
+//import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
 import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.util.{HttpUtil, JedisConnectionFactory, PostgresqlUtil, SystemConstants, ZCurveUtil}
 import whu.edu.cn.util.TileMosaicImage.tileMosaic
+import whu.edu.cn.util.{HttpUtil, JedisConnectionFactory, PostgresqlUtil, SystemConstants, ZCurveUtil}
+//import whu.edu.cn.util.TileMosaicImage.tileMosaic
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
 import java.io.{BufferedWriter, File, FileWriter}
@@ -164,7 +166,9 @@ object Image {
 
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(tileDataTuple)
         .map(t => { // 合并所有的元数据（追加了范围）
-          val rawTiles: util.ArrayList[RawTile] = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7) //TODO
+          val rawTiles: util.ArrayList[RawTile] = {
+            tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7)
+          } //TODO
           println(rawTiles.size() + "aaaaaaaaafdadagadgas")
           // 根据元数据和范围查询后端瓦片
           if (rawTiles.size() > 0) asScalaBuffer(rawTiles)
@@ -228,8 +232,9 @@ object Image {
   }
 
   def noReSlice(implicit sc: SparkContext, tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val extents = tileRDDReP.map(t => {
-      (t.getLngLatBottomLeft()(0), t.getLngLatBottomLeft()(1), t.getLngLatUpperRight()(0), t.getLngLatUpperRight()(1))
+    val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
+      (t.getLngLatBottomLeft.head, t.getLngLatBottomLeft.last,
+        t.getLngLatUpperRight.head, t.getLngLatUpperRight.head)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
@@ -284,13 +289,13 @@ object Image {
     val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
-    val rawtileRDD = tileRDDReP.map(t => {
+    val rawTileRDD = tileRDDReP.map(t => {
       val tile = getTileBuf(t)
       t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDataType))
       t
     })
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    val rawtileArray = rawtileRDD.collect()
+    val rawtileArray = rawTileRDD.collect()
     val RowSum = ld.tileLayout.layoutRows
     val ColSum = ld.tileLayout.layoutCols
     val tileBox = new ListBuffer[((Extent, SpaceTimeKey), List[RawTile])]

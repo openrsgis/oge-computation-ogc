@@ -38,17 +38,17 @@ object COGHeaderParse {
   /**
    * 根据元数据查询 tile
    *
-   * @param level        JSON中的level字段，前端层级
-   * @param in_path      获取tile的路径
+   * @param level       JSON中的level字段，前端层级
+   * @param in_path     获取tile的路径
    * @param time
    * @param crs
-   * @param measurement  影像的测量方式
+   * @param measurement 影像的测量方式
    * @param dType
    * @param resolution
-   * @param productName  产品名
+   * @param productName 产品名
    * @param queryExtent 查询瓦片的矩形范围
-   * @param bandCount    多波段
-   * @param tileSize     瓦片尺寸
+   * @param bandCount   多波段
+   * @param tileSize    瓦片尺寸
    * @return 后端瓦片
    */
   def tileQuery(level: Int, in_path: String,
@@ -92,7 +92,7 @@ object COGHeaderParse {
       inputStream.close()
       outStream.close()
       parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
-      System.out.println(cell)
+      System.out.println("cell =" + cell)
 
       getTiles(level, queryExtent, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
 
@@ -379,11 +379,11 @@ object COGHeaderParse {
           t.setLevel(level)
           t.setPath(in_path)
           t.setTime(time)
-          if(bandCount == 1) {
+          if (bandCount == 1) {
             t.setMeasurement(measurement)
           }
-          else{
-            t.setMeasurement(bandCount.toString)//TODO
+          else {
+            t.setMeasurement(bandCount.toString) //TODO
           }
           t.setCrs(crs.replace("EPSG:", "").toInt)
           t.setDataType(dType)
@@ -414,6 +414,7 @@ object COGHeaderParse {
                     bandCount: Int,
                     tileSize: Int): Unit = {
     var pIFD: Int = getIntII(header, 4, 4, tileSize) // DecodeIFH
+
     // DecodeIFD
     while ( {
       pIFD != 0
@@ -429,12 +430,16 @@ object COGHeaderParse {
         val totalSize: Int = TypeArray(TypeIndex) * Count
         if (totalSize > 4) pData = getIntII(header, pData, 4, tileSize)
         //再根据Tag把值读出并存起来，GetDEValue
+
+        println("aaaaacount= "+Count)
         getDEValue(TagIndex, TypeIndex, Count, pData, header, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
         // 之前的
         pIFD += 12
 
-        pIFD = getIntII(header, pIFD, 4, tileSize)
+
       } // end for
+
+      pIFD = getIntII(header, pIFD, 4, tileSize)
     } // end while
   }
 
@@ -449,7 +454,7 @@ object COGHeaderParse {
                          tileSize: Int): Unit = {
     val typeSize: Int = TypeArray(typeIndex)
     tagIndex match {
-      case tileSize => //ImageWidth
+      case 256 => //ImageWidth
 
         imageSize(1) = getIntII(header, pData, typeSize, tileSize)
 
@@ -509,8 +514,12 @@ object COGHeaderParse {
       case 33550 => //  cellWidth
 
         // getDoubleCell
-        for (i <- 0 until count)
+        for (i <- 0 until count) {
           cell.add(getDouble(header, pData + i * typeSize, typeSize, tileSize))
+          println("cell = "+
+            getDouble(header, pData + i * typeSize, typeSize, tileSize)
+          )
+        }
 
 
       case 33922 => //geoTransform
@@ -523,12 +532,13 @@ object COGHeaderParse {
 
         val crs: String = getString(header, pData, typeSize * count)
 
+      case _ =>
 
     }
   }
 
   private def getIntII(pd: Array[Byte], startPos: Int, Length: Int, tileSize: Int): Int = {
-    var value = 0
+    var value:Int = 0
     for (i <- 0 until Length) {
       value |= pd(startPos + i) << i * 8
       if (value < 0) value += tileSize << i * 8
@@ -537,9 +547,9 @@ object COGHeaderParse {
   }
 
   private def getDouble(pd: Array[Byte], startPos: Int, Length: Int, tileSize: Int): Double = {
-    var value = 0
+    var value:Long = 0
     for (i <- 0 until Length) {
-      value |= (pd(startPos + i) & 0xff).toLong << (8 * i)
+      value = value | (pd(startPos + i) & 0xff).toLong << (8 * i)
       if (value < 0) value += tileSize.toLong << i * 8
     }
     java.lang.Double.longBitsToDouble(value)

@@ -9,8 +9,9 @@ public class RawTile implements Serializable {
         private String time;
         private String measurement;
         private String product;
-        private final double[] LngLatBottomLeft = new double[2];/* extent of the tile*/
-        private final double[] LngLatUpperRight = new double[2];
+
+        private final double[] lngLatBottomLeft = new double[2];/* extent of the tile*/
+        private final double[] lngLatUpperRight = new double[2];
         private final int[] rowCol = new int[2];/* ranks of the tile*/
         private final long[] offset = new long[2];/* offsets of the tile*/
 
@@ -56,21 +57,21 @@ public class RawTile implements Serializable {
     }
 
     public double[] getLngLatBottomLeft() {
-        return LngLatBottomLeft;
+        return lngLatBottomLeft;
     }
 
     public void setLngLatBottomLeft(double lngLatBottomLeft0, double lngLatBottomLeft1) {
-        this.LngLatBottomLeft[0] = lngLatBottomLeft0;
-        this.LngLatBottomLeft[1] = lngLatBottomLeft1;
+        this.lngLatBottomLeft[0] = lngLatBottomLeft0;
+        this.lngLatBottomLeft[1] = lngLatBottomLeft1;
     }
 
     public double[] getLngLatUpperRight() {
-        return LngLatUpperRight;
+        return lngLatUpperRight;
     }
 
     public void setLngLatUpperRight(double lngLatUpperRight0, double lngLatUpperRight1) {
-        this.LngLatUpperRight[0] = lngLatUpperRight0;
-        this.LngLatUpperRight[1] = lngLatUpperRight1;
+        this.lngLatUpperRight[0] = lngLatUpperRight0;
+        this.lngLatUpperRight[1] = lngLatUpperRight1;
     }
 
     public int[] getRowCol() {
