@@ -574,6 +574,7 @@ object ImageTrigger {
 
   val time2 = System.currentTimeMillis()
   println(time2 - time1)
+    println("end")
 }
 /*def main(args: Array[String]): Unit = {
   val time1 = System.currentTimeMillis()

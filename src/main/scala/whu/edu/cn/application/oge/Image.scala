@@ -68,8 +68,12 @@ object Image {
 
 
     val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-    val StartTime: String = if (dateTimeArray != null) if (dateTimeArray.length == 2) dateTimeArray(0) else null else null
-    val EndTime: String = if (dateTimeArray != null) if (dateTimeArray.length == 2) dateTimeArray(1) else null else null
+    val StartTime: String = if (dateTimeArray != null) {
+      if (dateTimeArray.length == 2) dateTimeArray(0) else null
+    } else null
+    val EndTime: String = if (dateTimeArray != null) {
+      if (dateTimeArray.length == 2) dateTimeArray(1) else null
+    } else null
     var startTime = ""
     if (StartTime == null || StartTime == "") startTime = "2000-01-01 00:00:00"
     else startTime = StartTime
@@ -136,6 +140,7 @@ object Image {
       } // end for
 
 
+      jedis.close()
       val queryExtentRDD: RDD[Array[Double]] = sc.makeRDD(queryExtent)
 
       val tileDataTuple: ListBuffer[(String, String, String, String, String, String,
@@ -182,7 +187,9 @@ object Image {
       println("tileNum = " + tileNum)
       val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
       var repNum: Int = tileNum
-      if (repNum > 90) repNum = 90
+      if (repNum > 90) {
+        repNum = 90
+      }
       val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
       (noReSlice(sc, tileRDDReP), tileRDDReP)
     }
@@ -234,7 +241,7 @@ object Image {
   def noReSlice(implicit sc: SparkContext, tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
       (t.getLngLatBottomLeft.head, t.getLngLatBottomLeft.last,
-        t.getLngLatUpperRight.head, t.getLngLatUpperRight.head)
+        t.getLngLatUpperRight.head, t.getLngLatUpperRight.last)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
@@ -274,9 +281,14 @@ object Image {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
     val colRowInstant = tileRDDReP.map(t => {
-      (t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime, t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime)
+      (t.getCol, t.getRow,
+        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime,
+        t.getCol, t.getRow,
+        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime)
     }).reduce((a, b) => {
-      (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
+      (min(a._1, b._1), min(a._2, b._2),
+        min(a._3, b._3), max(a._4, b._4),
+        max(a._5, b._5), max(a._6, b._6))
     })
     val firstTile = tileRDDReP.take(1)(0)
     val tl = TileLayout(Math.round((extents._3 - extents._1) / firstTile.getResolution / 256.0).toInt, Math.round((extents._4 - extents._2) / firstTile.getResolution / 256.0).toInt, 256, 256)
@@ -328,91 +340,108 @@ object Image {
     val metaData = new ListBuffer[(String, String, String, String, String, String)]
     val postgresqlUtil = new PostgresqlUtil("")
     val conn = postgresqlUtil.getConnection()
-    if (conn != null) try {
-      // Configure to be Read Only
-      val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+    if (conn != null) {
+      try {
+        // Configure to be Read Only
+        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
 
-      // Extent dimension
-      val sql = new mutable.StringBuilder
-      sql ++= "select oge_image.*, oge_data_resource_product.name, oge_data_resource_product.dtype"
-      sql ++= ", oge_product_measurement.band_num, oge_product_measurement.resolution"
-      sql ++= " from oge_image "
-      if (productName != "" && productName != null) sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
-      if (sensorName != "" && sensorName != null) sql ++= " join oge_sensor on oge_data_resource_product.sensor_Key=oge_sensor.sensor_Key "
-      sql ++= "join oge_product_measurement on oge_product_measurement.product_key=oge_data_resource_product.id join oge_measurement on oge_product_measurement.measurement_key=oge_measurement.measurement_key "
-      var t = "where"
-      if (productName != "" && productName != null) {
-        sql ++= t
-        sql ++= " name="
-        sql ++= "\'"
-        sql ++= productName
-        sql ++= "\'"
-        t = "AND"
+        // Extent dimension
+        val sql = new mutable.StringBuilder
+        sql ++= "select oge_image.*, oge_data_resource_product.name, oge_data_resource_product.dtype"
+        sql ++= ", oge_product_measurement.band_num, oge_product_measurement.resolution"
+        sql ++= " from oge_image "
+        if (productName != "" && productName != null) {
+          sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
+        }
+        if (sensorName != "" && sensorName != null) {
+          sql ++= " join oge_sensor on oge_data_resource_product.sensor_Key=oge_sensor.sensor_Key "
+        }
+        sql ++= "join oge_product_measurement on oge_product_measurement.product_key=oge_data_resource_product.id join oge_measurement on oge_product_measurement.measurement_key=oge_measurement.measurement_key "
+        var t = "where"
+        if (productName != "" && productName != null) {
+          sql ++= t
+          sql ++= " name="
+          sql ++= "\'"
+          sql ++= productName
+          sql ++= "\'"
+          t = "AND"
 
-      }
-      if (sensorName != "" && sensorName != null) {
-        sql ++= t
-        sql ++= " sensor_name="
-        sql ++= "\'"
-        sql ++= sensorName
-        sql ++= "\'"
-        t = "AND"
-      }
-      if (measurementName != "" && measurementName != null) {
-        sql ++= t
-        sql ++= " measurement_name="
-        sql ++= "\'"
-        sql ++= measurementName
-        sql ++= "\'"
-        t = "AND"
-      }
-      if (startTime != null) {
-        sql ++= t
-        sql ++= " phenomenon_time>="
-        sql ++= "\'"
-        sql ++= startTime
-        sql ++= "\'"
-        t = "AND"
-      }
-      if (endTime != null) {
-        sql ++= t
-        sql ++= "\'"
-        sql ++= endTime
-        sql ++= "\'"
-        sql ++= ">=phenomenon_time"
-        t = " AND"
-      }
-      if (crs != null && crs != "") {
-        sql ++= t
-        sql ++= " crs="
-        sql ++= "\'"
-        sql ++= crs
-        sql ++= "\'"
-        t = "AND"
-      }
-      if (geom != null && geom != "") {
-        sql ++= t
-        sql ++= " ST_Intersects(geom,'SRID=4326;"
-        sql ++= geom
-        sql ++= "')"
-      }
-      println(sql)
-      val extentResults = statement.executeQuery(sql.toString())
+        }
+        if (sensorName != "" && sensorName != null) {
+          sql ++= t
+          sql ++= " sensor_name="
+          sql ++= "\'"
+          sql ++= sensorName
+          sql ++= "\'"
+          t = "AND"
+        }
+        if (measurementName != "" && measurementName != null) {
+          sql ++= t
+          sql ++= " measurement_name="
+          sql ++= "\'"
+          sql ++= measurementName
+          sql ++= "\'"
+          t = "AND"
+        }
+        if (startTime != null) {
+          sql ++= t
+          sql ++= " phenomenon_time>="
+          sql ++= "\'"
+          sql ++= startTime
+          sql ++= "\'"
+          t = "AND"
+        }
+        if (endTime != null) {
+          sql ++= t
+          sql ++= "\'"
+          sql ++= endTime
+          sql ++= "\'"
+          sql ++= ">=phenomenon_time"
+          t = " AND"
+        }
+        if (crs != null && crs != "") {
+          sql ++= t
+          sql ++= " crs="
+          sql ++= "\'"
+          sql ++= crs
+          sql ++= "\'"
+          t = "AND"
+        }
+        if (geom != null && geom != "") {
+          sql ++= t
+          sql ++= " ST_Intersects(geom,'SRID=4326;"
+          sql ++= geom
+          sql ++= "')"
+        }
+        println(sql)
+        val extentResults = statement.executeQuery(sql.toString())
 
 
-      while (extentResults.next()) {
-        val path = if (measurementName != "" && measurementName != null) extentResults.getString("path") + "/" + extentResults.getString("image_identification") + "_" + extentResults.getString("band_num") + ".tif"
-        else extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".tif"
-        println("path = " + path)
-        val time = extentResults.getString("phenomenon_time")
-        val srcID = extentResults.getString("crs")
-        val dtype = extentResults.getString("dtype")
-        val measurement = if (measurementName != "" && measurementName != null) extentResults.getString("band_num") else null
-        val resolution = extentResults.getString("resolution")
-        metaData.append((path, time, srcID, measurement, dtype, resolution))
+        while (extentResults.next()) {
+          val path = if (measurementName != "" && measurementName != null) {
+            extentResults.getString("path") + "/" +
+              extentResults.getString("image_identification") +
+              "_" + extentResults.getString("band_num") + ".tif"
+          }
+          else {
+            extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".tif"
+          }
+          println("path = " + path)
+          val time = extentResults.getString("phenomenon_time")
+          val srcID = extentResults.getString("crs")
+          val dtype = extentResults.getString("dtype")
+          val measurement =
+            if (measurementName != "" && measurementName != null)
+              extentResults.getString("band_num")
+            else null
+          val resolution = extentResults.getString("resolution")
+          metaData.append((path, time, srcID, measurement, dtype, resolution))
+        }
       }
-    }
-    finally conn.close else throw new RuntimeException("connection failed")
+      finally {
+        conn.close()
+      }
+    } else throw new RuntimeException("connection failed")
 
     metaData
   }
@@ -545,13 +574,19 @@ object Image {
    * @param threshold threshold
    * @return
    */
-  def binarization(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), threshold: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    val tilemap = t._2.map(pixel => {
-      if (pixel > threshold) 255
-      else 0
-    })
-    (t._1, tilemap)
-  }), image._2)
+  def binarization(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), threshold: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      val tilemap = t._2.map(pixel => {
+        if (pixel > threshold) {
+          255
+        }
+        else {
+          0
+        }
+      })
+      (t._1, tilemap)
+    }), image._2)
+  }
 
   /**
    * Returns 1 iff both values are non-zero for each matched pair of bands in image1 and image2.
@@ -615,9 +650,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def not(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Not(t._2))
-  }), image._2)
+  def not(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Not(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the sine of the input in radians.
@@ -625,9 +662,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def sin(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Sin(t._2))
-  }), image._2)
+  def sin(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Sin(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the cosine of the input in radians.
@@ -635,9 +674,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def cos(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Cos(t._2))
-  }), image._2)
+  def cos(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Cos(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the tangent of the input in radians.
@@ -645,9 +686,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def tan(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Tan(t._2))
-  }), image._2)
+  def tan(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Tan(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the hyperbolic sine of the input in radians.
@@ -655,9 +698,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def sinh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Sinh(t._2))
-  }), image._2)
+  def sinh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Sinh(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the hyperbolic cosine of the input in radians.
@@ -665,9 +710,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def cosh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Cosh(t._2))
-  }), image._2)
+  def cosh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Cosh(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the hyperbolic tangent of the input in radians.
@@ -675,9 +722,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def tanh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Tanh(t._2))
-  }), image._2)
+  def tanh(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Tanh(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the arc sine in radians of the input.
@@ -685,9 +734,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def asin(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Asin(t._2))
-  }), image._2)
+  def asin(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Asin(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the arc cosine in radians of the input.
@@ -695,9 +746,11 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def acos(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
-    (t._1, Acos(t._2))
-  }), image._2)
+  def acos(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Acos(t._2))
+    }), image._2)
+  }
 
   /**
    * Computes the atan sine in radians of the input.

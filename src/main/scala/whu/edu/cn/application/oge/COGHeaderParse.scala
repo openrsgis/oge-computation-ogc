@@ -77,7 +77,8 @@ object COGHeaderParse {
         .bucket("oge")
         .`object`(in_path)
         .offset(0L)
-        .length(HEAD_SIZE.toLong).build()
+        .length(HEAD_SIZE.toLong)
+        .build()
     )
     try {
       val outStream = new ByteArrayOutputStream
@@ -92,7 +93,6 @@ object COGHeaderParse {
       inputStream.close()
       outStream.close()
       parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
-      System.out.println("cell =" + cell)
 
       getTiles(level, queryExtent, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
 
@@ -114,18 +114,19 @@ object COGHeaderParse {
       .credentials(MINIO_KEY, MINIO_PWD)
       .build()
 
+    val tileLength:Long = Math.abs(tile.getOffset()(1) - tile.getOffset()(0))
     val inputStream: InputStream = minioClient.getObject(
       GetObjectArgs.builder()
         .bucket("oge")
         .`object`(tile.getPath)
         .offset(tile.getOffset()(0))
-        .length(tile.getOffset()(1) - tile.getOffset()(0)).build()
+        .length(tileLength)
+        .build()
     )
 
     try {
-      val length: Int = Math.toIntExact(tile.getOffset()(1) - tile.getOffset()(0))
       val outStream = new ByteArrayOutputStream
-      val buffer = new Array[Byte](length)
+      val buffer = new Array[Byte](tileLength.toInt)
       var len: Int = -1
       while ( {
         len = inputStream.read(buffer)
@@ -431,7 +432,6 @@ object COGHeaderParse {
         if (totalSize > 4) pData = getIntII(header, pData, 4, tileSize)
         //再根据Tag把值读出并存起来，GetDEValue
 
-        println("aaaaacount= "+Count)
         getDEValue(TagIndex, TypeIndex, Count, pData, header, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
         // 之前的
         pIFD += 12
