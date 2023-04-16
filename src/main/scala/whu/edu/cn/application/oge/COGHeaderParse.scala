@@ -99,7 +99,6 @@ object COGHeaderParse {
 
     } finally {
       if (inputStream != null) inputStream.close()
-      if (minioClient != null) minioClient.traceOff()
     }
 
   }
@@ -143,7 +142,6 @@ object COGHeaderParse {
       tile
     } finally {
       if (inputStream != null) inputStream.close()
-      if (minioClient != null) minioClient.traceOff()
     }
   }
 

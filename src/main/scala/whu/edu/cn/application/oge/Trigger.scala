@@ -800,7 +800,7 @@ object Trigger {
 //    println(time2 - time1)
   }
 
-  def runMain(sc: SparkContext,
+  def runMain(implicit sc: SparkContext,
               curWorkTaskJSON: String,
               curWorkID:String,
               curOriginTaskID:String): Unit = {
@@ -915,7 +915,7 @@ object Trigger {
 
 
 
-    val a = JsonToArgLocal.trans(jsonObject)
+    val a = JsonToArg.trans(jsonObject)
     println(a.size)
     a.foreach(println(_))
 
