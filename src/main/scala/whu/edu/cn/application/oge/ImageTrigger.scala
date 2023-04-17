@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSON
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.Tile
 import geotrellis.raster.mapalgebra.focal.Kernel
+import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import org.locationtech.jts.geom._
@@ -296,7 +296,7 @@ object ImageTrigger {
       case "Coverage.addStyles" => {
         if (oorB == 0) {
           Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName, level = level)
           layerID = layerID + 1
         }
         else {
@@ -415,7 +415,7 @@ object ImageTrigger {
       case "CoverageCollection.addStyles" => {
         if (oorB == 0) {
           Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName)
+            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName,level = level)
           layerID = layerID + 1
         }
         else {
@@ -435,6 +435,17 @@ object ImageTrigger {
   }
 
   def main(args: Array[String]): Unit = {
+    args.foreach(println)
+    /* sc,workTaskJson,workID,originTaskID */
+
+//    if (args.length<4)return
+//
+//
+//    workTaskJSON = args(1)
+//    workID = args(2)
+//    originTaskID = args(3)
+
+
 
     // 从命令行参数取
     // sc = args(....)
@@ -442,8 +453,10 @@ object ImageTrigger {
     //
     workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
+
     workTaskJSON = {
-      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
+      val fileSource = Source.fromFile(
+        "src/main/scala/whu/edu/cn/application/oge/modis.json")
       fileName = "datas/out.txt" // TODO
       val line: String = fileSource.mkString
       fileSource.close()
@@ -451,12 +464,12 @@ object ImageTrigger {
     } // 任务要用的 JSON,应当由命令行参数获取
 
 
-    originTaskID = "ogeDag:task:0000000000000:"
+    originTaskID = "0000000000000"
     // 点击整个run的唯一标识，来自boot
 
 
-    val time1 = System.currentTimeMillis()
-    val conf = new SparkConf()
+    val time1: Long = System.currentTimeMillis()
+    val conf: SparkConf = new SparkConf()
       .setMaster("local[*]")
       .setAppName("query")
     val sc = new SparkContext(conf)
@@ -539,16 +552,18 @@ object ImageTrigger {
   println(a.size)
   a.foreach(println(_))
 
+
+
   if (a.head._3.contains("productID")) {
     if (a.head._3("productID") != "GF2") {
       lamda(sc, a) // TODO
     }
     else {
       if (oorB == 0) {
-        Image.deepLearningOnTheFly(sc, level, geom = windowRange, geom2 = a.head._3("bbox"), fileName = fileName)
+
       }
       else {
-        Image.deepLearning(sc, geom = a.head._3("bbox"), fileName = fileName)
+
       }
     }
   }
@@ -556,8 +571,11 @@ object ImageTrigger {
     lamda(sc, a)
   }
 
+
+
   val time2 = System.currentTimeMillis()
   println(time2 - time1)
+    println("end")
 }
 /*def main(args: Array[String]): Unit = {
   val time1 = System.currentTimeMillis()

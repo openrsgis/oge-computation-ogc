@@ -9,7 +9,9 @@ import scala.util.control.Breaks
 object JsonToArgLocal {
 //  val jsonAlgorithms: String = "C:/Users/dell/Desktop/cube_algorithms.json"
 //  val scalaWriteFile: String = "C:/Users/dell/Desktop/cube_runMain.scala"
-  val jsonAlgorithms: String = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+  val jsonAlgorithms: String =
+"/home/geocube/oge/oge-server/dag-boot/algorithms_ogc.json"
+//"src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
 //    val jsonAlgorithms: String = "/home/geocube/jupyter/lge_python/algorithm_data/algorithms.json"
 //    val scalaWriteFile: String = "/home/geocube/lge/testRemote/src/main/scala/cn/edu/whu/runMain.scala"
   var arg:List[Tuple3[String, String, Map[String,String]]] = List.empty[Tuple3[String, String, Map[String,String]]]
