@@ -939,5 +939,6 @@ object Trigger {
     val time2 = System.currentTimeMillis()
     println(time2 - time1)
 
+    sc.stop()
   }
 }
