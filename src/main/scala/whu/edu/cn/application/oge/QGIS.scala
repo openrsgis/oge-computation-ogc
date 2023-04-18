@@ -29,9 +29,9 @@ object QGIS {
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
     val stitchedTile = Raster(tile, layout.extent)
     val time = System.currentTimeMillis()
-    val outputTiffPath = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/webapi/webapi_" + time + ".tif"
+    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/aspect_" + time + ".tif"
     GeoTiff(stitchedTile, input._2.crs).write(outputTiffPath)
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/webapi/webapi_" + time + ".tif"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/aspect_" + time + "_out.tif"
 
     try {
       versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
