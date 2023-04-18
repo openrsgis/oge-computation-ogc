@@ -59,6 +59,7 @@ object COGHeaderParse {
                 bandCount: Int = 1,
                 tileSize: Int = 256): util.ArrayList[RawTile] = {
 
+    println("dType = "+ dType)
     val imageSize: Array[Int] = Array[Int](0, 0) // imageLength & imageWidth
     val tileByteCounts = new util.ArrayList[util.ArrayList[util.ArrayList[Integer]]]
     val geoTrans = new util.ArrayList[Double] //TODO 经纬度
@@ -99,7 +100,6 @@ object COGHeaderParse {
 
     } finally {
       if (inputStream != null) inputStream.close()
-      if (minioClient != null) minioClient.traceOff()
     }
 
   }
@@ -143,7 +143,6 @@ object COGHeaderParse {
       tile
     } finally {
       if (inputStream != null) inputStream.close()
-      if (minioClient != null) minioClient.traceOff()
     }
   }
 
