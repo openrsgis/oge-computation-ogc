@@ -45,7 +45,7 @@ object ImageTrigger {
   val zIndexStrArray = new mutable.ArrayBuffer[String]
 
 
-  def argOrNot(args: Map[String, String], name: String): String = {
+  def argOrNot(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
     }

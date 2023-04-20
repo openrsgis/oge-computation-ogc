@@ -1162,9 +1162,9 @@ object Image {
    * @param downSampling 是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理
    * @return 和输入图像同类型的新图像
    */
-  def resample(implicit sc: SparkContext,
+  def resampleToTargetZoom(
                image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-               sourceZoom: Int, targetZoom: Int,
+               targetZoom: Int,
                mode: String,
                downSampling: Boolean = true
               )
@@ -1190,28 +1190,30 @@ object Image {
     val rasterMetaData: TileLayerMetadata[SpatialKey] =
       TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
 
-    val (solvedSourceZoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+    val (sourceZoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       TileLayerRDD(tiled, rasterMetaData)
         .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
-
-    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
-    //    println("srcAcc0 = " + myAcc2.value)
-
-    reprojected.map(t => {
+    // 求解出原始影像的zoom
 
 
-      //          println("srcRows = " + t._2.rows) 256
-      //          println("srcRows = " + t._2.cols) 256
-      myAcc2.add(1)
-      t
-    }).collect()
-    println("srcNumOfTiles = " + myAcc2.value) // 234
 
-    println("sourceZoom = " + sourceZoom + " and " + "solvedSourceZoom = " + solvedSourceZoom)
+//    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
+//    //    println("srcAcc0 = " + myAcc2.value)
+//
+//    reprojected.map(t => {
+//
+//
+//      //          println("srcRows = " + t._2.rows) 256
+//      //          println("srcRows = " + t._2.cols) 256
+//      myAcc2.add(1)
+//      t
+//    }).collect()
+//    println("srcNumOfTiles = " + myAcc2.value) // 234
+//
+//
 
-
-    val level: Int = targetZoom - solvedSourceZoom
+    val level: Int = targetZoom - sourceZoom
     if (level > 0 && level < 20) {
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
@@ -1357,7 +1359,7 @@ object Image {
    * @param image2
    * @return
    */
-  def changeDetectionDL(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+  def classificationDLCUG(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                         image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
                        ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
 
@@ -1554,10 +1556,9 @@ object Image {
     val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, COGHeaderParse.nearestZoom, level, "Bilinear", downSampling = false)
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resampleToTargetZoom(image, level, "Bilinear", downSampling = false)
       image._1.map(t => t._2)
 
-      println("Tiffheader_parse.nearestZoom = " + COGHeaderParse.nearestZoom)
       val timeList = resampledImage._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
       resampledImage._1.persist()
       timeList.foreach(x => {

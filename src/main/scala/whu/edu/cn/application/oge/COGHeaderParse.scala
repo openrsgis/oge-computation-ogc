@@ -15,11 +15,9 @@ import whu.edu.cn.util.SystemConstants._
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util
-import scala.util.control.Breaks
 
 
 object COGHeaderParse {
-  var nearestZoom = 0
   private val TypeArray = Array( //"???",
     0, //
     1, // byte //8-bit unsigned integer
@@ -205,39 +203,18 @@ object COGHeaderParse {
       resolutionTMS = resolutionTMSArray(l)
       System.out.println(l)
       level = Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2)).toInt + 1
-      var maxZoom = 0
-      val loop = new Breaks
-      loop.breakable {
-        for (i <- resolutionTMSArray.indices) {
-          if (Math.ceil(Math.log(resolutionTMSArray(i) / resolutionOrigin)
-            / Math.log(2)).toInt + 1 == 0) {
-            maxZoom = i
-            loop.break()
 
-          }
-        }
-      }
-      System.out.println("maxZoom = " + maxZoom)
-      System.out.println("java.level = " + level)
       System.out.println("tileOffsets.size() = " + tileOffsets.size) // 后端瓦片数
 
-      // 正常情况下的换算关系
-      COGHeaderParse.nearestZoom = ImageTrigger.level
-      //TODO 这里我们认为数据库中金字塔的第0层对应了前端 zoom 的第10级
-      //                        0 10
-      //                        1 9
-      //                        2 8
-      //                        ...
-      //                        6 4
+
       if (level > tileOffsets.size - 1) {
         level = tileOffsets.size - 1
-        assert(maxZoom > level)
-        COGHeaderParse.nearestZoom = maxZoom - level
+
         // throw new RuntimeException("Level is too small!");
       }
       if (level < 0) {
         level = 0
-        COGHeaderParse.nearestZoom = maxZoom
+
         // throw new RuntimeException("Level is too big!");
       }
     }
