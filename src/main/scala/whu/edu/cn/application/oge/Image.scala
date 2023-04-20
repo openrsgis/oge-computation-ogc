@@ -7,7 +7,7 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.{ColorMap, Exact}
 import geotrellis.raster.resample.{Bilinear, NearestNeighbor, PointResampleMethod}
-import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, Histogram, RGBA, Raster, Tile, TileLayout}
+import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, FloatArrayTile, FloatCellType, Histogram, RGBA, Raster, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
@@ -22,21 +22,27 @@ import org.geotools.geometry.jts.JTS
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
-import whu.edu.cn.application.oge.Tiffheader_parse._
-import whu.edu.cn.application.tritonClient.Preprocessing
+import redis.clients.jedis.Jedis
+//import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
+import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
+import whu.edu.cn.application.tritonClient.examples._
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.util.PostgresqlUtil
 import whu.edu.cn.util.TileMosaicImage.tileMosaic
+import whu.edu.cn.util.{HttpUtil, JedisConnectionFactory, PostgresqlUtil, SystemConstants, ZCurveUtil}
+//import whu.edu.cn.util.TileMosaicImage.tileMosaic
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.sql.{ResultSet, Timestamp}
 import java.text.SimpleDateFormat
-import java.time.Instant
+import java.util
 import scala.collection.JavaConversions._
+
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.postfixOps
+
 import scala.math._
 
 object Image {
@@ -53,32 +59,19 @@ object Image {
    * @param crs             crs of the images to query
    * @return ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
-  def load(implicit sc: SparkContext, productName: String = null, sensorName: String = null, measurementName: String = null, dateTime: String = null, geom: String = null, geom2: String = null, crs: String = null, level: Int = 0): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
-    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
-      t.toDouble
-    }).to[ListBuffer]
-    if (geom2 != null) {
-      val geom2Replace = geom2.replace("[", "").replace("]", "").split(",").map(t => {
-        t.toDouble
-      }).to[ListBuffer]
-      if (geom2Replace(0) > geomReplace(0)) {
-        geomReplace(0) = geom2Replace(0)
-      }
-      if (geom2Replace(1) > geomReplace(1)) {
-        geomReplace(1) = geom2Replace(1)
-      }
-      if (geom2Replace(2) < geomReplace(2)) {
-        geomReplace(2) = geom2Replace(2)
-      }
-      if (geom2Replace(3) < geomReplace(3)) {
-        geomReplace(3) = geom2Replace(3)
-      }
-    }
-    val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-    val StartTime = if (dateTimeArray != null) {
+  def load(implicit sc: SparkContext, productName: String = null,
+           sensorName: String = null, measurementName: String = null,
+           dateTime: String = null, geom: String = null /* // TODO geom 可以去掉了 */ ,
+           geom2: String = null, crs: String = null, level: Int = 0
+           /* //TODO 把trigger算出来的前端瓦片编号集合传进来 */): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
+    val zIndexStrArray: ArrayBuffer[String] = ImageTrigger.zIndexStrArray
+
+
+    val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+    val StartTime: String = if (dateTimeArray != null) {
       if (dateTimeArray.length == 2) dateTimeArray(0) else null
     } else null
-    val EndTime = if (dateTimeArray != null) {
+    val EndTime: String = if (dateTimeArray != null) {
       if (dateTimeArray.length == 2) dateTimeArray(1) else null
     } else null
     var startTime = ""
@@ -88,51 +81,166 @@ object Image {
     if (EndTime == null || EndTime == "") endTime = new Timestamp(System.currentTimeMillis).toString
     else endTime = EndTime
 
-    var geom_str = ""
-    if (geomReplace != null && geomReplace.length == 4) {
-      val minx = geomReplace(0)
-      val miny = geomReplace(1)
-      val maxx = geomReplace(2)
-      val maxy = geomReplace(3)
-      geom_str = "POLYGON((" + minx + " " + miny + ", " + minx + " " + maxy + ", " + maxx + " " + maxy + ", " + maxx + " " + miny + "," + minx + " " + miny + "))"
+
+    if (geom2 != null) {
+      println("geo2 = " + geom2)
+
+      val lonLatOfBBox: ListBuffer[Double] = geom2.replace("[", "")
+        .replace("]", "")
+        .split(",").map(_.toDouble).to[ListBuffer]
+
+      val queryExtent = new ArrayBuffer[Array[Double]]()
+
+
+      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
+      val jedis: Jedis = JedisConnectionFactory.getJedis
+      jedis.select(1)
+
+      // 通过传进来的前端瓦片编号反算出它们各自对应的经纬度范围 V
+      for (zIndexStr <- zIndexStrArray) {
+        val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+
+
+        val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+        val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+        val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+        val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+
+        // 改成用所有前端瓦片范围  和  bbox 的交集
+        val lonMinOfQueryExtent: Double =
+          if (lonLatOfBBox.head > lonMinOfTile) lonLatOfBBox.head else lonMinOfTile
+
+        val latMinOfQueryExtent: Double =
+          if (lonLatOfBBox(1) > latMinOfTile) lonLatOfBBox(1) else latMinOfTile
+
+        val lonMaxOfQueryExtent: Double =
+          if (lonLatOfBBox(2) < lonMaxOfTile) lonLatOfBBox(2) else lonMaxOfTile
+
+        val latMaxOfQueryExtent: Double =
+          if (lonLatOfBBox.last < latMaxOfTile) lonLatOfBBox(3) else latMaxOfTile
+        // 解决方法是用每个瓦片分别和bbox取交集
+
+        if (lonMinOfQueryExtent < lonMaxOfQueryExtent &&
+          latMinOfQueryExtent < latMaxOfQueryExtent
+        ) {
+          // 加入集合，可以把存redis的步骤转移到这里，减轻redis压力
+          queryExtent.append(
+            Array(
+              lonMinOfQueryExtent,
+              latMinOfQueryExtent,
+              lonMaxOfQueryExtent,
+              latMaxOfQueryExtent
+            )
+          )
+          jedis.sadd(key, zIndexStr)
+          jedis.expire(key, SystemConstants.REDIS_CACHE_TTL)
+
+        } // end if
+      } // end for
+
+
+      jedis.close()
+      val queryExtentRDD: RDD[Array[Double]] = sc.makeRDD(queryExtent)
+
+      val tileDataTuple: ListBuffer[(String, String, String, String, String, String,
+
+        Array[Double])] = queryExtentRDD.map(extent => {
+        val minX: Double = extent(0)
+        val minY: Double = extent(1)
+        val maxX: Double = extent(2)
+        val maxY: Double = extent(3)
+
+        val polygonStr: String = "POLYGON((" + minX + " " + minY + ", " +
+          minX + " " + maxY + ", " + maxX + " " + maxY + ", " +
+          maxX + " " + minY + "," + minX + " " + minY + "))"
+
+        query(productName, sensorName, measurementName,
+          startTime, endTime, polygonStr, crs) // 查询元数据并去重
+          .map(
+            metaData =>
+              (metaData._1, metaData._2, metaData._3,
+                metaData._4, metaData._5, metaData._6,
+                extent)
+          ) // 把query得到的元数据集合 和之前 与元数据集合对应的查询范围 合并到一个元组中
+      }).persist() // 暂存
+        .reduce(_ ++ _) // 合并成大数组
+      // 元数据应当是所有范围交集并去重后的集合，要合并
+      // 每一组元数据都对应一个唯一的矩形范围
+
+
+      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(tileDataTuple)
+        .map(t => { // 合并所有的元数据（追加了范围）
+          val rawTiles: util.ArrayList[RawTile] = {
+            tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7)
+          } //TODO
+          println(rawTiles.size() + "aaaaaaaaafdadagadgas")
+          // 根据元数据和范围查询后端瓦片
+          if (rawTiles.size() > 0) asScalaBuffer(rawTiles)
+          else mutable.Buffer.empty[RawTile]
+        }).distinct()
+      // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+
+      val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+        x + y
+      })
+      println("tileNum = " + tileNum)
+      val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
+      var repNum: Int = tileNum
+      if (repNum > 90) {
+        repNum = 90
+      }
+      val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
+      (noReSlice(sc, tileRDDReP), tileRDDReP)
     }
-    val query_extent = new Array[Double](4)
-    query_extent(0) = geomReplace(0)
-    query_extent(1) = geomReplace(1)
-    query_extent(2) = geomReplace(2)
-    query_extent(3) = geomReplace(3)
-    val metaData = query(productName, sensorName, measurementName, startTime, endTime, geom_str, crs)
-    println("metadata.length = " + metaData.length)
-    if (metaData.isEmpty) {
-      throw new RuntimeException("No data to compute!")
+    else { // geom2 == null，之前批处理使用的代码
+
+      val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
+        t.toDouble
+      }).to[ListBuffer]
+
+
+      var geom_str = ""
+      if (geomReplace != null && geomReplace.length == 4) {
+        val minx = geomReplace(0)
+        val miny = geomReplace(1)
+        val maxx = geomReplace(2)
+        val maxy = geomReplace(3)
+        geom_str = "POLYGON((" + minx + " " + miny + ", " + minx + " " + maxy + ", " + maxx + " " + maxy + ", " + maxx + " " + miny + "," + minx + " " + miny + "))"
+      }
+      val query_extent = new Array[Double](4)
+      query_extent(0) = geomReplace(0)
+      query_extent(1) = geomReplace(1)
+      query_extent(2) = geomReplace(2)
+      query_extent(3) = geomReplace(3)
+      val metaData = query(productName, sensorName, measurementName, startTime, endTime, geom_str, crs)
+      println("metadata.length = " + metaData.length)
+      if (metaData.isEmpty) throw new RuntimeException("No data to compute!")
+
+      val imagePathRdd: RDD[(String, String, String, String, String, String)] = sc.parallelize(metaData, metaData.length)
+      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
+        val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
+        if (tiles.size() > 0) asScalaBuffer(tiles)
+        else mutable.Buffer.empty[RawTile]
+      }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+      val tileNum = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+        x + y
+      })
+      println("tileNum = " + tileNum)
+      val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
+      var repNum = tileNum
+      if (repNum > 90) repNum = 90
+      val tileRDDReP = tileRDDFlat.repartition(repNum).persist()
+      (noReSlice(sc, tileRDDReP), tileRDDReP)
+
     }
 
-    val imagePathRdd = sc.parallelize(metaData, metaData.length)
-    val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
-      val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
-      if (tiles.size() > 0) {
-        asScalaBuffer(tiles)
-      }
-      else {
-        mutable.Buffer.empty[RawTile]
-      }
-    }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
-    val tileNum = tileRDDNoData.map(t => t.length).reduce((x, y) => {
-      x + y
-    })
-    println("tileNum = " + tileNum)
-    val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
-    var repNum = tileNum
-    if (repNum > 90) {
-      repNum = 90
-    }
-    val tileRDDReP = tileRDDFlat.repartition(repNum).persist()
-    (noReSlice(sc, tileRDDReP), tileRDDReP)
+
   }
 
   def noReSlice(implicit sc: SparkContext, tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val extents = tileRDDReP.map(t => {
-      (t.getP_bottom_leftX, t.getP_bottom_leftY, t.getP_upper_rightX, t.getP_upper_rightY)
+    val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
+      (t.getLngLatBottomLeft.head, t.getLngLatBottomLeft.last,
+        t.getLngLatUpperRight.head, t.getLngLatUpperRight.last)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
@@ -145,7 +253,7 @@ object Image {
     val firstTile = tileRDDReP.take(1)(0)
     val tl = TileLayout(Math.round((extents._3 - extents._1) / firstTile.getResolution / 256.0).toInt, Math.round((extents._4 - extents._2) / firstTile.getResolution / 256).toInt, 256, 256)
     val ld = LayoutDefinition(extent, tl)
-    val cellType = CellType.fromName(firstTile.getDType)
+    val cellType = CellType.fromName(firstTile.getDataType)
     val crs = CRS.fromEpsgCode(firstTile.getCrs)
     val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
@@ -156,7 +264,7 @@ object Image {
       val measurement = tile.getMeasurement
       val rowNum = tile.getRow
       val colNum = tile.getCol
-      val Tile = deserializeTileData("", tile.getTilebuf, 256, tile.getDType)
+      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType)
       val k = entity.SpaceTimeBandKey(SpaceTimeKey(colNum - colRowInstant._1, rowNum - colRowInstant._2, phenomenonTime), measurement)
       val v = Tile
       (k, v)
@@ -166,14 +274,20 @@ object Image {
 
   def mosaic(implicit sc: SparkContext, tileRDDReP: RDD[RawTile], method: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO
     val extents = tileRDDReP.map(t => {
-      (t.getP_bottom_leftX, t.getP_bottom_leftY, t.getP_upper_rightX, t.getP_upper_rightY)
+      (t.getLngLatBottomLeft.head, t.getLngLatBottomLeft.last,
+        t.getLngLatUpperRight.head, t.getLngLatUpperRight.last)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
     val colRowInstant = tileRDDReP.map(t => {
-      (t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime, t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime)
+      (t.getCol, t.getRow,
+        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime,
+        t.getCol, t.getRow,
+        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime)
     }).reduce((a, b) => {
-      (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
+      (min(a._1, b._1), min(a._2, b._2),
+        min(a._3, b._3), max(a._4, b._4),
+        max(a._5, b._5), max(a._6, b._6))
     })
     val firstTile = tileRDDReP.take(1)(0)
     val tl = TileLayout(Math.round((extents._3 - extents._1) / firstTile.getResolution / 256.0).toInt, Math.round((extents._4 - extents._2) / firstTile.getResolution / 256.0).toInt, 256, 256)
@@ -181,18 +295,18 @@ object Image {
     val extent = geotrellis.vector.Extent(extents._1, extents._4 - tl.layoutRows * 256 * firstTile.getResolution, extents._1 + tl.layoutCols * 256 * firstTile.getResolution, extents._4)
     println(extent)
     val ld = LayoutDefinition(extent, tl)
-    val cellType = CellType.fromName(firstTile.getDType)
+    val cellType = CellType.fromName(firstTile.getDataType)
     val crs = CRS.fromEpsgCode(firstTile.getCrs)
-    val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(tl.layoutCols - 1, tl.layoutRows - 1, colRowInstant._6))
+    val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
-    val rawtileRDD = tileRDDReP.map(t => {
+    val rawTileRDD = tileRDDReP.map(t => {
       val tile = getTileBuf(t)
-      t.setTile(deserializeTileData("", tile.getTilebuf, 256, tile.getDType))
+      t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDataType))
       t
     })
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    val rawtileArray = rawtileRDD.collect()
+    val rawtileArray = rawTileRDD.collect()
     val RowSum = ld.tileLayout.layoutRows
     val ColSum = ld.tileLayout.layoutCols
     val tileBox = new ListBuffer[((Extent, SpaceTimeKey), List[RawTile])]
@@ -200,9 +314,14 @@ object Image {
       for (j <- 0 until RowSum) {
         val rawTiles = new ListBuffer[RawTile]
         val tileExtent = new Extent(extents._1 + i * 256 * firstTile.getResolution, extents._4 - (j + 1) * 256 * firstTile.getResolution, extents._1 + (i + 1) * 256 * firstTile.getResolution, extents._4 - j * 256 * firstTile.getResolution)
-        for (rawtile <- rawtileArray) {
-          if (Extent(rawtile.getP_bottom_leftX, rawtile.getP_bottom_leftY, rawtile.getP_upper_rightX, rawtile.getP_upper_rightY).intersects(tileExtent))
-            rawTiles.append(rawtile)
+        for (rawTile <- rawtileArray) {
+          if (Extent(
+            rawTile.getLngLatBottomLeft.head, // X
+            rawTile.getLngLatBottomLeft.last, // Y
+            rawTile.getLngLatUpperRight.head, // X
+            rawTile.getLngLatUpperRight.last // Y
+          ).intersects(tileExtent))
+            rawTiles.append(rawTile)
         }
         if (rawTiles.nonEmpty) {
           val now = "1000-01-01 00:00:00"
@@ -212,7 +331,7 @@ object Image {
       }
     }
     val TileRDDUnComputed = sc.parallelize(tileBox, tileBox.length)
-    tileMosaic(TileRDDUnComputed, method, tileLayerMetadata, firstTile.getDType)
+    tileMosaic(TileRDDUnComputed, method, tileLayerMetadata, firstTile.getDataType)
   }
 
 
@@ -299,7 +418,9 @@ object Image {
 
         while (extentResults.next()) {
           val path = if (measurementName != "" && measurementName != null) {
-            extentResults.getString("path") + "/" + extentResults.getString("image_identification") + "_" + extentResults.getString("band_num") + ".tif"
+            extentResults.getString("path") + "/" +
+              extentResults.getString("image_identification") +
+              "_" + extentResults.getString("band_num") + ".tif"
           }
           else {
             extentResults.getString("path") + "/" + extentResults.getString("image_identification") + ".tif"
@@ -308,13 +429,16 @@ object Image {
           val time = extentResults.getString("phenomenon_time")
           val srcID = extentResults.getString("crs")
           val dtype = extentResults.getString("dtype")
-          val measurement = if (measurementName != "" && measurementName != null) extentResults.getString("band_num") else null
+          val measurement =
+            if (measurementName != "" && measurementName != null)
+              extentResults.getString("band_num")
+            else null
           val resolution = extentResults.getString("resolution")
           metaData.append((path, time, srcID, measurement, dtype, resolution))
         }
       }
       finally {
-        conn.close
+        conn.close()
       }
     } else throw new RuntimeException("connection failed")
 
@@ -332,8 +456,8 @@ object Image {
    */
   def add(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    val bandNum1: Int = bandNames(image1).length
+    val bandNum2: Int = bandNames(image2).length
     println("add bandNum1 = " + bandNum1)
     println("add bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
@@ -633,11 +757,9 @@ object Image {
    * @param image the image rdd for operation
    * @return
    */
-  def atan(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Atan(t._2))
-    }), image._2)
-  }
+  def atan(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Atan(t._2))
+  }), image._2)
 
   /**
    * Operation to get the Arc Tangent2 of values. The first raster holds the y-values, and the second holds the x values.
@@ -674,11 +796,9 @@ object Image {
    * @param image rdd for operation
    * @return
    */
-  def ceil(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Ceil(t._2))
-    }), image._2)
-  }
+  def ceil(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Ceil(t._2))
+  }), image._2)
 
   /**
    * Computes the largest integer less than or equal to the input.
@@ -686,11 +806,9 @@ object Image {
    * @param image rdd for operation
    * @return
    */
-  def floor(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Floor(t._2))
-    }), image._2)
-  }
+  def floor(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Floor(t._2))
+  }), image._2)
 
   /**
    * Computes the integer nearest to the input.
@@ -698,11 +816,9 @@ object Image {
    * @param image rdd for operation
    * @return
    */
-  def round(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Round(t._2))
-    }), image._2)
-  }
+  def round(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Round(t._2))
+  }), image._2)
 
   /**
    * Computes the natural logarithm of the input.
@@ -710,11 +826,9 @@ object Image {
    * @param image rdd for operation
    * @return
    */
-  def log(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Log(t._2))
-    }), image._2)
-  }
+  def log(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Log(t._2))
+  }), image._2)
 
   /**
    * Computes the base-10 logarithm of the input.
@@ -722,11 +836,9 @@ object Image {
    * @param image rdd for operation
    * @return
    */
-  def log10(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Log10(t._2))
-    }), image._2)
-  }
+  def log10(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Log10(t._2))
+  }), image._2)
 
   /**
    * Computes the square root of the input.
@@ -734,11 +846,9 @@ object Image {
    * @param image rdd for operation
    * @return
    */
-  def sqrt(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Sqrt(t._2))
-    }), image._2)
-  }
+  def sqrt(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Sqrt(t._2))
+  }), image._2)
 
   /**
    * Returns 1 iff the first value is equal to the second for each matched pair of bands in image1 and image2.
@@ -920,9 +1030,7 @@ object Image {
    * @param image rdd for getting bands
    * @return
    */
-  def bandNames(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): List[String] = {
-    image._1.map(t => t._1._measurementName).distinct().collect().toList
-  }
+  def bandNames(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): List[String] = image._1.map(t => t._1._measurementName).distinct().collect().toList
 
   /**
    * get the target bands from original image
@@ -932,9 +1040,7 @@ object Image {
    * @return
    */
   def select(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), targetBands: List[String])
-  : (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.filter(t => targetBands.contains(t._1._measurementName)), image._2)
-  }
+  : (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.filter(t => targetBands.contains(t._1._measurementName)), image._2)
 
   /**
    * Returns a map of the image's band types.
@@ -957,11 +1063,9 @@ object Image {
    * @param image The image to which the operation is applied.
    * @return
    */
-  def abs(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, Abs(t._2))
-    }), image._2)
-  }
+  def abs(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, Abs(t._2))
+  }), image._2)
 
   /**
    * Returns 1 iff the first value is not equal to the second for each matched pair of bands in image1 and image2.
@@ -996,15 +1100,13 @@ object Image {
    * @param image The image to which the operation is applied.
    * @return
    */
-  def signum(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.map(u => {
-        if (u > 0) 1
-        else if (u < 0) -1
-        else 0
-      }))
-    }), image._2)
-  }
+  def signum(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.map(u => {
+      if (u > 0) 1
+      else if (u < 0) -1
+      else 0
+    }))
+  }), image._2)
 
   /**
    * Rename the bands of an image.Returns the renamed image.
@@ -1023,9 +1125,7 @@ object Image {
         (SpaceTimeBandKey(t._1.spaceTimeKey, namesMap(t._1.measurementName)), t._2)
       }), image._2)
     }
-    else {
-      image
-    }
+    else image
   }
 
 
@@ -1050,58 +1150,25 @@ object Image {
    * @param image The coverage to which to get the projection.
    * @return
    */
-  def projection(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): String = {
-    image._2.crs.toString()
-  }
+  def projection(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): String = image._2.crs.toString()
 
   /**
-   * Force an image to be computed in a given projection
+   * 自定义重采样方法，功能有局限性，勿用
    *
-   * @param image The coverage to reproject.
-   * @param newProjectionCode The code of new projection
-   * @param resolution The resolution of reprojected image
-   * @return
+   * @param image        需要被重采样的图像
+   * @param sourceZoom   原图像的 Zoom 层级
+   * @param targetZoom   输出图像的 Zoom 层级
+   * @param mode         插值方法
+   * @param downSampling 是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理
+   * @return 和输入图像同类型的新图像
    */
-  def reproject(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-                newProjectionCode: Int, resolution: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val band = image._1.first()._1.measurementName
-    val resampleTime = Instant.now.getEpochSecond
-    val imagetileRDD = image._1.map(t => {
-      (t._1.spaceTimeKey.spatialKey, t._2)
-    })
-    val extent = image._2.extent.reproject(image._2.crs, CRS.fromEpsgCode(newProjectionCode))
-    val tl = TileLayout(((extent.xmax - extent.xmin) / (resolution * 256)).toInt, ((extent.ymax - extent.ymin) / (resolution * 256)).toInt, 256, 256)
-    val ld = LayoutDefinition(extent, tl)
-    val cellType = image._2.cellType
-    val srcLayout = image._2.layout
-    val srcExtent = image._2.extent
-    val srcCrs = image._2.crs
-    val srcBounds = image._2.bounds
-    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
-    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
-    val imagetileLayerRDD = TileLayerRDD(imagetileRDD, rasterMetaData);
-    val (_, imagetileRDDWithMetadata) = imagetileLayerRDD.reproject(CRS.fromEpsgCode(newProjectionCode), ld, geotrellis.raster.resample.Bilinear)
-    val imageNoband = (imagetileRDDWithMetadata.mapValues(tile => tile: Tile), imagetileRDDWithMetadata.metadata)
-    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(imageNoband._2.tileLayout.layoutCols - 1, imageNoband._2.tileLayout.layoutRows - 1, resampleTime))
-    val newMetadata = TileLayerMetadata(imageNoband._2.cellType, imageNoband._2.layout, imageNoband._2.extent, imageNoband._2.crs, newBound)
-    val imageRDD = imageNoband.map(t => {
-      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
-    })
-    (imageRDD, newMetadata)
-  }
-  /**
-   * 自定义重采样方法
-   *
-   * @param image   需要被重采样的图像
-   * @param sourceZoom   原图像的缩放等级
-   * @param targetZoom   输出图像的缩放等级
-   * @param mode   插值方法
-   * @return   和输入图像同类型的新图像
-   */
-  def resample(implicit sc: SparkContext,
-                image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-               sourceZoom: Int, targetZoom: Int,
-               mode: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def resampleToTargetZoom(
+               image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               targetZoom: Int,
+               mode: String,
+               downSampling: Boolean = true
+              )
+  : (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val resampleMethod: PointResampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
@@ -1123,30 +1190,30 @@ object Image {
     val rasterMetaData: TileLayerMetadata[SpatialKey] =
       TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
 
-    val (solvedSourceZoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+    val (sourceZoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       TileLayerRDD(tiled, rasterMetaData)
         .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
-
-
-    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
-//    println("srcAcc0 = " + myAcc2.value)
-    reprojected.map(t=>{
-      //          println("srcRows = " + t._2.rows) 256
-      //          println("srcRows = " + t._2.cols) 256
-      myAcc2.add(1)
-      t
-    }).collect()
-    println("srcNumOfTiles = " + myAcc2.value) // 234
-
-    println("sourceZoom = " + sourceZoom + " and " + "solvedSourceZoom = " + solvedSourceZoom)
+    // 求解出原始影像的zoom
 
 
 
+//    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
+//    //    println("srcAcc0 = " + myAcc2.value)
+//
+//    reprojected.map(t => {
+//
+//
+//      //          println("srcRows = " + t._2.rows) 256
+//      //          println("srcRows = " + t._2.cols) 256
+//      myAcc2.add(1)
+//      t
+//    }).collect()
+//    println("srcNumOfTiles = " + myAcc2.value) // 234
+//
+//
 
-
-
-    val level: Int = targetZoom - solvedSourceZoom
+    val level: Int = targetZoom - sourceZoom
     if (level > 0 && level < 20) {
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
@@ -1154,11 +1221,11 @@ object Image {
       (imageResampled,
         TileLayerMetadata(image._2.cellType, LayoutDefinition(
           image._2.extent,
-            TileLayout(image._2.layoutCols, image._2.layoutRows,
-              image._2.tileCols * (1 << level), image._2.tileRows * (1 << level))
+          TileLayout(image._2.layoutCols, image._2.layoutRows,
+            image._2.tileCols * (1 << level), image._2.tileRows * (1 << level))
         ), image._2.extent, image._2.crs, image._2.bounds))
     }
-    else if (level < 0 && level > (-20)) {
+    else if (level < 0 && level > (-20) && downSampling) {
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         val tileResampled: Tile = t._2.resample(Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt, Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt, resampleMethod)
         (t._1, tileResampled)
@@ -1171,9 +1238,7 @@ object Image {
             Math.ceil(image._2.tileCols.toDouble / (1 << -level)).toInt, Math.ceil(image._2.tileRows.toDouble / (1 << -level)).toInt)),
           image._2.extent, image._2.crs, image._2.bounds))
     }
-    else {
-      image
-    }
+    else image
   }
 
 
@@ -1207,9 +1272,7 @@ object Image {
       (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (-level + 1),
         image._2.tileRows / (-level + 1))), image._2.extent, image._2.crs, image._2.bounds))
     }
-    else {
-      image
-    }
+    else image
   }
 
   /**
@@ -1219,11 +1282,9 @@ object Image {
    * @return
    */
   def toInt8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-            ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("int8")))
-    }), image._2)
-  }
+            ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("int8")))
+  }), image._2)
 
   /**
    * Casts the input value to a unsigned 8-bit integer.
@@ -1232,11 +1293,9 @@ object Image {
    * @return
    */
   def toUint8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("uint8")))
-    }), image._2)
-  }
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("uint8")))
+  }), image._2)
 
   /**
    * Casts the input value to a signed 16-bit integer.
@@ -1245,11 +1304,9 @@ object Image {
    * @return
    */
   def toInt16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("int16")))
-    }), image._2)
-  }
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("int16")))
+  }), image._2)
 
   /**
    * Casts the input value to a unsigned 16-bit integer.
@@ -1258,11 +1315,9 @@ object Image {
    * @return
    */
   def toUint16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("uint16")))
-    }), image._2)
-  }
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("uint16")))
+  }), image._2)
 
   /**
    * Casts the input value to a signed 32-bit integer.
@@ -1271,11 +1326,9 @@ object Image {
    * @return
    */
   def toInt32(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("int32")))
-    }), image._2)
-  }
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("int32")))
+  }), image._2)
 
   /**
    * Casts the input value to a 32-bit float.
@@ -1284,11 +1337,9 @@ object Image {
    * @return
    */
   def toFloat(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("float32")))
-    }), image._2)
-  }
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("float32")))
+  }), image._2)
 
   /**
    * Casts the input value to a 64-bit float.
@@ -1297,27 +1348,166 @@ object Image {
    * @return
    */
   def toDouble(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
-              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    (image._1.map(t => {
-      (t._1, t._2.convert(CellType.fromName("float64")))
-    }), image._2)
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
+    (t._1, t._2.convert(CellType.fromName("float64")))
+  }), image._2)
+
+
+  /**
+   *
+   * @param image1
+   * @param image2
+   * @return
+   */
+  def classificationDLCUG(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+                        image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+                       ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+
+    // 处理 image1
+    // 依照 spaceTimeKey 分组
+    val imageGrouped: RDD[(SpaceTimeKey, Iterable[(SpaceTimeBandKey, Tile)])] = {
+      image1._1.groupBy(t => t._1.spaceTimeKey)
+    }
+    // 根据波段序号排序
+    val imageSorted: RDD[(SpaceTimeKey, Array[(SpaceTimeBandKey, Tile)])] =
+      imageGrouped.map(t => {
+        val tileArray: Array[(SpaceTimeBandKey, Tile)] = t._2.toArray
+        (t._1, tileArray.sortBy(x => x._1.measurementName.toInt))
+      }).persist()
+    val floatArrayOfImage1: RDD[(SpaceTimeKey, Array[Float])] = imageSorted.map(t => {
+      (t._1,
+        ModelInference.byteToFloatOPT(
+          t._2(0)._2.toBytes(), t._2(1)._2.toBytes(), t._2(2)._2.toBytes(), t._2(3)._2.toBytes()
+        ))
+    }
+    )
+
+    // 处理image2
+    val floatArrayOfImage2: RDD[(SpaceTimeKey, Array[Float])] = image2.map(t => {
+      (t._1.spaceTimeKey,
+        ModelInference.byteToFloatSAR(
+          t._2.toBytes()
+        ))
+    })
+
+
+    // 连接 image1 和 image2 的 Float 数组
+    val floatArrayInput: RDD[(SpaceTimeKey, (Array[Float], Array[Float]))] =
+      floatArrayOfImage1.join(floatArrayOfImage2)
+
+
+    // 将float数组对应瓦片合二为一，进行处理并得到返回值
+    val floatArrayOutput: RDD[(SpaceTimeBandKey, Tile)] =
+      floatArrayInput.map(t => (t._1, ModelInference.processOneTile(t._2._1, t._2._2)))
+        .mapPartitions(iter => {
+          // 拆分出三个波段并生成新的 rdd
+          val res = List[(SpaceTimeBandKey, Tile)]()
+          while (iter.hasNext) {
+            val curTuple: (SpaceTimeKey, Array[Float]) = iter.next()
+
+            val band1 = new Array[Byte](512 * 512)
+            val band2 = new Array[Byte](512 * 512)
+            val band3 = new Array[Byte](512 * 512)
+            val prob = new Array[Float](8)
+            for (k <- 0 until 512 * 512) {
+              for (l <- 0 until 8) {
+                prob(l) = FloatArrayTile(curTuple._2, 512, 512, FloatCellType)(k + l * 512 * 512)
+              }
+              val classValue: Int = prob.zipWithIndex.maxBy(_._1)._2 // 根据值的大小进行排序并返回索引
+
+              classValue match {
+                case 0 => {
+                  band1(k) = -1
+                  band2(k) = -1
+                  band3(k) = -1
+                }
+                case 1 => {
+                  band1(k) = -1
+                  band2(k) = -1
+                  band3(k) = 127
+                }
+                case 2 => {
+                  band1(k) = -1
+                  band2(k) = 127
+                  band3(k) = -1
+                }
+                case 3 => {
+                  band1(k) = 127
+                  band2(k) = -1
+                  band3(k) = -1
+                }
+                case 4 => {
+                  band1(k) = 127
+                  band2(k) = 127
+                  band3(k) = -1
+                }
+                case 5 => {
+                  band1(k) = 127
+                  band2(k) = -1
+                  band3(k) = 127
+                }
+                case 6 => {
+                  band1(k) = -1
+                  band2(k) = 127
+                  band3(k) = 127
+                }
+                case 7 => {
+                  band1(k) = 127
+                  band2(k) = 127
+                  band3(k) = 127
+                }
+              }
+            }
+
+            // 将三个波段的 key 及其对应的tile追加进去
+            res.::(SpaceTimeBandKey(curTuple._1, "ChangeDetectionBand1DL"),
+              ByteArrayTile(band1, 512, 512, ByteConstantNoDataCellType))
+            res.::(SpaceTimeBandKey(curTuple._1, "ChangeDetectionBand2DL"),
+              ByteArrayTile(band2, 512, 512, ByteConstantNoDataCellType))
+            res.::(SpaceTimeBandKey(curTuple._1, "ChangeDetectionBand3DL"),
+              ByteArrayTile(band3, 512, 512, ByteConstantNoDataCellType))
+
+          }
+
+          // 一变三
+          res.iterator
+        })
+
+    // 返回rdd和 TileLayerMetadata
+
+    (
+      // RDD
+      floatArrayOutput,
+      // TileLayerMetadata
+      TileLayerMetadata(
+        ByteConstantNoDataCellType,
+        image1._2.layout,
+        image1._2.extent,
+        image1._2.crs,
+        image1._2.bounds
+      )
+
+    )
+
+
+
+
+
+    //    val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+
+
   }
 
-  def deepLearning(implicit sc: SparkContext, geom: String, fileName: String): Unit = {
-    val metaData = Preprocessing.queryGF2()
-    val time = Preprocessing.load(sc, metaData._1, metaData._2, geom)
-    val writeFile = new File(fileName)
-    val writer = new BufferedWriter(new FileWriter(writeFile))
-    val path_img = "http://oge.whu.edu.cn/api/oge-python/ogeoutput/DL_" + time + ".png"
-    val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}";
-    writer.write(outputString)
-    writer.close()
-  }
-
-  def deepLearningOnTheFly(implicit sc: SparkContext, level: Int, geom: String, geom2: String = null, fileName: String): Unit = {
-    val metaData = Preprocessing.queryGF2()
-    Preprocessing.loadOnTheFly(sc, level, metaData._1, metaData._2, geom2, fileName)
-  }
+  //  def newSZ(image:(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), arg0, arg1): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) ={
+  //
+  //    //TODO RDD转换成TIFF
+  //    //TODO 调用Anaconda python环境的代码，在python中执行QGIS算法之后，返回TIFF结果
+  //    //TODO TIFF再转成RDD
+  //
+  //
+  //
+  //  }
 
   //Precipitation Anomaly Percentage
   def PAP(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), time: String, n: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -1360,17 +1550,15 @@ object Image {
     (PAP, image._2)
   }
 
-  def visualizeOnTheFly(implicit sc: SparkContext, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
+  def visualizeOnTheFly(implicit sc: SparkContext, level: Int, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
                         palette: String = null, layerID: Int, fileName: String = null): Unit = {
     val appID = sc.applicationId
     val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
-    val levelFromJSON: Int = ImageTrigger.level
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc,image, Tiffheader_parse.nearestZoom, levelFromJSON, "Bilinear")
-      image._1.map(t=>t._2)
+      val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resampleToTargetZoom(image, level, "Bilinear", downSampling = false)
+      image._1.map(t => t._2)
 
-      println("Tiffheader_parse.nearestZoom = " + Tiffheader_parse.nearestZoom)
       val timeList = resampledImage._1.map(t => t._1.spaceTimeKey.instant).distinct().collect()
       resampledImage._1.persist()
       timeList.foreach(x => {
@@ -1391,10 +1579,10 @@ object Image {
             .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
         val myAcc: LongAccumulator = sc.longAccumulator("myAcc")
-//        println("targetAcc0 = " + myAcc.value)
-        reprojected.map(t=>{
-//          println("targetRows = " + t._2.rows) 256
-//          println("targetRows = " + t._2.cols) 256
+        //        println("targetAcc0 = " + myAcc.value)
+        reprojected.map(t => {
+          //          println("targetRows = " + t._2.rows) 256
+          //          println("targetRows = " + t._2.cols) 256
           myAcc.add(1)
           t
         }).collect()
@@ -1404,9 +1592,11 @@ object Image {
         // Create the attributes store that will tell us information about our catalog.
         val attributeStore = FileAttributeStore(outputPath)
         // Create the writer that we will use to store the tiles in the local catalog.
-        val writer = FileLayerWriter(attributeStore)
+        val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+
         val time = System.currentTimeMillis()
-        val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
+        //        val layerIDAll = appID + "-layer-" + time + "_" + palette + "-" + min + "-" + max
+        val layerIDAll: String = ImageTrigger.originTaskID
         // Pyramiding up the zoom levels, write our tiles out to the local file system.
 
 
@@ -1414,13 +1604,14 @@ object Image {
         println("zoom = " + zoom)
 
         Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-          if (z == levelFromJSON) {
+          if (z == level) {
             val layerId = LayerId(layerIDAll, z)
+            println(layerId)
             // If the layer exists already, delete it out before writing
-            if (attributeStore.layerExists(layerId)) {
-              new FileLayerManager(attributeStore).delete(layerId)
-            }
+            if (attributeStore.layerExists(layerId)) new FileLayerManager(attributeStore).delete(layerId)
             writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+
+
           }
         }
 
@@ -1429,22 +1620,56 @@ object Image {
       }
       )
 
+
+
+
+
+
+
+
+
+
+
+      //TODO 回调服务
+
+      val resultSet: Map[String, ArrayBuffer[mutable.Map[String, Any]]] = Map(
+        "raster" -> TMSList,
+        "vector" -> ArrayBuffer.empty[mutable.Map[String, Any]],
+        "table" -> ArrayBuffer.empty[mutable.Map[String, Any]],
+        "rasterCube" -> new ArrayBuffer[mutable.Map[String, Any]](),
+        "vectorCube" -> new ArrayBuffer[mutable.Map[String, Any]]()
+      )
+      implicit val formats = DefaultFormats
+      val jsonStr: String = Serialization.write(resultSet)
+      val deliverWordID: String = "{\"workID\":\"" + ImageTrigger.workID + "\"}"
+      HttpUtil.postResponse(SystemConstants.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
+
+
+
+
+
+
+
+
+
+
+
       // 写入文件
       //      Serve.runTMS(outputPath)
-      val writeFile = new File(fileName)
-      val writerOutput = new BufferedWriter(new FileWriter(writeFile))
-      val result = mutable.Map[String, Any]()
-      result += ("raster" -> TMSList)
-      result += ("vector" -> ArrayBuffer.empty[mutable.Map[String, Any]])
-      result += ("table" -> ArrayBuffer.empty[mutable.Map[String, Any]])
-      val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
-      result += ("rasterCube" -> rasterCubeList)
-      result += ("vectorCube" -> vectorCubeList)
-      implicit val formats = DefaultFormats
-      val jsonStr: String = Serialization.write(result)
-      writerOutput.write(jsonStr)
-      writerOutput.close()
+      //      val writeFile = new File(fileName)
+      //      val writerOutput = new BufferedWriter(new FileWriter(writeFile))
+      //      val result = mutable.Map[String, Any]()
+      //      result += ("raster" -> TMSList)
+      //      result += ("vector" -> ArrayBuffer.empty[mutable.Map[String, Any]])
+      //      result += ("table" -> ArrayBuffer.empty[mutable.Map[String, Any]])
+      //      val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      //      val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
+      //      result += ("rasterCube" -> rasterCubeList)
+      //      result += ("vectorCube" -> vectorCubeList)
+      //      implicit val formats = DefaultFormats
+      //      val jsonStr: String = Serialization.write(result)
+      //      writerOutput.write(jsonStr)
+      //      writerOutput.close()
     }
 
     else {
@@ -1489,11 +1714,9 @@ object Image {
       // Pyramiding up the zoom levels, write our tiles out to the local file system.
       Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
         if (z == zoom) {
-          val layerId = LayerId(layerIDAll, z)
+          val layerId: LayerId = LayerId(layerIDAll, z)
           // If the layer exists already, delete it out before writing
-          if (attributeStore.layerExists(layerId)) {
-            new FileLayerManager(attributeStore).delete(layerId)
-          }
+          if (attributeStore.layerExists(layerId)) new FileLayerManager(attributeStore).delete(layerId)
           writer.write(layerId, rdd, ZCurveKeyIndexMethod)
         }
       }
@@ -1517,12 +1740,12 @@ object Image {
       val layout = image._2.layout
       val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray) // TODO
       val stitchedTile = Raster(tile, layout.extent)
-      val time = System.currentTimeMillis();
+      val time = System.currentTimeMillis()
       val path = executorOutputDir + "oge_" + time + ".tif"
       val path_img = "http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "oge_" + time + ".tif"
       GeoTiff(stitchedTile, image._2.crs).write(path)
       val writer = new BufferedWriter(new FileWriter(writeFile))
-      val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}";
+      val outputString = "{\"vectorCube\":[],\"rasterCube\":[],\"table\":[],\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\"}]}"
       writer.write(outputString)
       writer.close()
     }
@@ -1533,7 +1756,7 @@ object Image {
       val rasterList = new ArrayBuffer[mutable.Map[String, Any]]()
       val rasterCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
       val vectorCubeList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val time = System.currentTimeMillis();
+      val time = System.currentTimeMillis()
 
       val writer = new BufferedWriter(new FileWriter(writeFile))
       val imageTimeSeries = image._1.groupBy(t => {
@@ -1578,43 +1801,39 @@ object Image {
       val layout = image._2.layout
       val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
       val stitchedTile = Raster(tile, layout.extent)
-      val time = System.currentTimeMillis();
+      val time = System.currentTimeMillis()
       val path = executorOutputDir + "oge_" + time + ".png"
       val pathReproject = executorOutputDir + "oge_" + time + "_reproject.png"
       val path_img = "http://125.220.153.26:8093/ogedemooutput/oge_" + time + ".png"
       if (palette == null) {
-        val colorMap = {
-          ColorMap(
-            scala.Predef.Map(
-              max -> geotrellis.raster.render.RGBA(255, 255, 255, 255),
-              min -> geotrellis.raster.render.RGBA(0, 0, 0, 20),
-              -1 -> geotrellis.raster.render.RGBA(255, 255, 255, 255)
-            ),
-            ColorMap.Options(
-              classBoundaryType = Exact,
-              noDataColor = 0x00000000, // transparent
-              fallbackColor = 0x00000000, // transparent
-              strict = false
-            )
+        val colorMap = ColorMap(
+          scala.Predef.Map(
+            max -> geotrellis.raster.render.RGBA(255, 255, 255, 255),
+            min -> geotrellis.raster.render.RGBA(0, 0, 0, 20),
+            -1 -> geotrellis.raster.render.RGBA(255, 255, 255, 255)
+          ),
+          ColorMap.Options(
+            classBoundaryType = Exact,
+            noDataColor = 0x00000000, // transparent
+            fallbackColor = 0x00000000, // transparent
+            strict = false
           )
-        }
+        )
         stitchedTile.tile.renderPng(colorMap).write(path)
       }
       else if (palette == "green") {
-        val colorMap = {
-          ColorMap(
-            scala.Predef.Map(
-              max -> geotrellis.raster.render.RGBA(127, 255, 170, 255),
-              min -> geotrellis.raster.render.RGBA(0, 0, 0, 20)
-            ),
-            ColorMap.Options(
-              classBoundaryType = Exact,
-              noDataColor = 0x00000000, // transparent
-              fallbackColor = 0x00000000, // transparent
-              strict = false
-            )
+        val colorMap = ColorMap(
+          scala.Predef.Map(
+            max -> geotrellis.raster.render.RGBA(127, 255, 170, 255),
+            min -> geotrellis.raster.render.RGBA(0, 0, 0, 20)
+          ),
+          ColorMap.Options(
+            classBoundaryType = Exact,
+            noDataColor = 0x00000000, // transparent
+            fallbackColor = 0x00000000, // transparent
+            strict = false
           )
-        }
+        )
         stitchedTile.tile.renderPng(colorMap).write(path)
       }
       else if ("histogram".equals(palette)) {
@@ -1643,7 +1862,7 @@ object Image {
       if ("EPSG:4326".equals(image._2.crs.toString)) {
         val pointDestLD = new Coordinate(layout.extent.xmin, layout.extent.ymin)
         val pointDestRU = new Coordinate(layout.extent.xmax, layout.extent.ymax)
-        val outputString = "{\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\",\"extent\":[" + pointDestLD.x + "," + pointDestLD.y + "," + pointDestRU.x + "," + pointDestRU.y + "]}]}";
+        val outputString = "{\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\",\"extent\":[" + pointDestLD.x + "," + pointDestLD.y + "," + pointDestRU.x + "," + pointDestRU.y + "]}]}"
         writer.write(outputString)
         writer.close()
       }
@@ -1657,7 +1876,7 @@ object Image {
         val pointDestRU = new Coordinate()
         JTS.transform(pointSrcLD, pointDestLD, transform)
         JTS.transform(pointSrcRU, pointDestRU, transform)
-        val outputString = "{\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\",\"extent\":[" + pointDestLD.x + "," + pointDestLD.y + "," + pointDestRU.x + "," + pointDestRU.y + "]}]}";
+        val outputString = "{\"vector\":[],\"raster\":[{\"url\":\"" + path_img + "\",\"extent\":[" + pointDestLD.x + "," + pointDestLD.y + "," + pointDestRU.x + "," + pointDestRU.y + "]}]}"
         writer.write(outputString)
         writer.close()
       }
@@ -1666,7 +1885,7 @@ object Image {
       val result = mutable.Map[String, Any]()
       val vectorList = new ArrayBuffer[mutable.Map[String, Any]]()
       val rasterList = new ArrayBuffer[mutable.Map[String, Any]]()
-      val time = System.currentTimeMillis();
+      val time = System.currentTimeMillis()
 
       val writer = new BufferedWriter(new FileWriter(writeFile))
       val imageTimeSeries = image._1.groupBy(t => {
@@ -1678,38 +1897,34 @@ object Image {
         val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
         val stitchedTile = Raster(tile, layout.extent)
         if (palette == null) {
-          val colorMap = {
-            ColorMap(
-              scala.Predef.Map(
-                max -> geotrellis.raster.render.RGBA(255, 255, 255, 255),
-                min -> geotrellis.raster.render.RGBA(0, 0, 0, 20),
-                -1 -> geotrellis.raster.render.RGBA(255, 255, 255, 255)
-              ),
-              ColorMap.Options(
-                classBoundaryType = Exact,
-                noDataColor = 0x00000000, // transparent
-                fallbackColor = 0x00000000, // transparent
-                strict = false
-              )
+          val colorMap = ColorMap(
+            scala.Predef.Map(
+              max -> geotrellis.raster.render.RGBA(255, 255, 255, 255),
+              min -> geotrellis.raster.render.RGBA(0, 0, 0, 20),
+              -1 -> geotrellis.raster.render.RGBA(255, 255, 255, 255)
+            ),
+            ColorMap.Options(
+              classBoundaryType = Exact,
+              noDataColor = 0x00000000, // transparent
+              fallbackColor = 0x00000000, // transparent
+              strict = false
             )
-          }
+          )
           (stitchedTile.tile.renderPng(colorMap), stitchedTile.extent, t._1)
         }
         else if (palette == "green") {
-          val colorMap = {
-            ColorMap(
-              scala.Predef.Map(
-                max -> geotrellis.raster.render.RGBA(127, 255, 170, 255),
-                min -> geotrellis.raster.render.RGBA(0, 0, 0, 20)
-              ),
-              ColorMap.Options(
-                classBoundaryType = Exact,
-                noDataColor = 0x00000000, // transparent
-                fallbackColor = 0x00000000, // transparent
-                strict = false
-              )
+          val colorMap = ColorMap(
+            scala.Predef.Map(
+              max -> geotrellis.raster.render.RGBA(127, 255, 170, 255),
+              min -> geotrellis.raster.render.RGBA(0, 0, 0, 20)
+            ),
+            ColorMap.Options(
+              classBoundaryType = Exact,
+              noDataColor = 0x00000000, // transparent
+              fallbackColor = 0x00000000, // transparent
+              strict = false
             )
-          }
+          )
           (stitchedTile.tile.renderPng(colorMap), stitchedTile.extent, t._1)
         }
         else if ("histogram".equals(palette)) {

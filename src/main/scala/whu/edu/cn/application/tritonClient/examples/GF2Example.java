@@ -1,23 +1,12 @@
 package whu.edu.cn.application.tritonClient.examples;
 
 import com.google.common.collect.Lists;
-import org.gdal.gdal.Dataset;
-import org.gdal.gdal.Driver;
-import org.gdal.gdal.gdal;
-import org.gdal.gdalconst.gdalconstConstants;
-import scala.collection.mutable.ListBuffer;
-import whu.edu.cn.application.oge.Tiffheader_parse;
 import whu.edu.cn.application.tritonClient.*;
 import whu.edu.cn.application.tritonClient.pojo.DataType;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.zip.DeflaterOutputStream;
-
-import static org.gdal.gdalconst.gdalconstConstants.GDT_Byte;
 
 public class GF2Example {
 

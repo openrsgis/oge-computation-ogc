@@ -4,6 +4,7 @@ import org.junit.Test;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 /**
@@ -78,7 +79,7 @@ public class HttpRequest {
             //flush输出流的缓冲
             out.flush();
             // 定义 BufferedReader输入流来读取URL的响应
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             String line;
             while ((line = in.readLine()) != null) {
                 result += "\n" + line;

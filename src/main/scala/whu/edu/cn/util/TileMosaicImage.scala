@@ -4,7 +4,7 @@ import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.{ByteArrayTile, ByteCellType, ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleCellType, DoubleConstantNoDataCellType, FloatArrayTile, FloatCellType, FloatConstantNoDataCellType, IntArrayTile, IntCellType, IntConstantNoDataCellType, MutableArrayTile, ShortArrayTile, ShortCellType, ShortConstantNoDataCellType, Tile, UByteArrayTile, UByteCellType, UByteConstantNoDataCellType, UShortArrayTile, UShortCellType, UShortConstantNoDataCellType}
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.application.oge.Tiffheader_parse.RawTile
+import whu.edu.cn.application.oge.RawTile
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 
@@ -137,8 +137,8 @@ object TileMosaicImage {
           for (rawtile <- t._2) {
             for (i <- 0 to 255) {
               for (j <- 0 to 255) {
-                val y = Math.round((t._1._1.ymax - (rawtile.getP_upper_rightY - size * i)) / size).toInt
-                val x = Math.round((rawtile.getP_bottom_leftX + size * j - t._1._1.xmin) / size).toInt
+                val y = Math.round((t._1._1.ymax - (rawtile.getLngLatUpperRight.last - size * i)) / size).toInt
+                val x = Math.round((rawtile.getLngLatBottomLeft.head + size * j - t._1._1.xmin) / size).toInt
                 val value = getTileValue(rawtile.getTile, i, j, dType)
                 if (x >= 0 && x < 256 && y >= 0 && y < 256 && value.toString.toDouble!= 0 && value.toString.toDouble < mutableArrayTile.get(x, y)) {
                   value match {
@@ -171,8 +171,8 @@ object TileMosaicImage {
           for (rawtile <- t._2) {
             for (i <- 0 to 255) {
               for (j <- 0 to 255) {
-                val y = Math.round((t._1._1.ymax - (rawtile.getP_upper_rightY - size * i)) / size).toInt
-                val x = Math.round((rawtile.getP_bottom_leftX + size * j - t._1._1.xmin) / size).toInt
+                val y = Math.round((t._1._1.ymax - (rawtile.getLngLatUpperRight.last - size * i)) / size).toInt
+                val x = Math.round((rawtile.getLngLatBottomLeft.head + size * j - t._1._1.xmin) / size).toInt
                 val value = getTileValue(rawtile.getTile, i, j, dType)
                 if (x >= 0 && x < 256 && y >= 0 && y < 256 && value.toString.toDouble!= 0 && value.toString.toDouble > mutableArrayTile.get(x, y)) {
                   value match {
@@ -205,8 +205,8 @@ object TileMosaicImage {
           for (rawtile <- t._2) {
             for (i <- 0 to 255) {
               for (j <- 0 to 255) {
-                val y = Math.round((t._1._1.ymax - (rawtile.getP_upper_rightY - size * i)) / size).toInt
-                val x = Math.round((rawtile.getP_bottom_leftX + size * j - t._1._1.xmin) / size).toInt
+                val y = Math.round((t._1._1.ymax - (rawtile.getLngLatUpperRight.last - size * i)) / size).toInt
+                val x = Math.round((rawtile.getLngLatBottomLeft.head + size * j - t._1._1.xmin) / size).toInt
                 val value = getTileValue(rawtile.getTile, i, j, dType)
                 if (x >= 0 && x < 256 && y >= 0 && y < 256 && value.toString.toDouble!= 0) {
                   value match {
