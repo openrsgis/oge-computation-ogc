@@ -150,17 +150,17 @@ object COGHeaderParse {
    * 获取 Tile 相关的一些数据，不包含tile影像本体
    *
    * @param l          json里的 level 字段，表征前端 Zoom
-   * @param queryExtent
-   * @param crs
-   * @param in_path
-   * @param time
-   * @param measurement
-   * @param dType
+   * @param queryExtent 前端视口范围内的每一个瓦片和Bbox的交集
+   * @param crs 影像的crs EPSG:4326
+   * @param in_path 影像MINIO的路径
+   * @param time 影像的元数据 时间
+   * @param measurement 影像的波段
+   * @param dType 影像位数 unit8 float32
    * @param resolution 数据库中的原始影像分辨率
-   * @param productName
+   * @param productName 产品名字
    * @return
    */
-  private def getTiles(l: Int, queryExtent: Array[Double],
+  def getTiles(l: Int, queryExtent: Array[Double],
                        crs: String, in_path: String,
                        time: String, measurement: String,
                        dType: String, resolution: String,
@@ -357,6 +357,9 @@ object COGHeaderParse {
       if (pCoordinate(1) >= tileOffsets.get(level).size / bandCount)
         tileOffsets.get(level).size / bandCount - 1
       else pCoordinate(1))
+
+
+
          ) {
       for (j <- Math.max(pCoordinate(2), 0) to (
         if (pCoordinate(3) >= tileOffsets.get(level).get(i).size)
@@ -411,7 +414,7 @@ object COGHeaderParse {
    * @param tileByteCounts
    * @param imageSize 图像尺寸
    */
-  private def parse(header: Array[Byte],
+  def parse(header: Array[Byte],
                     tileOffsets: util.ArrayList[util.ArrayList[util.ArrayList[Integer]]],
                     cell: util.ArrayList[Double],
                     geoTrans: util.ArrayList[Double],
@@ -568,5 +571,4 @@ object COGHeaderParse {
 
 
 }
-
 

@@ -5,13 +5,15 @@ import geotrellis.raster.Tile
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.application.oge.HttpRequest.writeTIFF
+import whu.edu.cn.application.oge.utils.TiffUtil.tiff2RDD
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.ogc.entity.coverage.Coverage
 import whu.edu.cn.ogc.entity.process.{CoverageMediaType, Link}
 import whu.edu.cn.ogc.ogcAPIUtil.OgcAPI
 
+import java.text.SimpleDateFormat
 import java.util
-import java.util.{List => JList}
+import java.util.{Date, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 object Service {
@@ -24,19 +26,27 @@ object Service {
    * @param coverageID coverageId
    * @param subset Coverage的子集subset
    * @param properties 属性名称
+   * @param geom 空间查询范围 这里是视口范围
+   * @param mapLevel 前端层级
    * @return 返回的瓦片RDD
    */
   def getCoverage(implicit sc: SparkContext, baseUrl: String, productId: String = null, coverageID: String = null,
-                  subset: String = null, properties: String = null): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
+                  subset: String = null, properties: String = null, geom: String = null,
+                  mapLevel:Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
     // TODO存储路径
-    val writePath = ""
     val ogcAPI = new OgcAPI()
     val coverage = ogcAPI.getCoverage(baseUrl, coverageID)
+    var time = coverage.getTimeStamp
+    if(time == null){
+      val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") // 定义要输出的日期时间格式
+      val now = new Date() // 获取当前时间
+      val formattedDate = dateFormat.format(now) // 将当前时间格式化为指定格式的字符串
+      time = formattedDate
+    }
     val linkList:JList[Link] = coverage.getCoverageLinks
     for (link <- linkList.asScala) {
       if(link.getHref.contains("f=tif")){
-        writeTIFF(link.getHref, writePath)
-        val rdd = WebAPI.tiff2RDD(sc, writePath, CoverageMediaType.GEOTIFF.getType)
+        val rdd = tiff2RDD(sc, link.getHref, CoverageMediaType.GEOTIFF.getType, geom, mapLevel, productId, time)
         return rdd
       }
     }

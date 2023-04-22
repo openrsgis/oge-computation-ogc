@@ -6,7 +6,7 @@ import geotrellis.raster.{FastMapHistogram, Tile}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.application.oge.Trigger.argOrNot
-import whu.edu.cn.application.oge.WebAPI.tiff2RDD
+import whu.edu.cn.application.oge.utils.TiffUtil.tiff2RDD
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.ogc.entity.process.{CoverageMediaType, FeatureMediaType}
 import whu.edu.cn.ogc.ogcAPIUtil.OgcAPI
@@ -42,7 +42,7 @@ object ProcessResult {
           outputValue = processResult.getString("value")
         }
       }
-      tiff2RDD(sc, outputValue, coverageType)
+//      tiff2RDD(sc, outputValue, coverageType)
     }
     null
   }

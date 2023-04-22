@@ -335,7 +335,8 @@ object Image {
   }
 
 
-  def query(productName: String = null, sensorName: String = null, measurementName: String = null, startTime: String = null, endTime: String = null, geom: String = null, crs: String = null): (ListBuffer[(String, String, String, String, String, String)]) = {
+  def query(productName: String = null, sensorName: String = null, measurementName: String = null, startTime: String = null,
+            endTime: String = null, geom: String = null, crs: String = null): (ListBuffer[(String, String, String, String, String, String)]) = {
     val metaData = new ListBuffer[(String, String, String, String, String, String)]
     val postgresqlUtil = new PostgresqlUtil("")
     val conn = postgresqlUtil.getConnection()
@@ -1156,7 +1157,7 @@ object Image {
    * 自定义重采样方法，功能有局限性，勿用
    *
    * @param image        需要被重采样的图像
-   * @param sourceZoom   原图像的 Zoom 层级
+   * @param sourceZoom   原图像的 Zoom 层级 image必須是sourceZoom的層級
    * @param targetZoom   输出图像的 Zoom 层级
    * @param mode         插值方法
    * @param downSampling 是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理

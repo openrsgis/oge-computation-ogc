@@ -11,6 +11,7 @@ import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
 import whu.edu.cn.application.oge.ImageTrigger.{fileName, originTaskID, workID, workTaskJSON, zIndexStrArray}
 import whu.edu.cn.application.oge.WebAPI._
+import whu.edu.cn.application.oge.utils.TiffUtil.tileRDD2Tiff
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
 import whu.edu.cn.ogc.entity.process.CoverageMediaType
@@ -66,7 +67,7 @@ object Trigger {
               // 首先判断这个key所表示的影像能否支持以tif落地
               val coverageTypeList= ogcAPI.getTypeOfCoverageInput(args.toMap.asJava, key)
               if(coverageTypeList.size()!=0){
-                val href = WebAPI.tileRDD2Tiff(rdd_list_image.apply(key), CoverageMediaType.sort(coverageTypeList))
+                val href = tileRDD2Tiff(rdd_list_image.apply(key), CoverageMediaType.sort(coverageTypeList))
                 args.update(key, href)
                 val processResult = ogcAPI.executeProcess(args.toMap.asJava)
                 if(!processResult.isEmpty){
@@ -112,16 +113,19 @@ object Trigger {
         windowRange = argOrNot(args, "windowRange")
       }
       case "Service.getCoverageCollection" => {
-        if(argOrNot(args, "url") != null){
+        if(argOrNot(args, "baseUrl") != null){
 
         }else{
           imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
         }
       }
       case "Service.getCoverage" => {
-        if(argOrNot(args, "url") != null){
+        if(argOrNot(args, "baseUrl") != null){
+          var mapLevel = -1
+          if(oorB==0){mapLevel = level}
           rdd_list_image += (UUID -> Service.getCoverage(sc, argOrNot(args, "baseUrl"), argOrNot(args, "productID"),
-            argOrNot(args, "coverageID"), argOrNot(args, "subset"), argOrNot(args, "properties")))
+            argOrNot(args, "coverageID"), argOrNot(args, "subset"), argOrNot(args, "properties"),
+            mapLevel = mapLevel, geom = windowRange))
         }
       }
       case "Service.getFeatureCollection" => {
@@ -786,8 +790,10 @@ object Trigger {
 
 
     workTaskJSON = {
+//      val fileSource = Source.fromFile(
+//        "src/main/scala/whu/edu/cn/application/oge/modis.json")
       val fileSource = Source.fromFile(
-        "src/main/scala/whu/edu/cn/application/oge/modis.json")
+        "src/main/scala/whu/edu/cn/application/oge/testCoverageAPI.json")
       fileName = "datas/out.txt" // TODO
       val line: String = fileSource.mkString
       fileSource.close()
@@ -803,74 +809,6 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
     runMain(sc,workTaskJSON,workID,originTaskID)
-//    //    val time1 = System.currentTimeMillis()
-//    //    val conf = new SparkConf()
-//    //      .setAppName("GeoCube-Dianmu Hurrican Flood Analysis")
-//    //      .setMaster("local[*]")
-//    //      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-//    //      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-//    //      .set("spark.kryoserializer.buffer.max", "512m")
-//    //      .set("spark.rpc.message.maxSize", "1024")
-//    //    val sc = new SparkContext(conf)
-//    //
-//    //    val line: String = Source.fromFile("C:\\Users\\dell\\Desktop\\testJsonCubeFloodAnalysis.json").mkString
-//    //    val jsonObject = JSON.parseObject(line)
-//    //    println(jsonObject.size())
-//    //    println(jsonObject)
-//    //
-//    //    val a = JsonToArg.trans(jsonObject)
-//    //    println(a.size)
-//    //    a.foreach(println(_))
-//    //
-//    //    lamda(sc, a)
-//    //
-//    //    val time2 = System.currentTimeMillis()
-//    //    println("算子运行时间为："+(time2 - time1))
-//
-//    val time1 = System.currentTimeMillis()
-//    val conf = new SparkConf()
-//      .setAppName("OGE-Computation")
-//      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-//      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-//    val sc = new SparkContext(conf)
-//
-//    val fileSource = Source.fromFile(args(0))
-//    fileName = args(1)
-//    val line: String = fileSource.mkString
-//    fileSource.close()
-//    val jsonObject = JSON.parseObject(line)
-//    println(jsonObject.size())
-//    println(jsonObject)
-//
-//    oorB = jsonObject.getString("oorB").toInt
-//    if (oorB == 0) {
-//      val map = jsonObject.getJSONObject("map")
-//      level = map.getString("level").toInt
-//      windowRange = map.getString("spatialRange")
-//    }
-//
-//    val a = JsonToArg.trans(jsonObject)
-//    println(a.size)
-//    a.foreach(println(_))
-//
-//    if (a.head._3.contains("productID")) {
-//      if (a.head._3("productID") != "GF2") {
-//        lamda(sc, a)
-//      }
-//      else {
-//        if (oorB == 0) {
-//
-//        }
-//        else {
-//        }
-//      }
-//    }
-//    else {
-//      lamda(sc, a)
-//    }
-//
-//    val time2 = System.currentTimeMillis()
-//    println(time2 - time1)
   }
 
   def runMain(implicit sc: SparkContext,
@@ -884,51 +822,20 @@ object Trigger {
     workID = curWorkID
     originTaskID = curOriginTaskID
 
-
-
     val file = new File("aa.txt")
     val bool: Boolean = file.createNewFile()
-
-
-
-
-    // 从命令行参数取
-    // sc = args(....)
-    // workID = args(....)
-    //
-    //    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
-
-
-    //    = {
-    //      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
-    //      fileName = "datas/out.txt" // TODO
-    //      val line: String = fileSource.mkString
-    //      fileSource.close()
-    //      line
-    //    } // 任务要用的 JSON,应当由命令行参数获取
-
-
-    //    originTaskID = "0000000000000"
-    // 点击整个run的唯一标识，来自boot
-
-
     val time1: Long = System.currentTimeMillis()
-
-
     val jsonObject = JSON.parseObject(workTaskJSON)
     println(jsonObject.size())
     println(jsonObject)
-
     oorB = jsonObject.getString("oorB").toInt
     if (oorB == 0) {
       val map = jsonObject.getJSONObject("map")
       level = map.getString("level").toInt //2
       windowRange = map.getString("spatialRange") //1
-
-
       //TODO   通过on the fly的范围1和层级2找到该层级包含的所有前端瓦片
-      println(windowRange)
 
+      println(windowRange)
       val lonLatsOfWindow: Array[Double] = windowRange
         .substring(1, windowRange.length - 1).split(",").map(_.toDouble)
 
@@ -938,18 +845,14 @@ object Trigger {
       val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
       jedis.select(1)
 
-
       val xMinOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow.head, level)
       val xMaxOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow(2), level)
-
       val yMinOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow.last, level)
       val yMaxOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow(1), level)
       System.out.println(xMinOfTile + "-" + xMaxOfTile)
       System.out.println(yMinOfTile + "-" + yMaxOfTile)
 
       // z曲线编码后的索引字符串
-
-
       //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
 
       // 等价于两层循环
@@ -957,15 +860,11 @@ object Trigger {
            if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
         // 排除 redis 已经存在的前端瓦片编码
            ) { // redis里存在当前的索引
-
         // Redis 里没有的前端瓦片编码
         val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-
         zIndexStrArray.append(zIndexStr)
-
         // 将这些新的瓦片编号存到 Redis
         //        jedis.sadd(key, zIndexStr)
-
       }
     }
     if (zIndexStrArray.isEmpty){
@@ -974,19 +873,6 @@ object Trigger {
       return
     }
     println("***********************************************************")
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     val a = JsonToArg.trans(jsonObject)
     println(a.size)

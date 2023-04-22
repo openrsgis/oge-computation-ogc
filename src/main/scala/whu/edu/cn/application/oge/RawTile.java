@@ -20,7 +20,7 @@ public class RawTile implements Serializable {
         private double rotation;
         private double resolution;
         private int crs;
-        private String dataType;
+        private String dataType; // "Float32"
         private Tile tile;
 
 
