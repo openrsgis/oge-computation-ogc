@@ -286,9 +286,6 @@ object ImageTrigger {
         val hist = Image.histogram(image = rdd_list_image(args("coverage")))
         println(hist)
       }
-      case "Coverage.reproject" => {
-          rdd_list_image += (UUID -> Image.reproject(image = rdd_list_image(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
-        }
       case "Coverage.resample" => {
         rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
       }

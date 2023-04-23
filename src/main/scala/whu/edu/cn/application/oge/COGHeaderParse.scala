@@ -341,6 +341,7 @@ object COGHeaderParse {
         else pCoordinate(3))
            ) {
         for (k <- 0 until bandCount) {
+          println(s"bandCount = ${bandCount}")
           val t = new RawTile
           t.setOffset(
             tileOffsets.get(level).get(i).get(j).toLong,

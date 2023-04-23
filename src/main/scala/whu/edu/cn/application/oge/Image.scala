@@ -23,8 +23,8 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
 import redis.clients.jedis.Jedis
-//import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
-import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
+import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
+//import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
@@ -1354,10 +1354,10 @@ object Image {
 
 
   /**
-   *
-   * @param image1
-   * @param image2
-   * @return
+   * 调用深度学习网络处理影像
+   * @param image1 影像1
+   * @param image2 影像2
+   * @return 处理后的影像 RDD
    */
   def classificationDLCUG(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                         image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
