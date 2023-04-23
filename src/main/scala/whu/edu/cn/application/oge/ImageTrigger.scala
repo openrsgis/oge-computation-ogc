@@ -132,6 +132,7 @@ object ImageTrigger {
         rdd_list_table += (UUID -> SWMM5(input = rdd_list_table(argOrNot(args, "input"))))
       }
 
+
       //Table
       case "Table.getDownloadUrl" => {
         Table.getDownloadUrl(url = rdd_list_table(argOrNot(args, "input")), fileName = fileName)
