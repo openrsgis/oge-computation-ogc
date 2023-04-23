@@ -290,7 +290,6 @@ object ImageTrigger {
         rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
       }
 
-
       case "Coverage.slope" => {
         rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
       }
