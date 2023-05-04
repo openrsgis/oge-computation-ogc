@@ -2138,7 +2138,7 @@
       }
     ]
   },
-  "Coverage.min": {
+  "Coverage.mini": {
     "description": "Selects the minimum of the first and second values for each matched pair of bands in image1 and image2.",
     "returns": "Coverage",
     "args": [
@@ -2154,7 +2154,7 @@
       }
     ]
   },
-  "Coverage.max": {
+  "Coverage.maxi": {
     "description": "Selects the maximum of the first and second values for each matched pair of bands in image1 and image2.",
     "returns": "Coverage",
     "args": [
@@ -2384,6 +2384,54 @@
         "name": "mode",
         "type": "String",
         "description": "The interpolation mode to use"
+      }
+    ]
+  },
+  "Coverage.gradient": {
+    "description": "Calculates the gradient.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the gradient."
+      }
+    ]
+  },
+  "Coverage.clip": {
+    "description": "Clip the raster with the geometry",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to clip."
+      },
+      {
+        "name": "geom",
+        "type": "Geometry",
+        "description": "The geometry used to clip."
+      }
+    ]
+  },
+  "Coverage.clamp": {
+    "description": "Clamp the raster between low and high",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to clamp."
+      },
+      {
+        "name": "low",
+        "type": "Int",
+        "description": "The low value."
+      },
+      {
+        "name": "high",
+        "type": "Int",
+        "description": "The high value."
       }
     ]
   },

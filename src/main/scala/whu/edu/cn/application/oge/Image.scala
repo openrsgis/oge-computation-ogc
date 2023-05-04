@@ -5,9 +5,10 @@ import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
+import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.render.{ColorMap, Exact}
 import geotrellis.raster.resample.{Bilinear, NearestNeighbor, PointResampleMethod}
-import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, FloatArrayTile, FloatCellType, Histogram, RGBA, Raster, Tile, TileLayout}
+import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, FloatArrayTile, FloatCellType, Histogram, IntArrayTile, RGBA, Raster, TargetCell, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
@@ -23,6 +24,9 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
 import redis.clients.jedis.Jedis
+import whu.edu.cn.application.oge.Image.checkProjReso
+
+import java.time.Instant
 //import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
 import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
@@ -446,6 +450,69 @@ object Image {
   }
 
 
+  def checkProjReso(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+                    image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])) = {
+    val resampleTime = Instant.now.getEpochSecond
+    val band1 = image1._1.first()._1.measurementName
+    val image1tileRDD = image1._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val band2 = image2._1.first()._1.measurementName
+    val image2tileRDD = image2._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      var reso = image1._2.cellSize.resolution
+      if (image1._2.cellSize.resolution < image2._2.cellSize.resolution) {
+        reso = image2._2.cellSize.resolution
+      }
+      var extent1 = image1._2.extent.reproject(image1._2.crs, CRS.fromEpsgCode(32650))
+
+      var extent2 = image2._2.extent.reproject(image2._2.crs, CRS.fromEpsgCode(32650))
+
+      val extentIntersection = extent1.intersection(extent2)
+      extent1 = extentIntersection.getOrElse(extent1)
+      extent2 = extentIntersection.getOrElse(extent2)
+      val tl1 = TileLayout(((extent1.xmax - extent1.xmin) / (reso * 256)).toInt, ((extent1.ymax - extent1.ymin) / (reso * 256)).toInt, 256, 256)
+      val ld1 = LayoutDefinition(extent1, tl1)
+
+      val srcBounds1 = image1._2.bounds
+      val newBounds1 = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds1.get.maxKey.spatialKey._1, srcBounds1.get.maxKey.spatialKey._2))
+
+      val rasterMetaData1 = TileLayerMetadata(image1._2.cellType, image1._2.layout, image1._2.extent, image1._2.crs, newBounds1)
+      val image1tileLayerRDD = TileLayerRDD(image1tileRDD, rasterMetaData1)
+      val (_, image1tileRDDWithMetadata) = image1tileLayerRDD.reproject(CRS.fromEpsgCode(32650), ld1, geotrellis.raster.resample.Bilinear)
+      val image1Noband = (image1tileRDDWithMetadata.mapValues(tile => tile: Tile), image1tileRDDWithMetadata.metadata)
+      val newBound1 = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(image1Noband._2.tileLayout.layoutCols, image1Noband._2.tileLayout.layoutRows, resampleTime))
+      val newMetadata1 = TileLayerMetadata(image1Noband._2.cellType, image1Noband._2.layout, image1Noband._2.extent, image1Noband._2.crs, newBound1)
+      val image1RDD = image1Noband.map(t => {
+        (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band1), t._2)
+      })
+
+      val tl2 = TileLayout(((extent2.xmax - extent2.xmin) / (reso * 256)).toInt, ((extent2.ymax - extent2.ymin) / (reso * 256)).toInt, 256, 256)
+      val ld2 = LayoutDefinition(extent2, tl2)
+
+      val srcBounds2 = image2._2.bounds
+      val newBounds2 = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds2.get.maxKey.spatialKey._1, srcBounds2.get.maxKey.spatialKey._2))
+
+      val rasterMetaData2 = TileLayerMetadata(image2._2.cellType, image2._2.layout, image2._2.extent, image2._2.crs, newBounds2)
+      val image2tileLayerRDD = TileLayerRDD(image2tileRDD, rasterMetaData2)
+      val (_, image2tileRDDWithMetadata) = image2tileLayerRDD.reproject(CRS.fromEpsgCode(32650), ld2, geotrellis.raster.resample.Bilinear)
+      val image2Noband = (image2tileRDDWithMetadata.mapValues(tile => tile: Tile), image2tileRDDWithMetadata.metadata)
+      val newBound2 = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(image2Noband._2.tileLayout.layoutCols, image2Noband._2.tileLayout.layoutRows, resampleTime))
+      val newMetadata2 = TileLayerMetadata(image2Noband._2.cellType, image2Noband._2.layout, image2Noband._2.extent, image2Noband._2.crs, newBound2)
+      val image2RDD = image2Noband.map(t => {
+        (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band2), t._2)
+      })
+
+      ((image1RDD, newMetadata1), (image2RDD, newMetadata2))
+    }
+    else {
+      (image1, image2)
+    }
+  }
+
   /**
    * if both image1 and image2 has only 1 band, add operation is applied between the 2 bands
    * if not, add the first value to the second for each matched pair of bands in image1 and image2
@@ -456,23 +523,30 @@ object Image {
    */
   def add(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1: Int = bandNames(image1).length
-    val bandNum2: Int = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     println("add bandNum1 = " + bandNum1)
     println("add bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val addRDD = image1NoBand.join(image2NoBand)
       (addRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Add"), Add(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Add(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -486,23 +560,30 @@ object Image {
    */
   def subtract(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     println("subtract bandNum1 = " + bandNum1)
     println("subtract bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val subtractRDD = image1NoBand.join(image2NoBand)
       (subtractRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Subtract"), Subtract(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Subtract(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -516,23 +597,30 @@ object Image {
    */
   def divide(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
              image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     println("divide bandNum1 = " + bandNum1)
     println("divide bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val divideRDD = image1NoBand.join(image2NoBand)
       (divideRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Divide"), Divide(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Divide(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -546,23 +634,30 @@ object Image {
    */
   def multiply(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     println("multiply bandNum1 = " + bandNum1)
     println("multiply bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val multiplyRDD = image1NoBand.join(image2NoBand)
       (multiplyRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Multiply"), Multiply(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Multiply(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -597,21 +692,28 @@ object Image {
    */
   def and(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val andRDD = image1NoBand.join(image2NoBand)
       (andRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "And"), And(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, And(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -625,21 +727,28 @@ object Image {
    */
   def or(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val orRDD = image1NoBand.join(image2NoBand)
       (orRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Or"), Or(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Or(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -772,21 +881,28 @@ object Image {
    */
   def atan2(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
             image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val atan2RDD = image1NoBand.join(image2NoBand)
       (atan2RDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Atan2"), Atan2(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Atan2(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -860,21 +976,28 @@ object Image {
    */
   def eq(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val eqRDD = image1NoBand.join(image2NoBand)
       (eqRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Eq"), Equal(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Equal(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -888,21 +1011,28 @@ object Image {
    */
   def gt(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val gtRDD = image1NoBand.join(image2NoBand)
       (gtRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Gt"), Greater(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Greater(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -916,21 +1046,28 @@ object Image {
    */
   def gte(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val gteRDD = image1NoBand.join(image2NoBand)
       (gteRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Gte"), GreaterOrEqual(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, GreaterOrEqual(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -944,21 +1081,28 @@ object Image {
    */
   def lt(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val gtRDD = image1NoBand.join(image2NoBand)
       (gtRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Lt"), Less(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Less(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -972,21 +1116,28 @@ object Image {
    */
   def lte(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val gteRDD = image1NoBand.join(image2NoBand)
       (gteRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Lte"), LessOrEqual(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, LessOrEqual(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -1076,21 +1227,28 @@ object Image {
    */
   def neq(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val bandNum1 = bandNames(image1).length
-    val bandNum2 = bandNames(image2).length
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val eqRDD = image1NoBand.join(image2NoBand)
       (eqRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Ueq"), Unequal(t._2._1._2, t._2._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
     else {
-      val matchRDD = image1._1.join(image2._1)
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
       (matchRDD.map(t => {
         (t._1, Unequal(t._2._1, t._2._2))
-      }), image1._2)
+      }), image1Reprojected._2)
     }
   }
 
@@ -1128,6 +1286,273 @@ object Image {
     else image
   }
 
+  /**
+   * Raises the first value to the power of the second for each matched pair of bands in image1 and image2.
+   *
+   * @param image1 The image from which the left operand bands are taken.
+   * @param image2 The image from which the right operand bands are taken.
+   * @return
+   */
+  def pow(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+          image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
+    println("pow bandNum1 = " + bandNum1)
+    println("pow bandNum2 = " + bandNum2)
+    if (bandNum1 == 1 && bandNum2 == 1) {
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val powRDD = image1NoBand.join(image2NoBand)
+      (powRDD.map(t => {
+        (entity.SpaceTimeBandKey(t._1, "Pow"), Pow(t._2._1._2, t._2._2._2))
+      }), image1Reprojected._2)
+    }
+    else {
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
+      (matchRDD.map(t => {
+        (t._1, Pow(t._2._1, t._2._2))
+      }), image1Reprojected._2)
+    }
+  }
+
+  /**
+   * Selects the minimum of the first and second values for each matched pair of bands in image1 and image2.
+   *
+   * @param image1 The image from which the left operand bands are taken.
+   * @param image2 The image from which the right operand bands are taken.
+   * @return
+   */
+  def mini(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
+    println("min bandNum1 = " + bandNum1)
+    println("min bandNum2 = " + bandNum2)
+    if (bandNum1 == 1 && bandNum2 == 1) {
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val minRDD = image1NoBand.join(image2NoBand)
+      (minRDD.map(t => {
+        (entity.SpaceTimeBandKey(t._1, "Min"), Min(t._2._1._2, t._2._2._2))
+      }), image1Reprojected._2)
+    }
+    else {
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
+      (matchRDD.map(t => {
+        (t._1, Min(t._2._1, t._2._2))
+      }), image1Reprojected._2)
+    }
+  }
+
+  /**
+   * Selects the maximum of the first and second values for each matched pair of bands in image1 and image2.
+   *
+   * @param image1 The image from which the left operand bands are taken.
+   * @param image2 The image from which the right operand bands are taken.
+   * @return
+   */
+  def maxi(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+           image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var image1Reprojected = image1
+    var image2Reprojected = image2
+    if (image1._2.crs != image2._2.crs || image1._2.cellSize.resolution != image2._2.cellSize.resolution) {
+      val tuple = checkProjReso(image1, image2)
+      image1Reprojected = tuple._1
+      image2Reprojected = tuple._2
+    }
+    val bandNum1 = bandNames(image1Reprojected).length
+    val bandNum2 = bandNames(image2Reprojected).length
+    println("max bandNum1 = " + bandNum1)
+    println("max bandNum2 = " + bandNum2)
+    if (bandNum1 == 1 && bandNum2 == 1) {
+      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val maxRDD = image1NoBand.join(image2NoBand)
+      (maxRDD.map(t => {
+        (entity.SpaceTimeBandKey(t._1, "Max"), Max(t._2._1._2, t._2._2._2))
+      }), image1Reprojected._2)
+    }
+    else {
+      val matchRDD = image1Reprojected._1.join(image2Reprojected._1)
+      (matchRDD.map(t => {
+        (t._1, Max(t._2._1, t._2._2))
+      }), image1Reprojected._2)
+    }
+  }
+
+  /**
+   * Applies a morphological mean filter to each band of an image using a named or custom kernel.
+   *
+   * @param image The coverage to which to apply the operations.
+   * @param kernelType The type of kernel to use.
+   * @param radius The radius of the kernel to use.
+   * @return
+   */
+  def focalMean(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                radius: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    kernelType match {
+      case "square" => {
+        val neighborhood = focal.Square(radius)
+        print(neighborhood.extent)
+        val imageFocalMeaned = image._1.map(t => {
+          val cellType = t._2.cellType
+          (t._1, focal.Mean(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
+        })
+        (imageFocalMeaned, image._2)
+      }
+      case "circle" => {
+        val neighborhood = focal.Circle(radius)
+        val imageFocalMeaned = image._1.map(t => {
+          val cellType = t._2.cellType
+          (t._1, focal.Mean(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
+        })
+        (imageFocalMeaned, image._2)
+      }
+    }
+  }
+
+  /**
+   * Applies a morphological median filter to each band of an image using a named or custom kernel.
+   *
+   * @param image      The coverage to which to apply the operations.
+   * @param kernelType The type of kernel to use.
+   * @param radius     The radius of the kernel to use.
+   * @return
+   */
+  def focalMedian(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                  radius: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    kernelType match {
+      case "square" => {
+        val neighborhood = focal.Square(radius)
+        val imageFocalMedianed = image._1.map(t => {
+          val cellType = t._2.cellType
+          (t._1, focal.Median(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
+        })
+        (imageFocalMedianed, image._2)
+      }
+      case "circle" => {
+        val neighborhood = focal.Circle(radius)
+        val imageFocalMedianed = image._1.map(t => {
+          val cellType = t._2.cellType
+          (t._1, focal.Median(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
+        })
+        (imageFocalMedianed, image._2)
+      }
+    }
+  }
+
+  /**
+   * Applies a morphological max filter to each band of an image using a named or custom kernel.
+   *
+   * @param image      The coverage to which to apply the operations.
+   * @param kernelType The type of kernel to use.
+   * @param radius     The radius of the kernel to use.
+   * @return
+   */
+  def focalMax(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+               radius: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    kernelType match {
+      case "square" => {
+        val neighborhood = focal.Square(radius)
+        val imageFocalMaxed = image._1.map(t => {
+          (t._1, focal.Max(t._2, neighborhood, None, TargetCell.All))
+        })
+        (imageFocalMaxed, image._2)
+      }
+      case "circle" => {
+        val neighborhood = focal.Circle(radius)
+        val imageFocalMaxed = image._1.map(t => {
+          (t._1, focal.Max(t._2, neighborhood, None, TargetCell.All))
+        })
+        (imageFocalMaxed, image._2)
+      }
+    }
+  }
+
+  /**
+   * Applies a morphological min filter to each band of an image using a named or custom kernel.
+   *
+   * @param image      The coverage to which to apply the operations.
+   * @param kernelType The type of kernel to use.
+   * @param radius     The radius of the kernel to use.
+   * @return
+   */
+  def focalMin(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+               radius: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    kernelType match {
+      case "square" => {
+        val neighborhood = focal.Square(radius)
+        val imageFocalMined = image._1.map(t => {
+          (t._1, focal.Min(t._2, neighborhood, None, TargetCell.All))
+        })
+        (imageFocalMined, image._2)
+      }
+      case "circle" => {
+        val neighborhood = focal.Circle(radius)
+        val imageFocalMined = image._1.map(t => {
+          (t._1, focal.Min(t._2, neighborhood, None, TargetCell.All))
+        })
+        (imageFocalMined, image._2)
+      }
+    }
+  }
+
+  /**
+   * Applies a morphological mode filter to each band of an image using a named or custom kernel.
+   *
+   * @param image      The coverage to which to apply the operations.
+   * @param kernelType The type of kernel to use.
+   * @param radius     The radius of the kernel to use.
+   * @return
+   */
+  def focalMode(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                radius: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    kernelType match {
+      case "square" => {
+        val neighborhood = focal.Square(radius)
+        val imageFocalMeaned = image._1.map(t => {
+          (t._1, focal.Mode(t._2, neighborhood, None, TargetCell.All))
+        })
+        (imageFocalMeaned, image._2)
+      }
+      case "circle" => {
+        val neighborhood = focal.Circle(radius)
+        val imageFocalMeaned = image._1.map(t => {
+          (t._1, focal.Mode(t._2, neighborhood, None, TargetCell.All))
+        })
+        (imageFocalMeaned, image._2)
+      }
+    }
+  }
+
+  /**
+   * Convolves each band of an image with the given kernel.
+   *
+   * @param image The image to convolve.
+   * @param kernel The kernel to convolve with.
+   * @return
+   */
+  def convolve(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               kernel: focal.Kernel): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val imageConvolved = image._1.map(t => {
+      (t._1, focal.Convolve(t._2, kernel, None, TargetCell.All))
+    })
+    (imageConvolved, image._2)
+  }
 
   /**
    * Return the histogram of the image, a map of bin label value and its associated count.
@@ -1151,6 +1576,42 @@ object Image {
    * @return
    */
   def projection(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): String = image._2.crs.toString()
+
+  /**
+   * Force an image to be computed in a given projection
+   *
+   * @param image             The coverage to reproject.
+   * @param newProjectionCode The code of new projection
+   * @param resolution        The resolution of reprojected image
+   * @return
+   */
+  def reproject(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+                newProjectionCode: Int, resolution: Int): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val band = image._1.first()._1.measurementName
+    val resampleTime = Instant.now.getEpochSecond
+    val imagetileRDD = image._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val extent = image._2.extent.reproject(image._2.crs, CRS.fromEpsgCode(newProjectionCode))
+    val tl = TileLayout(((extent.xmax - extent.xmin) / (resolution * 256)).toInt, ((extent.ymax - extent.ymin) / (resolution * 256)).toInt, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val cellType = image._2.cellType
+    val srcLayout = image._2.layout
+    val srcExtent = image._2.extent
+    val srcCrs = image._2.crs
+    val srcBounds = image._2.bounds
+    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
+    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    val imagetileLayerRDD = TileLayerRDD(imagetileRDD, rasterMetaData);
+    val (_, imagetileRDDWithMetadata) = imagetileLayerRDD.reproject(CRS.fromEpsgCode(newProjectionCode), ld, geotrellis.raster.resample.Bilinear)
+    val imageNoband = (imagetileRDDWithMetadata.mapValues(tile => tile: Tile), imagetileRDDWithMetadata.metadata)
+    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(imageNoband._2.tileLayout.layoutCols - 1, imageNoband._2.tileLayout.layoutRows - 1, resampleTime))
+    val newMetadata = TileLayerMetadata(imageNoband._2.cellType, imageNoband._2.layout, imageNoband._2.extent, imageNoband._2.crs, newBound)
+    val imageRDD = imageNoband.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
+    })
+    (imageRDD, newMetadata)
+  }
 
   /**
    * 自定义重采样方法，功能有局限性，勿用
@@ -1275,6 +1736,29 @@ object Image {
     else image
   }
 
+  /**
+   * Calculates the gradient.
+   *
+   * @param image The coverage to compute the gradient.
+   * @return
+   */
+  def gradient(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val gradientRDD = image._1.map(t => {
+      val sobelx = focal.Kernel(IntArrayTile(Array[Int](-1, 0, 1, -2, 0, 2, -1, 0, 1), 3, 3))
+      val sobely = focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
+      val tilex = focal.Convolve(t._2.convert(CellType.fromName("int32")), sobelx, None, TargetCell.All)
+      val tiley = focal.Convolve(t._2.convert(CellType.fromName("int32")), sobely, None, TargetCell.All)
+      (t._1, Sqrt(Add(tilex * tilex, tiley * tiley)).map(u => {
+        if (u > 255) {
+          255
+        } else {
+          u
+        }
+      }))
+    })
+    (gradientRDD, image._2)
+  }
   /**
    * Casts the input value to a signed 8-bit integer.
    *

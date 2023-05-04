@@ -294,12 +294,13 @@ object COGHeaderParse {
       case "ASTER_GDEM_DEM30" =>
       case "GPM_Precipitation_China_Month" =>
         flagReader = true
+      case _ =>{}
     }
     //if ("LC08_L1TP_C01_T1".equals(productName)) {
     //    l = 2;
     //}
-    //if ("LE07_L1TP_C01_T1".equals(productName)) {
-    //    l = 0;
+//    if ("LE07_L1TP_C01_T1".equals(productName)) {
+//        l = 0
     //计算目标影像的左上和右下图上坐标
     var p_left = 0
     var p_right = 0
