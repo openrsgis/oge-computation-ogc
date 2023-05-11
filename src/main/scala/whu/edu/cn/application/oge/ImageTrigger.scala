@@ -324,6 +324,12 @@ object ImageTrigger {
       case "Coverage.gradient" => {
         rdd_list_image += (UUID -> Image.gradient(image = rdd_list_image(args("coverage"))))
       }
+      case "Coverage.clip"=>{
+        rdd_list_image+=(UUID->Image.clip(image=rdd_list_image(args("coverage")),geom = rdd_list_feature(args("geom"))))
+      }
+      case "Coverage.clamp"=>{
+        rdd_list_image += (UUID -> Image.clamp(image = rdd_list_image(args("coverage")),low=args("low").toInt,high=args("high").toInt))
+      }
 
       case "Coverage.slope" => {
         rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
