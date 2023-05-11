@@ -8,7 +8,7 @@ import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.render.{ColorMap, Exact}
 import geotrellis.raster.resample.{Bilinear, NearestNeighbor, PointResampleMethod}
-import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, CellType, ColorRamp, FloatArrayTile, FloatCellType, Histogram, IntArrayTile, RGBA, Raster, TargetCell, Tile, TileLayout}
+import geotrellis.raster.{ByteArrayTile, ByteCellType, ByteConstantNoDataCellType, CellType, ColorRamp, FloatArrayTile, FloatCellType, Histogram, IntArrayTile, RGBA, Raster, TargetCell, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
@@ -22,11 +22,12 @@ import org.apache.spark.util.LongAccumulator
 import org.geotools.geometry.jts.JTS
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
-import org.locationtech.jts.geom.Coordinate
+import org.locationtech.jts.geom.{Coordinate, Geometry}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.application.oge.Image.checkProjReso
 
 import java.time.Instant
+import scala.util.control.Breaks.{break, breakable}
 //import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
 import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
@@ -1548,10 +1549,63 @@ object Image {
    */
   def convolve(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                kernel: focal.Kernel): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val imageConvolved = image._1.map(t => {
-      (t._1, focal.Convolve(t._2, kernel, None, TargetCell.All))
+    val leftNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(0, 1), t._2))
     })
-    (imageConvolved, image._2)
+    val rightNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(2, 1), t._2))
+    })
+    val upNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(1, 0), t._2))
+    })
+    val downNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(1, 2), t._2))
+    })
+    val leftUpNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(0, 0), t._2))
+    })
+    val upRightNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(2, 0), t._2))
+    })
+    val rightDownNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(2, 2), t._2))
+    })
+    val downLeftNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(0, 2), t._2))
+    })
+    val midNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(1, 1), t._2))
+    })
+    val unionRDD = leftNeighborRDD.union(rightNeighborRDD).union(upNeighborRDD).union(downNeighborRDD).union(leftUpNeighborRDD).union(upRightNeighborRDD).union(rightDownNeighborRDD).union(downLeftNeighborRDD).union(midNeighborRDD)
+      .filter(t => {
+        t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < image._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < image._2.layout.layoutRows
+      })
+    val groupRDD = unionRDD.groupByKey().map(t => {
+      val listBuffer = new ListBuffer[(SpatialKey, Tile)]()
+      val list = t._2.toList
+      for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
+        var flag = false
+        breakable {
+          for (tile <- list) {
+            if (key.equals(tile._1)) {
+              listBuffer.append(tile)
+              flag = true
+              break
+            }
+          }
+        }
+        if (flag == false) {
+          listBuffer.append((key, ByteArrayTile(Array.fill[Byte](256 * 256)(-128), 256, 256, ByteCellType).mutable))
+        }
+      }
+      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(listBuffer)
+      (t._1, tile.crop(251, 251, 516, 516).convert(CellType.fromName("int16")))
+    })
+
+    val convolvedRDD: RDD[(SpaceTimeBandKey, Tile)] = groupRDD.map(t => {
+      (t._1, focal.Convolve(t._2, kernel, None, TargetCell.All).crop(5, 5, 260, 260))
+    })
+    (convolvedRDD, image._2)
   }
 
   /**
@@ -1758,6 +1812,53 @@ object Image {
       }))
     })
     (gradientRDD, image._2)
+  }
+
+  /**
+   * Clip the raster with the geometry (with the same crs).
+   *
+   * @param image The coverage to clip.
+   * @param geom The geometry used to clip.
+   * @return
+   */
+  def clip(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), geom: Geometry
+          ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val RDDExtent = image._2.extent
+    val reso = image._2.cellSize.resolution
+    val clipedRDD = image._1.map(t => {
+      val tileExtent = Extent(RDDExtent.xmin + t._1.spaceTimeKey.col * reso * 256, RDDExtent.ymax - (t._1.spaceTimeKey.row + 1) * 256 * reso,
+        RDDExtent.xmin + (t._1.spaceTimeKey.col + 1) * reso * 256, RDDExtent.ymax - t._1.spaceTimeKey.row * 256 * reso)
+      val tileCliped = t._2.mask(tileExtent, geom)
+      (t._1, tileCliped)
+    })
+    (clipedRDD, image._2)
+  }
+
+  /**
+   * Clamp the raster between low and high
+   *
+   * @param image The coverage to clamp.
+   * @param low The low value.
+   * @param high The high value.
+   * @return
+   */
+  def clamp(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), low: Int, high: Int
+           ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val imageRDDClamped = image._1.map(t => {
+      (t._1, t._2.map(t => {
+        if (t > high) {
+          high
+        }
+        else if (t < low) {
+          low
+        }
+        else {
+          t
+        }
+      }))
+    })
+    (imageRDDClamped, image._2)
   }
   /**
    * Casts the input value to a signed 8-bit integer.
