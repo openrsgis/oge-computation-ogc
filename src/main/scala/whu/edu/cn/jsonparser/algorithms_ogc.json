@@ -2435,6 +2435,48 @@
       }
     ]
   },
+  "Coverage.rgbToHsv": {
+    "description": "Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1], and produces three bands: hue, saturation and value with values in the range [0, 1].",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageRed",
+        "type": "Coverage",
+        "description": "The Red coverage."
+      },
+      {
+        "name": "coverageGreen",
+        "type": "Coverage",
+        "description": "The Green coverage."
+      },
+      {
+        "name": "coverageBlue",
+        "type": "Coverage",
+        "description": "The Blue coverage."
+      }
+    ]
+  },
+  "Coverage.hsvToRgb": {
+    "description": "Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1], and produces three bands: red, green and blue with values in the range [0, 255].",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageHue",
+        "type": "Coverage",
+        "description": "The Hue coverage."
+      },
+      {
+        "name": "coverageSaturation",
+        "type": "Coverage",
+        "description": "The Saturation coverage."
+      },
+      {
+        "name": "coverageValue",
+        "type": "Coverage",
+        "description": "The Value coverage."
+      }
+    ]
+  },
   "Coverage.toInt8": {
     "description": "Casts the input value to a signed 8-bit integer.",
     "returns": "Coverage",

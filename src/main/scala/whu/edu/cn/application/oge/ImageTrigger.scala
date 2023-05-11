@@ -330,6 +330,12 @@ object ImageTrigger {
       case "Coverage.clamp"=>{
         rdd_list_image += (UUID -> Image.clamp(image = rdd_list_image(args("coverage")),low=args("low").toInt,high=args("high").toInt))
       }
+      case "Coverage.rgbToHsv"=> {
+        rdd_list_image += (UUID -> Image.rgbToHsv(imageRed = rdd_list_image(args("coverageRed")), imageGreen = rdd_list_image(args("coverageGreen")), imageBlue = rdd_list_image(args("coverageBlue"))))
+      }
+      case "Coverage.hsvToRgb"=> {
+        rdd_list_image += (UUID -> Image.hsvToRgb(imageHue = rdd_list_image(args("coverageHue")), imageSaturation = rdd_list_image(args("coverageSaturation")), imageValue = rdd_list_image(args("coverageValue"))))
+      }
 
       case "Coverage.slope" => {
         rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))

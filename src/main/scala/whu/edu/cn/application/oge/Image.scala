@@ -1860,6 +1860,149 @@ object Image {
     })
     (imageRDDClamped, image._2)
   }
+
+  /**
+   * Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1],
+   * and produces three bands: hue, saturation and value with values in the range [0, 1].
+   *
+   * @param imageRed The Red coverage.
+   * @param imageGreen The Green coverage.
+   * @param imageBlue The Blue coverage.
+   * @return
+   */
+  def rgbToHsv(imageRed: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               imageGreen: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               imageBlue: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val imageRedRDD = imageRed._1.map(t => {
+      (t._1.spaceTimeKey, t._2)
+    })
+    val imageGreenRDD = imageGreen._1.map(t => {
+      (t._1.spaceTimeKey, t._2)
+    })
+    val imageBlueRDD = imageBlue._1.map(t => {
+      (t._1.spaceTimeKey, t._2)
+    })
+    val joinRDD = imageRedRDD.join(imageBlueRDD).join(imageGreenRDD).map(t => {
+      (t._1, (t._2._1._1, t._2._1._2, t._2._2))
+    })
+    val hsvRDD: RDD[List[(SpaceTimeBandKey, Tile)]] = joinRDD.map(t => {
+      val hTile = t._2._1.convert(CellType.fromName("float32")).mutable
+      val sTile = t._2._2.convert(CellType.fromName("float32")).mutable
+      val vTile = t._2._3.convert(CellType.fromName("float32")).mutable
+
+      for (i <- 0 to 255) {
+        for (j <- 0 to 255) {
+          val r: Double = t._2._1.getDouble(i, j) / 255
+          val g: Double = t._2._2.getDouble(i, j) / 255
+          val b: Double = t._2._3.getDouble(i, j) / 255
+          val ma = max(max(r, g), b)
+          val mi = min(min(r, g), b)
+          if (ma == mi) {
+            hTile.setDouble(i, j, 0)
+          }
+          else if (ma == r && g >= b) {
+            hTile.setDouble(i, j, 60 * ((g - b) / (ma - mi)))
+          }
+          else if (ma == r && g < b) {
+            hTile.setDouble(i, j, 60 * ((g - b) / (ma - mi)) + 360)
+          }
+          else if (ma == g) {
+            hTile.setDouble(i, j, 60 * ((b - r) / (ma - mi)) + 120)
+          }
+          else if (ma == b) {
+            hTile.setDouble(i, j, 60 * ((r - g) / (ma - mi)) + 240)
+          }
+          if (ma == 0) {
+            sTile.setDouble(i, j, 0)
+          }
+          else {
+            sTile.setDouble(i, j, (ma - mi) / ma)
+          }
+          vTile.setDouble(i, j, ma)
+        }
+      }
+
+      List((SpaceTimeBandKey(t._1, "Hue"), hTile), (SpaceTimeBandKey(t._1, "Saturation"), sTile), (SpaceTimeBandKey(t._1, "Value"), vTile))
+    })
+    (hsvRDD.flatMap(t => t), TileLayerMetadata(CellType.fromName("float32"), imageRed._2.layout, imageRed._2.extent, imageRed._2.crs, imageRed._2.bounds))
+  }
+
+  /**
+   * Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1],
+   * and produces three bands: red, green and blue with values in the range [0, 255].
+   *
+   * @param imageHue The Hue coverage.
+   * @param imageSaturation The Saturation coverage.
+   * @param imageValue The Value coverage.
+   * @return
+   */
+  def hsvToRgb(imageHue: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               imageSaturation: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               imageValue: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val imageHRDD = imageHue._1.map(t => {
+      (t._1.spaceTimeKey, t._2)
+    })
+    val imageSRDD = imageSaturation._1.map(t => {
+      (t._1.spaceTimeKey, t._2)
+    })
+    val imageVRDD = imageValue._1.map(t => {
+      (t._1.spaceTimeKey, t._2)
+    })
+    val joinRDD = imageHRDD.join(imageSRDD).join(imageVRDD).map(t => {
+      (t._1, (t._2._1._1, t._2._1._2, t._2._2))
+    })
+    val hsvRDD: RDD[List[(SpaceTimeBandKey, Tile)]] = joinRDD.map(t => {
+      val rTile = t._2._1.convert(CellType.fromName("uint8")).mutable
+      val gTile = t._2._2.convert(CellType.fromName("uint8")).mutable
+      val bTile = t._2._3.convert(CellType.fromName("uint8")).mutable
+      for (m <- 0 to 255) {
+        for (n <- 0 to 255) {
+          val h: Double = t._2._1.getDouble(m, n)
+          val s: Double = t._2._2.getDouble(m, n)
+          val v: Double = t._2._3.getDouble(m, n)
+
+          val i: Double = (h / 60) % 6
+          val f: Double = (h / 60) - i
+          val p: Double = v * (1 - s)
+          val q: Double = v * (1 - f * s)
+          val u: Double = v * (1 - (1 - f) * s)
+          if (i == 0) {
+            rTile.set(m, n, (v * 255).toInt)
+            gTile.set(m, n, (u * 255).toInt)
+            bTile.set(m, n, (p * 255).toInt)
+          }
+          else if (i == 1) {
+            rTile.set(m, n, (q * 255).toInt)
+            gTile.set(m, n, (v * 255).toInt)
+            bTile.set(m, n, (p * 255).toInt)
+          }
+          else if (i == 2) {
+            rTile.set(m, n, (p * 255).toInt)
+            gTile.set(m, n, (v * 255).toInt)
+            bTile.set(m, n, (u * 255).toInt)
+          }
+          else if (i == 3) {
+            rTile.set(m, n, (p * 255).toInt)
+            gTile.set(m, n, (q * 255).toInt)
+            bTile.set(m, n, (v * 255).toInt)
+          }
+          else if (i == 4) {
+            rTile.set(m, n, (u * 255).toInt)
+            gTile.set(m, n, (p * 255).toInt)
+            bTile.set(m, n, (v * 255).toInt)
+          }
+          else if (i == 5) {
+            rTile.set(m, n, (v * 255).toInt)
+            gTile.set(m, n, (p * 255).toInt)
+            bTile.set(m, n, (q * 255).toInt)
+          }
+        }
+      }
+      List((SpaceTimeBandKey(t._1, "red"), rTile), (SpaceTimeBandKey(t._1, "green"), gTile), (SpaceTimeBandKey(t._1, "blue"), bTile))
+    })
+    (hsvRDD.flatMap(t => t), TileLayerMetadata(CellType.fromName("uint8"), imageHue._2.layout, imageHue._2.extent, imageHue._2.crs, imageHue._2.bounds))
+  }
+
   /**
    * Casts the input value to a signed 8-bit integer.
    *
