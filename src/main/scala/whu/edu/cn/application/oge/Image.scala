@@ -1578,16 +1578,16 @@ object Image {
           TileLayerRDD(tiled, rasterMetaData)
             .reproject(WebMercator, layoutScheme, geotrellis.raster.resample.Bilinear)
 
-        val myAcc: LongAccumulator = sc.longAccumulator("myAcc")
-        //        println("targetAcc0 = " + myAcc.value)
-        reprojected.map(t => {
-          //          println("targetRows = " + t._2.rows) 256
-          //          println("targetRows = " + t._2.cols) 256
-          myAcc.add(1)
-          t
-        }).collect()
+//        val myAcc: LongAccumulator = sc.longAccumulator("myAcc")
+//        //        println("targetAcc0 = " + myAcc.value)
+//        reprojected.map(t => {
+//          //          println("targetRows = " + t._2.rows) 256
+//          //          println("targetRows = " + t._2.cols) 256
+//          myAcc.add(1)
+//          t
+//        }).collect()
 
-        println("targetNumOfTiles = " + myAcc.value)
+//        println("targetNumOfTiles = " + myAcc.value)
 
         // Create the attributes store that will tell us information about our catalog.
         val attributeStore = FileAttributeStore(outputPath)
