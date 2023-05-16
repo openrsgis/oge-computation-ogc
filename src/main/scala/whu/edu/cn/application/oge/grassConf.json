@@ -1,0 +1,38 @@
+{
+  "r.neighbors":{
+    "name": "r_neighbors",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["size","method"]
+  },
+  "r.buffer":{
+    "name": "r_buffer",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["distances","unit"]
+  },
+  "r.cross":{
+    "name": "r_cross",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["distances","unit"]
+  },
+  "r.patch":{
+    "name": "r_patch",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": []
+  },
+  "r.latlong":{
+    "name": "r_latlong",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["isLongitude"]
+  },
+  "r.test":{
+    "name": "r_test",
+    "inputArgs": ["first","second"],
+    "outputArgs": ["output"],
+    "otherArgs": ["args1","args2","args3"]
+  }
+}
