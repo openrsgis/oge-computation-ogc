@@ -278,6 +278,35 @@ object ImageTrigger {
       case "Coverage.rename" => {
         rdd_list_image += (UUID -> Image.rename(image = rdd_list_image(args("coverage")), name = args("name")))
       }
+      case "Coverage.pow" => {
+        rdd_list_image += (UUID -> Image.pow(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.mini" => {
+        rdd_list_image += (UUID -> Image.mini(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.maxi" => {
+        rdd_list_image += (UUID -> Image.maxi(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+
+      case "Coverage.focalMean"=>{
+        rdd_list_image+=(UUID->Image.focalMean(image=rdd_list_image(args("coverage")),kernelType = args("kernelType"),radius=args("radius").toInt))
+      }
+      case "Coverage.focalMedian" => {
+        rdd_list_image += (UUID -> Image.focalMedian(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMin" => {
+        rdd_list_image += (UUID -> Image.focalMin(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMax" => {
+        rdd_list_image += (UUID -> Image.focalMax(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMode" => {
+        rdd_list_image += (UUID -> Image.focalMode(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.convolve" => {
+        rdd_list_image += (UUID -> Image.convolve(image = rdd_list_image(args("coverage")),kernel = list_kernel(args("kernel"))))
+      }
+
       case "Coverage.projection" => {
         val projection: String = Image.projection(image = rdd_list_image(args("coverage")))
         println(projection)
@@ -288,6 +317,21 @@ object ImageTrigger {
       }
       case "Coverage.resample" => {
         rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
+      }
+      case "Coverage.gradient" => {
+        rdd_list_image += (UUID -> Image.gradient(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.clip"=>{
+        rdd_list_image+=(UUID->Image.clip(image=rdd_list_image(args("coverage")),geom = rdd_list_feature(args("geom"))))
+      }
+      case "Coverage.clamp"=>{
+        rdd_list_image += (UUID -> Image.clamp(image = rdd_list_image(args("coverage")),low=args("low").toInt,high=args("high").toInt))
+      }
+      case "Coverage.rgbToHsv"=> {
+        rdd_list_image += (UUID -> Image.rgbToHsv(imageRed = rdd_list_image(args("coverageRed")), imageGreen = rdd_list_image(args("coverageGreen")), imageBlue = rdd_list_image(args("coverageBlue"))))
+      }
+      case "Coverage.hsvToRgb"=> {
+        rdd_list_image += (UUID -> Image.hsvToRgb(imageHue = rdd_list_image(args("coverageHue")), imageSaturation = rdd_list_image(args("coverageSaturation")), imageValue = rdd_list_image(args("coverageValue"))))
       }
 
       case "Coverage.slope" => {

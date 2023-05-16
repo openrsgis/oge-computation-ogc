@@ -2138,7 +2138,7 @@
       }
     ]
   },
-  "Coverage.min": {
+  "Coverage.mini": {
     "description": "Selects the minimum of the first and second values for each matched pair of bands in image1 and image2.",
     "returns": "Coverage",
     "args": [
@@ -2154,7 +2154,7 @@
       }
     ]
   },
-  "Coverage.max": {
+  "Coverage.maxi": {
     "description": "Selects the maximum of the first and second values for each matched pair of bands in image1 and image2.",
     "returns": "Coverage",
     "args": [
@@ -2384,6 +2384,96 @@
         "name": "mode",
         "type": "String",
         "description": "The interpolation mode to use"
+      }
+    ]
+  },
+  "Coverage.gradient": {
+    "description": "Calculates the gradient.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the gradient."
+      }
+    ]
+  },
+  "Coverage.clip": {
+    "description": "Clip the raster with the geometry",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to clip."
+      },
+      {
+        "name": "geom",
+        "type": "Geometry",
+        "description": "The geometry used to clip."
+      }
+    ]
+  },
+  "Coverage.clamp": {
+    "description": "Clamp the raster between low and high",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to clamp."
+      },
+      {
+        "name": "low",
+        "type": "Int",
+        "description": "The low value."
+      },
+      {
+        "name": "high",
+        "type": "Int",
+        "description": "The high value."
+      }
+    ]
+  },
+  "Coverage.rgbToHsv": {
+    "description": "Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1], and produces three bands: hue, saturation and value with values in the range [0, 1].",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageRed",
+        "type": "Coverage",
+        "description": "The Red coverage."
+      },
+      {
+        "name": "coverageGreen",
+        "type": "Coverage",
+        "description": "The Green coverage."
+      },
+      {
+        "name": "coverageBlue",
+        "type": "Coverage",
+        "description": "The Blue coverage."
+      }
+    ]
+  },
+  "Coverage.hsvToRgb": {
+    "description": "Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1], and produces three bands: red, green and blue with values in the range [0, 255].",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageHue",
+        "type": "Coverage",
+        "description": "The Hue coverage."
+      },
+      {
+        "name": "coverageSaturation",
+        "type": "Coverage",
+        "description": "The Saturation coverage."
+      },
+      {
+        "name": "coverageValue",
+        "type": "Coverage",
+        "description": "The Value coverage."
       }
     ]
   },
