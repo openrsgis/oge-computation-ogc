@@ -28,7 +28,6 @@ import whu.edu.cn.application.oge.Image.checkProjReso
 
 import java.time.Instant
 import scala.util.control.Breaks.{break, breakable}
-//import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
 import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
 import whu.edu.cn.core.entity

@@ -42,41 +42,6 @@
 <!--            <version>${scala.version}</version>-->
 <!--        </dependency>-->
         <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_${scala.compat.version}</artifactId>
-            <version>${akka.actor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-stream_${scala.compat.version}</artifactId>
-            <version>${akka.actor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-http-core_${scala.compat.version}</artifactId>
-            <version>${akka.http.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-http_${scala.compat.version}</artifactId>
-            <version>${akka.http.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-http-spray-json_${scala.compat.version}</artifactId>
-            <version>${akka.http.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.megard</groupId>
-            <artifactId>akka-http-cors_${scala.compat.version}</artifactId>
-            <version>0.4.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpasyncclient</artifactId>
-            <version>4.1.5</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.compat.version}</artifactId>
             <version>2.4.3</version>
@@ -105,8 +70,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.5.2</version>
-<!--            <version>7.0.2</version>-->
+            <version>8.1.0</version>
         </dependency>
         <dependency>
             <groupId>io.sgr</groupId>
@@ -122,11 +86,6 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>1.7.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.36</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -195,24 +154,18 @@
             <version>${geotools.version}</version>
         </dependency>
         <!--geotools-->
-        <dependency>
-            <groupId>org.apache.zeppelin</groupId>
-            <artifactId>zeppelin-client</artifactId>
-            <version>0.10.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.zeppelin</groupId>
-            <artifactId>spark-scala-2.11</artifactId>
-            <version>0.10.1</version>
-        </dependency>
-
-
 
         <!--网络工具包-->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.32</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpasyncclient</artifactId>
+            <version>4.1.5</version>
         </dependency>
 
         <dependency>
