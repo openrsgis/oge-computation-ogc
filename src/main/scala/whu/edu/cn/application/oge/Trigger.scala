@@ -8,7 +8,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-import whu.edu.cn.application.oge.ImageTrigger.{fileName, originTaskID, workID, workTaskJSON, zIndexStrArray}
+import whu.edu.cn.application.oge.ImageTrigger.{fileName, originTaskID, rdd_list_image, workID, workTaskJSON, zIndexStrArray}
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
@@ -51,6 +51,9 @@ object Trigger {
 
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
     name match {
+
+
+      // ImageTrigger
       case "classificationDLCUG" => {
         rdd_list_image += (
           UUID -> Image.classificationDLCUG(
@@ -60,11 +63,15 @@ object Trigger {
           )
       }
 
+
       case "map" => {
         level = argOrNot(args, "level").toInt
         windowRange = argOrNot(args, "windowRange")
       }
       case "Service.getCoverageCollection" => {
+        imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+      }
+      case "Service.getCoverage" => {
         imageLoad += (UUID -> (argOrNot(args, "productID"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
       }
       case "Filter.equals" => {
@@ -299,7 +306,7 @@ object Trigger {
         rdd_list_image += (UUID -> Image.neq(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
       }
       case "Coverage.signum" => {
-        rdd_list_image += (UUID -> Image.abs(image = rdd_list_image(args("coverage"))))
+        rdd_list_image += (UUID -> Image.signum(image = rdd_list_image(args("coverage"))))
       }
       case "Coverage.bandTypes" => {
         val bandTypes: immutable.Map[String, String] = Image.bandTypes(image = rdd_list_image(args("coverage")))
@@ -309,6 +316,59 @@ object Trigger {
       case "Coverage.rename" => {
         rdd_list_image += (UUID -> Image.rename(image = rdd_list_image(args("coverage")), name = args("name")))
       }
+      case "Coverage.pow" => {
+        rdd_list_image += (UUID -> Image.pow(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.mini" => {
+        rdd_list_image += (UUID -> Image.mini(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.maxi" => {
+        rdd_list_image += (UUID -> Image.maxi(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
+      case "Coverage.focalMean" => {
+        rdd_list_image += (UUID -> Image.focalMean(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMedian" => {
+        rdd_list_image += (UUID -> Image.focalMedian(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMin" => {
+        rdd_list_image += (UUID -> Image.focalMin(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMax" => {
+        rdd_list_image += (UUID -> Image.focalMax(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.focalMode" => {
+        rdd_list_image += (UUID -> Image.focalMode(image = rdd_list_image(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      }
+      case "Coverage.convolve" => {
+        rdd_list_image += (UUID -> Image.convolve(image = rdd_list_image(args("coverage")), kernel = list_kernel(args("kernel"))))
+      }
+      case "Coverage.projection" => {
+        val projection: String = Image.projection(image = rdd_list_image(args("coverage")))
+        println(projection)
+      }
+      case "Coverage.histogram" => {
+        val hist = Image.histogram(image = rdd_list_image(args("coverage")))
+        println(hist)
+      }
+      case "Coverage.resample" => {
+        rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
+      }
+      case "Coverage.gradient" => {
+        rdd_list_image += (UUID -> Image.gradient(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.clamp" => {
+        rdd_list_image += (UUID -> Image.clamp(image = rdd_list_image(args("coverage")), low = args("low").toInt, high = args("high").toInt))
+      }
+      case "Coverage.rgbToHsv" => {
+        rdd_list_image += (UUID -> Image.rgbToHsv(imageRed = rdd_list_image(args("coverageRed")), imageGreen = rdd_list_image(args("coverageGreen")), imageBlue = rdd_list_image(args("coverageBlue"))))
+      }
+      case "Coverage.hsvToRgb" => {
+        rdd_list_image += (UUID -> Image.hsvToRgb(imageHue = rdd_list_image(args("coverageHue")), imageSaturation = rdd_list_image(args("coverageSaturation")), imageValue = rdd_list_image(args("coverageValue"))))
+      }
+
+
+
       case "Coverage.addStyles" => {
         if (oorB == 0) {
           Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
@@ -863,7 +923,7 @@ object Trigger {
       windowRange = map.getString("spatialRange") //1
 
 
-      //TODO   通过on the fly的范围1和层级2找到该层级包含的所有前端瓦片
+      // 通过on the fly的范围1和层级2找到该层级包含的所有前端瓦片
       println(windowRange)
 
       val lonLatsOfWindow: Array[Double] = windowRange

@@ -2400,6 +2400,13 @@ object Image {
       )
 
 
+      // 清空list
+      Trigger.rdd_list_image.clear()
+      Trigger.rdd_list_feature.clear()
+      Trigger.rdd_list_table.clear()
+      Trigger.rdd_list_feature_API.clear()
+      Trigger.rdd_list_cube.clear()
+      Trigger.rdd_list_image_waitingForMosaic.clear()
 
 
 
