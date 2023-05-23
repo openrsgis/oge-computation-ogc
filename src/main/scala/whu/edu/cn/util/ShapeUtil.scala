@@ -157,7 +157,7 @@ object ShapeUtil {
     val sfSource = store.getFeatureSource
     val sfIter = sfSource.getFeatures.features
     // 从ShapeFile文件中遍历每一个Feature，然后将Feature转为GeoJSON字符串
-    val preRdd = ArrayBuffer.empty[(String, (Geometry, Map[String, Any]))]
+    val preRdd: ArrayBuffer[(String, (Geometry, Map[String, Any]))] = ArrayBuffer.empty[(String, (Geometry, Map[String, Any]))]
     while ( {
       sfIter.hasNext
     }) {
@@ -176,7 +176,7 @@ object ShapeUtil {
         val element = properties.getString(key)
         props += (key -> element)
       }
-      preRdd += (UUID.randomUUID().toString, Tuple2(geom, props))
+      preRdd += Tuple2(UUID.randomUUID().toString, Tuple2(geom, props))
     }
     sc.makeRDD(preRdd)
   }
