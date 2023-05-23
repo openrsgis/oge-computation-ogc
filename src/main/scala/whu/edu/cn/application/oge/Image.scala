@@ -2400,6 +2400,7 @@ object Image {
       )
 
 
+      // 清空list
       Trigger.rdd_list_image.clear()
       Trigger.rdd_list_feature.clear()
       Trigger.rdd_list_table.clear()
@@ -2408,10 +2409,6 @@ object Image {
       Trigger.rdd_list_image_waitingForMosaic.clear()
 
 
-      ImageTrigger.rdd_list_image.clear()
-      ImageTrigger.rdd_list_table.clear()
-      ImageTrigger.rdd_list_image_waitingForMosaic.clear()
-      ImageTrigger.rdd_list_feature_API.clear()
 
 
 
