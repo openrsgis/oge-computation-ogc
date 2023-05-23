@@ -973,7 +973,7 @@ object Trigger {
     println("***********************************************************")
 
 
-    val a = JsonToArg.trans(jsonObject)
+    val a = JsonToArgLocal.trans(jsonObject)
     println(a.size)
     a.foreach(println(_))
 

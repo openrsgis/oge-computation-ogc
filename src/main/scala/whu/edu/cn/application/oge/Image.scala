@@ -2359,12 +2359,6 @@ object Image {
 
         val myAcc: LongAccumulator = sc.longAccumulator("myAcc")
         //        println("targetAcc0 = " + myAcc.value)
-        reprojected.map(t => {
-          //          println("targetRows = " + t._2.rows) 256
-          //          println("targetRows = " + t._2.cols) 256
-          myAcc.add(1)
-          t
-        }).collect()
 
         println("targetNumOfTiles = " + myAcc.value)
 
