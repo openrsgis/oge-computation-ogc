@@ -9,6 +9,7 @@ import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.render.{ColorMap, Exact}
 import geotrellis.raster.resample.{Bilinear, NearestNeighbor, PointResampleMethod}
 import geotrellis.raster.{ByteArrayTile, ByteCellType, ByteConstantNoDataCellType, CellType, ColorRamp, FloatArrayTile, FloatCellType, Histogram, IntArrayTile, RGBA, Raster, TargetCell, Tile, TileLayout}
+import io.minio.MinioClient
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
@@ -28,10 +29,11 @@ import whu.edu.cn.application.oge.Image.checkProjReso
 
 import java.time.Instant
 import scala.util.control.Breaks.{break, breakable}
-import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
+import COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
 import whu.edu.cn.core.entity
 import whu.edu.cn.core.entity.SpaceTimeBandKey
+import whu.edu.cn.util.SystemConstants.{MINIO_KEY, MINIO_PWD, MINIO_URL}
 import whu.edu.cn.util.TileMosaicImage.tileMosaic
 import whu.edu.cn.util.{HttpUtil, JedisConnectionFactory, PostgresqlUtil, SystemConstants, ZCurveUtil}
 //import whu.edu.cn.util.TileMosaicImage.tileMosaic
@@ -50,6 +52,9 @@ import scala.language.postfixOps
 import scala.math._
 
 object Image {
+
+  lazy val minioClient: MinioClient = MinioClient.builder.endpoint(MINIO_URL).credentials(MINIO_KEY, MINIO_PWD).build
+
 
   /**
    * load the images
@@ -144,9 +149,12 @@ object Image {
 
 
       jedis.close()
+
+
+
       val queryExtentRDD: RDD[Array[Double]] = sc.makeRDD(queryExtent)
 
-      val tileDataTuple: ListBuffer[(String, String, String, String, String, String,
+      val tileDataTuple: RDD[(String, String, String, String, String, String,
 
         Array[Double])] = queryExtentRDD.map(extent => {
         val minX: Double = extent(0)
@@ -166,16 +174,15 @@ object Image {
                 metaData._4, metaData._5, metaData._6,
                 extent)
           ) // 把query得到的元数据集合 和之前 与元数据集合对应的查询范围 合并到一个元组中
-      }).persist() // 暂存
-        .reduce(_ ++ _) // 合并成大数组
+      }).flatMap(t=>t) // 合并成大数组
       // 元数据应当是所有范围交集并去重后的集合，要合并
       // 每一组元数据都对应一个唯一的矩形范围
 
 
-      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(tileDataTuple)
+      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = tileDataTuple
         .map(t => { // 合并所有的元数据（追加了范围）
           val rawTiles: util.ArrayList[RawTile] = {
-            tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7)
+            tileQuery(minioClient,level, t._1, t._2, t._3, t._4, t._5, t._6, productName, t._7)
           } //TODO
           println(rawTiles.size() + "aaaaaaaaafdadagadgas")
           // 根据元数据和范围查询后端瓦片
@@ -222,7 +229,7 @@ object Image {
 
       val imagePathRdd: RDD[(String, String, String, String, String, String)] = sc.parallelize(metaData, metaData.length)
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
-        val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
+        val tiles = tileQuery(minioClient,level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
         if (tiles.size() > 0) asScalaBuffer(tiles)
         else mutable.Buffer.empty[RawTile]
       }).persist() // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
@@ -262,7 +269,7 @@ object Image {
     val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
     val tileRDD = tileRDDReP.map(t => {
-      val tile = getTileBuf(t)
+      val tile = getTileBuf(minioClient,t)
       val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       val phenomenonTime = sdf.parse(tile.getTime).getTime
       val measurement = tile.getMeasurement
@@ -305,7 +312,7 @@ object Image {
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     val rawTileRDD = tileRDDReP.map(t => {
-      val tile = getTileBuf(t)
+      val tile = getTileBuf(minioClient,t)
       t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDataType))
       t
     })

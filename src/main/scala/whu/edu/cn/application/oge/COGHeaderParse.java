@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import static whu.edu.cn.util.SystemConstants.*;
 
 
-public class COGHeaderParseOld {
+public class COGHeaderParse {
     public static int nearestZoom = 0;
     private static final int[] TypeArray = {//"???",
             0,//
@@ -57,7 +57,8 @@ public class COGHeaderParseOld {
      * @param bandCounts   多波段
      * @return 后端瓦片
      */
-    public static ArrayList<RawTile> tileQuery(int level, String in_path,
+    public static ArrayList<RawTile> tileQuery(MinioClient minioClient,
+                                               int level, String in_path,
                                                String time, String crs, String measurement,
                                                String dType, String resolution, String productName,
                                                double[] query_extent,
@@ -74,10 +75,6 @@ public class COGHeaderParseOld {
         final ArrayList<ArrayList<ArrayList<Integer>>> tileOffsets = new ArrayList<>();
 
         try {
-            MinioClient minioClient = MinioClient.builder()
-                    .endpoint(MINIO_URL)
-                    .credentials(MINIO_KEY, MINIO_PWD)
-                    .build();
             // 获取指定offset和length的"myobject"的输入流。
             InputStream inputStream = minioClient.getObject(
                     GetObjectArgs.builder()
@@ -118,12 +115,9 @@ public class COGHeaderParseOld {
      * @param tile tile相关数据
      * @return
      */
-    public static RawTile getTileBuf(RawTile tile) {
+    public static RawTile getTileBuf( MinioClient minioClient, RawTile tile) {
         try {
-            MinioClient minioClient = MinioClient.builder()
-                    .endpoint(MINIO_URL)
-                    .credentials(MINIO_KEY, MINIO_PWD)
-                    .build();
+
             // 获取指定offset和length的"myobject"的输入流。
 
 
@@ -135,7 +129,7 @@ public class COGHeaderParseOld {
                             .bucket("oge")
                             .object(tile.getPath())
                             .offset(tile.getOffset()[0])
-                            .length((long)length).build()
+                            .length((long) length).build()
             );
 
             ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -225,7 +219,7 @@ public class COGHeaderParseOld {
             System.out.println("tileOffsets.size() = " + tileOffsets.size()); // 后端瓦片数
 
             // 正常情况下的换算关系
-            COGHeaderParseOld.nearestZoom = ImageTrigger.level();
+            COGHeaderParse.nearestZoom = ImageTrigger.level();
             //TODO 这里我们认为数据库中金字塔的第0层对应了前端 zoom 的第10级
 //                        0 10
 //                        1 9
@@ -237,13 +231,13 @@ public class COGHeaderParseOld {
                 level = tileOffsets.size() - 1;
                 assert maxZoom > level;
 
-                COGHeaderParseOld.nearestZoom = maxZoom - level;
+                COGHeaderParse.nearestZoom = maxZoom - level;
 
                 // throw new RuntimeException("Level is too small!");
             }
             if (level < 0) {
                 level = 0;
-                COGHeaderParseOld.nearestZoom = maxZoom;
+                COGHeaderParse.nearestZoom = maxZoom;
 
                 // throw new RuntimeException("Level is too big!");
             }
