@@ -1,12 +1,15 @@
 package whu.edu.cn.application.oge;
-//
+
 
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.errors.*;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
-import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.algorithm.MinimumDiameter;
+import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.impl.CoordinateArraySequence;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.crs.ProjectedCRS;
@@ -25,7 +28,7 @@ import static whu.edu.cn.util.SystemConstants.*;
 
 
 public class COGHeaderParse {
-    public static int nearestZoom = 0;
+    public static int tileDifference = 0;
     private static final int[] TypeArray = {//"???",
             0,//
             1,// byte //8-bit unsigned integer
@@ -45,27 +48,31 @@ public class COGHeaderParse {
     /**
      * 根据元数据查询 tile
      *
-     * @param level        JSON中的level字段，前端层级
-     * @param in_path      获取tile的路径
+     * @param level         JSON中的level字段，前端层级
+     * @param in_path       获取tile的路径
      * @param time
      * @param crs
-     * @param measurement  影像的测量方式
+     * @param measurement   影像的测量方式
      * @param dType
      * @param resolution
      * @param productName
-     * @param query_extent 查询瓦片的矩形范围
-     * @param bandCounts   多波段
+     * @param queryGeometry 查询瓦片的矩形范围
+     * @param bandCounts    多波段
      * @return 后端瓦片
      */
     public static ArrayList<RawTile> tileQuery(MinioClient minioClient,
                                                int level, String in_path,
                                                String time, String crs, String measurement,
                                                String dType, String resolution, String productName,
-                                               double[] query_extent,
+                                               Geometry queryGeometry,
                                                int... bandCounts) throws IOException {
         int bandCount = 1;
-        if (bandCounts.length > 1) throw new RuntimeException("bandCount 参数最多传一个");
-        if (bandCounts.length == 1) bandCount = bandCounts[0];
+        if (bandCounts.length > 1) {
+            throw new RuntimeException("bandCount 参数最多传一个");
+        }
+        if (bandCounts.length == 1) {
+            bandCount = bandCounts[0];
+        }
 
         final int[] imageSize = new int[]{0, 0}; // imageLength & imageWidth
 
@@ -98,7 +105,7 @@ public class COGHeaderParse {
             parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount);
             System.out.println(cell);
 
-            return getTiles(level, query_extent, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount);
+            return getTiles(level, queryGeometry, crs, in_path, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount);
 
 
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
@@ -115,15 +122,9 @@ public class COGHeaderParse {
      * @param tile tile相关数据
      * @return
      */
-    public static RawTile getTileBuf( MinioClient minioClient, RawTile tile) {
+    public static RawTile getTileBuf(MinioClient minioClient, RawTile tile) {
         try {
-
-            // 获取指定offset和length的"myobject"的输入流。
-
-
-            int length = Math.toIntExact(Math.abs(tile.getOffset()[1] - tile.getOffset()[0]));
-
-
+            int length = Math.toIntExact(tile.getOffset()[1]);
             InputStream inputStream = minioClient.getObject(
                     GetObjectArgs.builder()
                             .bucket("oge")
@@ -134,7 +135,7 @@ public class COGHeaderParse {
 
             ByteArrayOutputStream outStream = new ByteArrayOutputStream();
             byte[] buffer = new byte[length];
-            int len = -1;
+            int len;
             while ((len = inputStream.read(buffer)) != -1) {
                 outStream.write(buffer, 0, len);
             }
@@ -151,18 +152,18 @@ public class COGHeaderParse {
     /**
      * 获取 Tile 相关的一些数据，不包含tile影像本体
      *
-     * @param l            json里的 level 字段，表征前端 Zoom
-     * @param query_extent
+     * @param level         json里的 level 字段，表征前端 Zoom
+     * @param queryGeometry
      * @param crs
      * @param in_path
      * @param time
      * @param measurement
      * @param dType
-     * @param resolution   数据库中的原始影像分辨率
+     * @param resolution    数据库中的原始影像分辨率
      * @param productName
      * @return
      */
-    private static ArrayList<RawTile> getTiles(int l, double[] query_extent,
+    private static ArrayList<RawTile> getTiles(int level, Geometry queryGeometry,
                                                String crs, String in_path, String time,
                                                String measurement, String dType,
                                                String resolution, String productName,
@@ -172,8 +173,8 @@ public class COGHeaderParse {
                                                final ArrayList<ArrayList<ArrayList<Integer>>> tileByteCounts,
                                                int bandCount) {
 
-        int level;
-        double resolutionTMS = 0.0;
+        int tileLevel;
+        double resolutionTMS;
         double[] resolutionTMSArray = {
                 156543.033928, /* 地图 zoom 为0时的分辨率，以下按zoom递增 */
                 78271.516964,
@@ -199,54 +200,29 @@ public class COGHeaderParse {
         };
         double resolutionOrigin = Double.parseDouble(resolution);
         System.out.println("resolutionOrigin = " + resolutionOrigin);//460
-        if (l == -1) {
-            level = 0;
+        if (level == -1) {
+            tileLevel = 0;
         } else {
-            resolutionTMS = resolutionTMSArray[l];
-            System.out.println(l);
-            level = (int) Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2)) + 1;
-            int maxZoom = 0;
-            for (int i = 0; i < resolutionTMSArray.length; i++) {
-                if ((int) Math.ceil(Math.log(resolutionTMSArray[i] / resolutionOrigin) / Math.log(2)) + 1 == 0) {
-                    maxZoom = i;
-                    break;
-                }
-            }
-
-            System.out.println("maxZoom = " + maxZoom);
-
-            System.out.println("java.level = " + level);
-            System.out.println("tileOffsets.size() = " + tileOffsets.size()); // 后端瓦片数
-
-            // 正常情况下的换算关系
-            COGHeaderParse.nearestZoom = ImageTrigger.level();
-            //TODO 这里我们认为数据库中金字塔的第0层对应了前端 zoom 的第10级
-//                        0 10
-//                        1 9
-//                        2 8
-//                        ...
-//                        6 4
-
-            if (level > tileOffsets.size() - 1) {
-                level = tileOffsets.size() - 1;
-                assert maxZoom > level;
-
-                COGHeaderParse.nearestZoom = maxZoom - level;
-
-                // throw new RuntimeException("Level is too small!");
-            }
-            if (level < 0) {
-                level = 0;
-                COGHeaderParse.nearestZoom = maxZoom;
-
-                // throw new RuntimeException("Level is too big!");
+            resolutionTMS = resolutionTMSArray[level];
+            System.out.println("level = " + level);
+            tileLevel = (int) Math.floor(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2)) + 1;
+            System.out.println("tileLevel = " + tileLevel);
+            if (tileLevel > tileOffsets.size()) {
+                tileLevel = tileOffsets.size() - 1;
+                tileDifference = tileLevel - (tileOffsets.size() - 1);
+            } else if (tileLevel < 0) {
+                tileLevel = 0;
+                tileDifference = tileLevel;
             }
         }
 
-        double lower_left_long = query_extent[0];
-        double lower_left_lat = query_extent[1];
-        double upper_right_long = query_extent[2];
-        double upper_right_lat = query_extent[3];
+        MinimumDiameter minimumDiameter = new MinimumDiameter(queryGeometry);
+        Geometry minimumRectangle = minimumDiameter.getMinimumRectangle();
+        Envelope envelope = minimumRectangle.getEnvelopeInternal();
+        double lower_left_long = envelope.getMinX();
+        double lower_left_lat = envelope.getMinY();
+        double upper_right_long = envelope.getMaxX();
+        double upper_right_lat = envelope.getMaxY();
 
         Coordinate pointLower = new Coordinate();
         Coordinate pointUpper = new Coordinate();
@@ -270,16 +246,14 @@ public class COGHeaderParse {
                 if (crsTarget instanceof ProjectedCRS) {
                     flag = true;
                 }
-
                 MathTransform transform = CRS.findMathTransform(crsSource, crsTarget);
                 JTS.transform(pointLower, pointLowerReprojected, transform);
                 JTS.transform(pointUpper, pointUpperReprojected, transform);
             }
         } catch (FactoryException |
-                 TransformException e) {
+                TransformException e) {
             e.printStackTrace();
         }
-
         double[] pMin = new double[2];
         double[] pMax = new double[2];
         pMin[0] = pointLowerReprojected.getX();
@@ -305,19 +279,6 @@ public class COGHeaderParse {
 
         ArrayList<RawTile> tile_srch = new ArrayList<>();
 
-        //int l = 0;
-/*        if ("MOD13Q1_061".equals(productName)) {
-            flagReader = true;
-        }
-        if ("LJ01_L2".equals(productName)) {
-            flagReader = true;
-        }
-        if ("ASTER_GDEM_DEM30".equals(productName)) {
-            flagReader = true;
-        }
-        if ("GPM_Precipitation_China_Month".equals(productName)) {
-            flagReader = true;
-        }*/
         switch (productName) {
             case "MOD13Q1_061":
             case "LJ01_L2":
@@ -327,16 +288,7 @@ public class COGHeaderParse {
                 break;
             default:
                 break;
-
         }
-
-
-        //if ("LC08_L1TP_C01_T1".equals(productName)) {
-        //    l = 2;
-        //}
-        //if ("LE07_L1TP_C01_T1".equals(productName)) {
-        //    l = 0;
-        //}
 
         //计算目标影像的左上和右下图上坐标
         int p_left;
@@ -344,21 +296,20 @@ public class COGHeaderParse {
         int p_lower;
         int p_upper;
         if (flag) {
-            p_left = (int) ((pMin[0] - xMin) / (256 * w_src * (int) Math.pow(2, level)));
-            p_right = (int) ((pMax[0] - xMin) / (256 * w_src * (int) Math.pow(2, level)));
-            p_lower = (int) ((yMax - pMax[1]) / (256 * h_src * (int) Math.pow(2, level)));
-            p_upper = (int) ((yMax - pMin[1]) / (256 * h_src * (int) Math.pow(2, level)));
+            p_left = (int) ((pMin[0] - xMin) / (256 * w_src * (int) Math.pow(2, tileLevel)));
+            p_right = (int) ((pMax[0] - xMin) / (256 * w_src * (int) Math.pow(2, tileLevel)));
+            p_lower = (int) ((yMax - pMax[1]) / (256 * h_src * (int) Math.pow(2, tileLevel)));
+            p_upper = (int) ((yMax - pMin[1]) / (256 * h_src * (int) Math.pow(2, tileLevel)));
         } else {
-            p_lower = (int) ((pMin[1] - yMax) / (256 * w_src * (int) Math.pow(2, level)));
-            p_upper = (int) ((pMax[1] - yMax) / (256 * w_src * (int) Math.pow(2, level)));
-            p_left = (int) ((xMin - pMax[0]) / (256 * h_src * (int) Math.pow(2, level)));
-            p_right = (int) ((xMin - pMin[0]) / (256 * h_src * (int) Math.pow(2, level)));
+            p_lower = (int) ((pMin[1] - yMax) / (256 * w_src * (int) Math.pow(2, tileLevel)));
+            p_upper = (int) ((pMax[1] - yMax) / (256 * w_src * (int) Math.pow(2, tileLevel)));
+            p_left = (int) ((xMin - pMax[0]) / (256 * h_src * (int) Math.pow(2, tileLevel)));
+            p_right = (int) ((xMin - pMin[0]) / (256 * h_src * (int) Math.pow(2, tileLevel)));
         }
 
-
-        int[] pCoordinate = null;
-        double[] srcSize = null;
-        double[] pRange = null;
+        int[] pCoordinate;
+        double[] srcSize;
+        double[] pRange;
         if (!flagReader) {
             pCoordinate = new int[]{p_lower, p_upper, p_left, p_right};
             srcSize = new double[]{w_src, h_src};
@@ -371,41 +322,53 @@ public class COGHeaderParse {
 
 
         for (int i = (Math.max(pCoordinate[0], 0));
-             i <= (pCoordinate[1] >= tileOffsets.get(level).size() / bandCount ?
-                     tileOffsets.get(level).size() / bandCount - 1 : pCoordinate[1]);
+             i <= (pCoordinate[1] >= tileOffsets.get(tileLevel).size() / bandCount ?
+                     tileOffsets.get(tileLevel).size() / bandCount - 1 : pCoordinate[1]);
              i++
         ) {
             for (int j = (Math.max(pCoordinate[2], 0));
-                 j <= (pCoordinate[3] >= tileOffsets.get(level).get(i).size() ?
-                         tileOffsets.get(level).get(i).size() - 1 : pCoordinate[3]);
+                 j <= (pCoordinate[3] >= tileOffsets.get(tileLevel).get(i).size() ?
+                         tileOffsets.get(tileLevel).get(i).size() - 1 : pCoordinate[3]);
                  j++) {
                 for (int k = 0; k < bandCount; k++) {
-                    RawTile t = new RawTile();
-                    t.setOffset(tileOffsets.get(level).get(i).get(j),
-                            tileByteCounts.get(level).get(i).get(j) + t.getOffset()[0]);
-                    t.setLngLatBottomLeft(
-                            j * (256 * srcSize[0] * Math.pow(2, level)) + pRange[0],
-                            (i + 1) * (256 * -srcSize[1] * Math.pow(2, level)) + pRange[1]
-                    );
-                    t.setLngLatUpperRight(
-                            (j + 1) * (256 * srcSize[0] * Math.pow(2, level)) + pRange[0],
-                            i * (256 * -srcSize[1] * Math.pow(2, level)) + pRange[1]
-                    );
-                    t.setRotation(geoTrans.get(5));
-                    t.setResolution(w_src * Math.pow(2, level));
-                    t.setRowCol(i, j);
-                    t.setLevel(level);
-                    t.setPath(in_path);
-                    t.setTime(time);
-                    if (bandCount == 1) {
-                        t.setMeasurement(measurement);
-                    } else {
-                        t.setMeasurement(String.valueOf(bandCount)); //TODO
+                    Coordinate minCoordinate = new Coordinate(j * (256 * srcSize[0] * Math.pow(2, tileLevel)) + pRange[0], (i + 1) * (256 * -srcSize[1] * Math.pow(2, tileLevel)) + pRange[1]); // 矩形左下角经纬度
+                    Coordinate maxCoordinate = new Coordinate((j + 1) * (256 * srcSize[0] * Math.pow(2, tileLevel)) + pRange[0], i * (256 * -srcSize[1] * Math.pow(2, tileLevel)) + pRange[1]); // 矩形右上角经纬度
+                    Coordinate[] coordinates = new Coordinate[]{
+                            minCoordinate,
+                            new Coordinate(maxCoordinate.x, minCoordinate.y),
+                            maxCoordinate,
+                            new Coordinate(minCoordinate.x, maxCoordinate.y),
+                            minCoordinate
+                    };
+                    Polygon tilePolygon = new GeometryFactory().createPolygon(new CoordinateArraySequence(coordinates));
+                    if (tilePolygon.intersects(queryGeometry)) {
+                        RawTile t = new RawTile();
+                        t.setOffset(tileOffsets.get(tileLevel).get(i).get(j),
+                                tileByteCounts.get(tileLevel).get(i).get(j) + t.getOffset()[0]);
+                        t.setLngLatBottomLeft(
+                                j * (256 * srcSize[0] * Math.pow(2, tileLevel)) + pRange[0],
+                                (i + 1) * (256 * -srcSize[1] * Math.pow(2, tileLevel)) + pRange[1]
+                        );
+                        t.setLngLatUpperRight(
+                                (j + 1) * (256 * srcSize[0] * Math.pow(2, tileLevel)) + pRange[0],
+                                i * (256 * -srcSize[1] * Math.pow(2, tileLevel)) + pRange[1]
+                        );
+                        t.setRotation(geoTrans.get(5));
+                        t.setResolution(w_src * Math.pow(2, tileLevel));
+                        t.setRowCol(i, j);
+                        t.setLevel(tileLevel);
+                        t.setPath(in_path);
+                        t.setTime(time);
+                        if (bandCount == 1) {
+                            t.setMeasurement(measurement);
+                        } else {
+                            t.setMeasurement(String.valueOf(bandCount)); //TODO
+                        }
+                        t.setCrs(Integer.parseInt(crs.replace("EPSG:", "")));
+                        t.setDataType(dType);
+                        t.setProduct(productName);
+                        tile_srch.add(t);
                     }
-                    t.setCrs(Integer.parseInt(crs.replace("EPSG:", "")));
-                    t.setDataType(dType);
-                    t.setProduct(productName);
-                    tile_srch.add(t);
                 }
             }
         }
@@ -565,7 +528,7 @@ public class COGHeaderParse {
 
         ArrayList<ArrayList<Integer>> StripOffsets = new ArrayList<>();
 
-        for (int k = 0; k < bandCount; k++)
+        for (int k = 0; k < bandCount; k++) {
             for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
                 ArrayList<Integer> Offsets = new ArrayList<>();
                 for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
@@ -575,6 +538,7 @@ public class COGHeaderParse {
                 }
                 StripOffsets.add(Offsets);
             }
+        }
         tileOffsets.add(StripOffsets);
     }
 
@@ -583,7 +547,7 @@ public class COGHeaderParse {
                                           final int[] imageSize, int bandCount) {
         ArrayList<ArrayList<Integer>> stripBytes = new ArrayList<>();
 
-        for (int k = 0; k < bandCount; k++)
+        for (int k = 0; k < bandCount; k++) {
             for (int i = 0; i < (imageSize[0] / 256) + 1; i++) {
                 ArrayList<Integer> tileBytes = new ArrayList<>();
                 for (int j = 0; j < (imageSize[1] / 256) + 1; j++) {
@@ -593,6 +557,7 @@ public class COGHeaderParse {
                 }
                 stripBytes.add(tileBytes);
             }
+        }
         tileByteCounts.add(stripBytes);
     }
 
