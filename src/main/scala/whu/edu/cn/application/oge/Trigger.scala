@@ -8,7 +8,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-import whu.edu.cn.application.oge.ImageTrigger.{fileName, originTaskID, rdd_list_image, workID, workTaskJSON, zIndexStrArray}
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
@@ -16,7 +15,7 @@ import whu.edu.cn.util.{JedisConnectionFactory, ZCurveUtil}
 
 import java.io.File
 import scala.collection.mutable.Map
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.language.postfixOps
 
@@ -39,6 +38,13 @@ object Trigger {
   var layerID: Int = 0
   var fileName: String = _
   var oorB: Int = _
+  var workID: String = _
+  /* 此次计算工作的唯一标识 */
+  var workTaskJSON: String = _
+  /* 此次计算工作的任务json */
+  var originTaskID: String = _
+  /* 用户点击run后生成的ID */
+  val zIndexStrArray = new mutable.ArrayBuffer[String]
 
   def argOrNot(args: Map[String, String], name: String): String = {
     if (args.contains(name)) {
@@ -369,8 +375,8 @@ object Trigger {
 
       case "Coverage.addStyles" => {
         if (oorB == 0) {
-          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName, level = level)
+          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")),
+            method = argOrNot(args, "method"), layerID = layerID, fileName = fileName, level = level)
           layerID = layerID + 1
         }
         else {
@@ -488,8 +494,8 @@ object Trigger {
       }
       case "CoverageCollection.addStyles" => {
         if (oorB == 0) {
-          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName, level = level)
+          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")),
+            method = argOrNot(args, "method"), layerID = layerID, fileName = fileName, level = level)
           layerID = layerID + 1
         }
         else {
@@ -821,6 +827,7 @@ object Trigger {
     val jsonObject = JSON.parseObject(workTaskJSON)
     println(jsonObject)
 
+
     oorB = jsonObject.getString("oorB").toInt
     if (oorB == 0) {
       val map = jsonObject.getJSONObject("map")
@@ -837,7 +844,7 @@ object Trigger {
       println("lonLatsOfWindow = " + lonLatsOfWindow.mkString("Array(", ", ", ")"))
 
       val jedis: Jedis = JedisConnectionFactory.getJedis
-      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
+      val key: String = originTaskID + ":solvedTile:" + level
       jedis.select(1)
 
       val xMinOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow.head, level)

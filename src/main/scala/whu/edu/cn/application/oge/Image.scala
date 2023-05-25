@@ -54,6 +54,7 @@ object Image {
     .endpoint(MINIO_URL)
     .credentials(MINIO_KEY, MINIO_PWD)
     .build()
+  val tileDifference: Int = 0
 
 
   /**
@@ -70,10 +71,10 @@ object Image {
    */
   def load(implicit sc: SparkContext, productName: String = null,
            sensorName: String = null, measurementName: String = null,
-           dateTime: String = null, geom: String = null /* // TODO geom 可以去掉了 */ ,
+           dateTime: String = null, geom: String = null /* // 在On-the-fly中，geom 没有用 */ ,
            geom2: String = null, crs: String = null, level: Int = 0
            /* //TODO 把trigger算出来的前端瓦片编号集合传进来 */): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile]) = {
-    val zIndexStrArray: ArrayBuffer[String] = ImageTrigger.zIndexStrArray
+    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
 
     val dateTimeArray: Array[String] = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
     val StartTime: String = if (dateTimeArray != null) {
@@ -98,7 +99,7 @@ object Image {
 
       val queryExtent = new ArrayBuffer[Array[Double]]()
 
-      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
+      val key: String = Trigger.originTaskID + ":solvedTile:" + level
       val jedis: Jedis = JedisConnectionFactory.getJedis
       jedis.select(1)
 
@@ -1695,9 +1696,12 @@ object Image {
     val level: Int = COGHeaderParse.tileDifference
     println("tileDifference = " + level)
     if (level > 0) {
+      val time1 = System.currentTimeMillis()
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
       })
+      val time2 = System.currentTimeMillis()
+      println("Resample Time is " + (time2 - time1))
       (imageResampled,
         TileLayerMetadata(image._2.cellType, LayoutDefinition(
           image._2.extent,
@@ -1706,10 +1710,13 @@ object Image {
         ), image._2.extent, image._2.crs, image._2.bounds))
     }
     else if (level < 0) {
+      val time1 = System.currentTimeMillis()
       val imageResampled: RDD[(SpaceTimeBandKey, Tile)] = image._1.map(t => {
         val tileResampled: Tile = t._2.resample(Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt, Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt, resampleMethod)
         (t._1, tileResampled)
       })
+      val time2 = System.currentTimeMillis()
+      println("Resample Time is " + (time2 - time1))
       (imageResampled, TileLayerMetadata(image._2.cellType, LayoutDefinition(image._2.extent, TileLayout(image._2.layoutCols, image._2.layoutRows, image._2.tileCols / (1 << -level),
         image._2.tileRows / (1 << -level))), image._2.extent, image._2.crs, image._2.bounds))
       println("image._2.tileCols.toDouble = " + image._2.tileCols.toDouble)
@@ -2278,8 +2285,7 @@ object Image {
     (PAP, image._2)
   }
 
-  def visualizeOnTheFly(implicit sc: SparkContext, level: Int, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
-                        palette: String = null, layerID: Int, fileName: String = null): Unit = {
+  def visualizeOnTheFly(implicit sc: SparkContext, level: Int, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, layerID: Int, fileName: String = null): Unit = {
     val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
     val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
 
@@ -2306,14 +2312,14 @@ object Image {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
-    val layerIDAll: String = ImageTrigger.originTaskID
+    val layerIDAll: String = Trigger.originTaskID
     // Pyramiding up the zoom levels, write our tiles out to the local file system.
 
     println("Final Front End Level = " + level)
     println("Final Back End Level = " + zoom)
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      if (z >= level - 1 && z <= level + 1) {
+      if (z == level) {
         val layerId = LayerId(layerIDAll, z)
         println(layerId)
         // If the layer exists already, delete it out before writing
@@ -2347,7 +2353,7 @@ object Image {
     )
     implicit val formats = DefaultFormats
     val jsonStr: String = Serialization.write(resultSet)
-    val deliverWordID: String = "{\"workID\":\"" + ImageTrigger.workID + "\"}"
+    val deliverWordID: String = "{\"workID\":\"" + Trigger.workID + "\"}"
     HttpUtil.postResponse(SystemConstants.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
   }
 

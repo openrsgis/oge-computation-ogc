@@ -29,6 +29,7 @@ import static whu.edu.cn.util.SystemConstants.*;
 
 public class COGHeaderParse {
     public static int tileDifference = 0;
+
     private static final int[] TypeArray = {//"???",
             0,//
             1,// byte //8-bit unsigned integer
@@ -207,12 +208,12 @@ public class COGHeaderParse {
             System.out.println("level = " + level);
             tileLevel = (int) Math.floor(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2)) + 1;
             System.out.println("tileLevel = " + tileLevel);
-            if (tileLevel > tileOffsets.size()) {
+            if (tileLevel > tileOffsets.size() - 1) {
+                tileDifference = tileOffsets.size() - 1 - tileLevel;
                 tileLevel = tileOffsets.size() - 1;
-                tileDifference = tileLevel - (tileOffsets.size() - 1);
             } else if (tileLevel < 0) {
+                tileDifference = -tileLevel - 1;
                 tileLevel = 0;
-                tileDifference = tileLevel;
             }
         }
 
