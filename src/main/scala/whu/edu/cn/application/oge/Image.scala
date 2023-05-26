@@ -1855,15 +1855,9 @@ object Image {
       val sobely = focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
       val tilex = focal.Convolve(t._2, sobelx, None, TargetCell.All).crop(5, 5, 260, 260)
       val tiley = focal.Convolve(t._2, sobely, None, TargetCell.All).crop(5, 5, 260, 260)
-      (t._1, Sqrt(Add(tilex * tilex, tiley * tiley)).map(u => {
-        if (u > 255) {
-          255
-        } else {
-          u
-        }
-      }))
+      (t._1, Sqrt(Add(tilex * tilex, tiley * tiley)))
     })
-    (gradientRDD, image._2)
+    (gradientRDD, TileLayerMetadata(CellType.fromName("int16"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
   }
 
   /**
@@ -1875,16 +1869,37 @@ object Image {
    */
   def clip(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), geom: Geometry
           ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-
     val RDDExtent = image._2.extent
     val reso = image._2.cellSize.resolution
-    val clipedRDD = image._1.map(t => {
+    val imageRDDWithExtent = image._1.map(t => {
       val tileExtent = Extent(RDDExtent.xmin + t._1.spaceTimeKey.col * reso * 256, RDDExtent.ymax - (t._1.spaceTimeKey.row + 1) * 256 * reso,
         RDDExtent.xmin + (t._1.spaceTimeKey.col + 1) * reso * 256, RDDExtent.ymax - t._1.spaceTimeKey.row * 256 * reso)
-      val tileCliped = t._2.mask(tileExtent, geom)
+      (t._1, (t._2, tileExtent))
+    })
+    val tilesIntersectedRDD = imageRDDWithExtent.filter(t => {
+      t._2._2.intersects(geom)
+    })
+    val tilesClippedRDD = tilesIntersectedRDD.map(t => {
+      val tileCliped = t._2._1.mask(t._2._2, geom)
       (t._1, tileCliped)
     })
-    (clipedRDD, image._2)
+    val extents = tilesIntersectedRDD.map(t => {
+      (t._2._2.xmin, t._2._2.ymin, t._2._2.xmax, t._2._2.ymax)
+    })
+      .reduce((a, b) => {
+        (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
+      })
+    val extent = Extent(extents._1, extents._2, extents._3, extents._4)
+    val colRowInstant = tilesIntersectedRDD.map(t => {
+      (t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, t._1.spaceTimeKey.instant, t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, t._1.spaceTimeKey.instant)
+    }).reduce((a, b) => {
+      (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
+    })
+    val tl = TileLayout(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val newbounds = Bounds(SpaceTimeKey(colRowInstant._1, colRowInstant._2, colRowInstant._3), SpaceTimeKey(colRowInstant._4, colRowInstant._5, colRowInstant._6))
+    val newlayerMetaData = TileLayerMetadata(image._2.cellType, ld, extent, image._2.crs, newbounds)
+    (tilesClippedRDD, newlayerMetaData)
   }
 
   /**

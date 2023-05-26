@@ -2554,6 +2554,43 @@
       }
     ]
   },
+  "Terrain.slope": {
+    "description": "Calculates slope in degrees from a terrain DEM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the slope."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the slope, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct slope calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Terrain.aspect": {
+    "description": "Calculates aspect in degrees from a terrain DEM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the aspect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the aspect, 1 for a 3×3 square."
+      }
+    ]
+  },
   "CoverageCollection.binarization": {
     "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
     "returns": "CoverageCollection",

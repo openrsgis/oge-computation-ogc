@@ -336,6 +336,13 @@ object ImageTrigger {
       case "Coverage.hsvToRgb"=> {
         rdd_list_image += (UUID -> Image.hsvToRgb(imageHue = rdd_list_image(args("coverageHue")), imageSaturation = rdd_list_image(args("coverageSaturation")), imageValue = rdd_list_image(args("coverageValue"))))
       }
+      case "Terrain.slope" => {
+        rdd_list_image += (UUID -> Terrain.slope(image = rdd_list_image(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+      }
+      case "Terrain.aspect" => {
+        rdd_list_image += (UUID -> Terrain.aspect(image = rdd_list_image(args("coverage")), radius = args("radius").toInt))
+      }
+
 
       case "Coverage.slope" => {
         rdd_list_image += (UUID -> slope(sc, input = rdd_list_image(args("input")), Z_factor = argOrNot(args, "Z_factor").toDouble))
@@ -351,6 +358,7 @@ object ImageTrigger {
           layerID = layerID + 1
         }
       }
+
 
       //CoverageCollection
       case "CoverageCollection.subtract" => {
