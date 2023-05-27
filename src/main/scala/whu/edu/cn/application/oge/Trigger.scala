@@ -8,7 +8,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-import whu.edu.cn.application.oge.ImageTrigger.{fileName, originTaskID, rdd_list_image, workID, workTaskJSON, zIndexStrArray}
 import whu.edu.cn.application.oge.WebAPI._
 import whu.edu.cn.core.entity.SpaceTimeBandKey
 import whu.edu.cn.jsonparser.{JsonToArg, JsonToArgLocal}
@@ -16,7 +15,7 @@ import whu.edu.cn.util.{JedisConnectionFactory, ZCurveUtil}
 
 import java.io.File
 import scala.collection.mutable.Map
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.language.postfixOps
 
@@ -39,6 +38,13 @@ object Trigger {
   var layerID: Int = 0
   var fileName: String = _
   var oorB: Int = _
+  var workID: String = _
+  /* 此次计算工作的唯一标识 */
+  var workTaskJSON: String = _
+  /* 此次计算工作的任务json */
+  var originTaskID: String = _
+  /* 用户点击run后生成的ID */
+  val zIndexStrArray = new mutable.ArrayBuffer[String]
 
   def argOrNot(args: Map[String, String], name: String): String = {
     if (args.contains(name)) {
@@ -367,12 +373,10 @@ object Trigger {
         rdd_list_image += (UUID -> Image.hsvToRgb(imageHue = rdd_list_image(args("coverageHue")), imageSaturation = rdd_list_image(args("coverageSaturation")), imageValue = rdd_list_image(args("coverageValue"))))
       }
 
-
-
       case "Coverage.addStyles" => {
         if (oorB == 0) {
-          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName, level = level)
+          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")),
+            method = argOrNot(args, "method"), layerID = layerID, fileName = fileName, level = level)
           layerID = layerID + 1
         }
         else {
@@ -490,8 +494,8 @@ object Trigger {
       }
       case "CoverageCollection.addStyles" => {
         if (oorB == 0) {
-          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")), min = args("min").toInt, max = args("max").toInt,
-            method = argOrNot(args, "method"), palette = argOrNot(args, "palette"), layerID = layerID, fileName = fileName, level = level)
+          Image.visualizeOnTheFly(sc, image = rdd_list_image(args("input")),
+            method = argOrNot(args, "method"), layerID = layerID, fileName = fileName, level = level)
           layerID = layerID + 1
         }
         else {
@@ -800,75 +804,10 @@ object Trigger {
     val sc = new SparkContext(conf)
     runMain(sc, workTaskJSON, workID, originTaskID)
 
+
+    Thread.sleep(1000000)
+
     sc.stop()
-    //    //    val time1 = System.currentTimeMillis()
-    //    //    val conf = new SparkConf()
-    //    //      .setAppName("GeoCube-Dianmu Hurrican Flood Analysis")
-    //    //      .setMaster("local[*]")
-    //    //      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    //    //      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-    //    //      .set("spark.kryoserializer.buffer.max", "512m")
-    //    //      .set("spark.rpc.message.maxSize", "1024")
-    //    //    val sc = new SparkContext(conf)
-    //    //
-    //    //    val line: String = Source.fromFile("C:\\Users\\dell\\Desktop\\testJsonCubeFloodAnalysis.json").mkString
-    //    //    val jsonObject = JSON.parseObject(line)
-    //    //    println(jsonObject.size())
-    //    //    println(jsonObject)
-    //    //
-    //    //    val a = JsonToArg.trans(jsonObject)
-    //    //    println(a.size)
-    //    //    a.foreach(println(_))
-    //    //
-    //    //    lamda(sc, a)
-    //    //
-    //    //    val time2 = System.currentTimeMillis()
-    //    //    println("算子运行时间为："+(time2 - time1))
-    //
-    //    val time1 = System.currentTimeMillis()
-    //    val conf = new SparkConf()
-    //      .setAppName("OGE-Computation")
-    //      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    //      .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
-    //    val sc = new SparkContext(conf)
-    //
-    //    val fileSource = Source.fromFile(args(0))
-    //    fileName = args(1)
-    //    val line: String = fileSource.mkString
-    //    fileSource.close()
-    //    val jsonObject = JSON.parseObject(line)
-    //    println(jsonObject.size())
-    //    println(jsonObject)
-    //
-    //    oorB = jsonObject.getString("oorB").toInt
-    //    if (oorB == 0) {
-    //      val map = jsonObject.getJSONObject("map")
-    //      level = map.getString("level").toInt
-    //      windowRange = map.getString("spatialRange")
-    //    }
-    //
-    //    val a = JsonToArg.trans(jsonObject)
-    //    println(a.size)
-    //    a.foreach(println(_))
-    //
-    //    if (a.head._3.contains("productID")) {
-    //      if (a.head._3("productID") != "GF2") {
-    //        lamda(sc, a)
-    //      }
-    //      else {
-    //        if (oorB == 0) {
-    //
-    //        }
-    //        else {
-    //        }
-    //      }
-    //    }
-    //    else {
-    //      lamda(sc, a)
-    //    }
-    //
-    //    val time2 = System.currentTimeMillis()
-    //    println(time2 - time1)
   }
 
   def runMain(implicit sc: SparkContext,
@@ -882,39 +821,12 @@ object Trigger {
     workID = curWorkID
     originTaskID = curOriginTaskID
 
-
-    val file = new File("aa.txt")
-    val bool: Boolean = file.createNewFile()
-
-
-
-
-    // 从命令行参数取
-    // sc = args(....)
-    // workID = args(....)
-    //
-    //    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
-
-
-    //    = {
-    //      val fileSource = Source.fromFile("src/main/scala/whu/edu/cn/application/oge/modis.json")
-    //      fileName = "datas/out.txt" // TODO
-    //      val line: String = fileSource.mkString
-    //      fileSource.close()
-    //      line
-    //    } // 任务要用的 JSON,应当由命令行参数获取
-
-
-    //    originTaskID = "0000000000000"
-    // 点击整个run的唯一标识，来自boot
-
-
     val time1: Long = System.currentTimeMillis()
 
 
     val jsonObject = JSON.parseObject(workTaskJSON)
-    println(jsonObject.size())
     println(jsonObject)
+
 
     oorB = jsonObject.getString("oorB").toInt
     if (oorB == 0) {
@@ -924,29 +836,26 @@ object Trigger {
 
 
       // 通过on the fly的范围1和层级2找到该层级包含的所有前端瓦片
-      println(windowRange)
+      println("windowRange = " + windowRange)
 
       val lonLatsOfWindow: Array[Double] = windowRange
         .substring(1, windowRange.length - 1).split(",").map(_.toDouble)
 
-      println(lonLatsOfWindow.mkString("Array(", ", ", ")"))
+      println("lonLatsOfWindow = " + lonLatsOfWindow.mkString("Array(", ", ", ")"))
 
       val jedis: Jedis = JedisConnectionFactory.getJedis
-      val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
+      val key: String = originTaskID + ":solvedTile:" + level
       jedis.select(1)
-
 
       val xMinOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow.head, level)
       val xMaxOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow(2), level)
 
       val yMinOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow.last, level)
       val yMaxOfTile: Int = ZCurveUtil.lat2Tile(lonLatsOfWindow(1), level)
-      System.out.println(xMinOfTile + "-" + xMaxOfTile)
-      System.out.println(yMinOfTile + "-" + yMaxOfTile)
+      System.out.println("xMinOfTile - xMaxOfTile" + xMinOfTile + "-" + xMaxOfTile)
+      System.out.println("yMinOfTile - yMaxOfTile" + yMinOfTile + "-" + yMaxOfTile)
 
       // z曲线编码后的索引字符串
-
-
       //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
 
       // 等价于两层循环
@@ -973,8 +882,13 @@ object Trigger {
     println("***********************************************************")
 
 
-    val a = JsonToArgLocal.trans(jsonObject)
-    println(a.size)
+    val a = if (sc.master == "local[*]") {
+      JsonToArgLocal.trans(jsonObject)
+    }
+    else {
+      JsonToArg.trans(jsonObject)
+    }
+    println("a.size = " + a.size)
     a.foreach(println(_))
 
     if (a.head._3.contains("productID")) {

@@ -7,7 +7,7 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
  * */
 class PostgresqlUtil (sql: String){
   Class.forName(PostgresqlUtil.driver)
-  private val connection: Connection = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password);
+  private lazy val connection: Connection = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password);
   private val statement: PreparedStatement = connection.prepareStatement(sql)
 
   def getConnection():Connection = connection
