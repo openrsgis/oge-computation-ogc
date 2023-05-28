@@ -13,7 +13,6 @@ import org.gdal.gdalconst.gdalconstConstants
 import org.gdal.ogr.Geometry
 import org.gdal.osr.{CoordinateTransformation, SpatialReference}
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
-import org.geotools.referencing.CRS
 import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 import org.opengis.referencing.FactoryException
 import org.opengis.referencing.crs.{CoordinateReferenceSystem, ProjectedCRS}
@@ -30,8 +29,7 @@ import whu.edu.cn.util.{JedisConnectionFactory, SystemConstants, ZCurveUtil}
 import whu.edu.cn.util.SystemConstants.{HEAD_SIZE, MINIO_KEY, MINIO_PWD, MINIO_URL}
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
-import java.io.{ByteArrayOutputStream, InputStream, RandomAccessFile}
-import java.sql.Timestamp
+import java.io.{ByteArrayOutputStream, File, InputStream, RandomAccessFile}
 import java.text.SimpleDateFormat
 import java.util
 import scala.collection.JavaConversions.asScalaBuffer
@@ -74,18 +72,29 @@ object TiffUtil {
 
   }
 
-  // TODO geotiff转RDD
+  /**
+   *
+   * @param sc Spark 环境
+   * @param tifHref tif链接
+   * @param coverageType coverage 的数据类型
+   * @param geom 空间范围
+   * @param mapLevel 地图层级
+   * @param productName 产品名称
+   * @param time 时间
+   * @return 返回RDD (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+   */
   def tiff2RDD(implicit sc: SparkContext, tifHref: String, coverageType:String, geom: String = null,
                mapLevel:Int, productName:String, time:String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageTypeEnum = CoverageMediaType.valueOf(coverageType.toUpperCase())
-    val storagePath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
-//    writeTIFF(tifHref, storagePath)
+    val storagePath = "E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_121037_20180410_20180417_01_T1_B3.TIF"
+//    val storagePath = "E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_122038_20180604_20180615_01_T1_B3.TIF"
+    //    writeTIFF(tifHref, storagePath)
     coverageTypeEnum match{
       case CoverageMediaType.GEOTIFF => {
         // TODO geotiff转RDD
-        loadTif(sc, (storagePath, productName, time), geom, mapLevel)._1
+        val a = loadTif(sc, (storagePath, productName, time), geom, mapLevel)._1
 //        tileRDD2Tiff(a, "geotiff")
-//        a
+        a
       }
       case CoverageMediaType.PNG => {
         // TODO png转RDD
@@ -97,6 +106,7 @@ object TiffUtil {
       }
     }
   }
+
 
   /**
    * 加载Tif 转换为RDD
@@ -160,13 +170,17 @@ object TiffUtil {
 
         } // end if
       } // end for
+      jedis.close()
 
       val imageInfo = getImageInfo(fileMeta._1)
-      jedis.close()
+//      val cogPath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
+      val parentPath = new File(fileMeta._1).getParent()
+      val cogPath = parentPath + File.separator +"cog_" + System.currentTimeMillis() + ".tif"
+      val cogLevel = transformCOG(mapLevel, fileMeta._1, cogPath, imageInfo._5, imageInfo._6, imageInfo._4.toDouble)
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(queryExtent)
         .map(t => { // 合并所有的元数据（追加了范围）
           val rawTiles: util.ArrayList[RawTile] = {
-            tileQuery(mapLevel, fileMeta._1, fileMeta._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
+            tileQuery(mapLevel, cogPath, cogLevel, fileMeta._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
               fileMeta._2, t, imageInfo._5, imageInfo._6, imageInfo._7)
           } //TODO
           // 根据元数据和范围查询后端瓦片
@@ -189,12 +203,14 @@ object TiffUtil {
     }
     else { // geom2 == null，之前批处理使用的代码
       val imageInfo = getImageInfo(fileMeta._1)
+      val cogPath = ""
+      val cogLevel = transformCOG(mapLevel, fileMeta._1, cogPath, imageInfo._5, imageInfo._6, imageInfo._4.toDouble)
 //      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = getTileFromFile(mapLevel, fileMeta._1, null, fileMeta._3, fileMeta._2)
       val metaData = Array[(String, String, String)](fileMeta)
       val imagePathRdd: RDD[(String, String, String)] = sc.parallelize(metaData, metaData.length)
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
 //        val tiles = tileQuery(level, t._1, t._2, t._3, t._4, t._5, t._6, productName, query_extent)
-      val tiles = tileQuery(mapLevel, t._1, t._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
+      val tiles = tileQuery(mapLevel, cogPath, cogLevel, t._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
           t._2, null, imageInfo._5, imageInfo._6, imageInfo._7)
 //        val tiles = getTileFromFile(mapLevel, t._1, null, t._3, t._2)
         if (tiles.size() > 0) asScalaBuffer(tiles)
@@ -212,6 +228,12 @@ object TiffUtil {
     }
   }
 
+  /**
+   *
+   * @param sc Spark 环境
+   * @param tileRDDReP Raw Tile
+   * @return 填充真实Tile数据后的RDD(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+   */
   def noReSliceFromFile(implicit sc: SparkContext, tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
       (t.getLngLatBottomLeft.head, t.getLngLatBottomLeft.last,
@@ -234,7 +256,6 @@ object TiffUtil {
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
     println(tileRDDReP.count())
     val tileRDD = tileRDDReP.map(t => {
-      println("ssssssssssss")
       val tile = getTileBufFromFile(t)
       val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       val phenomenonTime = sdf.parse(tile.getTime).getTime
@@ -283,6 +304,12 @@ object TiffUtil {
     }
   }
 
+  /**
+   *
+   * @param filePath 影像文件路径
+   * @return (String, String, String, String, Int, Int, Int)
+   *         (crsCode, measurement, dataType, resolutionMeter.toString, height, width, bandCount)
+   */
    def getImageInfo(filePath: String):(String, String, String, String, Int, Int, Int) ={
      // 我需要从影像文件中读取坐标系ID、波段名称（？）、dtype数据位数、分辨率
      // 这些应该要从coverages api中获取
@@ -303,9 +330,9 @@ object TiffUtil {
      println("波段数目" + bandCount)
      // 获取影像的坐标系
      val projection = dataset.GetProjectionRef()
-     val crsCode = "EPSG:" + getCRSFromWKT(projection)
-     println("CRS的编号" + crsCode)
-     val resolutionMeter = transformResolutionByCrs(crsCode, geotransform(1))
+     val crsCodeAndUnit = getCRSFromWKT(projection)
+     println("CRS的编号" + crsCodeAndUnit._1)
+     val resolutionMeter = transformResolutionByCrs("EPSG:" + crsCodeAndUnit._1, crsCodeAndUnit._2, geotransform(1))
      println("转换后的分辨率：" + resolutionMeter)
      // 获取影像的数据位数
      val band = dataset.GetRasterBand(1)
@@ -313,27 +340,15 @@ object TiffUtil {
      println("影像数据位数：" + dataType)
      // 关闭数据集
      dataset.delete()
-      (crsCode, measurement, dataType, resolutionMeter.toString, height, width, bandCount)
+      ("EPSG:" + crsCodeAndUnit._1, measurement, dataType, resolutionMeter.toString, height, width, bandCount)
    }
 
-//  /**
-//   *
-//   * @param filePath tif 的文件路径
-//   * @param queryExtent 空间查询范围
-//   */
-//  def getTileFromFile(mapLevel:Int, filePath: String, queryExtent: Array[Double], timeStamp:String,
-//                      productName:String): util.ArrayList[RawTile]={
-//
-//
-//
-//    tileQuery(mapLevel, filePath, timeStamp , crsCode, measurement, dataType, resolutionMeter.toString, productName,
-//      queryExtent, height, width, bandCount)
-//  }
 
   /**
    * 根据元数据查询 tile
    * @param mapLevel JSON中的level字段，前端层级
-   * @param filePath COG的路径
+   * @param cogPath COG的路径
+   * @param cogLevel cog的第一层的采样层级
    * @param time  影像元数据 时间
    * @param crs 影像的crs
    * @param measurement 影像的波段 当波段数不为1的时候设置为空
@@ -345,7 +360,7 @@ object TiffUtil {
    * @param tileSize    瓦片尺寸
    * @return 后端瓦片
    */
-  def tileQuery(mapLevel: Int, filePath: String,
+  def tileQuery(mapLevel: Int, cogPath: String, cogLevel: Int,
                 time: String, crs: String,
                 measurement: String, dType: String,
                 resolution: String, productName: String,
@@ -361,10 +376,10 @@ object TiffUtil {
     val tileOffsets = new util.ArrayList[util.ArrayList[util.ArrayList[Integer]]]
     try {
       // 根据前端图层层级，判断需要切的层级，然后调用脚本切COG
-      var targetFilePath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
-      val COGLevel = transformCOG(mapLevel, filePath, targetFilePath, imageHeight, imageWidth, resolution.toDouble)
+//      var targetFilePath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
+//      val COGLevel = transformCOG(mapLevel, filePath, targetFilePath, imageHeight, imageWidth, resolution.toDouble)
       // 读取转换后的COG
-      val imageFile = new RandomAccessFile(targetFilePath, "r")
+      val imageFile = new RandomAccessFile(cogPath, "r")
       val outStream = new ByteArrayOutputStream
       val buffer = new Array[Byte](HEAD_SIZE) //16383
       imageFile.seek(0)
@@ -377,7 +392,7 @@ object TiffUtil {
       // 填充信息
       parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
       //
-      getCOGTiles(COGLevel, queryExtent, crs, cell, geoTrans, tileByteCounts, productName, targetFilePath, bandCount, tileSize, tileOffsets, time, measurement, dType)
+      getCOGTiles(cogLevel, queryExtent, crs, cell, geoTrans, tileByteCounts, productName, cogPath, bandCount, tileSize, tileOffsets, time, measurement, dType)
       //getTiles(level, queryExtent, crs, filePath, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
 
     }
@@ -385,9 +400,6 @@ object TiffUtil {
       case e: Exception => println("Caught exception in finally block: " + e.getMessage)
         null
     }
-//    finally {
-//      println("error in read file")
-//    }
 
   }
 
@@ -444,8 +456,6 @@ object TiffUtil {
       val loop = new Breaks
       loop.breakable {
         for (i <- resolutionTMSArray.indices) {
-//          if (Math.ceil(Math.log(resolutionTMSArray(i) / imageResolution)
-//            / Math.log(2)).toInt + 1 == 0) {
           if (Math.ceil(Math.log(resolutionTMSArray(i) / imageResolution)
             / Math.log(2)).toInt == 0) {
             maxMapLevel = i
@@ -467,7 +477,10 @@ object TiffUtil {
         COGHeaderParse.nearestZoom = maxMapLevel - maxCOGLevel
       }
     }
-    // TODO 调用Python脚本切成COG 只切特定层级的 即COGLevel
+    val cogUtil = new COGUtil
+    // 调用Python脚本切成COG 只切特定层级的 即COGLevel
+    val cogScale = Math.pow(2, COGLevel).toInt
+    cogUtil.generateCOG(sourceFilePath, targetSourcePath, cogScale.toString)
     COGLevel
   }
 
@@ -667,13 +680,18 @@ object TiffUtil {
   extentArray
 }
 
-
-  def getCRSFromWKT(srsWKT:String):String = {
+  /**
+   * 从坐标系的WKT编码中获取crs code和单位
+   * @param srsWKT 坐标系的WKT编码
+   * @return (String, String) (crsCode, unit)
+   */
+  def getCRSFromWKT(srsWKT:String):(String, String) = {
     // 解析WKT格式
     val crs:CoordinateReferenceSystem = org.geotools.referencing.CRS.parseWKT(srsWKT)
     // 获取 CRS
     val crsCode: String = org.geotools.referencing.CRS.lookupEpsgCode(crs, true).toString
-    crsCode
+    val unit = crs.getCoordinateSystem.getAxis(0).getUnit.toString
+    (crsCode, unit)
 //    // 定义用于转换分辨率的 MathTransform 对象
 //    val transform: MathTransform = CRS.findMathTransform(crs, CRS.decode("EPSG:3857"), true)
 
@@ -684,12 +702,18 @@ object TiffUtil {
 //    val resolutionInMeters: Double = resolution * transform.transform(crs.getCoordinateSystem.getAxis(1).getMinimumValue, crs.getCoordinateSystem.getAxis(0).getMinimumValue).getScaleX
   }
 
-
-  def transformResolutionByCrs(crs:String, resolution:Double):Double= {
+  /**
+   * 分辨率转换
+   * @param crs 坐标系
+   * @param unit 单位
+   * @param resolution 分辨率
+   * @return 以米为单位的分辨率
+   */
+  def transformResolutionByCrs(crs:String, unit:String, resolution:Double):Double= {
     if(crs.equals("EPSG:4326")){
       val metersPerDegree = 2 * Math.PI * 6378137 / 360
       return resolution * metersPerDegree
-    }else if(crs.equals("EPSG:32650")){
+    }else if(crs.equals("EPSG:32650") || unit.equals("m")){
       return resolution
     }else{
       return 0.0
@@ -717,7 +741,8 @@ object TiffUtil {
     val queryExtent = Array(73.62, 18.19, 134.7601467382, 53.54)
     // 在这里写入你的程序逻辑
     //getTileFromFile("E:\\LaoK\\data2\\GEE_S2A_MSIL1C_20201022T031801_N0209_R118_T49RCN_20201022T052801_VC_ARD.tif", queryExtent)
-    getSpatialExtent("E:\\LaoK\\data2\\GEE_S2A_MSIL1C_20201022T031801_N0209_R118_T49RCN_20201022T052801_VC_ARD.tif")
+    getImageInfo("E:\\LaoK\\data2\\APITest\\1682393893371.tif")
+    //getSpatialExtent("E:\\LaoK\\data2\\GEE_S2A_MSIL1C_20201022T031801_N0209_R118_T49RCN_20201022T052801_VC_ARD.tif")
   }
 
 }

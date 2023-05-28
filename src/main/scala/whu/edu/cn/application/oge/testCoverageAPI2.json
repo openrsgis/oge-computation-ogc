@@ -1,0 +1,13 @@
+{
+  "oorB": "0",
+  "map": {
+    "level": 12,
+    "spatialRange": [
+      3.4500,
+      30.2404,
+      3.6566,
+      30.0708
+    ]
+  },
+  "0": {"functionInvocationValue": {"functionName": "Coverage.addStyles", "arguments": {"input": {"functionInvocationValue": {"functionName": "Service.getCoverage", "arguments": {"baseUrl": {"constantValue": "https://maps.gnosis.earth/ogcapi/"}, "coverageID": {"constantValue": "sentinel2-l2a"}, "productID": {"constantValue": "sentinel2"}}}}, "max": {"constantValue": 255}, "min": {"constantValue": 0}}}}
+}
