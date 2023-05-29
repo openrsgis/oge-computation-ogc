@@ -2477,6 +2477,38 @@
       }
     ]
   },
+  "Coverage.entropy": {
+    "description": "Computes the windowed entropy using the specified kernel centered on each input pixel. Entropy is computed as -sum(p * log2(p)), where p is the normalized probability of occurrence of the values encountered in each window.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the entropy."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square."
+      }
+    ]
+  },
+  "Coverage.NDVI": {
+    "description": "Calculation of image normalized vegetation index NDVI.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "NIR",
+        "type": "Coverage",
+        "description": "The Near-Infrared band."
+      },
+      {
+        "name": "Red",
+        "type": "Coverage",
+        "description": "The Red band."
+      }
+    ]
+  },
   "Coverage.toInt8": {
     "description": "Casts the input value to a signed 8-bit integer.",
     "returns": "Coverage",

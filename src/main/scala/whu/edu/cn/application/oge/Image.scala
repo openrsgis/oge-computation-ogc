@@ -2071,6 +2071,115 @@ object Image {
   }
 
   /**
+   *Computes the windowed entropy using the specified kernel centered on each input pixel. Entropy is computed as
+   * -sum(p * log2(p)), where p is the normalized probability of occurrence of the values encountered in each window.
+   *
+   * @param image The coverage to compute the entropy.
+   * @param radius The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square.
+   * @return
+   */
+  def entropy(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), radius: Int
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val leftNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(0, 1), t._2))
+    })
+    val rightNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(2, 1), t._2))
+    })
+    val upNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(1, 0), t._2))
+    })
+    val downNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(1, 2), t._2))
+    })
+    val leftUpNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(0, 0), t._2))
+    })
+    val upRightNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(2, 0), t._2))
+    })
+    val rightDownNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(2, 2), t._2))
+    })
+    val downLeftNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(0, 2), t._2))
+    })
+    val midNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(1, 1), t._2))
+    })
+    val unionRDD = leftNeighborRDD.union(rightNeighborRDD).union(upNeighborRDD).union(downNeighborRDD).union(leftUpNeighborRDD).union(upRightNeighborRDD).union(rightDownNeighborRDD).union(downLeftNeighborRDD).union(midNeighborRDD)
+      .filter(t => {
+        t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < image._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < image._2.layout.layoutRows
+      })
+    val groupRDD = unionRDD.groupByKey().map(t => {
+      val listBuffer = new ListBuffer[(SpatialKey, Tile)]()
+      val list = t._2.toList
+      for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
+        var flag = false
+        breakable {
+          for (tile <- list) {
+            if (key.equals(tile._1)) {
+              listBuffer.append(tile)
+              flag = true
+              break
+            }
+          }
+        }
+        if (flag == false) {
+          listBuffer.append((key, ByteArrayTile(Array.fill[Byte](256 * 256)(-128), 256, 256, ByteCellType).mutable))
+        }
+      }
+      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(listBuffer)
+      (t._1, tile.crop(251, 251, 516, 516).convert(CellType.fromName("int16")))
+    })
+    val entropyRDD: RDD[(SpaceTimeBandKey, Tile)] = groupRDD.map(t => {
+      val tile = FloatArrayTile(Array.fill[Float](256 * 256)(Float.NaN), 256, 256, FloatCellType).mutable
+      for (i <- 5 to 260) {
+        for (j <- 5 to 260) {
+          val focalArea = t._2.crop(i - radius, j - radius, i + radius, j + radius)
+
+          val hist = focalArea.histogram.binCounts()
+
+          var entropyValue: Float = 0
+          for (u <- hist) {
+            val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
+            entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
+          }
+          tile.setDouble(i - 5, j - 5, -entropyValue)
+        }
+      }
+      (t._1, tile)
+    })
+    (entropyRDD, image._2)
+  }
+
+  /**
+   * Calculation of image normalized vegetation index NDVI.
+   *
+   * @param NIR The Near-Infrared band.
+   * @param Red The Red band.
+   * @return
+   */
+  def NDVI(NIR: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), Red: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+          ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val NIRNoBand = NIR._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2.convert(CellType.fromName("float32"))))
+    val RedNoBand = Red._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2.convert(CellType.fromName("float32"))))
+    val joinRDD = NIRNoBand.join(RedNoBand)
+    val resampleTime = Instant.now.getEpochSecond
+    var value = 0
+    if (NIR._2.cellType.toString() == "int8") {
+      value = 128
+    }
+    val NDVIRDD = joinRDD.map(t => {
+      val NIR = Add(t._2._1, value)
+      val Red = Add(t._2._2, value)
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "NDVI"), Divide(Subtract(NIR, Red), Add(NIR, Red)))
+    })
+    (NDVIRDD, TileLayerMetadata(CellType.fromName("float32"), NIR._2.layout, NIR._2.extent, NIR._2.crs, NIR._2.bounds))
+  }
+
+
+  /**
    * Casts the input value to a signed 8-bit integer.
    *
    * @param image The coverage to which the operation is applied.
@@ -2079,7 +2188,7 @@ object Image {
   def toInt8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("int8")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("int8"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
   /**
    * Casts the input value to a unsigned 8-bit integer.
@@ -2090,7 +2199,7 @@ object Image {
   def toUint8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("uint8")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("uint8"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
   /**
    * Casts the input value to a signed 16-bit integer.
@@ -2101,7 +2210,7 @@ object Image {
   def toInt16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("int16")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("int16"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
   /**
    * Casts the input value to a unsigned 16-bit integer.
@@ -2112,7 +2221,7 @@ object Image {
   def toUint16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("uint16")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("uint16"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
   /**
    * Casts the input value to a signed 32-bit integer.
@@ -2123,7 +2232,7 @@ object Image {
   def toInt32(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("int32")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("int32"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
   /**
    * Casts the input value to a 32-bit float.
@@ -2134,7 +2243,7 @@ object Image {
   def toFloat(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("float32")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("float32"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
   /**
    * Casts the input value to a 64-bit float.
@@ -2145,7 +2254,7 @@ object Image {
   def toDouble(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("float64")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("float64"),image._2.layout,image._2.extent,image._2.crs,image._2.bounds))
 
 
   /**
