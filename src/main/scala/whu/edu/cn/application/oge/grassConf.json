@@ -34,5 +34,65 @@
     "inputArgs": ["first","second"],
     "outputArgs": ["output"],
     "otherArgs": ["args1","args2","args3"]
+  },
+  "r.blend": {
+    "name": "r_blend",
+    "inputArgs": ["first","second"],
+    "outputArgs": ["output"],
+    "otherArgs": ["percent"]
+  },
+  "r.composite": {
+    "name": "r_composite",
+    "inputArgs": ["red","green","blue"],
+    "outputArgs": ["output"],
+    "otherArgs": ["levels","level_red","level_blue","level_green"]
+  },
+  "r.sunmask": {
+    "name": "r_sunmask",
+    "inputArgs": ["elevation"],
+    "outputArgs": ["output"],
+    "otherArgs": ["altitude","azimuth","year","month","day","hour","minute","second","timezone","east","north"]
+  },
+  "r.resamp.stats": {
+    "name": "r_resamp_stats",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["method","quantile"]
+  },
+  "r.resamp.interp": {
+    "name": "r_resamp_interp",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["method"]
+  },
+  "r.resamp.bspline": {
+    "name": "r_resamp_bspline",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["method"]
+  },
+  "r.resamp.filter": {
+    "name": "r_resamp_filter",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["filter","radius"]
+  },
+  "r.texture": {
+    "name": "r_texture",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["size","distance","method"]
+  },
+  "r.viewshed": {
+    "name": "r_viewshed",
+    "inputArgs": ["input"],
+    "outputArgs": ["output"],
+    "otherArgs": ["coordinates","observer_elevation","target_elevation","max_distance","direction_range","refraction_coeff"]
+  },
+  "r.shade": {
+    "name": "r_shade",
+    "inputArgs": ["shade","color"],
+    "outputArgs": ["output"],
+    "otherArgs": ["brighten"]
   }
 }
