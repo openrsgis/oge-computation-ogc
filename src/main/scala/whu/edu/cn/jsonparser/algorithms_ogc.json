@@ -2509,6 +2509,28 @@
       }
     ]
   },
+  "Coverage.cbrt": {
+    "description": "Computes the cubic root of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.metadata": {
+    "description": "Return the metadata of the input.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to get the metadata"
+      }
+    ]
+  },
   "Coverage.toInt8": {
     "description": "Casts the input value to a signed 8-bit integer.",
     "returns": "Coverage",

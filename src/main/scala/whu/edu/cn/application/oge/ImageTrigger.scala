@@ -342,6 +342,13 @@ object ImageTrigger {
       case "Coverage.NDVI" => {
         rdd_list_image += (UUID -> Image.NDVI(NIR = rdd_list_image(args("NIR")), Red = rdd_list_image(args("Red"))))
       }
+      case "Coverage.cbrt" => {
+        rdd_list_image += (UUID -> Image.cbrt(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.metadata" => {
+        val metadataString = Image.metadata(image = rdd_list_image(args("coverage")))
+        println(metadataString)
+      }
       case "Coverage.toInt8" => {
         rdd_list_image += (UUID -> Image.toInt8(image = rdd_list_image(args("coverage"))))
       }
