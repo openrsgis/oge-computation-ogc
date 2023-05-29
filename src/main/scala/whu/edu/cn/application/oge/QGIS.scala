@@ -144,8 +144,8 @@ object QGIS {
     (tiledOut, metaData)
   }
 
-  def randomPointsAlongLine(implicit sc: SparkContext, featureRDD: RDD[(String, (Geometry, Map[String, Any]))], pointsNumber: Int = 1, minDistance: Double = 0.0): Unit/*RDD[(String, (Geometry, Map[String, Any]))]*/ = {
-    val data = featureRDD.map(t=>{
+  def randomPointsAlongLine(implicit sc: SparkContext, input: RDD[(String, (Geometry, Map[String, Any]))], pointsNumber: Int = 1, minDistance: Double = 0.0): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val data = input.map(t=>{
       t._2._2 + (ShapeUtil.DEF_GEOM_KEY -> t._2._1)
     }).collect().map(_.asJava).toList.asJava
     val time = System.currentTimeMillis()

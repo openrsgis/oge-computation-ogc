@@ -1,26 +1,20 @@
 package whu.edu.cn.application.oge
 
-import java.io._
-import java.text.SimpleDateFormat
-import java.util.UUID
-
+import com.alibaba.fastjson.JSON
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.{DoubleCellType, Raster, Tile}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.{DoubleCellType, Raster, Tile}
 import geotrellis.spark._
 import geotrellis.spark.store.hadoop.HadoopGeoTiffRDD
 import org.apache.hadoop.fs.Path
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import whu.edu.cn.core.entity.SpaceTimeBandKey
-import com.alibaba.fastjson.JSON
-import com.alibaba.fastjson.JSONObject
-import com.alibaba.fastjson.JSONArray
-import whu.edu.cn.jsonparser.JsonToArg.jsonAlgorithms
 
-import scala.collection.mutable.ListBuffer
+import java.io._
+import java.text.SimpleDateFormat
 import scala.io.Source
 
 /**
