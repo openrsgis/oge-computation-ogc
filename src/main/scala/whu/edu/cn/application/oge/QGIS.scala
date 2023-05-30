@@ -25,6 +25,7 @@ object QGIS {
    * @return 输入的RasterRDD
    */
   //输入输出都是TIF的
+  //
   def aspect(implicit sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), zFactor: Double = 1.0): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     //RDD转换为TIF，QGIS可以直接使用
     val time = System.currentTimeMillis()
