@@ -1,0 +1,13 @@
+{
+  "oorB": "0",
+  "map": {
+    "level": 12,
+    "spatialRange": [
+      113.82949,
+      30.17027,
+      113.93133,
+      30.23358
+    ]
+  },
+  "1": {"constantValue": "http://oge.whu.edu.cn/ogcapi/coverages_api/"}, "2": {"constantValue": "landsat8"}, "0": {"functionInvocationValue": {"functionName": "Coverage.addStyles", "arguments": {"input": {"functionInvocationValue": {"functionName": "Coverage.normalizedDifference", "arguments": {"coverage1": {"functionInvocationValue": {"functionName": "Service.getCoverage", "arguments": {"baseUrl": {"valueReference": "1"}, "coverageID": {"constantValue": "LC08_L1TP_123039_20181102_20181115_01_T1-B3"}, "productID": {"valueReference": "2"}}}}, "coverage2": {"functionInvocationValue": {"functionName": "Service.getCoverage", "arguments": {"baseUrl": {"valueReference": "1"}, "coverageID": {"constantValue": "LC08_L1TP_123039_20181102_20181115_01_T1-B5"}, "productID": {"valueReference": "2"}}}}}}}, "max": {"constantValue": 255}, "min": {"constantValue": 0}}}}
+}

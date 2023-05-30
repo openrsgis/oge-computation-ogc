@@ -38,17 +38,18 @@ object Service {
     val coverage = ogcAPI.getCoverage(baseUrl, coverageID)
     var time = coverage.getTimeStamp
     if(time == null){
-      val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") // 定义要输出的日期时间格式
+//      val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") // 定义要输出的日期时间格式
+      val dateFormat = new SimpleDateFormat("yyyy-MM-dd") // 定义要输出的日期时间格式
       val now = new Date() // 获取当前时间
       val formattedDate = dateFormat.format(now) // 将当前时间格式化为指定格式的字符串
       time = formattedDate
     }
     val linkList:JList[Link] = coverage.getCoverageLinks
     for (link <- linkList.asScala) {
-      if(link.getHref.contains("f=tif")){
-        val rdd = tiff2RDD(sc, link.getHref, CoverageMediaType.GEOTIFF.getType, geom, mapLevel, productId, time)
+      //if(link.getHref.contains("f=tif")){
+        val rdd = tiff2RDD(sc, link.getHref, CoverageMediaType.GEOTIFF.getType, geom, mapLevel, productId, coverageID, time)
         return rdd
-      }
+      //}
     }
     null
   }

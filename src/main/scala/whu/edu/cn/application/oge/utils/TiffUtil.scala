@@ -13,6 +13,7 @@ import org.gdal.gdalconst.gdalconstConstants
 import org.gdal.ogr.Geometry
 import org.gdal.osr.{CoordinateTransformation, SpatialReference}
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
+import org.geotools.referencing.CRS
 import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 import org.opengis.referencing.FactoryException
 import org.opengis.referencing.crs.{CoordinateReferenceSystem, ProjectedCRS}
@@ -30,6 +31,7 @@ import whu.edu.cn.util.SystemConstants.{HEAD_SIZE, MINIO_KEY, MINIO_PWD, MINIO_U
 import whu.edu.cn.util.TileSerializerImage.deserializeTileData
 
 import java.io.{ByteArrayOutputStream, File, InputStream, RandomAccessFile}
+import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util
 import scala.collection.JavaConversions.asScalaBuffer
@@ -39,6 +41,9 @@ import scala.math.{max, min}
 import scala.util.control.Breaks
 
 object TiffUtil {
+
+  val storageDir = "E:/LaoK/data2/APITest/NDWI_API"
+
   /**
    * RDD转tif
    * @param input (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]))
@@ -55,7 +60,7 @@ object TiffUtil {
     val coverageTypeEnum = CoverageMediaType.valueOf(coverageType.toUpperCase())
     coverageTypeEnum match{
       case CoverageMediaType.GEOTIFF => {
-        val outputTiffPath = "E:\\LaoK\\data2\\APITest\\" + time + ".tif"
+        val outputTiffPath = "E:\\LaoK\\data2\\APITest\\NDWI_API\\" + time + ".tif"
         GeoTiff(stitchedTile, input._2.crs).write(outputTiffPath)
         // TODO 这里应该返回一个href
         outputTiffPath
@@ -84,16 +89,17 @@ object TiffUtil {
    * @return 返回RDD (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
    */
   def tiff2RDD(implicit sc: SparkContext, tifHref: String, coverageType:String, geom: String = null,
-               mapLevel:Int, productName:String, time:String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+               mapLevel:Int, productName:String, coverageID:String, time:String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageTypeEnum = CoverageMediaType.valueOf(coverageType.toUpperCase())
-    val storagePath = "E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_121037_20180410_20180417_01_T1_B3.TIF"
+    val storagePath = storageDir + File.separator + coverageID+".tif"
+//    val storagePath = "E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_121037_20180410_20180417_01_T1_B3.TIF"
 //    val storagePath = "E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_122038_20180604_20180615_01_T1_B3.TIF"
-    //    writeTIFF(tifHref, storagePath)
+    writeTIFF(tifHref, storagePath)
     coverageTypeEnum match{
       case CoverageMediaType.GEOTIFF => {
         // TODO geotiff转RDD
         val a = loadTif(sc, (storagePath, productName, time), geom, mapLevel)._1
-//        tileRDD2Tiff(a, "geotiff")
+        tileRDD2Tiff(a, "geotiff")
         a
       }
       case CoverageMediaType.PNG => {
@@ -106,6 +112,7 @@ object TiffUtil {
       }
     }
   }
+
 
 
   /**
@@ -173,33 +180,62 @@ object TiffUtil {
       jedis.close()
 
       val imageInfo = getImageInfo(fileMeta._1)
-//      val cogPath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
-      val parentPath = new File(fileMeta._1).getParent()
-      val cogPath = parentPath + File.separator +"cog_" + System.currentTimeMillis() + ".tif"
-      val cogLevel = transformCOG(mapLevel, fileMeta._1, cogPath, imageInfo._5, imageInfo._6, imageInfo._4.toDouble)
-      val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(queryExtent)
-        .map(t => { // 合并所有的元数据（追加了范围）
-          val rawTiles: util.ArrayList[RawTile] = {
-            tileQuery(mapLevel, cogPath, cogLevel, fileMeta._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
-              fileMeta._2, t, imageInfo._5, imageInfo._6, imageInfo._7)
-          } //TODO
-          // 根据元数据和范围查询后端瓦片
-          if (rawTiles.size() > 0) asScalaBuffer(rawTiles)
-          else mutable.Buffer.empty[RawTile]
-        }).distinct()
-      // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+      val isCOG = true
+      if(isCOG){
+        // 如果获取的影像是COG
+        val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(queryExtent)
+          .map(t => { // 合并所有的元数据（追加了范围）
+            val rawTiles: util.ArrayList[RawTile] = {
+              tileQueryFromCOG(mapLevel, fileMeta._1, fileMeta._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
+                fileMeta._2, t, imageInfo._5, imageInfo._6, imageInfo._7)
+            } //TODO
+            // 根据元数据和范围查询后端瓦片
+            if (rawTiles.size() > 0) asScalaBuffer(rawTiles)
+            else mutable.Buffer.empty[RawTile]
+          }).distinct()
+        // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
 
-      val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
-        x + y
-      })
-      println("tileNum = " + tileNum)
-      val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
-      var repNum: Int = tileNum
-      if (repNum > 90) {
-        repNum = 90
+        val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+          x + y
+        })
+        println("tileNum = " + tileNum)
+        val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
+        var repNum: Int = tileNum
+        if (repNum > 90) {
+          repNum = 90
+        }
+        val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
+        (noReSliceFromFile(sc, tileRDDReP), tileRDDReP)
+      }else{
+        // 如果获取的影像不是COG
+        // val cogPath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
+        val parentPath = new File(fileMeta._1).getParent()
+        val cogPath = parentPath + File.separator +"cog_" + System.currentTimeMillis() + ".tif"
+        val cogLevel = transformCOG(mapLevel, fileMeta._1, cogPath, imageInfo._5, imageInfo._6, imageInfo._4.toDouble)
+        val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = sc.makeRDD(queryExtent)
+          .map(t => { // 合并所有的元数据（追加了范围）
+            val rawTiles: util.ArrayList[RawTile] = {
+              tileQuery(mapLevel, cogPath, cogLevel, fileMeta._3, imageInfo._1, imageInfo._2, imageInfo._3, imageInfo._4,
+                fileMeta._2, t, imageInfo._5, imageInfo._6, imageInfo._7)
+            } //TODO
+            // 根据元数据和范围查询后端瓦片
+            if (rawTiles.size() > 0) asScalaBuffer(rawTiles)
+            else mutable.Buffer.empty[RawTile]
+          }).distinct()
+        // TODO 转化成Scala的可变数组并赋值给tileRDDNoData
+
+        val tileNum: Int = tileRDDNoData.map(t => t.length).reduce((x, y) => {
+          x + y
+        })
+        println("tileNum = " + tileNum)
+        val tileRDDFlat: RDD[RawTile] = tileRDDNoData.flatMap(t => t)
+        var repNum: Int = tileNum
+        if (repNum > 90) {
+          repNum = 90
+        }
+        val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
+        (noReSliceFromFile(sc, tileRDDReP), tileRDDReP)
       }
-      val tileRDDReP: RDD[RawTile] = tileRDDFlat.repartition(repNum).persist()
-      (noReSliceFromFile(sc, tileRDDReP), tileRDDReP)
     }
     else { // geom2 == null，之前批处理使用的代码
       val imageInfo = getImageInfo(fileMeta._1)
@@ -242,7 +278,8 @@ object TiffUtil {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
     val colRowInstant = tileRDDReP.map(t => {
-      (t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime, t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime)
+      (t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd").parse(t.getTime).getTime, t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd").parse(t.getTime).getTime)
+      //      (t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime, t.getCol, t.getRow, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(t.getTime).getTime)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
     })
@@ -257,7 +294,8 @@ object TiffUtil {
     println(tileRDDReP.count())
     val tileRDD = tileRDDReP.map(t => {
       val tile = getTileBufFromFile(t)
-      val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+//      val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+      val sdf = new SimpleDateFormat("yyyy-MM-dd")
       val phenomenonTime = sdf.parse(tile.getTime).getTime
       val measurement = tile.getMeasurement
       val rowNum = tile.getRow
@@ -403,6 +441,354 @@ object TiffUtil {
 
   }
 
+  /**
+   * 从一张切好的COG中根据元数据查询 tile
+   * @param mapLevel JSON中的level字段，前端层级
+   * @param cogPath COG的路径
+   * @param time  影像元数据 时间
+   * @param crs 影像的crs
+   * @param measurement 影像的波段 当波段数不为1的时候设置为空
+   * @param dType 影像的位数
+   * @param resolution 影像的分辨率
+   * @param productName 产品名
+   * @param queryExtent 前端视口范围内的每一个瓦片和Bbox的交集
+   * @param bandCount   波段数目
+   * @param tileSize    瓦片尺寸
+   * @return 后端瓦片
+   */
+  def tileQueryFromCOG(mapLevel: Int, cogPath: String,
+                time: String, crs: String,
+                measurement: String, dType: String,
+                resolution: String, productName: String,
+                queryExtent: Array[Double],
+                imageHeight:Int, imageWidth: Int,
+                bandCount: Int = 1,
+                tileSize: Int = 256): util.ArrayList[RawTile] = {
+
+    val imageSize: Array[Int] = Array[Int](0, 0) // imageLength & imageWidth
+    val tileByteCounts = new util.ArrayList[util.ArrayList[util.ArrayList[Integer]]]
+    val geoTrans = new util.ArrayList[Double] //TODO 经纬度
+    val cell = new util.ArrayList[Double]
+    val tileOffsets = new util.ArrayList[util.ArrayList[util.ArrayList[Integer]]]
+    try {
+      // 根据前端图层层级，判断需要切的层级，然后调用脚本切COG
+      //      var targetFilePath = "E:\\LaoK\\data2\\APITest\\LC08_L1TP_121037_20180410_20180417_01_T1_B3.tif"
+      //      val COGLevel = transformCOG(mapLevel, filePath, targetFilePath, imageHeight, imageWidth, resolution.toDouble)
+      // 读取转换后的COG
+      val imageFile = new RandomAccessFile(cogPath, "r")
+      val outStream = new ByteArrayOutputStream
+      val buffer = new Array[Byte](HEAD_SIZE) //16383
+      imageFile.seek(0)
+      imageFile.read(buffer)
+      imageFile.close()
+      outStream.write(buffer, 0, HEAD_SIZE)
+
+      val headerByte: Array[Byte] = outStream.toByteArray
+      outStream.close()
+      // 填充信息
+      parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount, tileSize)
+      //
+      getTilesFromCOG(mapLevel, queryExtent, crs, cogPath, time, measurement,dType,resolution,productName, tileOffsets,
+        cell,geoTrans, tileByteCounts, bandCount, tileSize, imageHeight, imageWidth)
+      //getTiles(level, queryExtent, crs, filePath, time, measurement, dType, resolution, productName, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, tileSize)
+    }
+    catch {
+      case e: Exception => println("Caught exception in finally block: " + e.getMessage)
+        null
+    }
+  }
+  /**
+   * 获取 Tile 相关的一些数据，不包含tile影像本体
+   *
+   * @param mapLevel          json里的 level 字段，表征前端 Zoom
+   * @param queryExtent 前端视口范围内的每一个瓦片和Bbox的交集
+   * @param crs 影像的crs EPSG:4326
+   * @param cogPath 影像MINIO的路径
+   * @param time 影像的元数据 时间
+   * @param measurement 影像的波段
+   * @param dType 影像位数 unit8 float32
+   * @param resolution 数据库中的原始影像分辨率
+   * @param productName 产品名字
+   * @return
+   */
+  def getTilesFromCOG(mapLevel: Int, queryExtent: Array[Double],
+               crs: String, cogPath: String,
+               time: String, measurement: String,
+               dType: String, resolution: String,
+               productName: String,
+               tileOffsets: util.ArrayList[util.ArrayList[util.ArrayList[Integer]]],
+               cell: util.ArrayList[Double],
+               geoTrans: util.ArrayList[Double],
+               tileByteCounts: util.ArrayList[util.ArrayList[util.ArrayList[Integer]]],
+               bandCount: Int,
+               tileSize: Int, imageHeight:Int, imageWidth: Int): util.ArrayList[RawTile] = {
+    var COGLevel = 0
+    var resolutionTMS = 0.0
+    val resolutionTMSArray: Array[Double] =
+      Array(
+        156543.033928, /* 地图 zoom 为0时的分辨率，以下按zoom递增 */
+        78271.516964,
+        39135.758482,
+        19567.879241,
+        9783.939621,
+        4891.969810,
+        2445.984905,
+        1222.992453,
+        611.496226,
+        305.748113,
+        152.874057,
+        76.437028,
+        38.218514,
+        19.109257,
+        9.554629,
+        4.777314,
+        2.388657,
+        1.194329,
+        0.597164,
+        0.298582,
+        0.149291
+      )
+    val resolutionOrigin: Double = resolution.toDouble
+    System.out.println("resolutionOrigin = " + resolutionOrigin) //460
+
+//    if (mapLevel == -1) level = 0
+//    else {
+//      resolutionTMS = resolutionTMSArray(mapLevel)
+//      level = Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2)).toInt + 1
+//      var maxZoom = 0
+//      val loop = new Breaks
+//      loop.breakable {
+//        for (i <- resolutionTMSArray.indices) {
+//          if (Math.ceil(Math.log(resolutionTMSArray(i) / resolutionOrigin)
+//            / Math.log(2)).toInt + 1 == 0) {
+//            maxZoom = i
+//            loop.break()
+//
+//          }
+//        }
+//      }
+//      System.out.println("maxZoom = " + maxZoom)
+//      System.out.println("java.level = " + level)
+//      System.out.println("tileOffsets.size() = " + tileOffsets.size) // 后端瓦片数
+//
+//      // 正常情况下的换算关系
+//      COGHeaderParse.nearestZoom = ImageTrigger.level
+//      //TODO 这里我们认为数据库中金字塔的第0层对应了前端 zoom 的第10级
+//      //                        0 10
+//      //                        1 9
+//      //                        2 8
+//      //                        ...
+//      //                        6 4
+//      if (level > tileOffsets.size - 1) {
+//        level = tileOffsets.size - 1
+//        assert(maxZoom > level)
+//        COGHeaderParse.nearestZoom = maxZoom - level
+//        // throw new RuntimeException("Level is too small!");
+//      }
+//      if (level < 0) {
+//        level = 0
+//        COGHeaderParse.nearestZoom = maxZoom
+//        // throw new RuntimeException("Level is too big!");
+//      }
+//    }
+    if (mapLevel == -1){
+      // 批处理
+      COGLevel = 0
+    } else {
+      // 获取前端分辨率
+      resolutionTMS = resolutionTMSArray(mapLevel)
+      // 获取与前端分辨率对应的COG的level，注意这里的level是值相对于0层的2的level次方
+      //      COGLevel = Math.ceil(Math.log(resolutionTMS / imageResolution) / Math.log(2)).toInt + 1
+      COGLevel = Math.ceil(Math.log(resolutionTMS / resolutionOrigin) / Math.log(2)).toInt
+      // maxMapLevle是COG最高分辨率对应的前端分辨率
+      var maxMapLevel = 0
+      val loop = new Breaks
+      loop.breakable {
+        for (i <- resolutionTMSArray.indices) {
+          if (Math.ceil(Math.log(resolutionTMSArray(i) / resolutionOrigin)
+            / Math.log(2)).toInt == 0) {
+            maxMapLevel = i
+            loop.break()
+          }
+        }
+      }
+      // 判断COG能否切到COGLevel层
+      // 首先计算COG能切到的最高层级的level
+      var maxCOGLevel = 0
+      while((imageWidth/Math.pow(2, maxCOGLevel))>256 && (imageHeight/Math.pow(2, maxCOGLevel)>256)){
+        maxCOGLevel = maxCOGLevel + 1
+      }
+      //这是指前端最接近的层级
+      COGHeaderParse.nearestZoom = ImageTrigger.level
+      // 如果大于前端层级 那么就使用最高层级
+      if(COGLevel > maxCOGLevel){
+        COGLevel = maxCOGLevel
+        COGHeaderParse.nearestZoom = maxMapLevel - maxCOGLevel
+      }
+    }
+    val lowerLeftLongitude: Double = queryExtent(0)
+    val lowerLeftLatitude: Double = queryExtent(1)
+    val upperRightLongitude: Double = queryExtent(2)
+    val upperRightLatitude: Double = queryExtent(3)
+    val pointLower = new Coordinate
+    val pointUpper = new Coordinate
+    pointLower.setX(lowerLeftLatitude)
+    pointLower.setY(lowerLeftLongitude)
+    pointUpper.setX(upperRightLatitude)
+    pointUpper.setY(upperRightLongitude)
+    var pointLowerReprojected = new Coordinate
+    var pointUpperReprojected = new Coordinate
+    var flag = false
+    var flagReader = false
+    try if ("EPSG:4326" == crs) {
+      pointLowerReprojected = pointLower
+      pointUpperReprojected = pointUpper
+    }
+    else {
+      val crsSource: CoordinateReferenceSystem = org.geotools.referencing.CRS.decode("EPSG:4326")
+      //System.out.println("是否为投影坐标"+(crsSource instanceof ProjectedCRS));
+      //System.out.println("是否为经纬度坐标"+(crsSource instanceof GeographicCRS));
+      val crsTarget: CoordinateReferenceSystem = org.geotools.referencing.CRS.decode(crs)
+      if (crsTarget.isInstanceOf[ProjectedCRS]) flag = true
+      val transform: MathTransform = org.geotools.referencing.CRS.findMathTransform(crsSource, crsTarget)
+      JTS.transform(pointLower, pointLowerReprojected, transform)
+      JTS.transform(pointUpper, pointUpperReprojected, transform)
+    }
+    catch {
+      case e@(_: FactoryException | _: TransformException) =>
+        e.printStackTrace()
+    }
+    val pMin = new Array[Double](2)
+    val pMax = new Array[Double](2)
+    pMin(0) = pointLowerReprojected.getX
+    pMin(1) = pointLowerReprojected.getY
+    pMax(0) = pointUpperReprojected.getX
+    pMax(1) = pointUpperReprojected.getY
+    // 图像范围
+    // 东西方向空间分辨率  --->像素宽度
+    val w_src: Double = cell.get(0)
+    // 南北方向空间分辨率 ---> 像素高度 // TODO
+    val h_src: Double = cell.get(1)
+    // 左上角x坐标,y坐标 ---> 影像 左上角 投影坐标
+    var xMin = .0
+    var yMax = .0
+    if (flag) {
+      xMin = geoTrans.get(3)
+      yMax = geoTrans.get(4)
+    }
+    else {
+      xMin = geoTrans.get(4)
+      yMax = geoTrans.get(3)
+    }
+    val tileSearch = new util.ArrayList[RawTile]
+    //int l = 0;
+    /*        if ("MOD13Q1_061".equals(productName)) {
+                flagReader = true;
+            }
+            if ("LJ01_L2".equals(productName)) {
+                flagReader = true;
+            }
+            if ("ASTER_GDEM_DEM30".equals(productName)) {
+                flagReader = true;
+            }
+            if ("GPM_Precipitation_China_Month".equals(productName)) {
+                flagReader = true;
+            }*/
+
+
+    productName match {
+      case "MOD13Q1_061" =>
+      case "LJ01_L2" =>
+      case "ASTER_GDEM_DEM30" =>
+      case "GPM_Precipitation_China_Month" =>
+        flagReader = true
+      case _ =>
+    }
+    //if ("LC08_L1TP_C01_T1".equals(productName)) {
+    //    l = 2;
+    //}
+    //if ("LE07_L1TP_C01_T1".equals(productName)) {
+    //    l = 0;
+    //计算目标影像的左上和右下图上坐标
+    var p_left = 0
+    var p_right = 0
+    var p_lower = 0
+    var p_upper = 0
+    if (flag) {
+      p_left = ((pMin(0) - xMin) / (tileSize * w_src * Math.pow(2, COGLevel).toInt)).toInt
+      p_right = ((pMax(0) - xMin) / (tileSize * w_src * Math.pow(2, COGLevel).toInt)).toInt
+      p_lower = ((yMax - pMax(1)) / (tileSize * h_src * Math.pow(2, COGLevel).toInt)).toInt
+      p_upper = ((yMax - pMin(1)) / (tileSize * h_src * Math.pow(2, COGLevel).toInt)).toInt
+    }
+    else {
+      p_lower = ((pMin(1) - yMax) / (tileSize * w_src * Math.pow(2, COGLevel).toInt)).toInt
+      p_upper = ((pMax(1) - yMax) / (tileSize * w_src * Math.pow(2, COGLevel).toInt)).toInt
+      p_left = ((xMin - pMax(0)) / (tileSize * h_src * Math.pow(2, COGLevel).toInt)).toInt
+      p_right = ((xMin - pMin(0)) / (tileSize * h_src * Math.pow(2, COGLevel).toInt)).toInt
+    }
+    var pCoordinate: Array[Int] = null
+    var srcSize: Array[Double] = null
+    var pRange: Array[Double] = null
+    if (!flagReader) {
+      pCoordinate = Array[Int](p_lower, p_upper, p_left, p_right)
+      srcSize = Array[Double](w_src, h_src)
+      pRange = Array[Double](xMin, yMax)
+    }
+    else {
+      srcSize = Array[Double](h_src, w_src)
+      pRange = Array[Double](yMax, xMin)
+      pCoordinate = Array[Int](p_left, p_right, p_lower, p_upper)
+    }
+    for (i <- Math.max(pCoordinate(0), 0) to (
+      if (pCoordinate(1) >= tileOffsets.get(COGLevel).size / bandCount)
+        tileOffsets.get(COGLevel).size / bandCount - 1
+      else pCoordinate(1))
+
+
+
+         ) {
+      for (j <- Math.max(pCoordinate(2), 0) to (
+        if (pCoordinate(3) >= tileOffsets.get(COGLevel).get(i).size)
+          tileOffsets.get(COGLevel).get(i).size - 1
+        else pCoordinate(3))
+           ) {
+        for (k <- 0 until bandCount) {
+          val t = new RawTile
+          t.setOffset(
+            tileOffsets.get(COGLevel).get(i).get(j).toLong,
+            tileByteCounts.get(COGLevel).get(i).get(j) + t.getOffset()(0)
+          )
+
+
+          t.setLngLatBottomLeft(
+            j * (tileSize * srcSize(0) * Math.pow(2, COGLevel).toInt) + pRange(0),
+            (i + 1) * (tileSize * -srcSize(1) * Math.pow(2, COGLevel).toInt) + pRange(1)
+          )
+          t.setLngLatUpperRight(
+            (j + 1) * (tileSize * srcSize(0) * Math.pow(2, COGLevel).toInt) + pRange(0),
+            i * (tileSize * -srcSize(1) * Math.pow(2, COGLevel).toInt) + pRange(1)
+          )
+          t.setRotation(geoTrans.get(5))
+          t.setResolution(w_src * Math.pow(2, COGLevel).toInt)
+          t.setRowCol(i, j)
+          t.setLevel(COGLevel)
+          t.setPath(cogPath)
+          t.setTime(time)
+          if (bandCount == 1) {
+            t.setMeasurement(measurement)
+          }
+          else {
+            t.setMeasurement(bandCount.toString) //TODO
+          }
+          t.setCrs(crs.replace("EPSG:", "").toInt)
+          t.setDataType(dType)
+          t.setProduct(productName)
+          tileSearch.add(t)
+        }
+      }
+    }
+    tileSearch
+  }
   /**
    * 该函数根据前端地图层级将一张tif影像按照前端地图层级切COG（只切那与前端地图层级对应的那一级），返回后端COG的层级
    * COGLevel,该层级是二叉树划分的层级 2的COGLevel次方

@@ -1,9 +1,13 @@
 package whu.edu.cn.application.oge.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.gdal.gdal.Dataset;
+import org.gdal.gdal.gdal;
+import org.gdal.gdalconst.gdalconstConstants;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Vector;
 
 @Slf4j
 public class COGUtil {
@@ -43,10 +47,20 @@ public class COGUtil {
             return null;
         }
     }
+
+    public boolean isCOG(String filePath){
+        gdal.AllRegister();
+        Dataset dataset = gdal.Open(filePath, gdalconstConstants.GA_ReadOnly);
+        Vector metadata = dataset.GetMetadata_List();
+        return false;
+    }
+
     public static void main(String[] args){
         log.info("ssssssss");
+
         COGUtil cogUtil = new COGUtil();
-        cogUtil.generateCOG("E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_122038_20180604_20180615_01_T1_B3.TIF",
-                "E:\\LaoK\\data2\\APITest\\COG_LC08_L1TP_122038_20180604_20180615_01_T1_B3.TIF", "4");
+        cogUtil.isCOG("E:\\LaoK\\data2\\APITest\\NDWI\\LC08_L1TP_123039_20181102_20181115_01_T1_B3.tif");
+//        cogUtil.generateCOG("E:\\LaoK\\data2\\APITest\\GDAL_LC08_L1TP_122038_20180604_20180615_01_T1_B3.TIF",
+//                "E:\\LaoK\\data2\\APITest\\COG_LC08_L1TP_122038_20180604_20180615_01_T1_B3.TIF", "4");
     }
 }

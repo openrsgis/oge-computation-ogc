@@ -1,0 +1,96 @@
+{
+  "oorB": "0",
+  "map": {
+    "level": 12,
+    "spatialRange": [
+      113.7550,
+      30.0958,
+      114.0749,
+      30.3576
+    ]
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.addStyles",
+      "arguments": {
+        "input": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.divide",
+            "arguments": {
+              "coverage1": {
+                "functionInvocationValue": {
+                  "functionName": "Coverage.subtract",
+                  "arguments": {
+                    "coverage1": {
+                      "valueReference": "1"
+                    },
+                    "coverage2": {
+                      "valueReference": "4"
+                    }
+                  }
+                }
+              },
+              "coverage2": {
+                "functionInvocationValue": {
+                  "functionName": "Coverage.add",
+                  "arguments": {
+                    "coverage1": {
+                      "valueReference": "1"
+                    },
+                    "coverage2": {
+                      "valueReference": "4"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 255
+        },
+        "min": {
+          "constantValue": 0
+        }
+      }
+    }
+  },
+  "1": {
+    "functionInvocationValue": {
+      "functionName": "Service.getCoverage",
+      "arguments": {
+        "baseUrl": {
+          "valueReference": "2"
+        },
+        "coverageID": {
+          "constantValue": "LC08_L1TP_123039_20181102_20181115_01_T1-B3"
+        },
+        "productID": {
+          "valueReference": "3"
+        }
+      }
+    }
+  },
+  "2": {
+    "constantValue": "http://oge.whu.edu.cn/ogcapi/coverages_api/"
+  },
+  "3": {
+    "constantValue": "landsat8"
+  },
+  "4": {
+    "functionInvocationValue": {
+      "functionName": "Service.getCoverage",
+      "arguments": {
+        "baseUrl": {
+          "valueReference": "2"
+        },
+        "coverageID": {
+          "constantValue": "LC08_L1TP_123039_20181102_20181115_01_T1-B5"
+        },
+        "productID": {
+          "valueReference": "3"
+        }
+      }
+    }
+  }
+}

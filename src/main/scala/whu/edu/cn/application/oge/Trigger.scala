@@ -222,6 +222,9 @@ object Trigger {
       case "Coverage.multiply" => {
         rdd_list_image += (UUID -> Image.multiply(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
       }
+      case "Coverage.normalizedDifference" => {
+        rdd_list_image += (UUID -> Image.normalizedDifference(image1 = rdd_list_image(args("coverage1")), image2 = rdd_list_image(args("coverage2"))))
+      }
       case "Coverage.binarization" => {
         rdd_list_image += (UUID -> Image.binarization(image = rdd_list_image(args("coverage")), threshold = args("threshold").toInt))
       }
@@ -793,8 +796,10 @@ object Trigger {
 //      val fileSource = Source.fromFile(
 //        "src/main/scala/whu/edu/cn/application/oge/modis.json")
       val fileSource = Source.fromFile(
-        "src/main/scala/whu/edu/cn/application/oge/testCoverageAPI.json")
-      fileName = "datas/out.txt" // TODO
+  "src/main/scala/whu/edu/cn/application/oge/testCoverageAPI4.json")
+//        "src/main/scala/whu/edu/cn/application/oge/testCoverageAPI.json")
+//      fileName = "datas/out.txt" // TODO
+      fileName = "E:\\LaoK\\data2\\APITest\\NDWI_API\\output\\out.txt"
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -806,7 +811,9 @@ object Trigger {
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[*]")
-      .setAppName("query")
+      .setAppName("query").set("spark.driver.memory", "2g").set("spark.executor.memory", "2g")
+      .set("spark.executor.extraJavaOptions", "-XX:+UseG1GC")
+      .set("spark.driver.extraJavaOptions", "-Xmx2g");
     val sc = new SparkContext(conf)
     runMain(sc,workTaskJSON,workID,originTaskID)
   }
@@ -841,9 +848,9 @@ object Trigger {
 
       println(lonLatsOfWindow.mkString("Array(", ", ", ")"))
 
-      val jedis: Jedis = JedisConnectionFactory.getJedis
+//      val jedis: Jedis = JedisConnectionFactory.getJedis
       val key: String = ImageTrigger.originTaskID + ":solvedTile:" + level
-      jedis.select(1)
+//      jedis.select(1)
 
       val xMinOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow.head, level)
       val xMaxOfTile: Int = ZCurveUtil.lon2Tile(lonLatsOfWindow(2), level)
@@ -857,7 +864,7 @@ object Trigger {
 
       // 等价于两层循环
       for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
-           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+//           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
         // 排除 redis 已经存在的前端瓦片编码
            ) { // redis里存在当前的索引
         // Redis 里没有的前端瓦片编码
@@ -867,11 +874,11 @@ object Trigger {
         //        jedis.sadd(key, zIndexStr)
       }
     }
-    if (zIndexStrArray.isEmpty){
-      //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
-      println("窗口范围无明显变化，没有新的瓦片待计算")
-      return
-    }
+//    if (zIndexStrArray.isEmpty){
+//      //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
+//      println("窗口范围无明显变化，没有新的瓦片待计算")
+//      return
+//    }
     println("***********************************************************")
 
     val a = JsonToArg.trans(jsonObject)

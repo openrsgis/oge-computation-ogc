@@ -23,6 +23,7 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.locationtech.jts.geom.Coordinate
 import redis.clients.jedis.Jedis
+import whu.edu.cn.application.oge.utils.TiffUtil.tileRDD2Tiff
 //import whu.edu.cn.application.oge.COGHeaderParseOld.{getTileBuf, tileQuery}
 import whu.edu.cn.application.oge.COGHeaderParse.{getTileBuf, tileQuery}
 import whu.edu.cn.application.tritonClient.examples._
@@ -493,7 +494,8 @@ object Image {
     println("subtract bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
       val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t =>
+        (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val subtractRDD = image1NoBand.join(image2NoBand)
       (subtractRDD.map(t => {
         (entity.SpaceTimeBandKey(t._1, "Subtract"), Subtract(t._2._1._2, t._2._2._2))
@@ -521,7 +523,7 @@ object Image {
     val bandNum2 = bandNames(image2).length
     println("divide bandNum1 = " + bandNum1)
     println("divide bandNum2 = " + bandNum2)
-    if (bandNum1 == 1 && bandNum2 == 1) {
+    if ((bandNum1 == 1 && bandNum2 == 1)||(bandNum1 == 0 && bandNum2 == 0)) {
       val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
       val divideRDD = image1NoBand.join(image2NoBand)
@@ -536,7 +538,28 @@ object Image {
       }), image1._2)
     }
   }
-
+  /**
+   * (b1-b2)/(b1+b2)
+   *
+   * @param image1 first image rdd
+   * @param image2 second image rdd
+   * @return (b1-b2)/(b1+b2)
+   */
+  def normalizedDifference(image1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+               image2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val subtractRDD = subtract(image1, image2)
+//    subtractRDD._1.map(t =>{
+//      println(t._1.measurementName)
+//      println(t._1.spaceTimeKey)
+//    })
+//    subtractRDD
+    val  addRDD = add(image1, image2)
+//    addRDD._1.map(t =>{
+//      println(t._1.measurementName)
+//      println(t._1.spaceTimeKey)
+//    })
+    divide(subtractRDD, addRDD)
+  }
   /**
    * if both image1 and image2 has only 1 band, multiply operation is applied between the 2 bands
    * if not, multipliy the first tile by the second for each matched pair of bands in image1 and image2.
@@ -566,6 +589,8 @@ object Image {
       }), image1._2)
     }
   }
+
+
 
   /**
    * image Binarization
@@ -1552,7 +1577,9 @@ object Image {
   def visualizeOnTheFly(implicit sc: SparkContext, level: Int, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, min: Int = 0, max: Int = 255,
                         palette: String = null, layerID: Int, fileName: String = null): Unit = {
     val appID = sc.applicationId
-    val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
+//    val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
+    val outputPath = "E:\\LaoK\\data2\\APITest\\NDWI_API\\output"
+    tileRDD2Tiff(image, "geotiff")
     if ("timeseries".equals(method)) {
       val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
       val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resample(sc, image, COGHeaderParse.nearestZoom, level, "Bilinear", downSampling = false)

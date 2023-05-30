@@ -1927,6 +1927,22 @@
       }
     ]
   },
+  "Coverage.normalizedDifference": {
+    "description": "Computes the normalized difference between two bands.The normalized difference is computed as (first − second) / (first + second). ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The left image"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The right image"
+      }
+    ]
+  },
   "Coverage.binarization": {
     "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
     "returns": "Coverage",
