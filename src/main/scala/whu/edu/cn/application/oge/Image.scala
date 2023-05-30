@@ -2201,7 +2201,7 @@ object Image {
    */
   def cbrt(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     (image._1.map(t => {
-      (t._1, Pow(t._2.convert(CellType.fromName("float32")), 1 / 3))
+      (t._1, Pow(t._2.convert(CellType.fromName("float32")), 1.0 / 3.0))
     }), TileLayerMetadata(CellType.fromName("float32"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
   }
 
