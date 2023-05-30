@@ -51,7 +51,7 @@ object QGIS {
       versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
       val st = "conda activate qgis" +
         "\n" +
-        "cd /home/geocube/oge/oge-server/dag-boot/" +
+        "cd /home/geocube/oge/oge-server/dag-boot/qgis" +
         "\n" +
         "python algorithmCode/aspect.py" +
         " --in-layer \"" +
@@ -88,7 +88,7 @@ object QGIS {
       versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
       val st = "conda activate qgis" +
         "\n" +
-        "cd /home/geocube/oge/oge-server/dag-boot/" +
+        "cd /home/geocube/oge/oge-server/dag-boot/qgis" +
         "\n" +
         "python algorithmCode/aspect.py" +
         " --in-layer \"" +
