@@ -1,0 +1,4503 @@
+{
+  "Image.load": {
+    "description": "Returns the images by given id",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "productName",
+        "type": "String",
+        "description": "The name of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "sensorName",
+        "type": "String",
+        "description": "The sensor of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "measurementName",
+        "type": "String",
+        "description": "The measurement of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "StartTime",
+        "type": "String",
+        "description": "The start time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "EndTime",
+        "type": "String",
+        "description": "The end time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "geom",
+        "type": "List<Float>",
+        "description": "The geom of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "The method of reslicing.",
+        "optional": "True",
+        "default": "null"
+      }
+    ]
+  },
+  "CoverageCollection.deepLearning": {
+    "description": "Get the deep learning results of the input image",
+    "returns": "Coverage<unknown bands>",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection<unknown bands>",
+        "description": "The image of input."
+      },
+      {
+        "name": "class",
+        "type": "String",
+        "description": "The class of the deep learning."
+      }
+    ]
+  },
+  "CoverageCollection.PAP": {
+    "description": "Get the PAP results of the input image",
+    "returns": "Coverage<unknown bands>",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection<unknown bands>",
+        "description": "The image of input."
+      },
+      {
+        "name": "time",
+        "type": "String",
+        "description": "The time of the PAP to calculated."
+      },
+      {
+        "name": "n",
+        "type": "Int",
+        "description": "The total years of the PAP."
+      }
+    ]
+  },
+  "Coverage.deepLearning": {
+    "description": "Get the deep learning results of the input image",
+    "returns": "Coverage<unknown bands>",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage<unknown bands>",
+        "description": "The coverage of input."
+      },
+      {
+        "name": "class",
+        "type": "String",
+        "description": "The class of the deep learning."
+      }
+    ]
+  },
+  "Coverage.load": {
+    "description": "Returns the coverages by given id",
+    "returns": "Coverage<unknown bands>",
+    "args": [
+      {
+        "name": "productName",
+        "type": "String",
+        "description": "The name of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "sensorName",
+        "type": "String",
+        "description": "The sensor of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "measurementName",
+        "type": "String",
+        "description": "The measurement of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "StartTime",
+        "type": "String",
+        "description": "The start time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "EndTime",
+        "type": "String",
+        "description": "The end time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "geom",
+        "type": "List<Float>",
+        "description": "The geom of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "The method of reslicing.",
+        "optional": "True",
+        "default": "null"
+      }
+    ]
+  },
+  "Image.add": {
+    "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.subtract": {
+    "description": "Subtracts the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.multiply": {
+    "description": "multiply the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.divide": {
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.normalizedDifference": {
+    "description": "Computes the normalized difference between two bands.The normalized difference is computed as (first − second) / (first + second). ",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "input",
+        "type": "Image<unknown bands>",
+        "description": "The input image"
+      },
+      {
+        "name": "bandNames",
+        "type": "List<String>",
+        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Image.binaryzation": {
+    "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken"
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "threshold"
+      }
+    ]
+  },
+  "Image.and": {
+    "description": "Returns 1 iff both values are non-zero for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.or": {
+    "description": "Returns 1 iff either values are non-zero for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.not": {
+    "description": "Returns 0 if the input is non-zero, and 1 otherwise",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.sin": {
+    "description": "Computes the sine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.cos": {
+    "description": "Computes the cosine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.sinh": {
+    "description": "Computes the hyperbolic sine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.cosh": {
+    "description": "Computes the hyperbolic cosine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.asin": {
+    "description": "Computes the arc sine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.acos": {
+    "description": "Computes the arc cosine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.atan": {
+    "description": "Computes the atan sine of the input in radians.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.atan2": {
+    "description": "Operation to get the Arc Tangent2 of values. The first raster holds the y-values, and the second holds the x values.The arctan is calculated from y/x.if both have only 1 band, the 2 band will match",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.ceil": {
+    "description": "Computes the smallest integer greater than or equal to the input.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.floor": {
+    "description": "Computes the largest integer less than or equal to the input.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.eq": {
+    "description": "Returns 1 iff the first value is equal to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.gt": {
+    "description": "Returns 1 iff the first value is greater to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.gte": {
+    "description": "Returns 1 iff the first value is greater or equal to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Image.bandNames": {
+    "description": "get all the bands in rdd",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Image.addBands": {
+    "description": "Returns 1 iff the first value is greater or equal to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image1",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "image2",
+        "type": "Image<unknown bands>",
+        "description": "The image from which the right operand bands are taken."
+      },
+      {
+        "name": "names",
+        "type": "List[String]",
+        "description": "the name of selected bands in image2"
+      },
+      {
+        "name": "overwrite",
+        "type": "Boolean",
+        "description": "if true, overwrite bands in the first image with the same name in image2"
+      }
+    ]
+  },
+  "Image.sampleRegions": {
+    "description": "Converts each pixel of an image (at a given scale) that intersects one or more regions to a Feature, returning them as a FeatureCollection.  Each output feature will have one property per band of the input image, as well as any specified properties copied from the input feature.Note that geometries will be snapped to pixel centers.",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image to sample"
+      },
+      {
+        "name": "collection",
+        "type": "FeatureCollection",
+        "description": "The regions to sample over."
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "The list of properties to copy from each input feature.  Defaults to all non-system properties.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "scale",
+        "type": "Float",
+        "description": "A nominal scale in meters of the projection to sample in.  If unspecified,the scale of the image\\'s first band is used.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "projection",
+        "type": "Projection",
+        "description": "The projection in which to sample. If unspecified, the projection of the image\\'s first band is used. If specified in addition to scale, rescaled to the specified scale.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "titleScale",
+        "type": "Float",
+        "description": "A scaling factor used to reduce aggregation tile size; using a larger tileScale (e.g. 2 or 4) may enable computations that run out of memory with the default.",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "geometries",
+        "type": "Boolean",
+        "description": "If true, the results will include a point geometry per sampled pixel.  Otherwise, geometries will be omitted (saving memory).",
+        "optional": "True",
+        "default": "False"
+      }
+    ]
+  },
+  "Image.visualize": {
+    "description": "Produces an RGB or grayscale visualization of an image.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image",
+        "description": "The image to visualize"
+      },
+      {
+        "name": "bands",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "",
+        "default": "png",
+        "optional": "True"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      }
+    ]
+  },
+  "Coverage.visualize": {
+    "description": "Produces an RGB or grayscale visualization of an image.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to visualize"
+      },
+      {
+        "name": "bands",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "",
+        "default": "png",
+        "optional": "True"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      }
+    ]
+  },
+  "Collection.filter": {
+    "description": "Applies a filter to a given collection.",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "collection",
+        "type": "FeatureCollection",
+        "description": "The collection to filter"
+      },
+      {
+        "name": "filter",
+        "type": "Object",
+        "description": "The filter to apply to the collection. "
+      }
+    ]
+  },
+  "Filter.gte": {
+    "description": "Creates a unary or binary filter that passes unless the left operand is less than the right operand.",
+    "returns": "Filter",
+    "args": [
+      {
+        "name": "leftField",
+        "type": "String",
+        "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "rightValue",
+        "type": "Object",
+        "description": "The value of the right operand. Should not be specified if rightField is specified.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "rightField",
+        "type": "String",
+        "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "leftValue",
+        "type": "Object",
+        "description": "The value of the left operand. Should not be specified if leftField is specified.",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Collection.draw": {
+    "description": "Paints a vector collection for visualization. Not intended for use as input to other algorithms.",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "collection",
+        "type": "FeatureCollection",
+        "description": "The collection to draw"
+      },
+      {
+        "name": "color",
+        "type": "String",
+        "description": "A hex string in the format RRGGBB specifying the color to use for drawing the features."
+      },
+      {
+        "name": "pointRadius",
+        "type": "Integer",
+        "description": "The radius in pixels of the point markers.",
+        "optional": "True",
+        "default": "3"
+      },
+      {
+        "name": "strokeWidth",
+        "type": "Integer",
+        "description": "The width in pixels of lines and polygon borders.",
+        "optional": "True",
+        "default": "2"
+      }
+    ]
+  },
+  "Collection.map": {
+    "description": "Maps an algorithm over a collection.",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "collection",
+        "type": "FeatureCollection",
+        "description": "The collection of the elements to which the algorithm is applied."
+      },
+      {
+        "name": "baseAlgorithm",
+        "type": "Algorithm",
+        "description": "The algorithm being applied to each element"
+      },
+      {
+        "name": "dropNulls",
+        "type": "Boolean",
+        "description": "If true, the mapped algorithm is allowed to return nulls, and the elements for which it returns nulls will be dropped.",
+        "optional": "True",
+        "default": "False"
+      }
+    ]
+  },
+  "Image.reproject": {
+    "description": "Force an image to be computed in a given projection and resolution.",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "image",
+        "type": "Image<unknown bands>",
+        "description": "The image to reproject"
+      },
+      {
+        "name": "crs",
+        "type": "Projection",
+        "description": "The CRS to project the image to."
+      },
+      {
+        "name": "crsTransform",
+        "type": "List<Float>",
+        "description": "The list of CRS transform values.  This is a row-major ordering of the 3x2 transform matrix.  This option is mutually exclusive with the scale option, and replaces any transform already on the projection.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "scale",
+        "type": "Float",
+        "description": "If scale is specified, then the projection is scaled by dividing the specified scale value by the nominal size of a meter in the specified projection. If scale is not specified, then the scale of the given projection will be used.",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Projection": {
+    "description": "Returns a Projection with the given base coordinate system and the given transform between projected coordinates and the base. If no transform is specified, the identity transform is assumed.",
+    "returns": "Projection",
+    "args": [
+      {
+        "name": "crs",
+        "type": "Object",
+        "description": "The base coordinate reference system of this Projection, given as a well-known authority code (e.g. \\'EPSG:4326\\') or a WKT string."
+      },
+      {
+        "name": "transform",
+        "type": "List<Object>",
+        "description": "The transform between projected coordinates and the base coordinate system, specified as a 2x3 affine transform matrix in row-major order: [xScale, xShearing, xTranslation, yShearing, yScale, yTranslation]. May not specify both this and 'transformWkt'.",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "transformWkt",
+        "type": "String",
+        "description": "The transform between projected coordinates and the base coordinate system, specified as a WKT string. May not specify both this and \\'transform\\'.",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "ImageCollection.mosaic": {
+    "description": "Composites all the images in a collection, using the mask.",
+    "returns": "Image",
+    "args": [
+      {
+        "name": "collection",
+        "type": "ImageCollection",
+        "description": "The collection to mosaic."
+      }
+    ]
+  },
+  "Image.select": {
+    "description": "Selects bands from an image by name, RE2-compatible regex or index and optionally renames them.",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "input",
+        "type": "Image<unknown bands>",
+        "description": "The image to select bands from."
+      },
+      {
+        "name": "bandSelectors",
+        "type": "List<Object>",
+        "description": "A list of names, regexes or numeric indices specifying the bands to select."
+      },
+      {
+        "name": "newNames",
+        "type": "List<String>",
+        "description": "Optional new names for the output bands.  Must match the number of bands selected.",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Cube.load": {
+    "description": "Create a cube by some params",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "productIds",
+        "type": "List<String>",
+        "description": "The product id list for cube creation."
+      },
+      {
+        "name": "StartTime",
+        "type": "String",
+        "description": "The start time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "EndTime",
+        "type": "String",
+        "description": "The end time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "geom",
+        "type": "List<Float>",
+        "description": "The geom of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "bands",
+        "type": "List<String>",
+        "description": "The bands of the product.",
+        "optional": "True",
+        "default": "null"
+      }
+    ]
+  },
+  "Cube.band": {
+    "description": "Select a new cube by band name",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to select bands from."
+      },
+      {
+        "name": "bandName",
+        "type": "String",
+        "description": "The name of band to be selected"
+      }
+    ]
+  },
+  "Cube.visualize": {
+    "description": "Produces an RGB or grayscale visualization of an Cube.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to visualize"
+      },
+      {
+        "name": "products",
+        "type": "Object",
+        "description": "The products in cube to visualize"
+      },
+      {
+        "name": "bands",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "png",
+        "default": "False",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.NDWI": {
+    "description": "Compute NDWI of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDWI."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product in cube to compute NDWI"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of NDWI"
+      }
+    ]
+  },
+  "Cube.binarization": {
+    "description": "Compute binarization of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDWI."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product to compute binarization."
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "The threshold to binary"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of binary"
+      }
+    ]
+  },
+  "Cube.subtract": {
+    "description": "Compute binarization of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDWI."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product to compute binarization."
+      },
+      {
+        "name": "timeList",
+        "type": "List<String>",
+        "description": "The list of time."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of binary"
+      }
+    ]
+  },
+  "Cube.ChangeDetection": {
+    "description": "Get the change area of the target Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to find changed area."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product in cube to detect the change."
+      },
+      {
+        "name": "certainTimes",
+        "type": "List<String>",
+        "description": "The time range of two images to get change"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of change detection."
+      }
+    ]
+  },
+  "Cube.overlayAnalysis": {
+    "description": "Overlay analysis between two cube",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to overlay analysis."
+      },
+      {
+        "name": "raster",
+        "type": "String",
+        "description": "The raster product in cube to overlay"
+      },
+      {
+        "name": "vector",
+        "type": "String",
+        "description": "The target vector product in cube to overlay"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of overlay analysis."
+      }
+    ]
+  },
+  "Cube.conjointAnalysis": {
+    "description": "Conjoin analysis between raster cube and tabular data",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to conjoint analysis."
+      },
+      {
+        "name": "vector",
+        "type": "String",
+        "description": "The vector product in cube to conjoint."
+      },
+      {
+        "name": "tabular",
+        "type": "String",
+        "description": "The tabular product in cube to conjoint."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of conjoin analysis."
+      }
+    ]
+  },
+  "Service.getCollections": {
+    "description": "Getting resource Collections",
+    "returns": "Collections",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productIDs",
+        "type": "List<String>",
+        "description": "The id list of products.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getCollection": {
+    "description": "Getting resource Collection of certain id",
+    "returns": "Collection",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "collectionId",
+        "type": "String",
+        "description": "The id of target collection."
+      }
+    ]
+  },
+  "Service.getFeatureCollection": {
+    "description": "Getting feature collection from resource center",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "filter",
+        "type": "Filter",
+        "description": "Filter the properties of feature collection",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getFeature": {
+    "description": "Getting resource feature of certain id",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "featureId",
+        "type": "String",
+        "description": "The id of target feature."
+      }
+    ]
+  },
+  "Service.getCoverageCollection": {
+    "description": "Getting resource coverage collection of certain id",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "WGS84",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getCoverage": {
+    "description": "Getting resource coverage of certain id",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "coverageID",
+        "type": "String",
+        "description": "The id of target coverage."
+      },
+      {
+        "name": "subset",
+        "type": "List<Float>",
+        "description": "The subset of target coverage.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Get the bands.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getProcesses": {
+    "description": "Getting processes provided by service center",
+    "returns": "Processes",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      }
+    ]
+  },
+  "Service.getProcess": {
+    "description": "Getting process provided by service center",
+    "returns": "Process",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "processId",
+        "type": "String",
+        "description": "The id of target process."
+      }
+    ]
+  },
+  "ProcessResult.visualize": {
+    "description": "Visualize the result of process",
+    "returns": "ProcessResult",
+    "args": [
+      {
+        "name": "input",
+        "type": "ProcessResult",
+        "description": "The result of process to be visualized."
+      }
+    ]
+  },
+  "Processes.getProcess": {
+    "description": "Get the process form the processes.",
+    "returns": "Process",
+    "args": [
+      {
+        "name": "processes",
+        "type": "Processes",
+        "description": "The processes to be selected."
+      },
+      {
+        "name": "processId",
+        "type": "String",
+        "description": "The id of the certain process."
+      }
+    ]
+  },
+  "Collections.getCollection": {
+    "description": "Get the collection from collections.",
+    "returns": "Collection",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collections",
+        "description": "The collections as the input data "
+      },
+      {
+        "name": "collectionId",
+        "type": "String",
+        "description": "The id of the certain collection."
+      }
+    ]
+  },
+  "Collections.toCube": {
+    "description": "Transform the collections to cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collections",
+        "description": "The collections as the input data "
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "Cube的空间范围",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "String",
+        "description": "Cube的时间范围",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "Cube采用的投影",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bands",
+        "type": "List<String>",
+        "description": "波段维度",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Collection.getCollectionType": {
+    "description": "Get the type of the collection.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "collection",
+        "type": "Collection",
+        "description": "The collection to get type."
+      }
+    ]
+  },
+  "Collection.getItem": {
+    "description": "Get the item of a collection.",
+    "returns": "Item",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collection",
+        "description": "The collections as the input data "
+      },
+      {
+        "name": "itemId",
+        "type": "String",
+        "description": "The id of the target item."
+      }
+    ]
+  },
+  "Collection.getNumItems": {
+    "description": "Get the number of items in a collection.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collection",
+        "description": "The collections as the input data "
+      }
+    ]
+  },
+  "Collection.toFeatureCollection": {
+    "description": "Transform the collection to featureCollection.",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collection",
+        "description": "The collections as the input data "
+      }
+    ]
+  },
+  "Collection.toCoverageCollection": {
+    "description": "Transform the collection to featureCollection.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collection",
+        "description": "The collections as the input data "
+      }
+    ]
+  },
+  "Collection.subCollection": {
+    "description": "Get part of collection.",
+    "returns": "Collection",
+    "args": [
+      {
+        "name": "input",
+        "type": "Collection",
+        "description": "The collections as the input data "
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "CoverageCollection.getCollectionType": {
+    "description": "Get the type of the coverage collection.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage collection to get type."
+      }
+    ]
+  },
+  "CoverageCollection.getItem": {
+    "description": "Get the item of a coverage collection.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "The coverage collection as the input data "
+      },
+      {
+        "name": "itemId",
+        "type": "String",
+        "description": "The coverage id."
+      }
+    ]
+  },
+  "CoverageCollection.getNumItems": {
+    "description": "Get the number of items in a coverage collection.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "The coverage collection as the input data "
+      }
+    ]
+  },
+  "CoverageCollection.subCollection": {
+    "description": "Get part of coverage collection.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "The coverage collection as the input data "
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "filter",
+        "type": "Filter",
+        "description": "Filter used",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "FeatureCollection.getCollectionType": {
+    "description": "Get the type of the feature collection.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureCollection",
+        "type": "FeatureCollection",
+        "description": "The feature collection to get type."
+      }
+    ]
+  },
+  "FeatureCollection.getItem": {
+    "description": "Get the item of a feature collection.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "FeatureCollection",
+        "description": "The feature collection as the input data "
+      },
+      {
+        "name": "itemId",
+        "type": "String",
+        "description": "The feature id."
+      }
+    ]
+  },
+  "FeatureCollection.getNumItems": {
+    "description": "Get the number of items in a feature collection.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "input",
+        "type": "FeatureCollection",
+        "description": "The feature collection as the input data "
+      }
+    ]
+  },
+  "FeatureCollection.subCollection": {
+    "description": "Get part of feature collection.",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "FeatureCollection",
+        "description": "The feature collection as the input data "
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "filter",
+        "type": "Filter",
+        "description": "The filter to filter the featureCollection.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Feature.getItemType": {
+    "description": "Get type of item.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "The feature as the input data "
+      }
+    ]
+  },
+  "Coverage.getItemType": {
+    "description": "Get type of item.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The feature as the input data "
+      }
+    ]
+  },
+  "Coverage.domainSet": {
+    "description": "Get the domain set of a coverage.",
+    "returns": "Dictionary",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The Coverage as the input data "
+      }
+    ]
+  },
+  "Coverage.rangeSet": {
+    "description": "Get the range set of a coverage.",
+    "returns": "Dictionary",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The Coverage as the input data "
+      },
+      {
+        "name": "subset",
+        "type": "Dictionary",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Select specific data record fields (measured/observed properties) to be returned.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "scaleFactor",
+        "type": "Float",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "scaleAxes",
+        "type": "Dictionary",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "scaleSize",
+        "type": "Dictionary",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "scaleCrs",
+        "type": "String",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Coverage.rangeType": {
+    "description": "Get the range type of a coverage.",
+    "returns": "Dictionary",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The Coverage as the input data "
+      }
+    ]
+  },
+  "Coverage.add": {
+    "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.subtract": {
+    "description": "Subtracts the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.divide": {
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.binarization": {
+    "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage from which the left operand bands are taken"
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "threshold"
+      }
+    ]
+  },
+  "Kernel.fixed": {
+    "description": "Creates a Kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "weights",
+        "type": "List<List<Double>>",
+        "description": "A 2-D list to use as the weights of the kernel."
+      }
+    ]
+  },
+  "Kernel.square": {
+    "description": "Generates a square-shaped boolean kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "value",
+        "type": "Double",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.prewitt": {
+    "description": "Generates a 3x3 Prewitt edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "axis",
+        "type": "String",
+        "description": "Specify the direction of the convolution kernel,x/y."
+      }
+    ]
+  },
+  "Kernel.kirsch": {
+    "description": "Generates a 3x3 kirsch edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "axis",
+        "type": "String",
+        "description": "Specify the direction of the convolution kernel,x/y."
+      }
+    ]
+  },
+  "Kernel.sobel": {
+    "description": "Generates a 3x3 sobel edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "axis",
+        "type": "String",
+        "description": "Specify the direction of the convolution kernel,x/y."
+      }
+    ]
+  },
+  "Kernel.robert": {
+    "description": "Generates a 2x2 robert edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "axis",
+        "type": "String",
+        "description": "Specify the direction of the convolution kernel,x/y."
+      }
+    ]
+  },
+  "Kernel.laplacian4": {
+    "description": "Generates a 3x3 laplacian-4 edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      }
+    ]
+  },
+  "Kernel.laplacian8": {
+    "description": "Generates a 3x3 laplacian-8 edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      }
+    ]
+  },
+  "Kernel.add": {
+    "description": "Adds two kernels",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "kernel1",
+        "type": "Kernel",
+        "description": "The first kernel."
+      },
+      {
+        "name": "kernel2",
+        "type": "Kernel",
+        "description": "The second kernel."
+      }
+    ]
+  },
+  "Coverage.bandTypes": {
+    "description": "Returns a dictionary of the image's band types.",
+    "returns": "Map",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.rename": {
+    "description": "Rename the bands of an image.Returns the renamed image.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "name",
+        "type": "List<String>",
+        "description": "The new names for the bands. Must match the number of bands in the Image."
+      }
+    ]
+  },
+  "Coverage.abs": {
+    "description": "Computes the absolute value of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.neq": {
+    "description": "Returns 1 iff the first value is not equal to the second for each matched pair of bands in image1 and image2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.signum": {
+    "description": "Computes the signum function (sign) of the input; zero if the input is zero, 1 if the input is greater than zero, -1 if the input is less than zero.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.pow": {
+    "description": "Raises the first value to the power of the second for each matched pair of bands in image1 and image2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.mini": {
+    "description": "Selects the minimum of the first and second values for each matched pair of bands in image1 and image2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.maxi": {
+    "description": "Selects the maximum of the first and second values for each matched pair of bands in image1 and image2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.polynomial": {
+    "description": "Compute a polynomial at each pixel using the given coefficients.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The input image."
+      },
+      {
+        "name": "coefficients",
+        "type": "List<float>",
+        "description": "The polynomial coefficients in increasing order of degree starting with the constant term."
+      }
+    ]
+  },
+  "Coverage.mask": {
+    "description": "Sets an image's mask.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The input image"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The mask image."
+      }
+    ]
+  },
+  "Coverage.convolve": {
+    "description": "Convolves each band of an image with the given kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to convolve."
+      },
+      {
+        "name": "kernel",
+        "type": "Kernel",
+        "description": "The kernel to convolve with."
+      }
+    ]
+  },
+  "Coverage.focalMean": {
+    "description": "Applies a morphological mean filter to each band of an image using a named or custom kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "kernelType",
+        "type": "String",
+        "description": "The type of kernel to use."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to use."
+      }
+    ]
+  },
+  "Coverage.focalMedian": {
+    "description": "Applies a morphological median filter to each band of an image using a named or custom kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "kernelType",
+        "type": "String",
+        "description": "The type of kernel to use."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to use."
+      }
+    ]
+  },
+  "Coverage.focalMode": {
+    "description": "Applies a morphological mode filter to each band of an image using a named or custom kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "kernelType",
+        "type": "String",
+        "description": "The type of kernel to use."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to use."
+      }
+    ]
+  },
+  "Coverage.focalMax": {
+    "description": "Applies a morphological max filter to each band of an image using a named or custom kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "kernelType",
+        "type": "String",
+        "description": "The type of kernel to use."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to use."
+      }
+    ]
+  },
+  "Coverage.focalMin": {
+    "description": "Applies a morphological min filter to each band of an image using a named or custom kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to apply the operations."
+      },
+      {
+        "name": "kernelType",
+        "type": "String",
+        "description": "The type of kernel to use."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to use."
+      }
+    ]
+  },
+  "Coverage.histogram": {
+    "description": "Return the histogram of the image, a map of bin label value and its associated count.",
+    "returns": "Map",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to compute the histogram."
+      }
+    ]
+  },
+  "Coverage.projection": {
+    "description": "Returns the projection of an Image.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which to get the projection."
+      }
+    ]
+  },
+  "Coverage.reproject": {
+    "description": "Force an image to be computed in a given projection",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to reproject."
+      },
+      {
+        "name": "crsCode",
+        "type": "Int",
+        "description": "The code of new projection."
+      },
+      {
+        "name": "resolution",
+        "type": "Int",
+        "description": "The resolution of reprojected image."
+      }
+    ]
+  },
+  "Coverage.resample": {
+    "description": "Resample the image",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to resample."
+      },
+      {
+        "name": "level",
+        "type": "Int",
+        "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
+      },
+      {
+        "name": "mode",
+        "type": "String",
+        "description": "The interpolation mode to use"
+      }
+    ]
+  },
+  "Coverage.gradient": {
+    "description": "Calculates the gradient.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the gradient."
+      }
+    ]
+  },
+  "Coverage.clip": {
+    "description": "Clip the raster with the geometry",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to clip."
+      },
+      {
+        "name": "geom",
+        "type": "Geometry",
+        "description": "The geometry used to clip."
+      }
+    ]
+  },
+  "Coverage.clamp": {
+    "description": "Clamp the raster between low and high",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to clamp."
+      },
+      {
+        "name": "low",
+        "type": "Int",
+        "description": "The low value."
+      },
+      {
+        "name": "high",
+        "type": "Int",
+        "description": "The high value."
+      }
+    ]
+  },
+  "Coverage.rgbToHsv": {
+    "description": "Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1], and produces three bands: hue, saturation and value with values in the range [0, 1].",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageRed",
+        "type": "Coverage",
+        "description": "The Red coverage."
+      },
+      {
+        "name": "coverageGreen",
+        "type": "Coverage",
+        "description": "The Green coverage."
+      },
+      {
+        "name": "coverageBlue",
+        "type": "Coverage",
+        "description": "The Blue coverage."
+      }
+    ]
+  },
+  "Coverage.hsvToRgb": {
+    "description": "Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1], and produces three bands: red, green and blue with values in the range [0, 255].",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageHue",
+        "type": "Coverage",
+        "description": "The Hue coverage."
+      },
+      {
+        "name": "coverageSaturation",
+        "type": "Coverage",
+        "description": "The Saturation coverage."
+      },
+      {
+        "name": "coverageValue",
+        "type": "Coverage",
+        "description": "The Value coverage."
+      }
+    ]
+  },
+  "Coverage.entropy": {
+    "description": "Computes the windowed entropy using the specified kernel centered on each input pixel. Entropy is computed as -sum(p * log2(p)), where p is the normalized probability of occurrence of the values encountered in each window.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the entropy."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square."
+      }
+    ]
+  },
+  "Coverage.NDVI": {
+    "description": "Calculation of image normalized vegetation index NDVI.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "NIR",
+        "type": "Coverage",
+        "description": "The Near-Infrared band."
+      },
+      {
+        "name": "Red",
+        "type": "Coverage",
+        "description": "The Red band."
+      }
+    ]
+  },
+  "Coverage.cbrt": {
+    "description": "Computes the cubic root of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.metadata": {
+    "description": "Return the metadata of the input.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to get the metadata"
+      }
+    ]
+  },
+  "Coverage.toInt8": {
+    "description": "Casts the input value to a signed 8-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toUint8": {
+    "description": "Casts the input value to a unsigned 8-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toInt16": {
+    "description": "Casts the input value to a signed 16-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toUint16": {
+    "description": "Casts the input value to a unsigned 16-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toInt32": {
+    "description": "Casts the input value to a signed 32-bit integer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toFloat": {
+    "description": "Casts the input value to a 32-bit float.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.toDouble": {
+    "description": "Casts the input value to a 64-bit float.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Terrain.slope": {
+    "description": "Calculates slope in degrees from a terrain DEM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the slope."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the slope, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct slope calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Terrain.aspect": {
+    "description": "Calculates aspect in degrees from a terrain DEM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the aspect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the aspect, 1 for a 3×3 square."
+      }
+    ]
+  },
+  "CoverageCollection.binarization": {
+    "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "threshold"
+      }
+    ]
+  },
+  "CoverageCollection.mosaic": {
+    "description": "mosaic the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "the method to mosaic the coverages"
+      }
+    ]
+  },
+  "Coverage.addStyles": {
+    "description": "Add the styles to the coverage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The coverage to be added styles"
+      },
+      {
+        "name": "bands",
+        "type": "List<String>",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "",
+        "default": "png",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.addStyles": {
+    "description": "Add the styles to the coverage.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to visualize"
+      },
+      {
+        "name": "products",
+        "type": "Object",
+        "description": "The products in cube to visualize"
+      },
+      {
+        "name": "bands",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "png",
+        "default": "False",
+        "optional": "True"
+      }
+    ]
+  },
+  "CoverageCollection.addStyles": {
+    "description": "Add the styles to the coverage collection.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "The coverage collection to be added styles"
+      },
+      {
+        "name": "bands",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "png",
+        "default": "False",
+        "optional": "True"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Feature.point": {
+    "description": "create a Point",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.lineString": {
+    "description": "create a LineString",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.linearRing": {
+    "description": "create a LinearRing",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.polygon": {
+    "description": "create a Polygon",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiPoint": {
+    "description": "create a multiPoint",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiLineString": {
+    "description": "create a MultiLineString",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.multiPolygon": {
+    "description": "create a MultiPoint",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coors",
+        "type": "String",
+        "description": "Coordinates"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.geometry": {
+    "description": "create a geometry",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "gjson",
+        "type": "String",
+        "description": "geojson"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "Properties"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.load": {
+    "description": "load data",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "productName",
+        "type": "String",
+        "description": "productName"
+      },
+      {
+        "name": "dateTime",
+        "type": "String",
+        "description": "dataTime",
+        "default": "null"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS",
+        "default": "EPSG:4326"
+      }
+    ]
+  },
+  "Feature.featureCollection": {
+    "description": "create a featureCollection",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureList",
+        "type": "List[Feature]",
+        "description": "featureList"
+      }
+    ]
+  },
+  "Feature.centroid": {
+    "description": "compute bounds",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.buffer": {
+    "description": "compute buffer",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "distance",
+        "type": "Double",
+        "description": "distance"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.convexHull": {
+    "description": "compute convexHull",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.coordinates": {
+    "description": "compute coordinates",
+    "returns": "List[Array[Coordinate]]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.reproject": {
+    "description": "reproject",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "tarCrsCode",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.isUnbounded": {
+    "description": "judge a geometry is unbounded",
+    "returns": "List[Boolean]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.getType": {
+    "description": "Returns the GeoJSON type of the geometry",
+    "returns": "List[String]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.projection": {
+    "description": "Returns the projection of the geometry.",
+    "returns": "List[Int]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.toGeoJSONString": {
+    "description": "Returns a GeoJSON string representation of the geometry.",
+    "returns": "List[String]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.length": {
+    "description": "compute length",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.dissolve": {
+    "description": "Computes the union of all the elements of this geometry.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.contains": {
+    "description": "Returns true iff one geometry contains the other.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.containedIn": {
+    "description": "Returns true iff one geometry is contained in the other.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.disjoint": {
+    "description": "Returns true iff the geometries are disjoint.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.distance": {
+    "description": "Returns the minimum distance between two geometries.",
+    "returns": "Double",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.difference": {
+    "description": "Returns the result of subtracting the 'right' geometry from the 'left' geometry.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.intersection": {
+    "description": "Returns the intersection of the two geometries.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.intersects": {
+    "description": "Returns true iff the geometries intersect.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.symmetricDifference": {
+    "description": "Returns the symmetric difference between two geometries.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.union": {
+    "description": "Returns the union of the two geometries.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.withDistance": {
+    "description": "Returns true iff the geometries are within a specified distance.",
+    "returns": "Boolean",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.copyProperties": {
+    "description": "Copies metadata properties from one element to another.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD1",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "featureRDD2",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "properties",
+        "type": "List[String]",
+        "description": "The properties to copy. If omitted, all properties are copied."
+      }
+    ]
+  },
+  "Feature.get": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[Any]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.getNumber": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.getString": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[String]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.getArray": {
+    "description": "Extract a property from a feature.",
+    "returns": "List[Array[String]]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to extract."
+      }
+    ]
+  },
+  "Feature.propertyNames": {
+    "description": "Returns the names of properties on this element.",
+    "returns": "List[List[String]]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.set": {
+    "description": "Overrides one or more metadata properties of an Element.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "the property to set. it is a json"
+      }
+    ]
+  },
+  "Feature.setGeometry": {
+    "description": "Returns the feature, with the geometry replaced by the specified geometry.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "geom",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.inverseDistanceWeighted": {
+    "description": "InverseDistanceWeighted Interpolation",
+    "returns": "Image<unknown bands>",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "propertyName",
+        "type": "String",
+        "description": "the property to select"
+      },
+      {
+        "name": "maskGeom",
+        "type": "Feature",
+        "description": "feature"
+      }
+    ]
+  },
+  "Feature.area": {
+    "description": "compute area",
+    "returns": "List[Double]",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.bounds": {
+    "description": "compute area",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "Coordinates"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "CRS"
+      }
+    ]
+  },
+  "Feature.addStyles": {
+    "description": "Add the styles to the feature.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "The coverage collection to be added styles"
+      },
+      {
+        "name": "color",
+        "type": "String",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      }
+    ]
+  },
+  "FeatureCollection.addStyles": {
+    "description": "Add the styles to the feature collection.",
+    "returns": "FeatureCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "FeatureCollection",
+        "description": "The feature collection to be added styles"
+      },
+      {
+        "name": "color",
+        "type": "String",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      }
+    ]
+  },
+  "ProcessResult.addStyles": {
+    "description": "Add the styles to the result of process.",
+    "returns": "ProcessResult",
+    "args": [
+      {
+        "name": "input",
+        "type": "ProcessResult",
+        "description": "The feature collection to be added styles"
+      },
+      {
+        "name": "args",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      }
+    ]
+  },
+  "Item.addStyles": {
+    "description": "Add the styles to item.",
+    "returns": "Item",
+    "args": [
+      {
+        "name": "input",
+        "type": "Item",
+        "description": "The item to be added styles"
+      },
+      {
+        "name": "args",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      }
+    ]
+  },
+  "Item.getItemType": {
+    "description": "Get type of item.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Item",
+        "description": "The feature as the input data "
+      }
+    ]
+  },
+  "Filter.equals": {
+    "description": "Check if filter equals others",
+    "returns": "Filter",
+    "args": [
+      {
+        "name": "leftField",
+        "type": "String",
+        "description": "Field name"
+      },
+      {
+        "name": "rightValue",
+        "type": "Object",
+        "description": "value"
+      }
+    ]
+  },
+  "Filter.and": {
+    "description": "Filter and",
+    "returns": "Filter",
+    "args": [
+      {
+        "name": "filters",
+        "type": "List<String>",
+        "description": "Filters"
+      }
+    ]
+  },
+  "Coverage.slope": {
+    "description": "Compute the Slope of DEM",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input DEM"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "default": "1.0",
+        "optional": "True"
+      }
+    ]
+  },
+  "CoverageCollection.slope": {
+    "description": "Compute the Slope of DEM",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input DEM"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "default": "1.0",
+        "optional": "True"
+      }
+    ]
+  },
+  "slope": {
+    "description": "Compute the Slope of DEM",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input DEM"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "default": "1.0",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.fusion": {
+    "description": "Fusion of two cube",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "leftCube",
+        "type": "Cube",
+        "description": "the left cube"
+      },
+      {
+        "name": "rightCube",
+        "type": "Cube",
+        "description": "the other Cube"
+      },
+      {
+        "name": "function",
+        "type": "String",
+        "description": "the String function to use"
+      },
+      {
+        "name": "param",
+        "type": "Object",
+        "description": "the param to be added to function",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "newProduct",
+        "type": "String",
+        "description": "the new product from the process",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Feature.buffer": {
+    "description": "Fusion of two cube",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "the target feature"
+      },
+      {
+        "name": "distance",
+        "type": "Float",
+        "description": "the distance of the buffer"
+      },
+      {
+        "name": "maxError",
+        "type": "Float",
+        "description": "the String function to use",
+        "default": "0.01",
+        "optional": "True"
+      },
+      {
+        "name": "proj",
+        "type": "Projection",
+        "description": "the projection of buffer",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Feature.union": {
+    "description": "Union two  features",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "leftFeature",
+        "type": "Feature",
+        "description": "the left feature to union"
+      },
+      {
+        "name": "rightFeature",
+        "type": "Feature",
+        "description": "the right feature to union"
+      },
+      {
+        "name": "maxError",
+        "type": "Float",
+        "description": "the String function to use",
+        "default": "0.01",
+        "optional": "True"
+      },
+      {
+        "name": "proj",
+        "type": "Projection",
+        "description": "the projection of buffer",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Coverage.aspect": {
+    "description": "坡向计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "CoverageCollection.aspect": {
+    "description": "坡向计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "Coverage.hillShade": {
+    "description": "山体阴影计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "Azimuth",
+        "type": "Float",
+        "description": "Set the horizontal angle(in degrees) of the sun(clockwise direction)Range:0 to 360.0",
+        "optional": "True",
+        "default": "300.0"
+      },
+      {
+        "name": "Vertical_angle",
+        "type": "Float",
+        "description": "Set the vertical angle(in degrees) of the sun, that is the height of the sun",
+        "optional": "True",
+        "default": "40.0"
+      }
+    ]
+  },
+  "CoverageCollection.hillShade": {
+    "description": "山体阴影计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "Azimuth",
+        "type": "Float",
+        "description": "Set the horizontal angle(in degrees) of the sun(clockwise direction)Range:0 to 360.0",
+        "optional": "True",
+        "default": "300.0"
+      },
+      {
+        "name": "Vertical_angle",
+        "type": "Float",
+        "description": "Set the vertical angle(in degrees) of the sun, that is the height of the sun",
+        "optional": "True",
+        "default": "40.0"
+      }
+    ]
+  },
+  "Coverage.relief": {
+    "description": "等值线计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "CoverageCollection.relief": {
+    "description": "等值线计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "Coverage.ruggednessIndex": {
+    "description": "粗糙度计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "CoverageCollection.ruggednessIndex": {
+    "description": "粗糙度计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      },
+      {
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "Coverage.cellBalance": {
+    "description": "洼地去除",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "CoverageCollection.cellBalance": {
+    "description": "洼地去除",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "Coverage.flowAccumulationTD": {
+    "description": "流量(Top-Down)计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "CoverageCollection.flowAccumulationTD": {
+    "description": "流量(Top-Down)计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "Coverage.flowPathLength": {
+    "description": "流域长度计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "CoverageCollection.flowPathLength": {
+    "description": "流域长度计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "Coverage.slopeLength": {
+    "description": "坡长计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "CoverageCollection.slopeLength": {
+    "description": "坡长计算",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "Coverage.sceneClassification": {
+    "description": "场景分类",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "Coverage.imageSegmentation": {
+    "description": "语义分割",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "the input coverage"
+      }
+    ]
+  },
+  "Algorithm.hargreaves": {
+    "description": "水文hargreaves模型",
+    "returns": "Table",
+    "args": [
+      {
+        "name": "inputTemperature",
+        "type": "Table",
+        "description": "温度表格数据"
+      },
+      {
+        "name": "inputStation",
+        "type": "FeatureCollection",
+        "description": "站点数据"
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "开始时间"
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "结束时间"
+      },
+      {
+        "name": "timeStep",
+        "type": "Float",
+        "description": "步长"
+      }
+    ]
+  },
+  "Algorithm.topmodel": {
+    "description": "水文TOPMODEL模型",
+    "returns": "Table",
+    "args": [
+      {
+        "name": "rate",
+        "type": "Float",
+        "description": "rate"
+      },
+      {
+        "name": "recession",
+        "type": "Float",
+        "description": "recession"
+      },
+      {
+        "name": "tMax",
+        "type": "Float",
+        "description": "tMax"
+      },
+      {
+        "name": "iterception",
+        "type": "Float",
+        "description": "iterception"
+      },
+      {
+        "name": "waterShedArea",
+        "type": "Float",
+        "description": "waterShedArea"
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "开始时间"
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "结束时间"
+      },
+      {
+        "name": "timeStep",
+        "type": "Float",
+        "description": "步长"
+      },
+      {
+        "name": "inputTopoIndex",
+        "type": "Table",
+        "description": ""
+      },
+      {
+        "name": "inputPrecipEvapFile",
+        "type": "Table",
+        "description": ""
+      }
+    ]
+  },
+  "Algorithm.swmm": {
+    "description": "水文SWMM5模型",
+    "returns": "Table",
+    "args": [
+      {
+        "name": "input",
+        "type": "Table",
+        "description": ""
+      }
+    ]
+  },
+  "Algorithm.virtualConstellation": {
+    "description": "高分/哨兵2一致性产品生产",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "原始数据"
+      },
+      {
+        "name": "bands",
+        "type": "String",
+        "description": "所处理的波段"
+      }
+    ]
+  },
+  "CoverageCollection.calVegIndex": {
+    "description": "计算植被/水体指数",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "输入数据(Modis)"
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "description": "年份"
+      },
+      {
+        "name": "quarter",
+        "type": "String",
+        "description": "季度"
+      }
+    ]
+  },
+  "CoverageCollection.calCrop": {
+    "description": "用矢量裁剪",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "输入数据"
+      },
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "裁剪所用的矢量"
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "description": "年份"
+      },
+      {
+        "name": "quarter",
+        "type": "String",
+        "description": "季度"
+      },
+      {
+        "name": "sort",
+        "type": "String",
+        "description": "类型"
+      }
+    ]
+  },
+  "CoverageCollection.calVegCoverage": {
+    "description": "计算植被覆盖度",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "输入数据(Modis)"
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "description": "年份"
+      },
+      {
+        "name": "quarter",
+        "type": "String",
+        "description": "季度"
+      }
+    ]
+  },
+  "CoverageCollection.calNPP": {
+    "description": "计算植被生产力",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "输入数据，即植被/水体指数"
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "description": "年份"
+      },
+      {
+        "name": "quarter",
+        "type": "String",
+        "description": "季度"
+      }
+    ]
+  },
+  "CoverageCollection.calVEI": {
+    "description": "计算生态指数",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "inputFVC",
+        "type": "CoverageCollection",
+        "description": "输入的FVC产品"
+      },
+      {
+        "name": "inputNPP",
+        "type": "CoverageCollection",
+        "description": "输入的NPP产品"
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "description": "年份"
+      }
+    ]
+  },
+  "CoverageCollection.fromCoverages": {
+    "description": "从coverages列表中构造CoverageCollection",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "coverages",
+        "type": "List<Object>",
+        "description": "输入的coverages列表"
+      }
+    ]
+  },
+  "Service.getTable": {
+    "description": "从service中获取表格数据",
+    "returns": "Table",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of table product."
+      }
+    ]
+  },
+  "Table.getTable": {
+    "description": "从加载表格数据",
+    "returns": "Table",
+    "args": [
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of table product."
+      }
+    ]
+  },
+  "Table.getDownloadUrl": {
+    "description": "获取下载的url",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Table",
+        "description": "The table to download."
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "format of the  table file"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "file name of the  table file"
+      }
+    ]
+  },
+  "Table.addStyles": {
+    "description": "获取下载的url",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Table",
+        "description": "The table to download."
+      }
+    ]
+  }
+}
