@@ -2477,6 +2477,60 @@
       }
     ]
   },
+  "Coverage.entropy": {
+    "description": "Computes the windowed entropy using the specified kernel centered on each input pixel. Entropy is computed as -sum(p * log2(p)), where p is the normalized probability of occurrence of the values encountered in each window.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the entropy."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square."
+      }
+    ]
+  },
+  "Coverage.NDVI": {
+    "description": "Calculation of image normalized vegetation index NDVI.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "NIR",
+        "type": "Coverage",
+        "description": "The Near-Infrared band."
+      },
+      {
+        "name": "Red",
+        "type": "Coverage",
+        "description": "The Red band."
+      }
+    ]
+  },
+  "Coverage.cbrt": {
+    "description": "Computes the cubic root of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.metadata": {
+    "description": "Return the metadata of the input.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to get the metadata"
+      }
+    ]
+  },
   "Coverage.toInt8": {
     "description": "Casts the input value to a signed 8-bit integer.",
     "returns": "Coverage",
@@ -2551,6 +2605,43 @@
         "name": "coverage",
         "type": "Coverage",
         "description": "The coverage to which the operation is applied."
+      }
+    ]
+  },
+  "Terrain.slope": {
+    "description": "Calculates slope in degrees from a terrain DEM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the slope."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the slope, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct slope calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Terrain.aspect": {
+    "description": "Calculates aspect in degrees from a terrain DEM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the aspect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the aspect, 1 for a 3×3 square."
       }
     ]
   },
