@@ -357,11 +357,17 @@ object Trigger {
         val hist = Image.histogram(image = rdd_list_image(args("coverage")))
         println(hist)
       }
+      case "Coverage.reproject" => {
+        rdd_list_image += (UUID -> Image.reproject(image = rdd_list_image(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
+      }
       case "Coverage.resample" => {
         rdd_list_image += (UUID -> Image.resample(image = rdd_list_image(args("coverage")), level = args("level").toInt, mode = args("mode")))
       }
       case "Coverage.gradient" => {
         rdd_list_image += (UUID -> Image.gradient(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.clip" => {
+        rdd_list_image += (UUID -> Image.clip(image = rdd_list_image(args("coverage")), geom = rdd_list_feature(args("geom"))))
       }
       case "Coverage.clamp" => {
         rdd_list_image += (UUID -> Image.clamp(image = rdd_list_image(args("coverage")), low = args("low").toInt, high = args("high").toInt))
@@ -372,6 +378,49 @@ object Trigger {
       case "Coverage.hsvToRgb" => {
         rdd_list_image += (UUID -> Image.hsvToRgb(imageHue = rdd_list_image(args("coverageHue")), imageSaturation = rdd_list_image(args("coverageSaturation")), imageValue = rdd_list_image(args("coverageValue"))))
       }
+      case "Coverage.entropy" => {
+        rdd_list_image += (UUID -> Image.entropy(image = rdd_list_image(args("coverage")), radius = args("radius").toInt))
+      }
+      case "Coverage.NDVI" => {
+        rdd_list_image += (UUID -> Image.NDVI(NIR = rdd_list_image(args("NIR")), Red = rdd_list_image(args("Red"))))
+      }
+      case "Coverage.cbrt" => {
+        rdd_list_image += (UUID -> Image.cbrt(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.metadata" => {
+        val metadataString = Image.metadata(image = rdd_list_image(args("coverage")))
+        println(metadataString)
+      }
+      case "Coverage.toInt8" => {
+        rdd_list_image += (UUID -> Image.toInt8(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.toUint8" => {
+        rdd_list_image += (UUID -> Image.toUint8(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.toInt16" => {
+        rdd_list_image += (UUID -> Image.toInt16(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.toUint16" => {
+        rdd_list_image += (UUID -> Image.toUint16(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.toInt32" => {
+        rdd_list_image += (UUID -> Image.toInt32(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.toFloat" => {
+        rdd_list_image += (UUID -> Image.toFloat(image = rdd_list_image(args("coverage"))))
+      }
+      case "Coverage.toDouble" => {
+        rdd_list_image += (UUID -> Image.toDouble(image = rdd_list_image(args("coverage"))))
+      }
+
+
+      case "Terrain.slope" => {
+        rdd_list_image += (UUID -> Terrain.slope(image = rdd_list_image(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+      }
+      case "Terrain.aspect" => {
+        rdd_list_image += (UUID -> Terrain.aspect(image = rdd_list_image(args("coverage")), radius = args("radius").toInt))
+      }
+
 
       case "Coverage.addStyles" => {
         if (oorB == 0) {
