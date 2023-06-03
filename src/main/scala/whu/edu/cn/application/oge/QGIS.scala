@@ -2141,7 +2141,6 @@ def gdalTranslate(implicit sc: SparkContext,
 
   makeRasterRDDFromTif(sc, input, writePath)
 
-
 }
 
 
