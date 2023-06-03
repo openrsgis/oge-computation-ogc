@@ -50,6 +50,9 @@ public class HttpRequest {
         return result;
     }
 
+
+
+
     /**
      * 向指定URL发送POST方式的请求
      *

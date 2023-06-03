@@ -90,4 +90,5 @@ object RDDTransformerUtil {
     println("成功读取shp")
     featureRDD
   }
+
 }
