@@ -48,7 +48,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 import scala.math._
 
-object Image {
+object Coverage {
   val tileDifference: Int = 0
 
 
