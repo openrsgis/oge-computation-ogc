@@ -49,11 +49,6 @@ import scala.language.postfixOps
 import scala.math._
 
 object Image {
-  //  val pool = new MinIOConnectionPool(MINIO_URL, MINIO_KEY, MINIO_PWD, 10)
-  val client = new MinioClient.Builder()
-    .endpoint(MINIO_URL)
-    .credentials(MINIO_KEY, MINIO_PWD)
-    .build()
   val tileDifference: Int = 0
 
 
@@ -166,10 +161,7 @@ object Image {
         .map(t => { // 合并所有的元数据（追加了范围）
           val time1 = System.currentTimeMillis()
           val rawTiles: util.ArrayList[RawTile] = {
-            //            var tiles: util.ArrayList[RawTile] = null
-            //            pool.withClient(client => {
-            //              tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, union)
-            //            })
+            val client = new MinIOUtil().getMinioClient
             val tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, union)
             tiles
           } //TODO
@@ -213,10 +205,7 @@ object Image {
 
       val imagePathRdd: RDD[(String, String, String, String, String, String)] = sc.parallelize(metaData, metaData.length)
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
-        //        var tiles: util.ArrayList[RawTile] = null
-        //        pool.withClient(client => {
-        //          tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, polygon)
-        //        })
+        val client = new MinIOUtil().getMinioClient
         val tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, polygon)
         if (tiles.size() > 0) asScalaBuffer(tiles)
         else mutable.Buffer.empty[RawTile]
@@ -255,10 +244,7 @@ object Image {
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
     val tileRDD = tileRDDReP.map(t => {
       val time1 = System.currentTimeMillis()
-      //      var tile: RawTile = null
-      //      pool.withClient { client =>
-      //        tile = getTileBuf(client, t)
-      //      }
+      val client = new MinIOUtil().getMinioClient
       val tile = getTileBuf(client, t)
       val time2 = System.currentTimeMillis()
       println("Get Tile Time is " + (time2 - time1))
@@ -304,10 +290,7 @@ object Image {
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     val rawTileRDD = tileRDDReP.map(t => {
-      //      var tile: RawTile = null
-      //      pool.withClient { client =>
-      //        tile = getTileBuf(client, t)
-      //      }
+      val client = new MinIOUtil().getMinioClient
       val tile = getTileBuf(client, t)
       t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDataType))
       t
@@ -2467,7 +2450,7 @@ object Image {
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, level: Int, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, layerID: Int, fileName: String = null): Unit = {
-    val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
+    val outputPath = "/mnt/storage/on-the-fly" // TODO datas/on-the-fly
     val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
 
     val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resampleToTargetZoom(image, level, "Bilinear")

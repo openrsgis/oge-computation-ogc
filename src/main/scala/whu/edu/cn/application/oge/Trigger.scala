@@ -57,8 +57,6 @@ object Trigger {
 
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
     name match {
-
-
       // ImageTrigger
       case "classificationDLCUG" => {
         rdd_list_image += (
@@ -68,7 +66,6 @@ object Trigger {
           )
           )
       }
-
 
       case "map" => {
         level = argOrNot(args, "level").toInt
@@ -131,7 +128,6 @@ object Trigger {
       case "Service.getFeatureCollection" => {
         rdd_list_feature_API += (UUID -> argOrNot(args, "productID"))
       }
-
       //Algorithm
       case "Algorithm.hargreaves" => {
         rdd_list_table += (UUID -> hargreaves(inputTemperature = rdd_list_table(argOrNot(args, "inputTemperature")), inputStation = rdd_list_feature_API(argOrNot(args, "inputStation")),
@@ -367,7 +363,7 @@ object Trigger {
         rdd_list_image += (UUID -> Image.gradient(image = rdd_list_image(args("coverage"))))
       }
       case "Coverage.clip" => {
-        rdd_list_image += (UUID -> Image.clip(image = rdd_list_image(args("coverage")), geom = rdd_list_feature(args("geom"))))
+        rdd_list_image += (UUID -> Image.clip(image = rdd_list_image(args("coverage")), geom = rdd_list_feature(args("geom")).asInstanceOf[Geometry]))
       }
       case "Coverage.clamp" => {
         rdd_list_image += (UUID -> Image.clamp(image = rdd_list_image(args("coverage")), low = args("low").toInt, high = args("high").toInt))
@@ -833,7 +829,6 @@ object Trigger {
   def main(args: Array[String]): Unit = {
     workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
-
     workTaskJSON = {
       val fileSource = Source.fromFile(
         "src/main/scala/whu/edu/cn/application/oge/modis.json")
@@ -843,18 +838,16 @@ object Trigger {
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
-
     originTaskID = "0000000000000"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
-      .setMaster("local[*]")
+      .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
     runMain(sc, workTaskJSON, workID, originTaskID)
 
-
-    Thread.sleep(1000000)
+//    Thread.sleep(1000000)
 
     sc.stop()
   }
@@ -872,10 +865,8 @@ object Trigger {
 
     val time1: Long = System.currentTimeMillis()
 
-
     val jsonObject = JSON.parseObject(workTaskJSON)
     println(jsonObject)
-
 
     oorB = jsonObject.getString("oorB").toInt
     if (oorB == 0) {
@@ -931,7 +922,7 @@ object Trigger {
     println("***********************************************************")
 
 
-    val a = if (sc.master == "local[*]") {
+    val a = if (sc.master.contains("local")) {
       JsonToArgLocal.trans(jsonObject)
     }
     else {
