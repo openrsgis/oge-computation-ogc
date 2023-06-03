@@ -72,8 +72,7 @@ object QGIS {
    */
   def nativeAssignProjection(implicit sc: SparkContext,
                              input: RDD[(String, (Geometry, Map[String, Any]))],
-                             crs: String = "EPSG:4326 - WGS84"
-                            )
+                             crs: String = "EPSG:4326 - WGS84")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
     val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + ".shp"
@@ -875,7 +874,7 @@ def gdalGridAverage(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
 
@@ -955,7 +954,7 @@ def gdalGridDataMetrics(implicit sc: SparkContext,
     "2" -> "2",
     "3" -> "3",
     "4" -> "4",
-    "5" -> "5",
+    "5" -> "5"
   ).getOrElse(metric, "0")
 
 
@@ -970,7 +969,7 @@ def gdalGridDataMetrics(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
 
@@ -1058,7 +1057,7 @@ def gdalGridInverseDistance(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
 
@@ -1145,7 +1144,7 @@ def gdalGridInverseDistanceNearestNeighbor(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
 
@@ -1224,7 +1223,7 @@ def gdalGridLinear(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
   try {
@@ -1301,7 +1300,7 @@ def gdalGridNearestNeighbor(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
   try {
@@ -1536,7 +1535,7 @@ def gdalOneSideBuffer(implicit sc: SparkContext,
 
   val bufferSideInput: String = Map(
     "0" -> "0",
-    "1" -> "1",
+    "1" -> "1"
   ).getOrElse(bufferSide, "0")
 
   try {
@@ -1704,7 +1703,7 @@ def gdalProximity(implicit sc: SparkContext,
 
   val unitsInput: String = Map(
     "0" -> "0",
-    "1" -> "1",
+    "1" -> "1"
   ).getOrElse(units, "1")
 
   val dataTypeInput: String = Map(
@@ -1718,7 +1717,7 @@ def gdalProximity(implicit sc: SparkContext,
     "7" -> "7",
     "8" -> "8",
     "9" -> "9",
-    "10" -> "10",
+    "10" -> "10"
   ).getOrElse(dataType, "0")
 
   try {
@@ -2114,7 +2113,7 @@ def gdalTranslate(implicit sc: SparkContext,
     "8" -> "8",
     "9" -> "9",
     "10" -> "10",
-    "11" -> "11",
+    "11" -> "11"
   ).getOrElse(dataType, "0")
 
   try {
@@ -2142,7 +2141,13 @@ def gdalTranslate(implicit sc: SparkContext,
 
   makeRasterRDDFromTif(sc, input, writePath)
 
+
 }
+
+
+
+
+
 
 
 
