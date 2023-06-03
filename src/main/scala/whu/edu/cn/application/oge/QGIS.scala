@@ -72,7 +72,7 @@ object QGIS {
    */
   def nativeAssignProjection(implicit sc: SparkContext,
                              input: RDD[(String, (Geometry, Map[String, Any]))],
-                             crs: String = "EPSG:4326 - WGS84",
+                             crs: String = "EPSG:4326 - WGS84"
                             )
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
