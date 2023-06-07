@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Geometry}
-import whu.edu.cn.application.oge.ImageTrigger.lamda
 import whu.edu.cn.jsonparser.JsonToArgLocal
 
 import scala.collection.mutable.Map
