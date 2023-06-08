@@ -15,6 +15,7 @@ import whu.edu.cn.core.raster.query.QueryRasterTiles
 import whu.edu.cn.util.GcConstant
 import whu.edu.cn.view.Info
 
+
 /**
  * Cloud filter for landsat-8 ARD product.
  */

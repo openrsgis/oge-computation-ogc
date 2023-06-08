@@ -48,12 +48,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.postfixOps
 import scala.math._
 
-object Image {
-  //  val pool = new MinIOConnectionPool(MINIO_URL, MINIO_KEY, MINIO_PWD, 10)
-  val client = new MinioClient.Builder()
-    .endpoint(MINIO_URL)
-    .credentials(MINIO_KEY, MINIO_PWD)
-    .build()
+object Coverage {
   val tileDifference: Int = 0
 
 
@@ -166,10 +161,7 @@ object Image {
         .map(t => { // 合并所有的元数据（追加了范围）
           val time1 = System.currentTimeMillis()
           val rawTiles: util.ArrayList[RawTile] = {
-            //            var tiles: util.ArrayList[RawTile] = null
-            //            pool.withClient(client => {
-            //              tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, union)
-            //            })
+            val client = new MinIOUtil().getMinioClient
             val tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, union)
             tiles
           } //TODO
@@ -213,10 +205,7 @@ object Image {
 
       val imagePathRdd: RDD[(String, String, String, String, String, String)] = sc.parallelize(metaData, metaData.length)
       val tileRDDNoData: RDD[mutable.Buffer[RawTile]] = imagePathRdd.map(t => {
-        //        var tiles: util.ArrayList[RawTile] = null
-        //        pool.withClient(client => {
-        //          tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, polygon)
-        //        })
+        val client = new MinIOUtil().getMinioClient
         val tiles = tileQuery(client, level, t._1, t._2, t._3, t._4, t._5, t._6, productName, polygon)
         if (tiles.size() > 0) asScalaBuffer(tiles)
         else mutable.Buffer.empty[RawTile]
@@ -255,10 +244,7 @@ object Image {
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
     val tileRDD = tileRDDReP.map(t => {
       val time1 = System.currentTimeMillis()
-      //      var tile: RawTile = null
-      //      pool.withClient { client =>
-      //        tile = getTileBuf(client, t)
-      //      }
+      val client = new MinIOUtil().getMinioClient
       val tile = getTileBuf(client, t)
       val time2 = System.currentTimeMillis()
       println("Get Tile Time is " + (time2 - time1))
@@ -304,10 +290,7 @@ object Image {
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     val rawTileRDD = tileRDDReP.map(t => {
-      //      var tile: RawTile = null
-      //      pool.withClient { client =>
-      //        tile = getTileBuf(client, t)
-      //      }
+      val client = new MinIOUtil().getMinioClient
       val tile = getTileBuf(client, t)
       t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDataType))
       t
@@ -537,12 +520,13 @@ object Image {
     val bandNum2 = bandNames(image2Reprojected).length
     println("add bandNum1 = " + bandNum1)
     println("add bandNum2 = " + bandNum2)
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val addRDD = image1NoBand.join(image2NoBand)
       (addRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Add"), Add(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Add"), Add(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -574,12 +558,13 @@ object Image {
     val bandNum2 = bandNames(image2Reprojected).length
     println("subtract bandNum1 = " + bandNum1)
     println("subtract bandNum2 = " + bandNum2)
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val subtractRDD = image1NoBand.join(image2NoBand)
       (subtractRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Subtract"), Subtract(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Subtract"), Subtract(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -611,12 +596,13 @@ object Image {
     val bandNum2 = bandNames(image2Reprojected).length
     println("divide bandNum1 = " + bandNum1)
     println("divide bandNum2 = " + bandNum2)
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val divideRDD = image1NoBand.join(image2NoBand)
       (divideRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Divide"), Divide(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Divide"), Divide(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -648,12 +634,13 @@ object Image {
     val bandNum2 = bandNames(image2Reprojected).length
     println("multiply bandNum1 = " + bandNum1)
     println("multiply bandNum2 = " + bandNum2)
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val multiplyRDD = image1NoBand.join(image2NoBand)
       (multiplyRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Multiply"), Multiply(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Multiply"), Multiply(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -704,12 +691,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val andRDD = image1NoBand.join(image2NoBand)
       (andRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "And"), And(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "And"), And(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -739,12 +727,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val orRDD = image1NoBand.join(image2NoBand)
       (orRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Or"), Or(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Or"), Or(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -893,12 +882,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val atan2RDD = image1NoBand.join(image2NoBand)
       (atan2RDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Atan2"), Atan2(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Atan2"), Atan2(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -988,12 +978,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val eqRDD = image1NoBand.join(image2NoBand)
       (eqRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Eq"), Equal(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Eq"), Equal(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1023,12 +1014,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val gtRDD = image1NoBand.join(image2NoBand)
       (gtRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Gt"), Greater(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Gt"), Greater(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1058,12 +1050,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val gteRDD = image1NoBand.join(image2NoBand)
       (gteRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Gte"), GreaterOrEqual(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Gte"), GreaterOrEqual(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1093,12 +1086,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val gtRDD = image1NoBand.join(image2NoBand)
-      (gtRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Lt"), Less(t._2._1._2, t._2._2._2))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val ltRDD = image1NoBand.join(image2NoBand)
+      (ltRDD.map(t => {
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Lt"), Less(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1128,12 +1122,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val gteRDD = image1NoBand.join(image2NoBand)
-      (gteRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Lte"), LessOrEqual(t._2._1._2, t._2._2._2))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val lteRDD = image1NoBand.join(image2NoBand)
+      (lteRDD.map(t => {
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Lte"), LessOrEqual(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1239,12 +1234,13 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val eqRDD = image1NoBand.join(image2NoBand)
-      (eqRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Ueq"), Unequal(t._2._1._2, t._2._2._2))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val neqRDD = image1NoBand.join(image2NoBand)
+      (neqRDD.map(t => {
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Neq"), Unequal(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1307,14 +1303,15 @@ object Image {
     }
     val bandNum1 = bandNames(image1Reprojected).length
     val bandNum2 = bandNames(image2Reprojected).length
+    val resampleTime = Instant.now.getEpochSecond
     println("pow bandNum1 = " + bandNum1)
     println("pow bandNum2 = " + bandNum2)
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val powRDD = image1NoBand.join(image2NoBand)
       (powRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Pow"), Pow(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Pow"), Pow(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1345,12 +1342,13 @@ object Image {
     val bandNum2 = bandNames(image2Reprojected).length
     println("min bandNum1 = " + bandNum1)
     println("min bandNum2 = " + bandNum2)
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val minRDD = image1NoBand.join(image2NoBand)
       (minRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Min"), Min(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Min"), Min(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1381,12 +1379,13 @@ object Image {
     val bandNum2 = bandNames(image2Reprojected).length
     println("max bandNum1 = " + bandNum1)
     println("max bandNum2 = " + bandNum2)
+    val resampleTime = Instant.now.getEpochSecond
     if (bandNum1 == 1 && bandNum2 == 1) {
-      val image1NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image1Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
-      val image2NoBand: RDD[(SpaceTimeKey, (String, Tile))] = image2Reprojected._1.map(t => (t._1.spaceTimeKey, (t._1.measurementName, t._2)))
+      val image1NoBand = image1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val image2NoBand = image2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
       val maxRDD = image1NoBand.join(image2NoBand)
       (maxRDD.map(t => {
-        (entity.SpaceTimeBandKey(t._1, "Max"), Max(t._2._1._2, t._2._2._2))
+        (entity.SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "Max"), Max(t._2._1, t._2._2))
       }), image1Reprojected._2)
     }
     else {
@@ -1400,9 +1399,9 @@ object Image {
   /**
    * Applies a morphological mean filter to each band of an image using a named or custom kernel.
    *
-   * @param image      The coverage to which to apply the operations.
+   * @param image The coverage to which to apply the operations.
    * @param kernelType The type of kernel to use.
-   * @param radius     The radius of the kernel to use.
+   * @param radius The radius of the kernel to use.
    * @return
    */
   def focalMean(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
@@ -1545,7 +1544,7 @@ object Image {
   /**
    * Convolves each band of an image with the given kernel.
    *
-   * @param image  The image to convolve.
+   * @param image The image to convolve.
    * @param kernel The kernel to convolve with.
    * @return
    */
@@ -1682,7 +1681,8 @@ object Image {
   def resampleToTargetZoom(
                             image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
                             targetZoom: Int,
-                            mode: String
+                            mode: String,
+                            downSampling: Boolean = true
                           )
   : (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
     val resampleMethod: PointResampleMethod = mode match {
@@ -1692,6 +1692,20 @@ object Image {
     }
 
     // 求解出原始影像的zoom
+    //    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
+    //    //    println("srcAcc0 = " + myAcc2.value)
+    //
+    //    reprojected.map(t => {
+    //
+    //
+    //      //          println("srcRows = " + t._2.rows) 256
+    //      //          println("srcRows = " + t._2.cols) 256
+    //      myAcc2.add(1)
+    //      t
+    //    }).collect()
+    //    println("srcNumOfTiles = " + myAcc2.value) // 234
+    //
+    //
 
     val level: Int = COGHeaderParse.tileDifference
     println("tileDifference = " + level)
@@ -1829,36 +1843,57 @@ object Image {
       val sobely = focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
       val tilex = focal.Convolve(t._2, sobelx, None, TargetCell.All).crop(5, 5, 260, 260)
       val tiley = focal.Convolve(t._2, sobely, None, TargetCell.All).crop(5, 5, 260, 260)
-      (t._1, Sqrt(Add(tilex * tilex, tiley * tiley)).map(u => {
-        if (u > 255) {
-          255
-        } else {
-          u
-        }
-      }))
+      (t._1, Sqrt(Add(tilex * tilex, tiley * tiley)))
+
+
+
+
+
+
     })
-    (gradientRDD, image._2)
+    (gradientRDD, TileLayerMetadata(CellType.fromName("int16"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
   }
 
   /**
    * Clip the raster with the geometry (with the same crs).
    *
    * @param image The coverage to clip.
-   * @param geom  The geometry used to clip.
+   * @param geom The geometry used to clip.
    * @return
    */
   def clip(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), geom: Geometry
           ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-
     val RDDExtent = image._2.extent
     val reso = image._2.cellSize.resolution
-    val clipedRDD = image._1.map(t => {
+    val imageRDDWithExtent = image._1.map(t => {
       val tileExtent = Extent(RDDExtent.xmin + t._1.spaceTimeKey.col * reso * 256, RDDExtent.ymax - (t._1.spaceTimeKey.row + 1) * 256 * reso,
         RDDExtent.xmin + (t._1.spaceTimeKey.col + 1) * reso * 256, RDDExtent.ymax - t._1.spaceTimeKey.row * 256 * reso)
-      val tileCliped = t._2.mask(tileExtent, geom)
+      (t._1, (t._2, tileExtent))
+    })
+    val tilesIntersectedRDD = imageRDDWithExtent.filter(t => {
+      t._2._2.intersects(geom)
+    })
+    val tilesClippedRDD = tilesIntersectedRDD.map(t => {
+      val tileCliped = t._2._1.mask(t._2._2, geom)
       (t._1, tileCliped)
     })
-    (clipedRDD, image._2)
+    val extents = tilesIntersectedRDD.map(t => {
+      (t._2._2.xmin, t._2._2.ymin, t._2._2.xmax, t._2._2.ymax)
+    })
+      .reduce((a, b) => {
+        (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
+      })
+    val extent = Extent(extents._1, extents._2, extents._3, extents._4)
+    val colRowInstant = tilesIntersectedRDD.map(t => {
+      (t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, t._1.spaceTimeKey.instant, t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, t._1.spaceTimeKey.instant)
+    }).reduce((a, b) => {
+      (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
+    })
+    val tl = TileLayout(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val newbounds = Bounds(SpaceTimeKey(colRowInstant._1, colRowInstant._2, colRowInstant._3), SpaceTimeKey(colRowInstant._4, colRowInstant._5, colRowInstant._6))
+    val newlayerMetaData = TileLayerMetadata(image._2.cellType, ld, extent, image._2.crs, newbounds)
+    (tilesClippedRDD, newlayerMetaData)
   }
 
   /**
@@ -1891,9 +1926,9 @@ object Image {
    * Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1],
    * and produces three bands: hue, saturation and value with values in the range [0, 1].
    *
-   * @param imageRed   The Red coverage.
+   * @param imageRed The Red coverage.
    * @param imageGreen The Green coverage.
-   * @param imageBlue  The Blue coverage.
+   * @param imageBlue The Blue coverage.
    * @return
    */
   def rgbToHsv(imageRed: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
@@ -1957,9 +1992,9 @@ object Image {
    * Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1],
    * and produces three bands: red, green and blue with values in the range [0, 255].
    *
-   * @param imageHue        The Hue coverage.
+   * @param imageBlue The Blue coverage.
    * @param imageSaturation The Saturation coverage.
-   * @param imageValue      The Value coverage.
+   * @param imageValue The Value coverage.
    * @return
    */
   def hsvToRgb(imageHue: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
@@ -2030,6 +2065,135 @@ object Image {
   }
 
   /**
+   * Computes the windowed entropy using the specified kernel centered on each input pixel. Entropy is computed as
+   * -sum(p * log2(p)), where p is the normalized probability of occurrence of the values encountered in each window.
+   *
+   * @param image  The coverage to compute the entropy.
+   * @param radius The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square.
+   * @return
+   */
+  def entropy(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), radius: Int
+             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val leftNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(0, 1), t._2))
+    })
+    val rightNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(2, 1), t._2))
+    })
+    val upNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(1, 0), t._2))
+    })
+    val downNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(1, 2), t._2))
+    })
+    val leftUpNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(0, 0), t._2))
+    })
+    val upRightNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(2, 0), t._2))
+    })
+    val rightDownNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(2, 2), t._2))
+    })
+    val downLeftNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(0, 2), t._2))
+    })
+    val midNeighborRDD = image._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(1, 1), t._2))
+    })
+    val unionRDD = leftNeighborRDD.union(rightNeighborRDD).union(upNeighborRDD).union(downNeighborRDD).union(leftUpNeighborRDD).union(upRightNeighborRDD).union(rightDownNeighborRDD).union(downLeftNeighborRDD).union(midNeighborRDD)
+      .filter(t => {
+        t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < image._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < image._2.layout.layoutRows
+      })
+    val groupRDD = unionRDD.groupByKey().map(t => {
+      val listBuffer = new ListBuffer[(SpatialKey, Tile)]()
+      val list = t._2.toList
+      for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
+        var flag = false
+        breakable {
+          for (tile <- list) {
+            if (key.equals(tile._1)) {
+              listBuffer.append(tile)
+              flag = true
+              break
+            }
+          }
+        }
+        if (flag == false) {
+          listBuffer.append((key, ByteArrayTile(Array.fill[Byte](256 * 256)(-128), 256, 256, ByteCellType).mutable))
+        }
+      }
+      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(listBuffer)
+      (t._1, tile.crop(251, 251, 516, 516).convert(CellType.fromName("int16")))
+    })
+    val entropyRDD: RDD[(SpaceTimeBandKey, Tile)] = groupRDD.map(t => {
+      val tile = FloatArrayTile(Array.fill[Float](256 * 256)(Float.NaN), 256, 256, FloatCellType).mutable
+      for (i <- 5 to 260) {
+        for (j <- 5 to 260) {
+          val focalArea = t._2.crop(i - radius, j - radius, i + radius, j + radius)
+
+          val hist = focalArea.histogram.binCounts()
+
+          var entropyValue: Float = 0
+          for (u <- hist) {
+            val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
+            entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
+          }
+          tile.setDouble(i - 5, j - 5, -entropyValue)
+        }
+      }
+      (t._1, tile)
+    })
+    (entropyRDD, image._2)
+  }
+
+  /**
+   * Calculation of image normalized vegetation index NDVI.
+   *
+   * @param NIR The Near-Infrared band.
+   * @param Red The Red band.
+   * @return
+   */
+  def NDVI(NIR: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), Red: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
+          ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val NIRNoBand = NIR._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2.convert(CellType.fromName("float32"))))
+    val RedNoBand = Red._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2.convert(CellType.fromName("float32"))))
+    val joinRDD = NIRNoBand.join(RedNoBand)
+    val resampleTime = Instant.now.getEpochSecond
+    var value = 0
+    if (NIR._2.cellType.toString() == "int8") {
+      value = 128
+    }
+    val NDVIRDD = joinRDD.map(t => {
+      val NIR = Add(t._2._1, value)
+      val Red = Add(t._2._2, value)
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), "NDVI"), Divide(Subtract(NIR, Red), Add(NIR, Red)))
+    })
+    (NDVIRDD, TileLayerMetadata(CellType.fromName("float32"), NIR._2.layout, NIR._2.extent, NIR._2.crs, NIR._2.bounds))
+  }
+
+  /**
+   * Computes the cubic root of the input.
+   *
+   * @param image The image to which the operation is applied.
+   * @return
+   */
+  def cbrt(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+    (image._1.map(t => {
+      (t._1, Pow(t._2.convert(CellType.fromName("float32")), 1.0 / 3.0))
+    }), TileLayerMetadata(CellType.fromName("float32"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
+  }
+
+  /**
+   * Return the metadata of the input.
+   *
+   * @param image The image to get the metadata
+   * @return
+   */
+  def metadata(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    TileLayerMetadata.toString
+  }
+  /**
    * Casts the input value to a signed 8-bit integer.
    *
    * @param image The coverage to which the operation is applied.
@@ -2038,7 +2202,7 @@ object Image {
   def toInt8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
             ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("int8")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("int8"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
   /**
    * Casts the input value to a unsigned 8-bit integer.
@@ -2049,7 +2213,7 @@ object Image {
   def toUint8(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("uint8")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("uint8"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
   /**
    * Casts the input value to a signed 16-bit integer.
@@ -2060,7 +2224,7 @@ object Image {
   def toInt16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("int16")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("int16"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
   /**
    * Casts the input value to a unsigned 16-bit integer.
@@ -2071,7 +2235,7 @@ object Image {
   def toUint16(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("uint16")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("uint16"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
   /**
    * Casts the input value to a signed 32-bit integer.
@@ -2082,7 +2246,7 @@ object Image {
   def toInt32(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("int32")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("int32"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
   /**
    * Casts the input value to a 32-bit float.
@@ -2093,7 +2257,7 @@ object Image {
   def toFloat(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("float32")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("float32"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
   /**
    * Casts the input value to a 64-bit float.
@@ -2104,7 +2268,7 @@ object Image {
   def toDouble(image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (image._1.map(t => {
     (t._1, t._2.convert(CellType.fromName("float64")))
-  }), image._2)
+  }), TileLayerMetadata(CellType.fromName("float64"), image._2.layout, image._2.extent, image._2.crs, image._2.bounds))
 
 
   /**
@@ -2286,7 +2450,7 @@ object Image {
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, level: Int, image: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method: String = null, layerID: Int, fileName: String = null): Unit = {
-    val outputPath = "/home/geocube/oge/on-the-fly" // TODO datas/on-the-fly
+    val outputPath = "/mnt/storage/on-the-fly" // TODO datas/on-the-fly
     val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
 
     val resampledImage: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = resampleToTargetZoom(image, level, "Bilinear")
