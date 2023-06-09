@@ -20,93 +20,6 @@ object QGIS {
 
 
   /**
-   *
-   * Calculated slope direction
-   *
-   * @param sc      Alias object for SparkContext
-   * @param input   Digital Terrain Model raster layer
-   * @param zFactor Vertical exaggeration. This parameter is useful when the Z units differ from the X and Y units, for example feet and meters. You can use this parameter to adjust for this. The default is 1 (no exaggeration).
-   * @return The output aspect raster layer
-   */
-
-  def nativeAspect(implicit sc: SparkContext,
-                   input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-                   zFactor: Double = 1.0):
-  (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
-
-    val time = System.currentTimeMillis()
-
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAspect_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAspect_" + time + "_out.tif"
-    saveRasterRDDToTif(input, outputTiffPath)
-
-
-    try {
-      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
-      val st =
-        raw"""conda activate qgis
-             |cd /home/geocube/oge/oge-server/dag-boot/qgis
-             |python algorithmCode/native_aspect.py""".stripMargin +
-          raw""" --input "$outputTiffPath"""" +
-          raw""" --z-factor $zFactor""" +
-          raw""" --output "$writePath"""".stripMargin
-
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
-
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-
-
-    makeRasterRDDFromTif(sc, input, writePath)
-
-  }
-
-
-  /**
-   * It creates a new layer with the exact same features and geometries as the input one, but assigned to a new CRS.
-   * The geometries are not reprojected, they are just assigned to a different CRS.
-   *
-   * @param sc    Alias object for SparkContext
-   * @param input Input vector layer
-   * @param crs   Select the new CRS to assign to the vector layer
-   * @return Vector layer with assigned projection
-   */
-  def nativeAssignProjection(implicit sc: SparkContext,
-                             input: RDD[(String, (Geometry, Map[String, Any]))],
-                             crs: String = "EPSG:4326 - WGS84")
-  : RDD[(String, (Geometry, Map[String, Any]))] = {
-    val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath)
-
-
-    try {
-      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
-      val st =
-        raw"""conda activate qgis
-             |cd /home/geocube/oge/oge-server/dag-boot/qgis
-             |python algorithmCode/native_assignprojection.py""".stripMargin +
-          raw""" --input "$outputShpPath"""" +
-          raw""" --crs "$crs"""" +
-          raw""" --output "$writePath"""".stripMargin
-
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
-
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-
-    makeFeatureRDDFromShp(sc, writePath)
-  }
-
-
-  /**
    * Creates a new point layer, with points placed on the lines of another layer.
    *
    * @param sc           Alias object for SparkContext
@@ -223,7 +136,9 @@ object QGIS {
     val time = System.currentTimeMillis()
 
     val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAssignProjection_" + time + ".tif"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAssignProjection_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
+    saveRasterRDDToTif(input, writePath)
 
 
     try {
@@ -232,7 +147,7 @@ object QGIS {
         raw"""conda activate qgis
              |cd /home/geocube/oge/oge-server/dag-boot/qgis
              |python algorithmCode/gdal_assignprojection.py""".stripMargin +
-          raw""" --input "$outputTiffPath"""" +
+          raw""" --input "$writePath"""" +
           raw""" --crs "$crs"""".stripMargin
 
 
@@ -244,7 +159,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeChangedRasterRDDFromTif(sc, outputTiffPath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 
 
@@ -2471,6 +2386,343 @@ object QGIS {
 
     makeFeatureRDDFromShp(sc, writePath)
   }
+
+
+  /**
+   * Calculates the rotation required to align point features with their nearest feature from another reference layer.
+   * A new field is added to the output layer which is filled with the angle
+   * (in degrees, clockwise) to the nearest reference feature.
+   *
+   * @param sc             Alias object for SparkContext
+   * @param input          Point features to calculate the rotation for
+   * @param applySymbology Rotates the symbol marker of the features using the angle field value
+   * @param maxDistance    If no reference feature is found within this distance, no rotation is assigned to the point feature.
+   * @param fieldName      Field in which to store the rotation value.
+   * @param referenceLayer Layer to find the closest feature from for rotation calculation
+   * @return The point layer appended with a rotation field. If loaded to QGIS, it is applied by default the input layer symbology, with a data-defined rotation of its marker symbol.
+   */
+  def nativeAngleToNearest(implicit sc: SparkContext,
+                           input: RDD[(String, (Geometry, Map[String, Any]))],
+                           applySymbology: String = "True",
+                           maxDistance: Double,
+                           fieldName: String = "rotation",
+                           referenceLayer: RDD[(String, (Geometry, Map[String, Any]))]
+                          )
+  : RDD[(String, (Geometry, Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+
+    val outputShpPath1 = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAngleToNearest1_" + time + ".shp"
+    val outputShpPath2 = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAngleToNearest2_" + time + ".shp"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAngleToNearest_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputShpPath1)
+    saveFeatureRDDToShp(referenceLayer, outputShpPath2)
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_angletonearest.py""".stripMargin +
+          raw""" --input "$outputShpPath1"""" +
+          raw""" --apply-symbology "$applySymbology"""" +
+          raw""" --max-distance $maxDistance""" +
+          raw""" --field-name "$fieldName"""" +
+          raw""" --reference-layer "$outputShpPath2"""" +
+          raw""" --output "$writePath"""".stripMargin
+
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+
+  /**
+   * Splits a line into multiple geodesic segments, whenever the line crosses the antimeridian (±180 degrees longitude).
+   *
+   * @param sc    Alias object for SparkContext
+   * @param input Input line vector layer
+   * @return The output line vector layer split at the antimeridian.
+   */
+  def nativeAntimeridiansplit(implicit sc: SparkContext,
+                              input: RDD[(String, (Geometry, Map[String, Any]))]
+                             )
+  : RDD[(String, (Geometry, Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+
+    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAntimeridiansplit_" + time + ".shp"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAntimeridiansplit_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputShpPath)
+
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_antimeridiansplit.py""".stripMargin +
+          raw""" --input "$outputShpPath"""" +
+          raw""" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+
+  /**
+   * Creates copies of line features in a layer, by creating multiple offset versions of each feature. Each new version is incrementally offset by a specified distance.
+   *
+   * @param sc         Alias object for SparkContext
+   * @param input      Input line vector layer to use for the offsets.
+   * @param segments   Number of line segments to use to approximate a quarter circle when creating rounded offsets
+   * @param joinStyle  Specify whether round, miter or beveled joins should be used when offsetting corners in a line.
+   * @param offset     Distance between two consecutive offset copies
+   * @param count      Number of offset copies to generate for each feature
+   * @param miterLimit Sets the maximum distance from the offset geometry to use when creating a mitered join as a factor of the offset distance (only applicable for miter join styles). Minimum: 1.0
+   * @return Output line layer with offset features. The original features are also copied.
+   */
+  def nativeArrayOffsetLines(implicit sc: SparkContext,
+                             input: RDD[(String, (Geometry, Map[String, Any]))],
+                             segments: Double = 8,
+                             joinStyle: String = "0",
+                             offset: Double = 1.0,
+                             count: Double = 10,
+                             miterLimit: Double = 2.0
+                            )
+  : RDD[(String, (Geometry, Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+
+    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeArrayOffsetLines_" + time + ".shp"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeArrayOffsetLines_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputShpPath)
+
+    val joinStyleInput: String = Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2"
+    ).getOrElse(joinStyle, "0")
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_arrayoffsetlines.py""".stripMargin +
+          raw""" --input "$outputShpPath"""" +
+          raw""" --segments $segments""" +
+          raw""" --join-style "$joinStyleInput"""" +
+          raw""" --offset $offset""" +
+          raw""" --count $count""" +
+          raw""" --miter-limit $miterLimit""" +
+          raw""" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+
+  /**
+   * Creates copies of features in a layer by creating multiple translated versions of each. Each copy is incrementally displaced by a preset amount in the X, Y and/or Z axis.
+   *
+   * @param sc     Alias object for SparkContext
+   * @param input  Input vector layer to translate
+   * @param count  Number of copies to generate for each feature
+   * @param deltaM Displacement to apply on M
+   * @param deltaX Displacement to apply on the X axis
+   * @param deltaY Displacement to apply on the Y axis
+   * @param deltaZ Displacement to apply on the Z axis
+   * @return Output vector layer with translated (moved) copies of the features. The original features are also copied.
+   */
+  def nativeArrayTranslatedFeatures(implicit sc: SparkContext,
+                                    input: RDD[(String, (Geometry, Map[String, Any]))],
+                                    count: Double = 10,
+                                    deltaM: Double = 0.0,
+                                    deltaX: Double = 0.0,
+                                    deltaY: Double = 0.0,
+                                    deltaZ: Double = 0.0
+                                   )
+  : RDD[(String, (Geometry, Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+
+    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeArrayTranslatedFeatures_" + time + ".shp"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeArrayTranslatedFeatures_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputShpPath)
+
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_arraytranslatedfeatures.py""".stripMargin +
+          raw""" --input "$outputShpPath"""" +
+          raw""" --count $count""" +
+          raw""" --delta-m $deltaM""" +
+          raw""" --delta-x $deltaX""" +
+          raw""" --delta-y $deltaY""" +
+          raw""" --delta-z $deltaZ""" +
+          raw""" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+
+  /**
+   *
+   * Calculated slope direction
+   *
+   * @param sc      Alias object for SparkContext
+   * @param input   Digital Terrain Model raster layer
+   * @param zFactor Vertical exaggeration. This parameter is useful when the Z units differ from the X and Y units, for example feet and meters. You can use this parameter to adjust for this. The default is 1 (no exaggeration).
+   * @return The output aspect raster layer
+   */
+
+  def nativeAspect(implicit sc: SparkContext,
+                   input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
+                   zFactor: Double = 1.0):
+  (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAspect_" + time + ".tif"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAspect_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_aspect.py""".stripMargin +
+          raw""" --input "$outputTiffPath"""" +
+          raw""" --z-factor $zFactor""" +
+          raw""" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+
+    makeRasterRDDFromTif(sc, input, writePath)
+
+  }
+
+
+  /**
+   * It creates a new layer with the exact same features and geometries as the input one, but assigned to a new CRS.
+   * The geometries are not reprojected, they are just assigned to a different CRS.
+   *
+   * @param sc    Alias object for SparkContext
+   * @param input Input vector layer
+   * @param crs   Select the new CRS to assign to the vector layer
+   * @return Vector layer with assigned projection
+   */
+  def nativeAssignProjection(implicit sc: SparkContext,
+                             input: RDD[(String, (Geometry, Map[String, Any]))],
+                             crs: String = "EPSG:4326 - WGS84")
+  : RDD[(String, (Geometry, Map[String, Any]))] = {
+    val time = System.currentTimeMillis()
+    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + ".shp"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputShpPath)
+
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_assignprojection.py""".stripMargin +
+          raw""" --input "$outputShpPath"""" +
+          raw""" --crs "$crs"""" +
+          raw""" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+
+  /**
+   * Returns the closure of the combinatorial boundary of the input geometries (i.e. the topological boundary of the geometry).
+   *
+   * @param sc    Alias object for SparkContext
+   * @param input Input line or polygon vector layer
+   * @return Boundaries from the input layer (point for line, and line for polygon)
+   */
+  def nativeBoundary(implicit sc: SparkContext,
+                     input: RDD[(String, (Geometry, Map[String, Any]))])
+  : RDD[(String, (Geometry, Map[String, Any]))] = {
+    val time = System.currentTimeMillis()
+    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeBoundary_" + time + ".shp"
+    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeBoundary_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputShpPath)
+
+
+    try {
+      versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
+      val st =
+        raw"""conda activate qgis
+             |cd /home/geocube/oge/oge-server/dag-boot/qgis
+             |python algorithmCode/native_boundary.py""".stripMargin +
+          raw""" --input "$outputShpPath"""" +
+          raw""" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+
 
 
 
