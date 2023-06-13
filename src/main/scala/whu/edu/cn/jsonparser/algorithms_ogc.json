@@ -1,736 +1,5 @@
 {
-  "Image.load": {
-    "description": "Returns the images by given id",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "productName",
-        "type": "String",
-        "description": "The name of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "sensorName",
-        "type": "String",
-        "description": "The sensor of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "measurementName",
-        "type": "String",
-        "description": "The measurement of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "StartTime",
-        "type": "String",
-        "description": "The start time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "EndTime",
-        "type": "String",
-        "description": "The end time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "geom",
-        "type": "List<Float>",
-        "description": "The geom of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "crs",
-        "type": "String",
-        "description": "The crs of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "method",
-        "type": "String",
-        "description": "The method of reslicing.",
-        "optional": "True",
-        "default": "null"
-      }
-    ]
-  },
-  "CoverageCollection.deepLearning": {
-    "description": "Get the deep learning results of the input image",
-    "returns": "Coverage<unknown bands>",
-    "args": [
-      {
-        "name": "coverageCollection",
-        "type": "CoverageCollection<unknown bands>",
-        "description": "The image of input."
-      },
-      {
-        "name": "class",
-        "type": "String",
-        "description": "The class of the deep learning."
-      }
-    ]
-  },
-  "CoverageCollection.PAP": {
-    "description": "Get the PAP results of the input image",
-    "returns": "Coverage<unknown bands>",
-    "args": [
-      {
-        "name": "coverageCollection",
-        "type": "CoverageCollection<unknown bands>",
-        "description": "The image of input."
-      },
-      {
-        "name": "time",
-        "type": "String",
-        "description": "The time of the PAP to calculated."
-      },
-      {
-        "name": "n",
-        "type": "Int",
-        "description": "The total years of the PAP."
-      }
-    ]
-  },
-  "Coverage.deepLearning": {
-    "description": "Get the deep learning results of the input image",
-    "returns": "Coverage<unknown bands>",
-    "args": [
-      {
-        "name": "coverage",
-        "type": "Coverage<unknown bands>",
-        "description": "The coverage of input."
-      },
-      {
-        "name": "class",
-        "type": "String",
-        "description": "The class of the deep learning."
-      }
-    ]
-  },
-  "Coverage.load": {
-    "description": "Returns the coverages by given id",
-    "returns": "Coverage<unknown bands>",
-    "args": [
-      {
-        "name": "productName",
-        "type": "String",
-        "description": "The name of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "sensorName",
-        "type": "String",
-        "description": "The sensor of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "measurementName",
-        "type": "String",
-        "description": "The measurement of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "StartTime",
-        "type": "String",
-        "description": "The start time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "EndTime",
-        "type": "String",
-        "description": "The end time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "geom",
-        "type": "List<Float>",
-        "description": "The geom of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "crs",
-        "type": "String",
-        "description": "The crs of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "method",
-        "type": "String",
-        "description": "The method of reslicing.",
-        "optional": "True",
-        "default": "null"
-      }
-    ]
-  },
-  "Image.add": {
-    "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.subtract": {
-    "description": "Subtracts the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.multiply": {
-    "description": "multiply the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.divide": {
-    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.normalizedDifference": {
-    "description": "Computes the normalized difference between two bands.The normalized difference is computed as (first − second) / (first + second). ",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "input",
-        "type": "Image<unknown bands>",
-        "description": "The input image"
-      },
-      {
-        "name": "bandNames",
-        "type": "List<String>",
-        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
-        "optional": "True",
-        "default": "None"
-      }
-    ]
-  },
-  "Image.binaryzation": {
-    "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken"
-      },
-      {
-        "name": "threshold",
-        "type": "Int",
-        "description": "threshold"
-      }
-    ]
-  },
-  "Image.and": {
-    "description": "Returns 1 iff both values are non-zero for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.or": {
-    "description": "Returns 1 iff either values are non-zero for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.not": {
-    "description": "Returns 0 if the input is non-zero, and 1 otherwise",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.sin": {
-    "description": "Computes the sine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.cos": {
-    "description": "Computes the cosine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.sinh": {
-    "description": "Computes the hyperbolic sine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.cosh": {
-    "description": "Computes the hyperbolic cosine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.asin": {
-    "description": "Computes the arc sine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.acos": {
-    "description": "Computes the arc cosine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.atan": {
-    "description": "Computes the atan sine of the input in radians.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.atan2": {
-    "description": "Operation to get the Arc Tangent2 of values. The first raster holds the y-values, and the second holds the x values.The arctan is calculated from y/x.if both have only 1 band, the 2 band will match",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.ceil": {
-    "description": "Computes the smallest integer greater than or equal to the input.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.floor": {
-    "description": "Computes the largest integer less than or equal to the input.",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.eq": {
-    "description": "Returns 1 iff the first value is equal to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.gt": {
-    "description": "Returns 1 iff the first value is greater to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.gte": {
-    "description": "Returns 1 iff the first value is greater or equal to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Image.bandNames": {
-    "description": "get all the bands in rdd",
-    "returns": "Image",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      }
-    ]
-  },
-  "Image.addBands": {
-    "description": "Returns 1 iff the first value is greater or equal to the second for each matched pair of bands in image1 and image2.if both have only 1 band, the 2 band will match",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image1",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "image2",
-        "type": "Image<unknown bands>",
-        "description": "The image from which the right operand bands are taken."
-      },
-      {
-        "name": "names",
-        "type": "List[String]",
-        "description": "the name of selected bands in image2"
-      },
-      {
-        "name": "overwrite",
-        "type": "Boolean",
-        "description": "if true, overwrite bands in the first image with the same name in image2"
-      }
-    ]
-  },
-  "Image.sampleRegions": {
-    "description": "Converts each pixel of an image (at a given scale) that intersects one or more regions to a Feature, returning them as a FeatureCollection.  Each output feature will have one property per band of the input image, as well as any specified properties copied from the input feature.Note that geometries will be snapped to pixel centers.",
-    "returns": "FeatureCollection",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image to sample"
-      },
-      {
-        "name": "collection",
-        "type": "FeatureCollection",
-        "description": "The regions to sample over."
-      },
-      {
-        "name": "properties",
-        "type": "List<String>",
-        "description": "The list of properties to copy from each input feature.  Defaults to all non-system properties.",
-        "optional": "True",
-        "default": "None"
-      },
-      {
-        "name": "scale",
-        "type": "Float",
-        "description": "A nominal scale in meters of the projection to sample in.  If unspecified,the scale of the image\\'s first band is used.",
-        "optional": "True",
-        "default": "None"
-      },
-      {
-        "name": "projection",
-        "type": "Projection",
-        "description": "The projection in which to sample. If unspecified, the projection of the image\\'s first band is used. If specified in addition to scale, rescaled to the specified scale.",
-        "optional": "True",
-        "default": "None"
-      },
-      {
-        "name": "titleScale",
-        "type": "Float",
-        "description": "A scaling factor used to reduce aggregation tile size; using a larger tileScale (e.g. 2 or 4) may enable computations that run out of memory with the default.",
-        "optional": "True",
-        "default": "1"
-      },
-      {
-        "name": "geometries",
-        "type": "Boolean",
-        "description": "If true, the results will include a point geometry per sampled pixel.  Otherwise, geometries will be omitted (saving memory).",
-        "optional": "True",
-        "default": "False"
-      }
-    ]
-  },
-  "Image.visualize": {
-    "description": "Produces an RGB or grayscale visualization of an image.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image",
-        "description": "The image to visualize"
-      },
-      {
-        "name": "bands",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "gain",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "bias",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "min",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "max",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "gamma",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "opacity",
-        "type": "Float",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "palette",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "format",
-        "type": "String",
-        "description": "",
-        "default": "png",
-        "optional": "True"
-      },
-      {
-        "name": "method",
-        "type": "String",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      }
-    ]
-  },
-  "Coverage.visualize": {
-    "description": "Produces an RGB or grayscale visualization of an image.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
-    "returns": "Coverage",
-    "args": [
-      {
-        "name": "coverage",
-        "type": "Coverage",
-        "description": "The image to visualize"
-      },
-      {
-        "name": "bands",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "gain",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "bias",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "min",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "max",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "gamma",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "opacity",
-        "type": "Float",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "palette",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "format",
-        "type": "String",
-        "description": "",
-        "default": "png",
-        "optional": "True"
-      },
-      {
-        "name": "method",
-        "type": "String",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      }
-    ]
-  },
-  "Collection.filter": {
+  "FeatureCollection.filter": {
     "description": "Applies a filter to a given collection.",
     "returns": "FeatureCollection",
     "args": [
@@ -742,6 +11,22 @@
       {
         "name": "filter",
         "type": "Object",
+        "description": "The filter to apply to the collection. "
+      }
+    ]
+  },
+  "CoverageCollection.filter": {
+    "description": "Applies a filter to a given collection.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "collection",
+        "type": "CoverageCollection",
+        "description": "The collection to filter"
+      },
+      {
+        "name": "filter",
+        "type": "Filter",
         "description": "The filter to apply to the collection. "
       }
     ]
@@ -810,7 +95,7 @@
       }
     ]
   },
-  "Collection.map": {
+  "FeatureCollection.map": {
     "description": "Maps an algorithm over a collection.",
     "returns": "FeatureCollection",
     "args": [
@@ -833,377 +118,26 @@
       }
     ]
   },
-  "Image.reproject": {
-    "description": "Force an image to be computed in a given projection and resolution.",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "image",
-        "type": "Image<unknown bands>",
-        "description": "The image to reproject"
-      },
-      {
-        "name": "crs",
-        "type": "Projection",
-        "description": "The CRS to project the image to."
-      },
-      {
-        "name": "crsTransform",
-        "type": "List<Float>",
-        "description": "The list of CRS transform values.  This is a row-major ordering of the 3x2 transform matrix.  This option is mutually exclusive with the scale option, and replaces any transform already on the projection.",
-        "optional": "True",
-        "default": "None"
-      },
-      {
-        "name": "scale",
-        "type": "Float",
-        "description": "If scale is specified, then the projection is scaled by dividing the specified scale value by the nominal size of a meter in the specified projection. If scale is not specified, then the scale of the given projection will be used.",
-        "optional": "True",
-        "default": "None"
-      }
-    ]
-  },
-  "Projection": {
-    "description": "Returns a Projection with the given base coordinate system and the given transform between projected coordinates and the base. If no transform is specified, the identity transform is assumed.",
-    "returns": "Projection",
-    "args": [
-      {
-        "name": "crs",
-        "type": "Object",
-        "description": "The base coordinate reference system of this Projection, given as a well-known authority code (e.g. \\'EPSG:4326\\') or a WKT string."
-      },
-      {
-        "name": "transform",
-        "type": "List<Object>",
-        "description": "The transform between projected coordinates and the base coordinate system, specified as a 2x3 affine transform matrix in row-major order: [xScale, xShearing, xTranslation, yShearing, yScale, yTranslation]. May not specify both this and 'transformWkt'.",
-        "optional": "True",
-        "default": "None"
-      },
-      {
-        "name": "transformWkt",
-        "type": "String",
-        "description": "The transform between projected coordinates and the base coordinate system, specified as a WKT string. May not specify both this and \\'transform\\'.",
-        "optional": "True",
-        "default": "None"
-      }
-    ]
-  },
-  "ImageCollection.mosaic": {
-    "description": "Composites all the images in a collection, using the mask.",
-    "returns": "Image",
+  "Collection.map": {
+    "description": "Maps an algorithm over a collection.",
+    "returns": "Collection",
     "args": [
       {
         "name": "collection",
-        "type": "ImageCollection",
-        "description": "The collection to mosaic."
-      }
-    ]
-  },
-  "Image.select": {
-    "description": "Selects bands from an image by name, RE2-compatible regex or index and optionally renames them.",
-    "returns": "Image<unknown bands>",
-    "args": [
-      {
-        "name": "input",
-        "type": "Image<unknown bands>",
-        "description": "The image to select bands from."
+        "type": "Collection",
+        "description": "The collection of the elements to which the algorithm is applied."
       },
       {
-        "name": "bandSelectors",
-        "type": "List<Object>",
-        "description": "A list of names, regexes or numeric indices specifying the bands to select."
+        "name": "baseAlgorithm",
+        "type": "Algorithm",
+        "description": "The algorithm being applied to each element"
       },
       {
-        "name": "newNames",
-        "type": "List<String>",
-        "description": "Optional new names for the output bands.  Must match the number of bands selected.",
+        "name": "dropNulls",
+        "type": "Boolean",
+        "description": "If true, the mapped algorithm is allowed to return nulls, and the elements for which it returns nulls will be dropped.",
         "optional": "True",
-        "default": "None"
-      }
-    ]
-  },
-  "Cube.load": {
-    "description": "Create a cube by some params",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "productIds",
-        "type": "List<String>",
-        "description": "The product id list for cube creation."
-      },
-      {
-        "name": "StartTime",
-        "type": "String",
-        "description": "The start time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "EndTime",
-        "type": "String",
-        "description": "The end time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "geom",
-        "type": "List<Float>",
-        "description": "The geom of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "bands",
-        "type": "List<String>",
-        "description": "The bands of the product.",
-        "optional": "True",
-        "default": "null"
-      }
-    ]
-  },
-  "Cube.band": {
-    "description": "Select a new cube by band name",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to select bands from."
-      },
-      {
-        "name": "bandName",
-        "type": "String",
-        "description": "The name of band to be selected"
-      }
-    ]
-  },
-  "Cube.visualize": {
-    "description": "Produces an RGB or grayscale visualization of an Cube.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "cube",
-        "type": "Cube",
-        "description": "The cube to visualize"
-      },
-      {
-        "name": "products",
-        "type": "Object",
-        "description": "The products in cube to visualize"
-      },
-      {
-        "name": "bands",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "gain",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "bias",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "min",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "max",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "gamma",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "opacity",
-        "type": "Float",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "palette",
-        "type": "Object",
-        "description": "",
-        "default": "None",
-        "optional": "True"
-      },
-      {
-        "name": "format",
-        "type": "String",
-        "description": "png",
-        "default": "False",
-        "optional": "True"
-      }
-    ]
-  },
-  "Cube.NDWI": {
-    "description": "Compute NDWI of the Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to compute NDWI."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product in cube to compute NDWI"
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of NDWI"
-      }
-    ]
-  },
-  "Cube.binarization": {
-    "description": "Compute binarization of the Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to compute NDWI."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product to compute binarization."
-      },
-      {
-        "name": "threshold",
-        "type": "Int",
-        "description": "The threshold to binary"
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of binary"
-      }
-    ]
-  },
-  "Cube.subtract": {
-    "description": "Compute binarization of the Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to compute NDWI."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product to compute binarization."
-      },
-      {
-        "name": "timeList",
-        "type": "List<String>",
-        "description": "The list of time."
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of binary"
-      }
-    ]
-  },
-  "Cube.ChangeDetection": {
-    "description": "Get the change area of the target Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to find changed area."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product in cube to detect the change."
-      },
-      {
-        "name": "certainTimes",
-        "type": "List<String>",
-        "description": "The time range of two images to get change"
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of change detection."
-      }
-    ]
-  },
-  "Cube.overlayAnalysis": {
-    "description": "Overlay analysis between two cube",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to overlay analysis."
-      },
-      {
-        "name": "raster",
-        "type": "String",
-        "description": "The raster product in cube to overlay"
-      },
-      {
-        "name": "vector",
-        "type": "String",
-        "description": "The target vector product in cube to overlay"
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of overlay analysis."
-      }
-    ]
-  },
-  "Cube.conjointAnalysis": {
-    "description": "Conjoin analysis between raster cube and tabular data",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to conjoint analysis."
-      },
-      {
-        "name": "vector",
-        "type": "String",
-        "description": "The vector product in cube to conjoint."
-      },
-      {
-        "name": "tabular",
-        "type": "String",
-        "description": "The tabular product in cube to conjoint."
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of conjoin analysis."
+        "default": "False"
       }
     ]
   },
@@ -1943,6 +877,40 @@
       }
     ]
   },
+  "Coverage.normalizedDifference": {
+    "description": "Computes the normalized difference between two bands.The normalized difference is computed as (first − second) / (first + second). ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Covergae",
+        "description": "The input covergae"
+      },
+      {
+        "name": "bandNames",
+        "type": "List<String>",
+        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Coverage.selectBand": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "band",
+        "type": "List<String>",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
   "Kernel.fixed": {
     "description": "Creates a Kernel.",
     "returns": "Kernel",
@@ -2642,22 +1610,6 @@
         "name": "radius",
         "type": "Int",
         "description": "The radius of the square neighborhood to compute the aspect, 1 for a 3×3 square."
-      }
-    ]
-  },
-  "CoverageCollection.binarization": {
-    "description": "Returns 0 iff the first value is smaller than threshold,else return 255",
-    "returns": "CoverageCollection",
-    "args": [
-      {
-        "name": "coverageCollection",
-        "type": "CoverageCollection",
-        "description": "The coverage from which the left operand bands are taken"
-      },
-      {
-        "name": "threshold",
-        "type": "Int",
-        "description": "threshold"
       }
     ]
   },
@@ -3859,66 +2811,6 @@
       }
     ]
   },
-  "Feature.buffer": {
-    "description": "Fusion of two cube",
-    "returns": "Feature",
-    "args": [
-      {
-        "name": "feature",
-        "type": "Feature",
-        "description": "the target feature"
-      },
-      {
-        "name": "distance",
-        "type": "Float",
-        "description": "the distance of the buffer"
-      },
-      {
-        "name": "maxError",
-        "type": "Float",
-        "description": "the String function to use",
-        "default": "0.01",
-        "optional": "True"
-      },
-      {
-        "name": "proj",
-        "type": "Projection",
-        "description": "the projection of buffer",
-        "default": "null",
-        "optional": "True"
-      }
-    ]
-  },
-  "Feature.union": {
-    "description": "Union two  features",
-    "returns": "Feature",
-    "args": [
-      {
-        "name": "leftFeature",
-        "type": "Feature",
-        "description": "the left feature to union"
-      },
-      {
-        "name": "rightFeature",
-        "type": "Feature",
-        "description": "the right feature to union"
-      },
-      {
-        "name": "maxError",
-        "type": "Float",
-        "description": "the String function to use",
-        "default": "0.01",
-        "optional": "True"
-      },
-      {
-        "name": "proj",
-        "type": "Projection",
-        "description": "the projection of buffer",
-        "default": "null",
-        "optional": "True"
-      }
-    ]
-  },
   "Coverage.aspect": {
     "description": "坡向计算",
     "returns": "Coverage",
@@ -4497,6 +3389,291 @@
         "name": "input",
         "type": "Table",
         "description": "The table to download."
+      }
+    ]
+  },
+  "Cube.load": {
+    "description": "Create a cube by some params",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "productIds",
+        "type": "List<String>",
+        "description": "The product id list for cube creation."
+      },
+      {
+        "name": "StartTime",
+        "type": "String",
+        "description": "The start time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "EndTime",
+        "type": "String",
+        "description": "The end time of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "geom",
+        "type": "List<Float>",
+        "description": "The geom of the product.",
+        "optional": "True",
+        "default": "null"
+      },
+      {
+        "name": "bands",
+        "type": "List<String>",
+        "description": "The bands of the product.",
+        "optional": "True",
+        "default": "null"
+      }
+    ]
+  },
+  "Cube.band": {
+    "description": "Select a new cube by band name",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to select bands from."
+      },
+      {
+        "name": "bandName",
+        "type": "String",
+        "description": "The name of band to be selected"
+      }
+    ]
+  },
+  "Cube.visualize": {
+    "description": "Produces an RGB or grayscale visualization of an Cube.  Each of the gain, bias, min, max and gamma arguments can take either a single value, which will be applied to all bands, or a list of values the same length as bands.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to visualize"
+      },
+      {
+        "name": "products",
+        "type": "Object",
+        "description": "The products in cube to visualize"
+      },
+      {
+        "name": "bands",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "png",
+        "default": "False",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.NDWI": {
+    "description": "Compute NDWI of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDWI."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product in cube to compute NDWI"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of NDWI"
+      }
+    ]
+  },
+  "Cube.binarization": {
+    "description": "Compute binarization of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDWI."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product to compute binarization."
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "The threshold to binary"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of binary"
+      }
+    ]
+  },
+  "Cube.subtract": {
+    "description": "Compute binarization of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDWI."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product to compute binarization."
+      },
+      {
+        "name": "timeList",
+        "type": "List<String>",
+        "description": "The list of time."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of binary"
+      }
+    ]
+  },
+  "Cube.ChangeDetection": {
+    "description": "Get the change area of the target Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to find changed area."
+      },
+      {
+        "name": "product",
+        "type": "String",
+        "description": "The product in cube to detect the change."
+      },
+      {
+        "name": "certainTimes",
+        "type": "List<String>",
+        "description": "The time range of two images to get change"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of change detection."
+      }
+    ]
+  },
+  "Cube.overlayAnalysis": {
+    "description": "Overlay analysis between two cube",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to overlay analysis."
+      },
+      {
+        "name": "raster",
+        "type": "String",
+        "description": "The raster product in cube to overlay"
+      },
+      {
+        "name": "vector",
+        "type": "String",
+        "description": "The target vector product in cube to overlay"
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of overlay analysis."
+      }
+    ]
+  },
+  "Cube.conjointAnalysis": {
+    "description": "Conjoin analysis between raster cube and tabular data",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to conjoint analysis."
+      },
+      {
+        "name": "vector",
+        "type": "String",
+        "description": "The vector product in cube to conjoint."
+      },
+      {
+        "name": "tabular",
+        "type": "String",
+        "description": "The tabular product in cube to conjoint."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of result of conjoin analysis."
       }
     ]
   }

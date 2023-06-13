@@ -1,0 +1,75 @@
+{
+  "oorB": "0",
+  "map": {
+    "level": 11,
+    "spatialRange": [
+      117.51476648622568,
+      22.684498262780092,
+      124.7106782367174,
+      24.43893723104236
+    ]
+  },
+  "1": {
+    "constantValue": "2022-03-06 00:00:00"
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "CoverageCollection.addStyles",
+      "arguments": {
+        "input": {
+          "functionInvocationValue": {
+            "functionName": "CoverageCollection.filter",
+            "arguments": {
+              "collection": {
+                "functionInvocationValue": {
+                  "functionName": "Service.getCoverageCollection",
+                  "arguments": {
+                    "baseUrl": {
+                      "constantValue": "http://localhost"
+                    },
+                    "bbox": {
+                      "constantValue": [
+                        73.62,
+                        18.19,
+                        134.7601467382,
+                        53.54
+                      ]
+                    },
+                    "datetime": {
+                      "arrayValue": {
+                        "values": [
+                          {
+                            "valueReference": "1"
+                          },
+                          {
+                            "valueReference": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "productID": {
+                      "constantValue": "MOD13Q1_061"
+                    }
+                  }
+                }
+              },
+              "filter": {
+                "functionInvocationValue": {
+                  "functionName": "Filter.equals",
+                  "arguments": {
+                    "leftField": {
+                      "constantValue": "crs"
+                    },
+                    "rightValue": {
+                      "constantValue": "EPSG:4326"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

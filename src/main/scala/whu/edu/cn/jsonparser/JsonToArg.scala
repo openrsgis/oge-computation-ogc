@@ -4,29 +4,27 @@ import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
 import com.alibaba.fastjson.JSONArray
 
-import scala.collection.mutable.Map
-import scala.io.Source
+import scala.collection.mutable
+import scala.io.{BufferedSource, Source}
 import scala.util.control.Breaks
 
 object JsonToArg {
-//  val jsonAlgorithms: String = "C:/Users/dell/Desktop/cube_algorithms.json"
-//  val scalaWriteFile: String = "C:/Users/dell/Desktop/cube_runMain.scala"
-  val jsonAlgorithms: String = "/home/geocube/oge/oge-server/dag-boot/algorithms_ogc.json"
-//    val jsonAlgorithms: String = "/home/geocube/jupyter/lge_python/algorithm_data/algorithms.json"
-//    val scalaWriteFile: String = "/home/geocube/lge/testRemote/src/main/scala/cn/edu/whu/runMain.scala"
-  var arg:List[Tuple3[String, String, Map[String,String]]] = List.empty[Tuple3[String, String, Map[String,String]]]
+  var jsonAlgorithms: String = "/home/geocube/oge/oge-server/dag-boot/algorithms_ogc.json"
+  var dagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
 
   def numberOfArgs(functionName: String): Int = {
-    val line: String = Source.fromFile(jsonAlgorithms).mkString
-    val jsonObject = JSON.parseObject(line)
-    val num = jsonObject.getJSONObject(functionName).getJSONArray("args").size()
+    val source: BufferedSource = Source.fromFile(jsonAlgorithms)
+    val line: String = source.mkString
+    val jsonObject: JSONObject = JSON.parseObject(line)
+    val num: Int = jsonObject.getJSONObject(functionName).getJSONArray("args").size()
     num
   }
 
   def getArgNameByIndex(functionName: String, index: Int): String = {
-    val line: String = Source.fromFile(jsonAlgorithms).mkString
-    val jsonObject = JSON.parseObject(line)
-    val argName = jsonObject.getJSONObject(functionName).getJSONArray("args").getJSONObject(index).getString("name")
+    val source: BufferedSource = Source.fromFile(jsonAlgorithms)
+    val line: String = source.mkString
+    val jsonObject: JSONObject = JSON.parseObject(line)
+    val argName: String = jsonObject.getJSONObject(functionName).getJSONArray("args").getJSONObject(index).getString("name")
     argName
   }
 
@@ -34,10 +32,14 @@ object JsonToArg {
     jsonObject.getJSONObject(valueReference)
   }
 
-  def BackAndOn(node: Node, depth: Int, jsonObject:JSONObject): Node = {
+  def BackAndOn(node: Node, depth: Int, jsonObject: JSONObject): Node = {
     for (i <- 0 until numberOfArgs(node.getFunctionName())) {
-      val keys = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i))
+      val keys: JSONObject = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i))
       if (node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)) != null) {
+        if (keys.containsKey("functionDefinitionValue")) {
+          val body: String = keys.getJSONObject("functionDefinitionValue").getString("body")
+          trans(jsonObject, body)
+        }
         if (keys.containsKey("functionInvocationValue")) {
           val nodeChildren: Node = new Node(keys.getJSONObject("functionInvocationValue").getString("functionName"),
             keys.getJSONObject("functionInvocationValue").getJSONObject("arguments"), node, null, 0, i + 1, node.getUUID() + i.toString)
@@ -45,7 +47,7 @@ object JsonToArg {
           BackAndOn(nodeChildren, depth + 1, jsonObject)
         }
         if (keys.containsKey("valueReference")) {
-          val value = getValueReference(keys.getString("valueReference"), jsonObject)
+          val value: JSONObject = getValueReference(keys.getString("valueReference"), jsonObject)
           if (value.getJSONObject("functionInvocationValue") != null) {
             val nodeChildren: Node = new Node(value.getJSONObject("functionInvocationValue").getString("functionName"),
               value.getJSONObject("functionInvocationValue").getJSONObject("arguments"), node, null, 0, i + 1, node.getUUID() + i.toString)
@@ -63,11 +65,11 @@ object JsonToArg {
           }
         }
         if (keys.containsKey("arrayValue")) {
-          val nodeArray = keys.getJSONObject("arrayValue").getJSONArray("values")
+          val nodeArray: JSONArray = keys.getJSONObject("arrayValue").getJSONArray("values")
           for (i <- (0 until nodeArray.size()).reverse) {
-            val key = nodeArray.getJSONObject(i)
+            val key: JSONObject = nodeArray.getJSONObject(i)
             if (key.containsKey("valueReference")) {
-              val value = getValueReference(key.getString("valueReference"), jsonObject)
+              val value: JSONObject = getValueReference(key.getString("valueReference"), jsonObject)
               if (value.getJSONObject("functionInvocationValue") != null) {
                 val nodeChildren: Node = new Node(value.getJSONObject("functionInvocationValue").getString("functionName"),
                   value.getJSONObject("functionInvocationValue").getJSONObject("arguments"), node, null, 0, i + 1, node.getUUID() + i.toString)
@@ -105,37 +107,38 @@ object JsonToArg {
             }
           }
         }
+
       }
     }
     node.setDepth(node.getDepth() + depth + 1)
     node
   }
 
-  def DFS(nodeList: List[Node]): List[Node] = {
-    val node = nodeList.iterator
+  def DFS(nodeList: List[Node], arg: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]): List[Node] = {
+    val node: Iterator[Node] = nodeList.iterator
     while (node.hasNext) {
-      val nodeNow = node.next()
+      val nodeNow: Node = node.next()
       if (nodeNow.getChildren() != null) {
-        DFS(nodeNow.getChildren())
+        DFS(nodeNow.getChildren(), arg)
       }
-      writeAsTuple(nodeNow)
+      writeAsTuple(nodeNow, arg)
     }
     nodeList
   }
 
-  def writeAsTuple(node: Node):Unit = {
-    val UUID = node.getUUID()
-    val name = node.getFunctionName()
-    var map = Map.empty[String, String]
-    arg = arg :+ Tuple3(UUID, name, map)
-    val num = numberOfArgs(node.getFunctionName())
-    val size = node.getArguments().size()
+  def writeAsTuple(node: Node, arg: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]): Unit = {
+    val UUID: String = node.getUUID()
+    val name: String = node.getFunctionName()
+    val map = mutable.Map.empty[String, String]
+    arg.append(Tuple3(UUID, name, map))
+    val num: Int = numberOfArgs(node.getFunctionName())
+    val size: Int = node.getArguments().size()
     var sizeCount = 1
     val loop = new Breaks
     loop.breakable {
       for (i <- 0 until num) {
         if (node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)) != null) {
-          val keys = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i))
+          val keys: JSONObject = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i))
           if (keys.containsKey("functionInvocationValue") || keys.containsKey("valueReference")) {
             if (sizeCount <= size) {
               map += (getArgNameByIndex(node.getFunctionName(), i) -> (node.getUUID() + i.toString))
@@ -146,14 +149,14 @@ object JsonToArg {
             }
           }
           else if (keys.containsKey("arrayValue")) {
-            val getArray = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).getJSONObject("arrayValue").getJSONArray("values")
+            val getArray: JSONArray = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).getJSONObject("arrayValue").getJSONArray("values")
             if (sizeCount <= size) {
               var st: String = "["
               for (i <- 0 until getArray.size() - 1) {
-                val get = getArray.getJSONObject(i).get("constantValue")
+                val get: AnyRef = getArray.getJSONObject(i).get("constantValue")
                 st = st + get + ","
               }
-              val get = getArray.getJSONObject(getArray.size() - 1).get("constantValue")
+              val get: AnyRef = getArray.getJSONObject(getArray.size() - 1).get("constantValue")
               st = st + get + "]"
               map += (getArgNameByIndex(node.getFunctionName(), i) -> st)
               sizeCount = sizeCount + 1
@@ -162,9 +165,9 @@ object JsonToArg {
               loop.break()
             }
           }
-          else {
-            val get = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).get("constantValue")
-            val getString = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).getString("constantValue")
+          else if (keys.containsKey("constantValue")) {
+            val get: AnyRef = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).get("constantValue")
+            val getString: String = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).getString("constantValue")
             if (sizeCount <= size) {
               if (get.isInstanceOf[JSONArray]) {
                 map += (getArgNameByIndex(node.getFunctionName(), i) -> getString.replace("\"", ""))
@@ -178,17 +181,44 @@ object JsonToArg {
               loop.break()
             }
           }
+          else if (keys.containsKey("argumentReference")) {
+            val get: AnyRef = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).get("argumentReference")
+            val getString: String = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).getString("argumentReference")
+            if (sizeCount <= size) {
+              if (get.isInstanceOf[JSONArray]) {
+                map += (getArgNameByIndex(node.getFunctionName(), i) -> getString.replace("\"", ""))
+              }
+              else {
+                map += (getArgNameByIndex(node.getFunctionName(), i) -> getString)
+              }
+              sizeCount = sizeCount + 1
+            }
+            else if (sizeCount > size) {
+              loop.break()
+            }
+          }
+          else if (keys.containsKey("functionDefinitionValue")) {
+            val getString: String = node.getArguments().getJSONObject(getArgNameByIndex(node.getFunctionName(), i)).getJSONObject("functionDefinitionValue").getString("body")
+            if (sizeCount <= size) {
+              map += (getArgNameByIndex(node.getFunctionName(), i) -> getString)
+              sizeCount = sizeCount + 1
+            }
+            else if (sizeCount > size) {
+              loop.break()
+            }
+          }
         }
       }
     }
   }
 
 
-  def trans(jsonObject:JSONObject): List[Tuple3[String, String, Map[String,String]]] = {
-    val node = new Node(jsonObject.getJSONObject("0").getJSONObject("functionInvocationValue").getString("functionName"),
-      jsonObject.getJSONObject("0").getJSONObject("functionInvocationValue").getJSONObject("arguments"), null, null, 0, 1, "0")
+  def trans(jsonObject: JSONObject, UUID: String): Unit = {
+    val node = new Node(jsonObject.getJSONObject(UUID).getJSONObject("functionInvocationValue").getString("functionName"),
+      jsonObject.getJSONObject(UUID).getJSONObject("functionInvocationValue").getJSONObject("arguments"), null, null, 0, 1, UUID)
     BackAndOn(node, 0, jsonObject)
-    DFS(List(node))
-    arg
+    val arg: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
+    DFS(List(node), arg)
+    dagMap += (UUID -> arg)
   }
 }

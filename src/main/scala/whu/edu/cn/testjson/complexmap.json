@@ -1,0 +1,140 @@
+{
+  "layerName": "ndvi",
+  "isBacth": "0",
+  "map": {
+    "level": 7,
+    "spatialRange": [
+      111.51476648622568,
+      30.684498262780092,
+      116.7106782367174,
+      31.43893723104236
+    ]
+  },
+  "2": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.selectBand",
+      "arguments": {
+        "band": {
+          "constantValue": [
+            "B4"
+          ]
+        },
+        "coverage": {
+          "argumentReference": "_MAPPING_VAR_0_0"
+        }
+      }
+    }
+  },
+  "3": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.selectBand",
+      "arguments": {
+        "band": {
+          "constantValue": [
+            "B5"
+          ]
+        },
+        "coverage": {
+          "argumentReference": "_MAPPING_VAR_0_0"
+        }
+      }
+    }
+  },
+  "1": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.divide",
+      "arguments": {
+        "coverage1": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.subtract",
+            "arguments": {
+              "coverage1": {
+                "valueReference": "2"
+              },
+              "coverage2": {
+                "valueReference": "3"
+              }
+            }
+          }
+        },
+        "coverage2": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.add",
+            "arguments": {
+              "coverage1": {
+                "valueReference": "2"
+              },
+              "coverage2": {
+                "valueReference": "3"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "CoverageCollection.addStyles",
+      "arguments": {
+        "input": {
+          "functionInvocationValue": {
+            "functionName": "Collection.map",
+            "arguments": {
+              "baseAlgorithm": {
+                "functionDefinitionValue": {
+                  "argumentNames": [
+                    "_MAPPING_VAR_0_0"
+                  ],
+                  "body": "1"
+                }
+              },
+              "collection": {
+                "functionInvocationValue": {
+                  "functionName": "Service.getCoverageCollection",
+                  "arguments": {
+                    "baseUrl": {
+                      "constantValue": "http://localhost"
+                    },
+                    "bbox": {
+                      "constantValue": [
+                        111.23,
+                        29.31,
+                        111.8,
+                        29.98
+                      ]
+                    },
+                    "datetime": {
+                      "constantValue": [
+                        "2018-11-26 00:00:00",
+                        "2018-12-01 00:00:00"
+                      ]
+                    },
+                    "productID": {
+                      "constantValue": "LC08_L1TP_C01_T1"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 1
+        },
+        "min": {
+          "constantValue": 0
+        },
+        "palette": {
+          "constantValue": [
+            "blue",
+            "qian blue",
+            "zongSe",
+            "qian green",
+            "green"
+          ]
+        }
+      }
+    }
+  }
+}

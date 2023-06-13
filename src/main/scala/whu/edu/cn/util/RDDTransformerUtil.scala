@@ -12,8 +12,9 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Geometry, LineString}
-import whu.edu.cn.core.entity.SpaceTimeBandKey
-import whu.edu.cn.util.ShapeUtil.readShp
+import whu.edu.cn.entity
+import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.util.ShapeFileUtil.readShp
 
 import java.text.SimpleDateFormat
 import scala.collection.JavaConverters._
@@ -48,7 +49,7 @@ object RDDTransformerUtil {
     val newBounds = Bounds(SpaceTimeKey(srcBounds.get.minKey.spatialKey._1, srcBounds.get.minKey.spatialKey._2, date), SpaceTimeKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2, date))
     val metaData = TileLayerMetadata(DoubleCellType, srcLayout, srcExtent, srcCrs, newBounds)
     val tiledOut = tiled.map(t => {
-      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), "Grass"), t._2)
+      (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), "Grass"), t._2)
     })
     println("成功读取tif")
     (tiledOut, metaData)
@@ -71,17 +72,17 @@ object RDDTransformerUtil {
     val newBounds = Bounds(SpaceTimeKey(srcBounds.get.minKey._1, srcBounds.get.minKey._2, date), SpaceTimeKey(srcBounds.get.maxKey._1, srcBounds.get.maxKey._2, date))
     val metaData = TileLayerMetadata(DoubleCellType, srcLayout, srcExtent, srcCrs, newBounds)
     val tiledOut = tiled.map(t => {
-      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), "Aspect"), t._2)
+      (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), "Aspect"), t._2)
     })
     println("成功读取tif")
     (tiledOut, metaData)
   }
 
-  def saveFeatureRDDToShp(input: RDD[(String, (Geometry, Map[String, Any]))], outputShpPath: String): Unit ={
-    val data = input.map(t=>{
-      t._2._2 + (ShapeUtil.DEF_GEOM_KEY -> t._2._1)
+  def saveFeatureRDDToShp(input: RDD[(String, (Geometry, Map[String, Any]))], outputShpPath: String): Unit = {
+    val data = input.map(t => {
+      t._2._2 + (ShapeFileUtil.DEF_GEOM_KEY -> t._2._1)
     }).collect().map(_.asJava).toList.asJava
-    ShapeUtil.createShp(outputShpPath, "utf-8", classOf[LineString], data)
+    ShapeFileUtil.createShp(outputShpPath, "utf-8", classOf[LineString], data)
     println("成功落地shp")
   }
 

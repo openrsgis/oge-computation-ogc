@@ -12,11 +12,11 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <geotools.version>21.2</geotools.version>
-        <scala.version>2.11.12</scala.version>
-        <scala.compat.version>2.11</scala.compat.version>
+        <scala.version>2.12.10</scala.version>
+        <scala.compat.version>2.12</scala.compat.version>
         <akka.actor.version>2.5.32</akka.actor.version>
         <akka.http.version>10.1.15</akka.http.version>
-        <geotrellis.version>3.0.0</geotrellis.version>
+        <geotrellis.version>3.7.0</geotrellis.version>
     </properties>
 
     <repositories>
@@ -36,32 +36,22 @@
     </repositories>
 
     <dependencies>
-<!--        <dependency>-->
-<!--            <groupId>org.scala-lang</groupId>-->
-<!--            <artifactId>scala-library</artifactId>-->
-<!--            <version>${scala.version}</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.compat.version}</artifactId>
-            <version>2.4.3</version>
+            <version>3.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.2.6</version>
+            <version>42.5.4</version>
         </dependency>
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>4.0.3</version>
-        </dependency>
+        <!-- hbase -->
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-client</artifactId>
             <version>1.4.13</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase -->
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-common</artifactId>
@@ -72,6 +62,7 @@
             <artifactId>hbase-server</artifactId>
             <version>1.4.13</version>
         </dependency>
+        <!-- hbase -->
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
@@ -90,13 +81,14 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>1.7.2</version>
+            <version>2.10.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>23.6-jre</version>
+            <version>31.1-jre</version>
         </dependency>
+        <!--geotrellis-->
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
             <artifactId>geotrellis-layer_${scala.compat.version}</artifactId>
@@ -110,6 +102,11 @@
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
             <artifactId>geotrellis-raster_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.locationtech.geotrellis</groupId>
+            <artifactId>geotrellis-vector_${scala.compat.version}</artifactId>
             <version>${geotrellis.version}</version>
         </dependency>
         <dependency>
@@ -129,28 +126,14 @@
         </dependency>
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-spark-etl_${scala.compat.version}</artifactId>
-            <version>2.0.1</version>
+            <artifactId>geotrellis-geotools_${scala.compat.version}</artifactId>
+            <version>${geotrellis.version}</version>
         </dependency>
+        <!--geotrellis-->
         <!--geotools-->
         <dependency>
             <groupId>org.geotools</groupId>
-            <artifactId>gt-main</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
             <artifactId>gt-shapefile</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-referencing</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-epsg-hsql</artifactId>
             <version>${geotools.version}</version>
         </dependency>
         <dependency>
@@ -159,38 +142,35 @@
             <version>${geotools.version}</version>
         </dependency>
         <!--geotools-->
-
-        <!--网络工具包-->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.32</version>
+            <version>2.0.32</version>
         </dependency>
-
+        <!--网络工具包-->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpasyncclient</artifactId>
             <version>4.1.5</version>
         </dependency>
-
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
-            <version>4.4.9</version>
+            <version>4.4.15</version>
         </dependency>
-
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.5</version>
+            <version>4.5.14</version>
         </dependency>
-
+        <!--网络工具包-->
         <!--jedis-->
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
-            <version>3.7.0</version>
+            <version>4.3.1</version>
         </dependency>
+        <!--jedis-->
 
     </dependencies>
     <build>
