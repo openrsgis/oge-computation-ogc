@@ -5,11 +5,10 @@ import com.alibaba.fastjson.JSONObject
 import geotrellis.vector.GeometryCollection
 import org.geotools.geojson.GeoJSONUtil
 import org.geotools.geojson.geom.GeometryJSON
-import org.locationtech.jts.geom._
+import org.locationtech.jts.geom.{Geometry, GeometryFactory}
 import org.locationtech.jts.io.{ParseException, WKTReader, WKTWriter}
 
-import java.io._
-
+import java.io.{IOException, StringWriter}
 
 /**
  * wktutil
@@ -51,7 +50,7 @@ object WKTUtil {
    * @return
    */
   def wktToJson(wkt: String): JSONObject = {
-    var json:String = null
+    var json: String = null
     var jsonObject = new JSONObject
     try {
       val geometry = reader.read(wkt)
@@ -75,7 +74,7 @@ object WKTUtil {
    * @return
    */
   def jsonToWkt(jsonObject: JSONObject): String = {
-    var wkt:String = null
+    var wkt: String = null
     val `type` = jsonObject.getString("type")
     val gJson = new GeometryJSON
     try // {"geometries":[{"coordinates":[4,6],"type":"Point"},{"coordinates":[[4,6],[7,10]],"type":"LineString"}],"type":"GeometryCollection"}
@@ -108,4 +107,3 @@ object WKTUtil {
   }
 
 }
-

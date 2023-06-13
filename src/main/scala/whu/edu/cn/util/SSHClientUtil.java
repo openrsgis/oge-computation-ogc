@@ -17,15 +17,6 @@ public class SSHClientUtil {
     private static ChannelExec channelExec;
     private static Session session = null;
     private static int timeout = 60000;
-    // 测试代码
-    //public static void main(String[] args){
-    //    try{
-    //        versouSshUtil("125.220.153.26","geocube","ypfamily608",22);
-    //        runCmd("java -version","UTF-8");
-    //    }catch (Exception e){
-    //        e.printStackTrace();
-    //    }
-    //}
     /**
      * 连接远程服务器
      * @param host ip地址
