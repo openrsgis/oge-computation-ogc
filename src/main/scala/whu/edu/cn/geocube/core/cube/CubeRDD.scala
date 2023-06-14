@@ -6,11 +6,10 @@ import geotrellis.layer.SpaceTimeKey
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, Partitioner, SparkConf, SparkContext, TaskContext}
-import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
 import whu.edu.cn.geocube.core.cube.tabular.{TabularCollection, TabularRDD}
 import whu.edu.cn.geocube.core.cube.vector.{FeatureRDD, GeoObject}
-import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTile, RasterTileLayerMetadata, VectorGridLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTile, RasterTileLayerMetadata, VectorGridLayerMetadata}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
 import whu.edu.cn.geocube.core.tabular.query.QueryTabularCollection.getTabularCollection
 import whu.edu.cn.geocube.core.tabular.query.DistributedQueryTabularRecords

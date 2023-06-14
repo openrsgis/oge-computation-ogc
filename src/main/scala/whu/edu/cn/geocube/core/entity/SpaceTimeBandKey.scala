@@ -1,4 +1,4 @@
-package whu.edu.cn.entity
+package whu.edu.cn.geocube.core.entity
 
 import geotrellis.layer.SpaceTimeKey
 
@@ -9,11 +9,11 @@ import scala.collection.mutable
  * Extend Geotrellis SpaceTimeKey to contain measurement dimension.
  *
  */
-case class SpaceTimeBandKey(_spaceTimeKey: SpaceTimeKey, _measurementName: mutable.ListBuffer[String]) extends Serializable {
+case class SpaceTimeBandKey(_spaceTimeKey: SpaceTimeKey, _measurementName: String) extends Serializable {
   @BeanProperty
   var spaceTimeKey: SpaceTimeKey = _spaceTimeKey
   @BeanProperty
-  var measurementName:  mutable.ListBuffer[String] = _measurementName
+  var measurementName: String = _measurementName
 
   override def equals(obj: Any): Boolean = {
     obj match {

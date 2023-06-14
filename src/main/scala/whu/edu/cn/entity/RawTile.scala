@@ -14,6 +14,7 @@ class RawTile extends Serializable {
   var path: String = _
   var time: LocalDateTime = _
   var measurement: String = _
+  var measurementRank: Int = _
   var product: String = _
   var coverageId: String = _
   var extent: Extent = _
@@ -65,6 +66,14 @@ class RawTile extends Serializable {
 
   def setMeasurement(measurement: String): Unit = {
     this.measurement = measurement
+  }
+
+  def getMeasurementRank: Int = {
+    this.measurementRank
+  }
+
+  def setMeasurementRank(measurementRank: Int): Unit = {
+    this.measurementRank = measurementRank
   }
 
   def getProduct: String = {

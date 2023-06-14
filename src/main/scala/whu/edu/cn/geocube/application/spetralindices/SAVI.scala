@@ -10,11 +10,10 @@ import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity.SpaceTimeBandKey
 
 import scala.sys.process.ProcessLogger
 import sys.process._
-import whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, RasterTileLayerMetadata}
 import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.view.Info
 

@@ -8,8 +8,7 @@ import geotrellis.vector.Extent
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTileLayerMetadata}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.util.TileUtil
 

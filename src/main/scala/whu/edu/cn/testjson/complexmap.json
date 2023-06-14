@@ -1,6 +1,6 @@
 {
   "layerName": "ndvi",
-  "isBacth": "0",
+  "isBatch": "0",
   "map": {
     "level": 7,
     "spatialRange": [
@@ -12,9 +12,9 @@
   },
   "2": {
     "functionInvocationValue": {
-      "functionName": "Coverage.selectBand",
+      "functionName": "Coverage.selectBands",
       "arguments": {
-        "band": {
+        "bands": {
           "constantValue": [
             "B4"
           ]
@@ -27,9 +27,9 @@
   },
   "3": {
     "functionInvocationValue": {
-      "functionName": "Coverage.selectBand",
+      "functionName": "Coverage.selectBands",
       "arguments": {
-        "band": {
+        "bands": {
           "constantValue": [
             "B5"
           ]
@@ -77,7 +77,7 @@
     "functionInvocationValue": {
       "functionName": "CoverageCollection.addStyles",
       "arguments": {
-        "input": {
+        "coverageCollection": {
           "functionInvocationValue": {
             "functionName": "Collection.map",
             "arguments": {
@@ -100,8 +100,8 @@
                       "constantValue": [
                         111.23,
                         29.31,
-                        111.8,
-                        29.98
+                        116.8,
+                        31.98
                       ]
                     },
                     "datetime": {
@@ -138,3 +138,4 @@
     }
   }
 }
+

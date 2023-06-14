@@ -91,10 +91,9 @@ object COGUtil {
    * @return
    */
   def getTileBuf(minioClient: MinioClient, tile: RawTile): RawTile = {
-    val length: Int = Math.toIntExact(tile.getOffset)
-    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(tile.getPath).offset(tile.getByteCount).length(length.toLong).build)
+    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
     val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](length)
+    val buffer = new Array[Byte](tile.getOffset.toInt)
     var len = 0
     while ( {
       len = inputStream.read(buffer)
@@ -149,14 +148,15 @@ object COGUtil {
     val queryEnv: Envelope = queryGeometry.getEnvelopeInternal
     val queryMbr: Extent = new Extent(queryEnv.getMinX, queryEnv.getMinY, queryEnv.getMaxX, queryEnv.getMaxY)
 
-    var flag = true
-    var flagReader = true
+    // flag = true 代表是投影坐标系
+    var flag: Boolean = false
+    var flagReader: Boolean = false
     // 将传入的范围改为数据所在坐标系下，方便两个范围进行相交
     // 传入的范围始终是 4326 坐标系下的
     val queryMbrReproj: Extent = Reproject(queryMbr, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
-    if (coverageMetadata.getCrs.isGeographic) {
-      flag = false
-      flagReader = false
+    if (!coverageMetadata.getCrs.isGeographic) {
+      flag = true
+      flagReader = true
     }
 
     val pMin = new Array[Double](2)
@@ -177,16 +177,8 @@ object COGUtil {
     // 左上角x坐标,y坐标 ---> 影像 左上角 投影坐标
     var xMin: Double = .0
     var yMax: Double = .0
-    if (flag) {
-      xMin = geoTrans(3)
-      yMax = geoTrans(4)
-    }
-    else {
-      // xMin这里实际上是xMax
-      xMin = geoTrans(4)
-      // yMax这里实际上是yMin
-      yMax = geoTrans(3)
-    }
+    xMin = geoTrans(3)
+    yMax = geoTrans(4)
     val tiles: mutable.ArrayBuffer[RawTile] = mutable.ArrayBuffer.empty[RawTile]
 
     //计算目标影像的左上和右下图上坐标
@@ -194,33 +186,17 @@ object COGUtil {
     var pRight: Int = 0
     var pLower: Int = 0
     var pUpper: Int = 0
-    if (flag) {
-      pLeft = ((pMin(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-      pRight = ((pMax(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-      pLower = ((yMax - pMax(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
-      pUpper = ((yMax - pMin(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
-    }
-    else {
-      pLower = ((pMin(1) - yMax) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-      pUpper = ((pMax(1) - yMax) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-      pLeft = ((xMin - pMax(0)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
-      pRight = ((xMin - pMin(0)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
-    }
+    pLeft = ((pMin(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
+    pRight = ((pMax(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
+    pLower = ((yMax - pMax(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
+    pUpper = ((yMax - pMin(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
     var pCoordinate: Array[Int] = null
     var srcSize: Array[Double] = null
     var pRange: Array[Double] = null
 
-    // 根据不同坐标系的不同顺序，有两种情况
-    if (flagReader) {
-      pCoordinate = Array[Int](pLower, pUpper, pLeft, pRight)
-      srcSize = Array[Double](wReso, hReso)
-      pRange = Array[Double](xMin, yMax)
-    }
-    else {
-      pCoordinate = Array[Int](pLeft, pRight, pLower, pUpper)
-      srcSize = Array[Double](hReso, wReso)
-      pRange = Array[Double](yMax, xMin)
-    }
+    pCoordinate = Array[Int](pLower, pUpper, pLeft, pRight)
+    srcSize = Array[Double](wReso, hReso)
+    pRange = Array[Double](xMin, yMax)
     for (i <- Math.max(pCoordinate(0), 0) to (if (pCoordinate(1) >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1
     else pCoordinate(1))) {
       for (j <- Math.max(pCoordinate(2), 0) to (if (pCoordinate(3) >= tileOffsets(tileLevel)(i).length) tileOffsets(tileLevel)(i).length - 1
@@ -240,8 +216,14 @@ object COGUtil {
             t.setCoverageId(coverageMetadata.getCoverageID)
             t.setPath(coverageMetadata.getPath)
             t.setTime(coverageMetadata.getTime)
-            if (bandCount == 1) t.setMeasurement(coverageMetadata.getMeasurement)
-            else t.setMeasurement(String.valueOf(bandCount)) //TODO
+            if (bandCount == 1) {
+              t.setMeasurement(coverageMetadata.getMeasurement)
+              t.setMeasurementRank(coverageMetadata.getMeasurementRank)
+            }
+            else {
+              t.setMeasurement(coverageMetadata.getMeasurement)
+              t.setMeasurementRank(coverageMetadata.getMeasurementRank + bandCount)
+            } //TODO
             t.setCrs(coverageMetadata.getCrs)
             t.setDataType(coverageMetadata.getDataType)
             t.setProduct(coverageMetadata.getProduct)

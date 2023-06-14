@@ -2,7 +2,7 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.Tile
+import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.raster.mapalgebra.focal.Kernel
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
@@ -23,8 +23,8 @@ object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
   var lazyFunc: mutable.Map[String, (String, mutable.Map[String, String])] = mutable.Map.empty[String, (String, mutable.Map[String, String])]
-  var coverageCollectionRddList: mutable.Map[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]] = mutable.Map.empty[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]]
-  var coverageRddList: mutable.Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]
+  var coverageCollectionRddList: mutable.Map[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]] = mutable.Map.empty[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]]
+  var coverageRddList: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
 
 
   // TODO lrx: 以下为未检验
@@ -47,11 +47,11 @@ object Trigger {
   var layerName: String = _
   var isBatch: Int = _
   // 此次计算工作的任务json
-  var workTaskJSON: String = _
+  var workTaskJson: String = _
   // 用户ID
   var userId: String = _
-  // 任务ID
-  var jobId: String = _
+  // 时间ID
+  var timeId: String = _
   val zIndexStrArray = new mutable.ArrayBuffer[String]
 
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
@@ -107,25 +107,24 @@ object Trigger {
       // CoverageCollection
       case "CoverageCollection.filter" =>
         coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
-      case "CoverageCollection.mosaic" =>
-        coverageRddList += (UUID -> CoverageCollection.mosaic(sc, tileRDDReP = coverageRddListWaitingForMosaic(isOptionalArg(args, "coverageCollection")), method = isOptionalArg(args, "method")))
+//      case "CoverageCollection.mosaic" =>
+//        coverageRddList += (UUID -> CoverageCollection.mosaic(sc, tileRDDReP = coverageRddListWaitingForMosaic(isOptionalArg(args, "coverageCollection")), method = isOptionalArg(args, "method")))
       case "CoverageCollection.addStyles" =>
         if (isBatch == 0) {
-          CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")), layerID = layerID, fileName = fileName, level = level)
-          layerID = layerID + 1
+          CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
         }
         else {
-          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("input")), layerID = layerID, fileName = fileName)
-          layerID = layerID + 1
+          CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
         }
 
-      //Table
+      // TODO lrx: 这里要改造
+      // Table
       case "Table.getDownloadUrl" =>
-        Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = fileName)
+        Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = "fileName")
       case "Table.addStyles" =>
-        Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = fileName)
+        Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
-      //Coverage
+      // Coverage
       case "Coverage.subtract" =>
         coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.add" =>
@@ -168,11 +167,11 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.gt(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.gte" =>
         coverageRddList += (UUID -> Coverage.gte(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.selectBand" =>
-        coverageRddList += (UUID -> Coverage.selectBand(coverage = coverageRddList(args("coverage")), targetBands = args("band").substring(1, args("band").size - 1).split(",").toList))
-      case "Coverage.addBands" =>
-        val names: List[String] = List("B3")
-        coverageRddList += (UUID -> Coverage.addBands(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), names = names))
+      case "Coverage.selectBands" =>
+        coverageRddList += (UUID -> Coverage.selectBands(coverage = coverageRddList(args("coverage")), bands = args("bands").substring(1, args("bands").length - 1).split(",").toList))
+//      case "Coverage.addBands" =>
+//        val names: List[String] = List("B3")
+//        coverageRddList += (UUID -> Coverage.addBands(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), names = names))
       case "Coverage.bandNames" =>
         val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
         println("******************test bandNames***********************")
@@ -185,59 +184,59 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.neq(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.signum" =>
         coverageRddList += (UUID -> Coverage.signum(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.bandTypes" =>
-        val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
-        println(bandTypes)
-        println(bandTypes.size)
-      case "Coverage.rename" =>
-        coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name")))
+//      case "Coverage.bandTypes" =>
+//        val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
+//        println(bandTypes)
+//        println(bandTypes.size)
+//      case "Coverage.rename" =>
+//        coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name")))
       case "Coverage.pow" =>
         coverageRddList += (UUID -> Coverage.pow(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.mini" =>
         coverageRddList += (UUID -> Coverage.mini(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.maxi" =>
         coverageRddList += (UUID -> Coverage.maxi(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.focalMean" =>
-        coverageRddList += (UUID -> Coverage.focalMean(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      case "Coverage.focalMedian" =>
-        coverageRddList += (UUID -> Coverage.focalMedian(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      case "Coverage.focalMin" =>
-        coverageRddList += (UUID -> Coverage.focalMin(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      case "Coverage.focalMax" =>
-        coverageRddList += (UUID -> Coverage.focalMax(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      case "Coverage.focalMode" =>
-        coverageRddList += (UUID -> Coverage.focalMode(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      case "Coverage.convolve" =>
-        coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
+//      case "Coverage.focalMean" =>
+//        coverageRddList += (UUID -> Coverage.focalMean(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+//      case "Coverage.focalMedian" =>
+//        coverageRddList += (UUID -> Coverage.focalMedian(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+//      case "Coverage.focalMin" =>
+//        coverageRddList += (UUID -> Coverage.focalMin(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+//      case "Coverage.focalMax" =>
+//        coverageRddList += (UUID -> Coverage.focalMax(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+//      case "Coverage.focalMode" =>
+//        coverageRddList += (UUID -> Coverage.focalMode(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+//      case "Coverage.convolve" =>
+//        coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
       case "Coverage.projection" =>
         val projection: String = Coverage.projection(coverage = coverageRddList(args("coverage")))
         println(projection)
-      case "Coverage.histogram" =>
-        val hist = Coverage.histogram(coverage = coverageRddList(args("coverage")))
-        println(hist)
-      case "Coverage.reproject" =>
-        coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
-      case "Coverage.resample" =>
-        coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
-      case "Coverage.gradient" =>
-        coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.clip" =>
-        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
-      case "Coverage.clamp" =>
-        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
-      case "Coverage.rgbToHsv" =>
-        coverageRddList += (UUID -> Coverage.rgbToHsv(coverageRed = coverageRddList(args("coverageRed")), coverageGreen = coverageRddList(args("coverageGreen")), coverageBlue = coverageRddList(args("coverageBlue"))))
-      case "Coverage.hsvToRgb" =>
-        coverageRddList += (UUID -> Coverage.hsvToRgb(coverageHue = coverageRddList(args("coverageHue")), coverageSaturation = coverageRddList(args("coverageSaturation")), coverageValue = coverageRddList(args("coverageValue"))))
-      case "Coverage.entropy" =>
-        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
-      case "Coverage.NDVI" =>
-        coverageRddList += (UUID -> Coverage.NDVI(NIR = coverageRddList(args("NIR")), Red = coverageRddList(args("Red"))))
-      case "Coverage.cbrt" =>
-        coverageRddList += (UUID -> Coverage.cbrt(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.metadata" =>
-        val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
-        println(metadataString)
+//      case "Coverage.histogram" =>
+//        val hist = Coverage.histogram(coverage = coverageRddList(args("coverage")))
+//        println(hist)
+//      case "Coverage.reproject" =>
+//        coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
+//      case "Coverage.resample" =>
+//        coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
+//      case "Coverage.gradient" =>
+//        coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
+//      case "Coverage.clip" =>
+//        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
+//      case "Coverage.clamp" =>
+//        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
+//      case "Coverage.rgbToHsv" =>
+//        coverageRddList += (UUID -> Coverage.rgbToHsv(coverageRed = coverageRddList(args("coverageRed")), coverageGreen = coverageRddList(args("coverageGreen")), coverageBlue = coverageRddList(args("coverageBlue"))))
+//      case "Coverage.hsvToRgb" =>
+//        coverageRddList += (UUID -> Coverage.hsvToRgb(coverageHue = coverageRddList(args("coverageHue")), coverageSaturation = coverageRddList(args("coverageSaturation")), coverageValue = coverageRddList(args("coverageValue"))))
+//      case "Coverage.entropy" =>
+//        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+//      case "Coverage.NDVI" =>
+//        coverageRddList += (UUID -> Coverage.NDVI(NIR = coverageRddList(args("NIR")), Red = coverageRddList(args("Red"))))
+//      case "Coverage.cbrt" =>
+//        coverageRddList += (UUID -> Coverage.cbrt(coverage = coverageRddList(args("coverage"))))
+//      case "Coverage.metadata" =>
+//        val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
+//        println(metadataString)
       case "Coverage.toInt8" =>
         coverageRddList += (UUID -> Coverage.toInt8(coverage = coverageRddList(args("coverage"))))
       case "Coverage.toUint8" =>
@@ -293,20 +292,17 @@ object Trigger {
         print(kernel.tile.asciiDraw())
 
       // Terrain
-      case "Terrain.slope" =>
-        coverageRddList += (UUID -> Terrain.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
-      case "Terrain.aspect" =>
-        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+//      case "Terrain.slope" =>
+//        coverageRddList += (UUID -> Terrain.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+//      case "Terrain.aspect" =>
+//        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
       case "Coverage.addStyles" =>
         if (isBatch == 0) {
-          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("input")),
-            method = isOptionalArg(args, "method"), layerID = layerID, fileName = fileName, level = level)
-          layerID = layerID + 1
+          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")))
         }
         else {
-          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("input")), layerID = layerID, fileName = fileName)
-          layerID = layerID + 1
+          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")))
         }
 
 
@@ -506,9 +502,9 @@ object Trigger {
       case "Feature.setGeometry" =>
         featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
           featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.inverseDistanceWeighted" =>
-        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+//      case "Feature.inverseDistanceWeighted" =>
+//        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+//          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
 
       //Cube
       case "Service.getCollections" =>
@@ -591,16 +587,15 @@ object Trigger {
 
 
   def runMain(implicit sc: SparkContext,
-              curWorkTaskJSON: String,
-              curWorkID: String,
-              curOriginTaskID: String): Unit = {
+              curWorkTaskJson: String,
+              curUserId: String): Unit = {
     /* sc,workTaskJson,workID,originTaskID */
-    workTaskJSON = curWorkTaskJSON
-    workID = curWorkID
-    originTaskID = curOriginTaskID
+    workTaskJson = curWorkTaskJson
+    userId = curUserId
 
     val time1: Long = System.currentTimeMillis()
-    val jsonObject: JSONObject = JSON.parseObject(workTaskJSON)
+    timeId = time1.toString
+    val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
     println(jsonObject)
 
     isBatch = jsonObject.getString("isBatch").toInt
@@ -614,7 +609,7 @@ object Trigger {
       windowExtent = new Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
 
       val jedis: Jedis = new JedisUtil().getJedis
-      val key: String = originTaskID + ":solvedTile:" + level
+      val key: String = userId + timeId + ":solvedTile:" + level
       jedis.select(1)
 
       val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)
@@ -674,25 +669,23 @@ object Trigger {
 
 
   def main(args: Array[String]): Unit = {
-    workID = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
+    userId = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
-    workTaskJSON = {
-      val fileSource: BufferedSource = Source.fromFile(
-        "src/main/scala/whu/edu/cn/testjson/complexmap.json")
-      fileName = "datas/out.txt" // TODO
+    workTaskJson = {
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/complexmap.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
-    originTaskID = Random.nextInt().toString
+    userId = Random.nextInt().toString
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    runMain(sc, workTaskJSON, workID, originTaskID)
+    runMain(sc, workTaskJson, userId)
 
     //    Thread.sleep(1000000)
 

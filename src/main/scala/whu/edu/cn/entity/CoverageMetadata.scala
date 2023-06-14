@@ -15,6 +15,7 @@ class CoverageMetadata extends Serializable{
   var path: String = _
   var geom: Geometry = _
   var measurement: String = _
+  var measurementRank: Int = _
   var time: LocalDateTime = _
   var crs: CRS = _
   var dataType: OGEDataType = _
@@ -58,6 +59,14 @@ class CoverageMetadata extends Serializable{
 
   def setMeasurement(measurement: String): Unit = {
     this.measurement = measurement
+  }
+
+  def getMeasurementRank: Int = {
+    this.measurementRank
+  }
+
+  def setMeasurementRank(measurementRank: Int): Unit = {
+    this.measurementRank = measurementRank
   }
 
   def getTime: LocalDateTime = {

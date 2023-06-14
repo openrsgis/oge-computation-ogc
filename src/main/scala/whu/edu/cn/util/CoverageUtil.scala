@@ -2,7 +2,7 @@ package whu.edu.cn.util
 
 import geotrellis.layer._
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellType, Tile, TileLayout}
+import geotrellis.raster.{CellType, MultibandTile, Tile, TileLayout}
 import geotrellis.spark.{TileLayerRDD, _}
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
@@ -11,11 +11,12 @@ import whu.edu.cn.oge.Coverage.bandNames
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
 
 import java.time.{Instant, ZoneOffset}
+import scala.collection.mutable
 import scala.math.{max, min}
 
 object CoverageUtil {
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
-  def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageRawTiles: RDD[RawTile] = tileRDDReP
     val extents: (Double, Double, Double, Double) = coverageRawTiles.map(t => {
       (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
@@ -35,28 +36,40 @@ object CoverageUtil {
     val crs: CRS = firstTile.getCrs
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
-    val tileRDD: RDD[(SpaceTimeBandKey, Tile)] = coverageRawTiles.map(tile => {
+
+    val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = coverageRawTiles.map(tile => {
       val phenomenonTime: Long = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-      val measurement: String = tile.getMeasurement
       val rowNum: Int = tile.getSpatialKey.row
       val colNum: Int = tile.getSpatialKey.col
+      val measurementRank: Int = tile.getMeasurementRank
+      val measurement: String = tile.getMeasurement
       val Tile: Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      val k: SpaceTimeBandKey = SpaceTimeBandKey(SpaceTimeKey(colNum - colRowInstant._1, rowNum - colRowInstant._2, phenomenonTime), measurement)
+      val k: SpaceTimeKey = SpaceTimeKey(colNum - colRowInstant._1, rowNum - colRowInstant._2, phenomenonTime)
       val v: Tile = Tile
-      (k, v)
+      (k, (measurementRank, measurement, v))
     })
-    (tileRDD, tileLayerMetadata)
+    val multibandTileRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = tileRdd.groupByKey.map(t => {
+      val tileSorted: Array[(Int, String, Tile)] = t._2.toArray.sortBy(x => x._1)
+      val listBuffer: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      val tileMeasurement: Array[String] = tileSorted.map(x => x._2)
+      listBuffer ++= tileMeasurement
+      val tileArray: Array[Tile] = tileSorted.map(x => x._3)
+      (SpaceTimeBandKey(t._1, listBuffer), MultibandTile(tileArray))
+    })
+    (multibandTileRdd, tileLayerMetadata)
   }
 
-  def checkProjResoExtent(coverage1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-                          coverage2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): ((RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])) = {
-    val time: Long = Instant.now.getEpochSecond
-    val band1: String = coverage1._1.first()._1.measurementName
-    val coverage1tileRDD: RDD[(SpatialKey, Tile)] = coverage1._1.map(t => {
+  def checkProjResoExtent(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = {
+    val tile1: (SpaceTimeBandKey, MultibandTile) = coverage1.first()
+    val tile2: (SpaceTimeBandKey, MultibandTile) = coverage2.first()
+    val time1: Long = tile1._1.spaceTimeKey.instant
+    val time2: Long = tile2._1.spaceTimeKey.instant
+    val band1: mutable.ListBuffer[String] = tile1._1.measurementName
+    val band2: mutable.ListBuffer[String] = tile2._1.measurementName
+    val coverage1tileRDD: RDD[(SpatialKey, MultibandTile)] = coverage1._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
-    val band2: String = coverage2._1.first()._1.measurementName
-    val coverage2tileRDD: RDD[(SpatialKey, Tile)] = coverage2._1.map(t => {
+    val coverage2tileRDD: RDD[(SpatialKey, MultibandTile)] = coverage2._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
 
@@ -73,8 +86,7 @@ object CoverageUtil {
         // 这里投影到统一的坐标系下只是为了比较分辨率大小
         val reso1: Double = coverage1._2.cellSize.resolution
         // 把第二张影像投影到第一张影像的坐标系下，然后比较分辨率
-        val tile2: (SpatialKey, Tile) = coverage2tileRDD.first()
-        val reso2: Double = tile2._2.reproject(coverage2._2.layout.mapTransform(tile2._1), coverage2._2.crs, coverage1._2.crs).cellSize.resolution
+        val reso2: Double = tile2._2.reproject(coverage2._2.layout.mapTransform(tile2._1.spaceTimeKey.spatialKey), coverage2._2.crs, coverage1._2.crs).cellSize.resolution
         if (reso1 < reso2) {
           reso = reso1
           resoRatio = reso2 / reso1
@@ -110,8 +122,8 @@ object CoverageUtil {
         var extent: Extent = extent1.intersection(extent2).orNull
 
         // 先重投影，重投影到原始范围重投影后的范围、这个范围除以256, 顺势进行裁剪
-        val layoutCols: Int = ((extent.xmax - extent.xmin) / reso / 256.0).toInt
-        val layoutRows: Int = ((extent.ymax - extent.ymin) / reso / 256.0).toInt
+        val layoutCols: Int = math.max(((extent.xmax - extent.xmin) / reso / 256.0).toInt, 1)
+        val layoutRows: Int = math.max(((extent.ymax - extent.ymin) / reso / 256.0).toInt, 1)
         val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
         // Extent必须进行重新计算，因为layoutCols和layoutRows加了黑边，导致范围变化了
         val newExtent: Extent = new Extent(extent.xmin, extent.ymin, extent.xmin + reso * 256.0 * layoutCols, extent.ymin + reso * 256.0 * layoutRows)
@@ -122,9 +134,9 @@ object CoverageUtil {
         val srcBounds1: Bounds[SpaceTimeKey] = coverage1._2.bounds
         val newBounds1: Bounds[SpatialKey] = Bounds(SpatialKey(srcBounds1.get.minKey.spatialKey._1, srcBounds1.get.minKey.spatialKey._2), SpatialKey(srcBounds1.get.maxKey.spatialKey._1, srcBounds1.get.maxKey.spatialKey._2))
         val rasterMetaData1: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverage1._2.cellType, coverage1._2.layout, coverage1._2.extent, coverage1._2.crs, newBounds1)
-        val coverage1Rdd: RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]] = TileLayerRDD(coverage1tileRDD, rasterMetaData1)
+        val coverage1Rdd: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = MultibandTileLayerRDD(coverage1tileRDD, rasterMetaData1)
 
-        var coverage1tileLayerRdd: RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage1Rdd
+        var coverage1tileLayerRdd: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage1Rdd
         // 如果flag=1， 代表第一张影像的分辨率较低
         if (flag == 1) {
           // 对影像进行瓦片大小重切分
@@ -140,11 +152,11 @@ object CoverageUtil {
           coverage1tileLayerRdd = coverage1Retiled.crop(cropExtent1)
         }
 
-        val (_, reprojectedRdd1): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+        val (_, reprojectedRdd1): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
           coverage1tileLayerRdd.reproject(crs, ld)
 
         // Filter配合extent的强制修改，达到真正裁剪到我们想要的Layout的目的
-        val reprojFilter1: RDD[(SpatialKey, Tile)] = reprojectedRdd1.filter(layer => {
+        val reprojFilter1: RDD[(SpatialKey, MultibandTile)] = reprojectedRdd1.filter(layer => {
           val key: SpatialKey = layer._1
           val extentR: Extent = ld.mapTransform(key)
           extentR.xmin >= extent.xmin && extentR.xmax <= extent.xmax && extentR.ymin >= extent.ymin && extentR.ymax <= extent.ymax
@@ -153,22 +165,22 @@ object CoverageUtil {
         // metadata需要添加time
         val srcMetadata1: TileLayerMetadata[SpatialKey] = reprojectedRdd1.metadata
         val srcProjBounds1: Bounds[SpatialKey] = srcMetadata1.bounds
-        val newProjBounds1: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(srcProjBounds1.get.minKey._1, srcProjBounds1.get.minKey._2, time), SpaceTimeKey(srcProjBounds1.get.maxKey._1, srcProjBounds1.get.maxKey._2, time))
+        val newProjBounds1: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(srcProjBounds1.get.minKey._1, srcProjBounds1.get.minKey._2, time1), SpaceTimeKey(srcProjBounds1.get.maxKey._1, srcProjBounds1.get.maxKey._2, time1))
         val newMetadata1: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(srcMetadata1.cellType, srcMetadata1.layout, extent, srcMetadata1.crs, newProjBounds1)
 
         // 这里LayerMetadata直接使用reprojectRdd1的，尽管SpatialKey有负值也不影响
-        val newCoverage1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (reprojFilter1.map(t => {
-          (SpaceTimeBandKey(new SpaceTimeKey(t._1.col, t._1.row, time), band1), t._2)
+        val newCoverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (reprojFilter1.map(t => {
+          (SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, time1), band1), t._2)
         }), newMetadata1)
 
         // 这里是coverage2开始进行重投影
         val srcBounds2: Bounds[SpaceTimeKey] = coverage2._2.bounds
         val newBounds2: Bounds[SpatialKey] = Bounds(SpatialKey(srcBounds2.get.minKey.spatialKey._1, srcBounds2.get.minKey.spatialKey._2), SpatialKey(srcBounds2.get.maxKey.spatialKey._1, srcBounds2.get.maxKey.spatialKey._2))
         val rasterMetaData2: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverage2._2.cellType, coverage2._2.layout, coverage2._2.extent, coverage2._2.crs, newBounds2)
-        val coverage2Rdd: RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]] = TileLayerRDD(coverage2tileRDD, rasterMetaData2)
+        val coverage2Rdd: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = MultibandTileLayerRDD(coverage2tileRDD, rasterMetaData2)
 
 
-        var coverage2tileLayerRdd: RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage2Rdd
+        var coverage2tileLayerRdd: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage2Rdd
         // 如果flag=2， 代表第二张影像的分辨率较低
         if (flag == 2) {
           // 对影像进行瓦片大小重切分
@@ -184,10 +196,10 @@ object CoverageUtil {
           coverage2tileLayerRdd = coverage2Retiled.crop(cropExtent2)
         }
 
-        val (_, reprojectedRdd2): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+        val (_, reprojectedRdd2): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
           coverage2tileLayerRdd.reproject(crs, ld)
 
-        val reprojFilter2: RDD[(SpatialKey, Tile)] = reprojectedRdd2.filter(layer => {
+        val reprojFilter2: RDD[(SpatialKey, MultibandTile)] = reprojectedRdd2.filter(layer => {
           val key: SpatialKey = layer._1
           val extentR: Extent = ld.mapTransform(key)
           extentR.xmin >= extent.xmin && extentR.xmax <= extent.xmax && extentR.ymin >= extent.ymin && extentR.ymax <= extent.ymax
@@ -196,12 +208,12 @@ object CoverageUtil {
         // metadata需要添加time
         val srcMetadata2: TileLayerMetadata[SpatialKey] = reprojectedRdd2.metadata
         val srcProjBounds2: Bounds[SpatialKey] = srcMetadata2.bounds
-        val newProjBounds2: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(srcProjBounds2.get.minKey._1, srcProjBounds2.get.minKey._2, time), SpaceTimeKey(srcProjBounds2.get.maxKey._1, srcProjBounds2.get.maxKey._2, time))
+        val newProjBounds2: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(srcProjBounds2.get.minKey._1, srcProjBounds2.get.minKey._2, time2), SpaceTimeKey(srcProjBounds2.get.maxKey._1, srcProjBounds2.get.maxKey._2, time2))
         val newMetadata2: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(srcMetadata2.cellType, srcMetadata2.layout, extent, srcMetadata2.crs, newProjBounds2)
 
         // 这里LayerMetadata直接使用reprojectRdd2的，尽管SpatialKey有负值也不影响
-        val newCoverage2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = (reprojFilter2.map(t => {
-          (SpaceTimeBandKey(new SpaceTimeKey(t._1.col, t._1.row, time), band2), t._2)
+        val newCoverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (reprojFilter2.map(t => {
+          (SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, time2), band2), t._2)
         }), newMetadata2)
 
 
@@ -216,40 +228,54 @@ object CoverageUtil {
     }
   }
 
-  def coverageTemplate(coverage1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), coverage2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), func: (Tile, Tile) => Tile, bandName: String): (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) = {
+  // TODO lrx: 后续改成和GEE一样的，要指定前几个波段相加
+  // TODO lrx: 波段是有顺序的
+  def coverageTemplate(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), func: (Tile, Tile) => Tile): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    def funcMulti(multibandTile1: MultibandTile, multibandTile2: MultibandTile): MultibandTile = {
+      val bands1: Vector[Tile] = multibandTile1.bands
+      val bands2: Vector[Tile] = multibandTile2.bands
+      val bandsFunc: mutable.ArrayBuffer[Tile] = mutable.ArrayBuffer.empty[Tile]
+      for (i <- bands1.indices) {
+        bandsFunc.append(func(bands1(i), bands2(i)))
+      }
+      MultibandTile(bandsFunc)
+    }
+
     val (coverage1Reprojected, coverage2Reprojected) = checkProjResoExtent(coverage1, coverage2)
-    val bandNum1: Int = bandNames(coverage1Reprojected).length
-    val bandNum2: Int = bandNames(coverage2Reprojected).length
+    val bandNum1: Int = bandNum(coverage1Reprojected)
+    val bandNum2: Int = bandNum(coverage2Reprojected)
     val resampleTime: Long = Instant.now.getEpochSecond
-    if (bandNum1 == 1 && bandNum2 == 1) {
-      val coverage1NoBand: RDD[(SpatialKey, Tile)] = coverage1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
-      val coverage2NoBand: RDD[(SpatialKey, Tile)] = coverage2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
-      val rdd: RDD[(SpatialKey, (Tile, Tile))] = coverage1NoBand.join(coverage2NoBand)
+    val band1: mutable.ListBuffer[String] = coverage1._1.first()._1.measurementName
+    if (bandNum1 == bandNum2) {
+      val coverage1NoTime: RDD[(SpatialKey, MultibandTile)] = coverage1Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val coverage2NoTime: RDD[(SpatialKey, MultibandTile)] = coverage2Reprojected._1.map(t => (t._1.spaceTimeKey.spatialKey, t._2))
+      val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1NoTime.join(coverage2NoTime)
       (rdd.map(t => {
-        (SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), bandName), func(t._2._1, t._2._2))
+        (SpaceTimeBandKey(SpaceTimeKey(t._1.col, t._1.row, resampleTime), band1), funcMulti(t._2._1, t._2._2))
       }), coverage1Reprojected._2)
     }
     else {
-      val coverage1NoTime: RDD[(SpaceBandKey, Tile)] = coverage1Reprojected._1.map(t => (SpaceBandKey(t._1.spaceTimeKey.spatialKey, t._1.measurementName), t._2))
-      val coverage2NoTime: RDD[(SpaceBandKey, Tile)] = coverage2Reprojected._1.map(t => (SpaceBandKey(t._1.spaceTimeKey.spatialKey, t._1.measurementName), t._2))
-      val matchRDD: RDD[(SpaceBandKey, (Tile, Tile))] = coverage1NoTime.join(coverage2NoTime)
-      (matchRDD.map(t => {
-        (SpaceTimeBandKey(SpaceTimeKey(t._1.spatialKey._1, t._1.spatialKey._2, resampleTime), t._1.measurementName), func(t._2._1, t._2._2))
-      }), coverage1Reprojected._2)
+      throw new IllegalArgumentException("Error: 波段数量不相等")
     }
   }
 
+  def coverageTemplate(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), func: Tile => Tile): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-  // TODO lrx: 定义一个checkDataType
-  /*def checkDataType(coverage1: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-                    coverage2: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])): (Boolean, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])) = {
-    val cellType1 = coverage1._1.first()._2.cellType
-    val cellType2 = coverage2._1.first()._2.cellType
-    if (cellType1 != cellType2) {
-
+    def funcMulti(multibandTile: MultibandTile): MultibandTile = {
+      val bands: Vector[Tile] = multibandTile.bands
+      val bandsFunc: mutable.ArrayBuffer[Tile] = mutable.ArrayBuffer.empty[Tile]
+      for (i <- bands.indices) {
+        bandsFunc.append(func(bands(i)))
+      }
+      MultibandTile(bandsFunc)
     }
-    else {
 
-    }
-  }*/
+    (coverage._1.map(t => (t._1, funcMulti(t._2))), coverage._2)
+  }
+
+  def bandNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Int = {
+    coverage._1.first()._2.bandCount
+  }
+
 }

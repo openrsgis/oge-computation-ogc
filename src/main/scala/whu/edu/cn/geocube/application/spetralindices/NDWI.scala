@@ -4,9 +4,7 @@ import geotrellis.layer._
 import geotrellis.raster._
 import geotrellis.raster.mapalgebra.local._
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity
-import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, RasterTileLayerMetadata}
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
 
 /**
@@ -42,7 +40,7 @@ object NDWI {
         if (greenBandTile.isEmpty || nirBandTile.isEmpty)
           throw new RuntimeException("There is no Green band or Nir band")
         val ndwiTile: Tile = ndwiTileComputation(greenBandTile.get, nirBandTile.get)
-        (entity.SpaceTimeBandKey(spaceTimeKey, "NDWI"), ndwiTile)
+        (SpaceTimeBandKey(spaceTimeKey, "NDWI"), ndwiTile)
       }
 
     val srcLayout = rasterTileRddExceptBandMeta.tileLayerMetadata.layout

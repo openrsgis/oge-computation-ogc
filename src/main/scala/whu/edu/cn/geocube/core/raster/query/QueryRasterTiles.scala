@@ -12,9 +12,8 @@ import geotrellis.raster.render.{ColorRamp, RGB}
 import geotrellis.raster.{CellType, Raster, Tile, TileLayout}
 import geotrellis.vector.Extent
 import org.apache.spark.{SparkConf, SparkContext}
-import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.geocube.core.entity
-import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTile, RasterTileLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTile, RasterTileLayerMetadata}
 import whu.edu.cn.geocube.core.entity.GcProduct._
 import whu.edu.cn.geocube.core.entity.GcMeasurement._
 import whu.edu.cn.geocube.util.HbaseUtil.{getTileCell, getTileMeta}

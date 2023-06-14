@@ -14,7 +14,7 @@
 //import scala.io.Source
 //
 //object TriggerModelBuilder {
-//  var rdd_list_image: Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])] = Map.empty[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])]
+//  var rdd_list_image: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map.empty[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
 //  var rdd_list_image_waitingForMosaic: Map[String, RDD[RawTile]] = Map.empty[String, RDD[RawTile]]
 //  var imageLoad: Map[String, (String, String, String)] = Map.empty[String, (String, String, String)]
 //  var filterEqual: Map[String, (String, String)] = Map.empty[String, (String, String)]

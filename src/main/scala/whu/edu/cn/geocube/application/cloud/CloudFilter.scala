@@ -10,11 +10,9 @@ import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity
-import whu.edu.cn.entity.SpaceTimeBandKey
 
 import scala.collection.mutable.ArrayBuffer
-import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTileLayerMetadata}
 import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
 import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.geocube.view.Info
@@ -113,7 +111,7 @@ object CloudFilter {
             dstMultibandsTile(bandNameIndexMap.get(bandName).get).setDouble(i, j, multibandsPixel.getQuick(bandNameIndexMap.get(bandName).get))
         }
         for (bandName <- bandNameIndexMap.keySet) {
-          spaceTimeBandTile.append((entity.SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, avgInstant), bandName), dstMultibandsTile(bandNameIndexMap.get(bandName).get)))
+          spaceTimeBandTile.append((SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, avgInstant), bandName), dstMultibandsTile(bandNameIndexMap.get(bandName).get)))
         }
         spaceTimeBandTile.toArray
       }
@@ -215,7 +213,7 @@ object CloudFilter {
             dstMultibandsTile(bandNameIndexMap.get(bandName).get).setDouble(i, j, multibandsPixel.getQuick(bandNameIndexMap.get(bandName).get))
         }
         for (bandName <- bandNameIndexMap.keySet) {
-          spaceTimeBandTile.append((entity.SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, avgInstant), bandName), dstMultibandsTile(bandNameIndexMap.get(bandName).get)))
+          spaceTimeBandTile.append((SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, avgInstant), bandName), dstMultibandsTile(bandNameIndexMap.get(bandName).get)))
         }
         spaceTimeBandTile.toArray
       }

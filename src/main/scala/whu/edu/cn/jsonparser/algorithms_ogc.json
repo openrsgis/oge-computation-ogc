@@ -895,7 +895,7 @@
       }
     ]
   },
-  "Coverage.selectBand": {
+  "Coverage.selectBands": {
     "description": "",
     "returns": "Coverage",
     "args": [
@@ -905,7 +905,7 @@
         "description": "The image from which the left operand bands are taken."
       },
       {
-        "name": "band",
+        "name": "bands",
         "type": "List<String>",
         "description": "The image from which the right operand bands are taken."
       }
@@ -1634,7 +1634,7 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "input",
+        "name": "coverage",
         "type": "Coverage",
         "description": "The coverage to be added styles"
       },
@@ -1787,7 +1787,7 @@
     "returns": "CoverageCollection",
     "args": [
       {
-        "name": "input",
+        "name": "coverageCollection",
         "type": "CoverageCollection",
         "description": "The coverage collection to be added styles"
       },
