@@ -3,10 +3,8 @@ package whu.edu.cn.geocube.application.timeseries
 import geotrellis.layer._
 import geotrellis.raster._
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity
-import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
-import whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, RasterTileLayerMetadata}
 
 import java.text.SimpleDateFormat
 
@@ -57,7 +55,7 @@ object WaterChangeDetection {
           val previous: (SpaceTimeKey, Tile) = list(listI)
           val rear: (SpaceTimeKey, Tile) = list(listJ)
           val changedTile = rear._2 - previous._2
-          (entity.SpaceTimeBandKey(new SpaceTimeKey(x._1.col, x._1.row, System.currentTimeMillis()), "WaterChangeDetection"), changedTile)
+          (SpaceTimeBandKey(new SpaceTimeKey(x._1.col, x._1.row, System.currentTimeMillis()), "WaterChangeDetection"), changedTile)
         }
       }.filter(t => t != null)
     val srcLayout = ndwiMeta.tileLayerMetadata.layout

@@ -19,9 +19,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, Partitioner, SparkConf, SparkContext, TaskContext}
 import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}
 import org.opengis.feature.simple.SimpleFeature
-import whu.edu.cn.entity
-import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandProductKey}
+import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTileLayerMetadata, SpaceTimeBandProductKey}
 import whu.edu.cn.geocube.core.cube.tabular.{TabularRDD, TabularRecord}
 import whu.edu.cn.geocube.core.cube.vector.{FeatureRDD, GeoObject}
 import whu.edu.cn.geocube.core.vector.grid.GridTransformer.getGeomGridInfo
@@ -470,7 +468,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -491,8 +489,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -534,7 +532,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -611,7 +609,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -632,8 +630,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -675,7 +673,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Add(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -752,7 +750,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -773,8 +771,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -816,7 +814,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -893,7 +891,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -914,8 +912,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -957,7 +955,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Subtract(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -1035,7 +1033,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -1056,8 +1054,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -1099,7 +1097,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -1176,7 +1174,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -1197,8 +1195,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -1240,7 +1238,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Divide(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -1317,7 +1315,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -1338,8 +1336,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -1381,7 +1379,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -1458,7 +1456,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
         }
 
         /*val thisMeta = this.meta
@@ -1479,8 +1477,8 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val newMeta = RasterTileLayerMetadata(TileLayerMetadata(DoubleConstantNoDataCellType, ld, intersectExtent, crs, bounds), productName, _measurementNames = Array(newBand).toBuffer.asInstanceOf[ArrayBuffer[String]])
         new RasterRDD(rdd, newMeta)
       }else { //两个rdd至少有一个有多个波段，对相同波段的进行运算。返回的rdd中只有相同的波段，丢弃不同的波段
-        val thisRdd = this.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
-        val otherRdd = other.map(x => (entity.SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val thisRdd = this.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
+        val otherRdd = other.map(x => (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.spatialKey.col, x._1.spaceTimeKey.spatialKey.row, newInstant), x._1.measurementName), x._2))
         val rdd: RDD[(SpaceTimeBandKey, Tile)] = thisRdd.join(otherRdd).map{x =>
           val key = x._1
           val tile1 = DoubleArrayTile(x._2._1.toArrayDouble(), x._2._1.cols, x._2._1.rows)
@@ -1522,7 +1520,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
             .convert(DoubleConstantNoDataCellType)
           val tile2 = DoubleArrayTile(x._2._2.toArrayDouble(), x._2._2.cols, x._2._2.rows)
             .convert(DoubleConstantNoDataCellType)
-          (entity.SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
+          (SpaceTimeBandKey(key, newBand), Multiply(tile1, tile2))
         }
         /*val thisMeta = this.meta
         val otherMeta = other.meta
@@ -1610,7 +1608,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val resultTile: Tile = Add(tile1, tile2)
         //val resultTile: Tile = if(tile1 == None || tile2 == None) null else Add(tile1, tile2)
 
-        (entity.SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
+        (SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
       }.filter(x => x._2 != null)
 
     /*val newMeta = new RasterTileLayerMetadata[SpaceTimeKey](this.meta.getTileLayerMetadata)
@@ -1661,7 +1659,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val resultTile: Tile = Subtract(tile1, tile2)
         //val resultTile: Tile = if(tile1 == None || tile2 == None) null else Add(tile1, tile2)
 
-        (entity.SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
+        (SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
       }.filter(x => x._2 != null)
 
     /*val newMeta = new RasterTileLayerMetadata[SpaceTimeKey](this.meta.getTileLayerMetadata)
@@ -1712,7 +1710,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val resultTile: Tile = Divide(tile1, tile2)
         //val resultTile: Tile = if(tile1 == None || tile2 == None) null else Add(tile1, tile2)
 
-        (entity.SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
+        (SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
       }.filter(x => x._2 != null)
 
     /*val newMeta = new RasterTileLayerMetadata[SpaceTimeKey](this.meta.getTileLayerMetadata)
@@ -1763,7 +1761,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val resultTile: Tile = Multiply(tile1, tile2)
         //val resultTile: Tile = if(tile1 == None || tile2 == None) null else Add(tile1, tile2)
 
-        (entity.SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
+        (SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
       }.filter(x => x._2 != null)
 
     /*val newMeta = new RasterTileLayerMetadata[SpaceTimeKey](this.meta.getTileLayerMetadata)
@@ -1815,7 +1813,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val resultTile: Tile = reduce.apply(tile1, tile2)
         //val resultTile: Tile = if(tile1 == None || tile2 == None) null else reduce.apply(tile1, tile2)
 
-        (entity.SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
+        (SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
       }.filter(x => x._2 != null)
 
     /*val newMeta = new RasterTileLayerMetadata[SpaceTimeKey](this.meta.getTileLayerMetadata)
@@ -1870,7 +1868,7 @@ class RasterRDD(val rddPrev: RDD[(SpaceTimeBandKey, Tile)], val meta:RasterTileL
         val resultTile: Tile = reduce.apply(tile1, tile2, tile3)
         //val resultTile: Tile = if(tile1 == None || tile2 == None || tile3 == None) null else reduce.apply(tile1, tile2, tile3)
 
-        (entity.SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
+        (SpaceTimeBandKey(spaceTimeKey, newBand), resultTile)
       }.filter(x => x._2 != null)
 
     /*val newMeta = new RasterTileLayerMetadata[SpaceTimeKey](this.meta.getTileLayerMetadata)

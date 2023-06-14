@@ -1,7 +1,7 @@
 package whu.edu.cn.util
 
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.Tile
+import geotrellis.raster.{MultibandTile, Tile}
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{RawTile, SpaceTimeBandKey}
 import whu.edu.cn.util.CoverageUtil.makeCoverageRDD
@@ -21,7 +21,7 @@ object CoverageCollectionUtil {
 
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
   // 不能用嵌套RDD，因为makeCoverageRDD需要MinIOClient，这个类不能序列化
-  def makeCoverageCollectionRDD(rawTileRdd: Map[String, RDD[RawTile]]): Map[String, (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])] = {
+  def makeCoverageCollectionRDD(rawTileRdd: Map[String, RDD[RawTile]]): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
     rawTileRdd.map(t=>{
         (t._1, makeCoverageRDD(t._2))
     })

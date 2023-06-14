@@ -14,7 +14,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 import org.locationtech.jts.io.WKTReader
-import whu.edu.cn.entity.SpaceTimeBandKey
 
 import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD

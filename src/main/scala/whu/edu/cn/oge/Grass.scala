@@ -5,7 +5,7 @@ import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{DoubleCellType, Raster, Tile}
+import geotrellis.raster.{DoubleCellType, MultibandTile, Raster, Tile}
 import geotrellis.spark._
 import geotrellis.spark.store.hadoop.HadoopGeoTiffRDD
 import org.apache.hadoop.fs.Path
@@ -16,6 +16,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 
 import java.io._
 import java.text.SimpleDateFormat
+import scala.collection.mutable
 import scala.io.Source
 
 /**
@@ -145,7 +146,7 @@ object GrassUtil {
 
   }
 
-  def saveRDDToTif(input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),outputTiffPath:String):Unit={
+  def saveRDDToTif(input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),outputTiffPath:String):Unit={
     val tileLayerArray = input._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()
@@ -156,25 +157,26 @@ object GrassUtil {
     println("成功落地tif")
   }
 
-  def makeRDDFromTif(sc: SparkContext,input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]),
-                      sourceTiffpath:String):(RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey])={
-    val layout = input._2.layout
-    val inputRdd = HadoopGeoTiffRDD.spatial(new Path(sourceTiffpath))(sc)
-    val tiled = inputRdd.tileToLayout(DoubleCellType, layout, Bilinear)
-    val srcLayout = input._2.layout
-    val srcExtent = input._2.extent
-    val srcCrs = input._2.crs
-    val srcBounds = input._2.bounds
-    val now = "1000-01-01 00:00:00"
-    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    val date = sdf.parse(now).getTime
-    val newBounds = Bounds(SpaceTimeKey(srcBounds.get.minKey.spatialKey._1, srcBounds.get.minKey.spatialKey._2, date), SpaceTimeKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2, date))
-    val metaData = TileLayerMetadata(DoubleCellType, srcLayout, srcExtent, srcCrs, newBounds)
-    val tiledOut = tiled.map(t => {
-      (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), "Grass"), t._2)
-    })
-    println("成功读取tif")
-    (tiledOut, metaData)
+  def makeRDDFromTif(sc: SparkContext,input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                      sourceTiffpath:String):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
+//    val layout = input._2.layout
+//    val inputRdd = HadoopGeoTiffRDD.spatial(new Path(sourceTiffpath))(sc)
+//    val tiled = inputRdd.tileToLayout(DoubleCellType, layout, Bilinear)
+//    val srcLayout = input._2.layout
+//    val srcExtent = input._2.extent
+//    val srcCrs = input._2.crs
+//    val srcBounds = input._2.bounds
+//    val now = "1000-01-01 00:00:00"
+//    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+//    val date = sdf.parse(now).getTime
+//    val newBounds = Bounds(SpaceTimeKey(srcBounds.get.minKey.spatialKey._1, srcBounds.get.minKey.spatialKey._2, date), SpaceTimeKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2, date))
+//    val metaData = TileLayerMetadata(DoubleCellType, srcLayout, srcExtent, srcCrs, newBounds)
+//    val tiledOut = tiled.map(t => {
+//      (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), mutable.ListBuffer("Grass")), t._2)
+//    })
+//    println("成功读取tif")
+//    (tiledOut, metaData)
+    input
   }
 
   //TODO:从数据库中查询对应坐标系的location
@@ -249,10 +251,10 @@ object GrassUtil {
       i=i+1
       println(input)
       if(i==argsNum){
-        functionDefination=functionDefination+input+": (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) )"
+        functionDefination=functionDefination+input+": (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) )"
       }
       else{
-        functionDefination=functionDefination+input+": (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), "
+        functionDefination=functionDefination+input+": (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), "
       }
     }
     for(arg <- args){
@@ -381,7 +383,7 @@ object GrassUtil {
 
   }
 
-//  def r_neighbors(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), size:String, method:String )={
+//  def r_neighbors(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), size:String, method:String )={
 //    val time_1=System.currentTimeMillis()
 //    //将imageRDD落地为tif
 //    val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
@@ -438,7 +440,7 @@ object GrassUtil {
 //    tif
 //  }
 
-  def r_neighbors(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), size:String, method:String )={
+  def r_neighbors(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), size:String, method:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -468,7 +470,7 @@ object GrassUtil {
     tif
   }
 
-  def r_buffer(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), distances:String, unit:String )={
+  def r_buffer(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), distances:String, unit:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -498,7 +500,7 @@ object GrassUtil {
     tif
   }
 
-  def r_cross(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), distances:String, unit:String )={
+  def r_cross(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), distances:String, unit:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -528,7 +530,7 @@ object GrassUtil {
     tif
   }
 
-  def r_patch(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]) )={
+  def r_patch(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -558,7 +560,7 @@ object GrassUtil {
     tif
   }
 
-  def r_latlong(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), isLongitude:String )={
+  def r_latlong(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), isLongitude:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -588,7 +590,7 @@ object GrassUtil {
     tif
   }
 
-  def r_blend(sc: SparkContext, first: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), second: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), percent:String )={
+  def r_blend(sc: SparkContext, first: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), second: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), percent:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(first,outputTiffPath_1)
@@ -623,7 +625,7 @@ object GrassUtil {
     tif
   }
 
-  def r_composite(sc: SparkContext, red: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), green: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), blue: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), levels:String, level_red:String, level_blue:String, level_green:String )={
+  def r_composite(sc: SparkContext, red: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), green: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), blue: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), levels:String, level_red:String, level_blue:String, level_green:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(red,outputTiffPath_1)
@@ -663,7 +665,7 @@ object GrassUtil {
     tif
   }
 
-  def r_sunmask(sc: SparkContext, elevation: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), altitude:String, azimuth:String, year:String, month:String, day:String, hour:String, minute:String, second:String, timezone:String, east:String, north:String )={
+  def r_sunmask(sc: SparkContext, elevation: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), altitude:String, azimuth:String, year:String, month:String, day:String, hour:String, minute:String, second:String, timezone:String, east:String, north:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(elevation,outputTiffPath_1)
@@ -693,7 +695,7 @@ object GrassUtil {
     tif
   }
 
-  def r_resamp_stats(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method:String, quantile:String )={
+  def r_resamp_stats(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), method:String, quantile:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -723,7 +725,7 @@ object GrassUtil {
     tif
   }
 
-  def r_resamp_interp(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method:String )={
+  def r_resamp_interp(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), method:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -753,7 +755,7 @@ object GrassUtil {
     tif
   }
 
-  def r_resamp_bspline(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), method:String )={
+  def r_resamp_bspline(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), method:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -783,7 +785,7 @@ object GrassUtil {
     tif
   }
 
-  def r_resamp_filter(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), filter:String, radius:String )={
+  def r_resamp_filter(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), filter:String, radius:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -813,7 +815,7 @@ object GrassUtil {
     tif
   }
 
-  def r_texture(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), size:String, distance:String, method:String )={
+  def r_texture(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), size:String, distance:String, method:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -843,7 +845,7 @@ object GrassUtil {
     tif
   }
 
-  def r_viewshed(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), coordinates:String, observer_elevation:String, target_elevation:String, max_distance:String, direction_range:String, refraction_coeff:String )={
+  def r_viewshed(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), coordinates:String, observer_elevation:String, target_elevation:String, max_distance:String, direction_range:String, refraction_coeff:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(input,outputTiffPath_1)
@@ -873,7 +875,7 @@ object GrassUtil {
     tif
   }
 
-  def r_shade(sc: SparkContext, shade: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), color: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), brighten:String )={
+  def r_shade(sc: SparkContext, shade: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), color: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), brighten:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(shade,outputTiffPath_1)
@@ -909,7 +911,7 @@ object GrassUtil {
   }
 
 
-  def r_test(sc: SparkContext, first: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), second: (RDD[(SpaceTimeBandKey, Tile)], TileLayerMetadata[SpaceTimeKey]), args1:String, args2:String, args3:String )={
+  def r_test(sc: SparkContext, first: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), second: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), args1:String, args2:String, args3:String )={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
     saveRDDToTif(first,outputTiffPath_1)
