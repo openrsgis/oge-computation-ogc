@@ -1,10 +1,10 @@
-package whu.edu.cn.oge
+package whu.edu.cn.trigger
 
 import com.alibaba.fastjson.JSON
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.{Coordinate, Geometry}
-import whu.edu.cn.jsonparser.JsonToArg
+import org.apache.spark.{SparkConf, SparkContext}
+import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.oge.Feature
 
 import scala.collection.mutable.Map
 import scala.io.Source
@@ -260,10 +260,10 @@ object FeatureTrigger {
         rdd_list_feature += (UUID -> Feature.setGeometry(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
           rdd_list_feature(args("geometry")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
       }
-//      case "Feature.inverseDistanceWeighted" => {
-//        rdd_list_feature += (UUID -> Feature.inverseDistanceWeighted(sc, rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
-//          args("propertyName"), rdd_list_feature(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
-//      }
+      //      case "Feature.inverseDistanceWeighted" => {
+      //        rdd_list_feature += (UUID -> Feature.inverseDistanceWeighted(sc, rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],
+      //          args("propertyName"), rdd_list_feature(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+      //      }
     }
 
   }
@@ -288,12 +288,12 @@ object FeatureTrigger {
     println(jsonObject.size())
     println(jsonObject)
 
-//    val a = JsonToArg.trans(jsonObject)
-//    println(a.size)
-//    a.foreach(println(_))
-//    lamda(sc, a)
-//    val t2 = System.currentTimeMillis()
-//    println("main函数中完整空间插值过程的时间：" + (t2 - t1) / 1000)
+    //    val a = JsonToArg.trans(jsonObject)
+    //    println(a.size)
+    //    a.foreach(println(_))
+    //    lamda(sc, a)
+    //    val t2 = System.currentTimeMillis()
+    //    println("main函数中完整空间插值过程的时间：" + (t2 - t1) / 1000)
 
     //    var properties="{\"name\":\"haha\",\"value\":10}"
     //    var properties2="{\n\"name\":\"网站\",\n\"num\":3,\n\"sites\":[ \"Google\", \"Runoob\", \"Taobao\" ]\n}"

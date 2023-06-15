@@ -1,37 +1,24 @@
 package whu.edu.cn.oge
 
-import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
-import geotrellis.proj4.{CRS, WebMercator}
-import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{CellType, MultibandTile, Tile, TileLayout}
-import geotrellis.spark.TileLayerRDD
-import geotrellis.spark.pyramid.Pyramid
-import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
-import geotrellis.store.LayerId
-import geotrellis.store.file.FileAttributeStore
-import geotrellis.store.index.ZCurveKeyIndexMethod
+import geotrellis.layer._
+import geotrellis.proj4.CRS
+import geotrellis.raster.{MultibandTile, TileLayout}
+import geotrellis.spark._
 import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.json4s.DefaultFormats
-import org.json4s.jackson.Serialization
 import redis.clients.jedis.Jedis
-import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, CoverageRDDAccumulator, RawTile, SpaceTimeBandKey}
-import whu.edu.cn.geocube.util.HttpUtil
+import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, RawTile, SpaceTimeBandKey}
+import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
-import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, makeCoverageCollectionRDD}
+import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
-import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
 import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
 
-import java.text.SimpleDateFormat
-import java.time.{LocalDateTime, ZoneOffset}
-import java.util
-import scala.collection.JavaConverters.asScalaBuffer
+import java.time.{Instant, LocalDateTime}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
-import scala.math.{max, min}
 
 object CoverageCollection {
   /**
@@ -111,65 +98,43 @@ object CoverageCollection {
   }
 
 
-//  def mosaic(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], method: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO
-//
-//    val extents = tileRDDReP.map(t => {
-//      (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
-//    }).reduce((a, b) => {
-//      (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
-//    })
-//    val colRowInstant = tileRDDReP.map(t => {
-//      (t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)), t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
-//    }).reduce((a, b) => {
-//      (min(a._1, b._1), min(a._2, b._2),
-//        min(a._3, b._3), max(a._4, b._4),
-//        max(a._5, b._5), max(a._6, b._6))
-//    })
-//    val firstTile = tileRDDReP.take(1)(0)
-//    val tl = TileLayout(Math.round((extents._3 - extents._1) / firstTile.getResolution / 256.0).toInt, Math.round((extents._4 - extents._2) / firstTile.getResolution / 256.0).toInt, 256, 256)
-//    println(tl)
-//    val extent = geotrellis.vector.Extent(extents._1, extents._4 - tl.layoutRows * 256 * firstTile.getResolution, extents._1 + tl.layoutCols * 256 * firstTile.getResolution, extents._4)
-//    println(extent)
-//    val ld = LayoutDefinition(extent, tl)
-//    val cellType = CellType.fromName(firstTile.getDataType.toString)
-//    val crs = firstTile.getCrs
-//    val bounds = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(tl.layoutCols - 1, tl.layoutRows - 1, colRowInstant._6))
-//    val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
-//
-//    val rawTileRDD = tileRDDReP.map(t => {
-//      val client = new MinIOUtil().getMinioClient
-//      val tile = getTileBuf(client, t)
-//      t.setTile(deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString))
-//      t
-//    })
-//    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-//    val rawtileArray = rawTileRDD.collect()
-//    val RowSum = ld.tileLayout.layoutRows
-//    val ColSum = ld.tileLayout.layoutCols
-//    val tileBox = new ListBuffer[((Extent, SpaceTimeKey), List[RawTile])]
-//    for (i <- 0 until ColSum) {
-//      for (j <- 0 until RowSum) {
-//        val rawTiles = new ListBuffer[RawTile]
-//        val tileExtent = new Extent(extents._1 + i * 256 * firstTile.getResolution, extents._4 - (j + 1) * 256 * firstTile.getResolution, extents._1 + (i + 1) * 256 * firstTile.getResolution, extents._4 - j * 256 * firstTile.getResolution)
-//        for (rawTile <- rawtileArray) {
-//          if (Extent(
-//            rawTile.getExtent.xmin, // X
-//            rawTile.getExtent.ymin, // Y
-//            rawTile.getExtent.xmax, // X
-//            rawTile.getExtent.ymax // Y
-//          ).intersects(tileExtent))
-//            rawTiles.append(rawTile)
-//        }
-//        if (rawTiles.nonEmpty) {
-//          val now = "1000-01-01 00:00:00"
-//          val date = sdf.parse(now).getTime
-//          tileBox.append(((tileExtent, SpaceTimeKey(i, j, date)), rawTiles.toList))
-//        }
-//      }
-//    }
-//    val TileRDDUnComputed = sc.parallelize(tileBox, tileBox.length)
-//    tileMosaic(TileRDDUnComputed, method, tileLayerMetadata, firstTile.getDataType.toString)
-//  }
+  // TODO lrx: 检查相同的影像被写入同一个CoverageCollection
+  // TODO lrx: 如果相同波段就拼（包括顺序、个数、名称），不相同就不拼
+  def mosaic(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "mean")
+  }
+
+  def mean(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "mean")
+  }
+
+  def min(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "min")
+  }
+
+  def max(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "max")
+  }
+
+  def sum(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "sum")
+  }
+
+  def or(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "or")
+  }
+
+  def and(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "and")
+  }
+
+  def median(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "median")
+  }
+
+  def mode(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "mode")
+  }
 
 
   def map(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], baseAlgorithm: String): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
@@ -204,8 +169,13 @@ object CoverageCollection {
     newCollection
   }
 
-  def visualizeOnTheFly(implicit sc:SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): Unit = {
+  def visualizeOnTheFly(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): Unit = {
 
+//    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(coverageCollection)
+//
+//
+//
+//
 //    val outputPath = "/mnt/storage/on-the-fly" // TODO datas/on-the-fly
 //    val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
 //
@@ -276,7 +246,7 @@ object CoverageCollection {
 //    HttpUtil.postResponse(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
   }
 
-  def visualizeBatch(implicit sc:SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): Unit = {
+  def visualizeBatch(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): Unit = {
   }
 
 }

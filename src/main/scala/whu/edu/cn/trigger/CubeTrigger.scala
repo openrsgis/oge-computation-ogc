@@ -1,8 +1,8 @@
-package whu.edu.cn.oge
+package whu.edu.cn.trigger
 
 import com.alibaba.fastjson.JSON
 import org.apache.spark.{SparkConf, SparkContext}
-import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.oge.Cube
 
 import scala.collection.mutable.Map
 import scala.io.Source
@@ -72,14 +72,14 @@ object CubeTrigger {
     println(jsonObject.size())
     println(jsonObject)
 
-//    val a = JsonToArg.trans(jsonObject)
-//
-//    println(a.size)
-//    a.foreach(println(_))
-//
-//    lamda(sc, a)
-//
-//    val time2 = System.currentTimeMillis()
-//    println(time2 - time1)
+    //    val a = JsonToArg.trans(jsonObject)
+    //
+    //    println(a.size)
+    //    a.foreach(println(_))
+    //
+    //    lamda(sc, a)
+    //
+    //    val time2 = System.currentTimeMillis()
+    //    println(time2 - time1)
   }
 }
