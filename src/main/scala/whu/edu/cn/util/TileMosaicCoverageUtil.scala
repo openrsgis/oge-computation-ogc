@@ -1,12 +1,11 @@
 //package whu.edu.cn.util
 //
 //import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-//import geotrellis.raster.{ByteArrayTile, ByteCellType, ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleCellType, DoubleConstantNoDataCellType, FloatArrayTile, FloatCellType, FloatConstantNoDataCellType, IntArrayTile, IntCellType, IntConstantNoDataCellType, MultibandTile, MutableArrayTile, ShortArrayTile, ShortCellType, ShortConstantNoDataCellType, Tile, UByteArrayTile, UByteCellType, UByteConstantNoDataCellType, UShortArrayTile, UShortCellType, UShortConstantNoDataCellType}
+//import geotrellis.raster._
 //import geotrellis.vector.Extent
 //import org.apache.spark.rdd.RDD
 //import whu.edu.cn
 //import whu.edu.cn.entity.{RawTile, SpaceTimeBandKey}
-//import whu.edu.cn.geocube.core.entity
 //
 //object TileMosaicCoverageUtil {
 //
@@ -152,7 +151,7 @@
 //              }
 //            }
 //          }
-//          (cn.entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
+//          (SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
 //        })
 //        (TileRDDComputed, tileLayerMetadata)
 //      }
@@ -185,7 +184,7 @@
 //              }
 //            }
 //          }
-//          (cn.entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
+//          (SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
 //        })
 //        (TileRDDComputed, tileLayerMetadata)
 //      }
@@ -224,7 +223,7 @@
 //              }
 //            }
 //          }
-//          (cn.entity.SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
+//          (SpaceTimeBandKey(t._1._2, measurementName), mutableArrayTile)
 //        })
 //        (TileRDDComputed, tileLayerMetadata)
 //      }

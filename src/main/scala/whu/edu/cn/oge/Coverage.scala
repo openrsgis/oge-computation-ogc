@@ -24,6 +24,7 @@ import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey}
 import whu.edu.cn.geocube.application.tritonClient.examples._
 import whu.edu.cn.geocube.util._
+import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, makeCoverageRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
@@ -38,6 +39,7 @@ import scala.math._
 import scala.util.control.Breaks.{break, breakable}
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
+// TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
   val tileDifference: Int = 0
 
@@ -162,6 +164,7 @@ object Coverage {
    * @param threshold threshold
    * @return
    */
+  // 自动转成uint8数据类型
   def binarization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), threshold: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     (coverage._1.map(t => {
       (t._1, t._2.mapBands((_, tile) => {
@@ -176,7 +179,7 @@ object Coverage {
         })
         tileMap.convert(UByteConstantNoDataCellType)
       }))
-    }), coverage._2)
+    }), TileLayerMetadata(UByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
   }
 
   /**

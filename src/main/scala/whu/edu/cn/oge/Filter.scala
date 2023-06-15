@@ -1,6 +1,7 @@
 package whu.edu.cn.oge
 
 import whu.edu.cn.entity.CoverageCollectionMetadata
+import whu.edu.cn.trigger.Trigger
 
 import scala.collection.mutable
 
