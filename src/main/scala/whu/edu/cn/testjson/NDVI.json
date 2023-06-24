@@ -2,12 +2,12 @@
   "layerName": "ndvi",
   "isBatch": "0",
   "map": {
-    "level": 7,
+    "level": 15,
     "spatialRange": [
       111.51476648622568,
-      30.684498262780092,
-      116.7106782367174,
-      31.43893723104236
+      30.424498262780092,
+      111.5256782367174,
+      30.43493723104236
     ]
   },
   "2": {
@@ -106,12 +106,12 @@
                     },
                     "datetime": {
                       "constantValue": [
-                        "2018-11-26 00:00:00",
-                        "2018-12-01 00:00:00"
+                        "2013-01-01 00:00:00",
+                        "2013-12-31 00:00:00"
                       ]
                     },
                     "productID": {
-                      "constantValue": "LC08_L1TP_C01_T1"
+                      "constantValue": "LE07_L1TP_C01_T1"
                     }
                   }
                 }
@@ -127,15 +127,14 @@
         },
         "palette": {
           "constantValue": [
+            "red",
             "blue",
-            "qian blue",
-            "zongSe",
-            "qian green",
-            "green"
+            "yellow"
           ]
         }
       }
     }
   }
 }
+
 

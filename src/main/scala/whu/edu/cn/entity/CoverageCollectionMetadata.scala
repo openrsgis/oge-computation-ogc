@@ -40,7 +40,7 @@ class CoverageCollectionMetadata extends Serializable {
 
   def setMeasurementName(measurementName: String): Unit = {
     val measurement: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty[String]
-    if (measurementName.contains("[") && measurementName.contains("]") && measurementName.contains(",")) {
+    if (measurementName.head == '[' && measurementName.last == ']') {
       measurement ++= measurementName.replace("[", "").replace("]", "").split(",")
     }
     else {

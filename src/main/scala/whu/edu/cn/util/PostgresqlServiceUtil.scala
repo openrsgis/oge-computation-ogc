@@ -33,7 +33,7 @@ object PostgresqlServiceUtil {
 
         val sql = new mutable.StringBuilder
         sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.dtype"
-        sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.resolution_m"
+        sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.band_train, oge_product_measurement.resolution_m"
         sql ++= " from oge_image "
         sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
         if (sensorName != "" && sensorName != null) {
@@ -107,7 +107,7 @@ object PostgresqlServiceUtil {
 
         // 排除BQA波段
         while (extentResults.next()) {
-          if (extentResults.getInt("band_rank") != 0) {
+          if (extentResults.getInt("band_train") != 0) {
             val coverageMetadata = new CoverageMetadata
             coverageMetadata.setCoverageID(extentResults.getString("image_identification"))
             coverageMetadata.setMeasurement(extentResults.getString("band_num"))
@@ -140,7 +140,7 @@ object PostgresqlServiceUtil {
 
         val sql = new mutable.StringBuilder
         sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, st_astext(oge_image.geom) as geom, oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.dtype"
-        sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.resolution_m"
+        sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.band_train, oge_product_measurement.resolution_m"
         sql ++= " from oge_image "
         sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
         sql ++= "join oge_product_measurement on oge_product_measurement.product_key=oge_data_resource_product.id join oge_measurement on oge_product_measurement.measurement_key=oge_measurement.measurement_key "
@@ -156,7 +156,7 @@ object PostgresqlServiceUtil {
 
         // 排除BQA波段
         while (extentResults.next()) {
-          if (extentResults.getInt("band_rank") != 0) {
+          if (extentResults.getInt("band_train") != 0) {
             val coverageMetadata = new CoverageMetadata
             coverageMetadata.setCoverageID(extentResults.getString("image_identification"))
             coverageMetadata.setMeasurement(extentResults.getString("band_num"))

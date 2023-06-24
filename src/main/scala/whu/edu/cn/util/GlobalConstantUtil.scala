@@ -20,6 +20,8 @@ object GlobalConstantUtil {
   final val POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
   final val POSTGRESQL_USER: String = "oge"
   final val POSTGRESQL_PWD: String = "ypfamily608"
+  final val POSTGRESQL_MAX_RETRIES: Int = 3
+  final val POSTGRESQL_RETRY_DELAY: Int = 500
 
   final val WORK_PREFIX: String = "oge:computation_ogc:existedTiles:"
 

@@ -1,6 +1,10 @@
 package whu.edu.cn.oge
 
-import whu.edu.cn.entity.CoverageCollectionMetadata
+import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.raster.MultibandTile
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
+import whu.edu.cn.entity.{CoverageCollectionMetadata, SpaceTimeBandKey}
 
 object Service {
 
@@ -16,6 +20,11 @@ object Service {
       coverageCollectionMetadata.setEndTime(timeArray(1))
     }
     coverageCollectionMetadata
+  }
+
+  // TODO lrx: 这里也搞一个惰性函数
+  def getCoverage(implicit sc: SparkContext, coverageId: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    Coverage.load(sc, coverageId, level)
   }
 
 }

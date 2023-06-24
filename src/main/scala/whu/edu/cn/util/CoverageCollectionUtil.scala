@@ -67,8 +67,8 @@ object CoverageCollectionUtil {
         val resoMin: Double = resoCrsMap.keys.min
         val crs: CRS = resoCrsMap(resoMin)
 
-        val layoutCols: Int = math.max(((extents._3 - extents._1) / resoMin / 256.0).toInt, 1)
-        val layoutRows: Int = math.max(((extents._4 - extents._2) / resoMin / 256.0).toInt, 1)
+        val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1) / resoMin / 256.0).toInt, 1)
+        val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2) / resoMin / 256.0).toInt, 1)
 
         val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
         // Extent必须进行重新计算，因为layoutCols和layoutRows加了黑边，导致范围变化了

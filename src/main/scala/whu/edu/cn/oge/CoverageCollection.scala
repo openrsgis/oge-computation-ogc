@@ -2,21 +2,20 @@ package whu.edu.cn.oge
 
 import geotrellis.layer._
 import geotrellis.proj4.CRS
-import geotrellis.raster.{MultibandTile, TileLayout}
-import geotrellis.spark._
+import geotrellis.raster.MultibandTile
 import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import redis.clients.jedis.Jedis
-import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, RawTile, SpaceTimeBandKey}
+import whu.edu.cn.entity._
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
 
-import java.time.{Instant, LocalDateTime}
+import java.time.LocalDateTime
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
@@ -33,12 +32,10 @@ object CoverageCollection {
    * @param crs             crs of the images to query
    * @return ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
-  def load(implicit sc: SparkContext, productName: String,
-           sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String],
-           startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
+  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
     val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
 
-    val key: String = Trigger.userId + Trigger.timeId + ":solvedTile:" + level
+    val key: String = Trigger.dagId + ":solvedTile:" + level
     val jedis: Jedis = new JedisUtil().getJedis
     jedis.select(1)
 
@@ -57,7 +54,7 @@ object CoverageCollection {
     }).reduce((a, b) => {
       a.union(b)
     })
-    val union: geotrellis.vector.Geometry = unionTileExtent.union(extent)
+    val union: geotrellis.vector.Geometry = unionTileExtent.intersection(extent)
     jedis.close()
 
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
@@ -136,7 +133,7 @@ object CoverageCollection {
     coverageCollectionMosaicTemplate(coverageCollection, "mode")
   }
 
-
+  // TODO lrx: 这里要添加并行，并行之前的并行，需要写个调度
   def map(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], baseAlgorithm: String): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
 
     coverageCollection.foreach(coverage => {
@@ -169,81 +166,9 @@ object CoverageCollection {
     newCollection
   }
 
-  def visualizeOnTheFly(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): Unit = {
-
-//    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(coverageCollection)
-//
-//
-//
-//
-//    val outputPath = "/mnt/storage/on-the-fly" // TODO datas/on-the-fly
-//    val TMSList = new ArrayBuffer[mutable.Map[String, Any]]()
-//
-//    val resampledCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = resampleToTargetZoom(coverage, Trigger.level, "Bilinear")
-//
-//    val tiled = resampledCoverage.map(t => {
-//      (t._1.spaceTimeKey.spatialKey, t._2)
-//    })
-//    val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
-//    val cellType = resampledCoverage._2.cellType
-//    val srcLayout = resampledCoverage._2.layout
-//    val srcExtent = resampledCoverage._2.extent
-//    val srcCrs = resampledCoverage._2.crs
-//    val srcBounds = resampledCoverage._2.bounds
-//    val newBounds = Bounds(srcBounds.get.minKey.spatialKey, srcBounds.get.maxKey.spatialKey)
-//    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
-//
-//    val (zoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
-//      TileLayerRDD(tiled, rasterMetaData)
-//        .reproject(WebMercator, layoutScheme)
-//
-//    // Create the attributes store that will tell us information about our catalog.
-//    val attributeStore = FileAttributeStore(outputPath)
-//    // Create the writer that we will use to store the tiles in the local catalog.
-//    val writer: FileLayerWriter = FileLayerWriter(attributeStore)
-//
-//    val layerIDAll: String = Trigger.userId + Trigger.timeId
-//    // Pyramiding up the zoom levels, write our tiles out to the local file system.
-//
-//    println("Final Front End Level = " + Trigger.level)
-//    println("Final Back End Level = " + zoom)
-//
-//    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-//      if (z == Trigger.level) {
-//        val layerId = LayerId(layerIDAll, z)
-//        println(layerId)
-//        // If the layer exists already, delete it out before writing
-//        if (attributeStore.layerExists(layerId)) new FileLayerManager(attributeStore).delete(layerId)
-//        writer.write(layerId, rdd, ZCurveKeyIndexMethod)
-//      }
-//    }
-//
-//    TMSList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-dag/" + layerIDAll + "/{z}/{x}/{y}.png")))
-//    // 清空list
-//    //    Trigger.coverageRDDList.clear()
-//    //    Trigger.coverageRDDListWaitingForMosaic.clear()
-//    //    Trigger.tableRDDList.clear()
-//    //    Trigger.featureRDDList.clear()
-//    //    Trigger.kernelRDDList.clear()
-//    //    Trigger.coverageLoad.clear()
-//    //    Trigger.filterEqual.clear()
-//    //    Trigger.filterAnd.clear()
-//    //    Trigger.cubeRDDList.clear()
-//    //    Trigger.cubeLoad.clear()
-//
-//    //TODO 回调服务
-//
-//    val resultSet: Map[String, ArrayBuffer[mutable.Map[String, Any]]] = Map(
-//      "raster" -> TMSList,
-//      "vector" -> ArrayBuffer.empty[mutable.Map[String, Any]],
-//      "table" -> ArrayBuffer.empty[mutable.Map[String, Any]],
-//      "rasterCube" -> new ArrayBuffer[mutable.Map[String, Any]](),
-//      "vectorCube" -> new ArrayBuffer[mutable.Map[String, Any]]()
-//    )
-//    implicit val formats = DefaultFormats
-//    val jsonStr: String = Serialization.write(resultSet)
-//    val deliverWordID: String = "{\"workID\":\"" + Trigger.workID + "\"}"
-//    HttpUtil.postResponse(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
+  def visualizeOnTheFly(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], visParam: VisualizationParam): Unit = {
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(coverageCollection)
+    Coverage.visualizeOnTheFly(sc, coverage, visParam)
   }
 
   def visualizeBatch(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): Unit = {
