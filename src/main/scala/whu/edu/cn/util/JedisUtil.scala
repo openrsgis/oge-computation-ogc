@@ -20,7 +20,7 @@ class JedisUtil {
   poolConfig.setMinEvictableIdleTime(Duration.ofSeconds(60))
 
 
-  private lazy val JEDIS_POOL: JedisPool = new JedisPool(poolConfig, JEDIS_HOST, JEDIS_PORT, 1000, JEDIS_PWD)
+  private val JEDIS_POOL: JedisPool = new JedisPool(poolConfig, JEDIS_HOST, JEDIS_PORT, 1000, JEDIS_PWD)
 
   def getJedis: Jedis = JEDIS_POOL.getResource
 }

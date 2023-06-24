@@ -14,7 +14,7 @@ import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
-import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.util.{COGUtil, GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
 
 import java.time.LocalDateTime
 import scala.collection.mutable
@@ -84,7 +84,7 @@ object CoverageCollection {
       val tileNum: Int = tileRDDFlat.count().toInt
       println("tileNum = " + tileNum)
       tileRDDFlat.unpersist()
-      val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 90))
+      val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
       (t._1, tileRDDRePar.map(t => {
         val time1: Long = System.currentTimeMillis()
         val client: MinioClient = new MinIOUtil().getMinioClient
@@ -151,7 +151,10 @@ object CoverageCollection {
     val coverageAfterComputation: mutable.ArrayBuffer[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))] = mutable.ArrayBuffer.empty[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))]
 
     for (coverageId <- coverageIds) {
-      val dagChildren: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = Trigger.optimizedDagMap(baseAlgorithm)
+      val dagChildren: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
+      Trigger.optimizedDagMap(baseAlgorithm).foreach(t => {
+        dagChildren += ((t._1, t._2, t._3.clone()))
+      })
       dagChildren.foreach(algorithm => {
         checkMapping(coverageId, algorithm)
         Trigger.coverageRddList.remove(algorithm._1)
@@ -172,6 +175,7 @@ object CoverageCollection {
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], visParam: VisualizationParam): Unit = {
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(coverageCollection)
+    COGUtil.extent = coverage._2.extent
     Coverage.visualizeOnTheFly(sc, coverage, visParam)
   }
 

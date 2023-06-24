@@ -16,7 +16,7 @@
         <scala.compat.version>2.12</scala.compat.version>
         <akka.actor.version>2.5.32</akka.actor.version>
         <akka.http.version>10.1.15</akka.http.version>
-        <geotrellis.version>3.7.0</geotrellis.version>
+        <geotrellis.version>3.0.0</geotrellis.version>
     </properties>
 
     <repositories>
@@ -106,34 +106,29 @@
         </dependency>
         <dependency>
             <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-vector_${scala.compat.version}</artifactId>
-            <version>${geotrellis.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.locationtech.geotrellis</groupId>
             <artifactId>geotrellis-store_${scala.compat.version}</artifactId>
-            <version>${geotrellis.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-proj4_${scala.compat.version}</artifactId>
-            <version>${geotrellis.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-util_${scala.compat.version}</artifactId>
-            <version>${geotrellis.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.locationtech.geotrellis</groupId>
-            <artifactId>geotrellis-geotools_${scala.compat.version}</artifactId>
             <version>${geotrellis.version}</version>
         </dependency>
         <!--geotrellis-->
         <!--geotools-->
         <dependency>
             <groupId>org.geotools</groupId>
+            <artifactId>gt-main</artifactId>
+            <version>${geotools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.geotools</groupId>
             <artifactId>gt-shapefile</artifactId>
+            <version>${geotools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.geotools</groupId>
+            <artifactId>gt-referencing</artifactId>
+            <version>${geotools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.geotools</groupId>
+            <artifactId>gt-epsg-hsql</artifactId>
             <version>${geotools.version}</version>
         </dependency>
         <dependency>
@@ -145,7 +140,7 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>2.0.32</version>
+            <version>1.2.36</version>
         </dependency>
         <!--网络工具包-->
         <dependency>

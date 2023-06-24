@@ -147,20 +147,14 @@ object COGUtil {
     }
 
     val queryEnv: Envelope = queryGeometry.getEnvelopeInternal
-    val queryMbr: Extent = new Extent(queryEnv.getMinX, queryEnv.getMinY, queryEnv.getMaxX, queryEnv.getMaxY)
 
-    // flag = true 代表是投影坐标系
-    var flag: Boolean = false
-    var flagReader: Boolean = false
+    val queryMbr: Extent = Reproject(queryEnv, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
+
     // 将传入的范围改为数据所在坐标系下，方便两个范围进行相交
     // 传入的范围始终是 4326 坐标系下的
-    val queryMbrReproj: Extent = Reproject(queryMbr, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
-    extent = queryMbrReproj
-    if (!coverageMetadata.getCrs.isGeographic) {
-      flag = true
-      flagReader = true
-    }
+    val queryMbrReproj: Extent = Extent(queryMbr.xmin, queryMbr.ymin, queryMbr.xmax, queryMbr.ymax)
 
+    extent = queryMbrReproj
     val pMin = new Array[Double](2)
     val pMax = new Array[Double](2)
     pMin(0) = queryMbrReproj.xmin
