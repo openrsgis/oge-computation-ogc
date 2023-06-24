@@ -1,12 +1,13 @@
 {
-  "oorB": "0",
+  "layerName": "ndwi",
+  "isBatch": "0",
   "map": {
     "level": 7,
     "spatialRange": [
       111.51476648622568,
-      30.684498262780092,
-      116.7106782367174,
-      31.43893723104236
+      30.424498262780092,
+      111.6256782367174,
+      30.53493723104236
     ]
   },
   "1": {
@@ -19,7 +20,7 @@
             "B5"
           ]
         },
-        "input": {
+        "coverage": {
           "argumentReference": "_MAPPING_VAR_0_0"
         }
       }
@@ -27,43 +28,50 @@
   },
   "0": {
     "functionInvocationValue": {
-      "functionName": "CoverageCollection.addStyles",
+      "functionName": "Coverage.addStyles",
       "arguments": {
-        "input": {
+        "coverage": {
           "functionInvocationValue": {
-            "functionName": "Collection.map",
+            "functionName": "CoverageCollection.sum",
             "arguments": {
-              "baseAlgorithm": {
-                "functionDefinitionValue": {
-                  "argumentNames": [
-                    "_MAPPING_VAR_0_0"
-                  ],
-                  "body": "1"
-                }
-              },
-              "collection": {
+              "coverageCollection": {
                 "functionInvocationValue": {
-                  "functionName": "Service.getCoverageCollection",
+                  "functionName": "Collection.map",
                   "arguments": {
-                    "baseUrl": {
-                      "constantValue": "http://localhost"
+                    "baseAlgorithm": {
+                      "functionDefinitionValue": {
+                        "argumentNames": [
+                          "_MAPPING_VAR_0_0"
+                        ],
+                        "body": "1"
+                      }
                     },
-                    "bbox": {
-                      "constantValue": [
-                        111.23,
-                        29.31,
-                        116.8,
-                        31.98
-                      ]
-                    },
-                    "datetime": {
-                      "constantValue": [
-                        "2013-01-01 00:00:00",
-                        "2013-12-01 00:00:00"
-                      ]
-                    },
-                    "productID": {
-                      "constantValue": "LE07_L1TP_C01_T1"
+                    "collection": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCoverageCollection",
+                        "arguments": {
+                          "baseUrl": {
+                            "constantValue": "http://localhost"
+                          },
+                          "bbox": {
+                            "constantValue": [
+                              111.23,
+                              29.31,
+                              116.8,
+                              31.98
+                            ]
+                          },
+                          "datetime": {
+                            "constantValue": [
+                              "2013-01-01 00:00:00",
+                              "2013-12-31 00:00:00"
+                            ]
+                          },
+                          "productID": {
+                            "constantValue": "LE07_L1TP_C01_T1"
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -79,11 +87,9 @@
         },
         "palette": {
           "constantValue": [
+            "red",
             "blue",
-            "qian blue",
-            "zongSe",
-            "qian green",
-            "green"
+            "yellow"
           ]
         }
       }

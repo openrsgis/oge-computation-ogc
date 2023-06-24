@@ -9,7 +9,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.OGEClassType.OGEClassType
-import whu.edu.cn.entity.{CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey}
+import whu.edu.cn.entity.{CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.{JedisUtil, ZCurveUtil}
@@ -28,29 +28,22 @@ object Trigger {
 
   // TODO lrx: 以下为未检验
 
-  var coverageRddListWaitingForMosaic: mutable.Map[String, RDD[RawTile]] = mutable.Map.empty[String, RDD[RawTile]]
-
   var tableRddList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var kernelRddList: mutable.Map[String, geotrellis.raster.mapalgebra.focal.Kernel] = mutable.Map.empty[String, geotrellis.raster.mapalgebra.focal.Kernel]
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-  var coverageLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
-  var filterEqual: mutable.Map[String, (String, String)] = mutable.Map.empty[String, (String, String)]
-  var filterAnd: mutable.Map[String, Array[String]] = mutable.Map.empty[String, Array[String]]
 
   var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
 
 
   var level: Int = _
-  var windowExtent: Extent = _
   var layerName: String = _
+  var windowExtent: Extent = _
   var isBatch: Int = _
   // 此次计算工作的任务json
   var workTaskJson: String = _
-  // 用户ID
-  var userId: String = _
-  // 时间ID
-  var timeId: String = _
+  // DAG-ID
+  var dagId: String = _
   val zIndexStrArray = new mutable.ArrayBuffer[String]
 
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
@@ -83,8 +76,8 @@ object Trigger {
       case "Service.getCoverageCollection" =>
         lazyFunc += (UUID -> (funcName, args))
         coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
-      case "Service.getCoverage" => // TODO lrx: 更改此处
-        coverageLoad += (UUID -> (isOptionalArg(args, "productID"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
+      case "Service.getCoverage" =>
+        coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
       case "Service.getTable" =>
         tableRddList += (UUID -> isOptionalArg(args, "productID"))
       case "Service.getFeatureCollection" =>
@@ -106,11 +99,39 @@ object Trigger {
       // CoverageCollection
       case "CoverageCollection.filter" =>
         coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
-      //      case "CoverageCollection.mosaic" =>
-      //        coverageRddList += (UUID -> CoverageCollection.mosaic(sc, tileRDDReP = coverageRddListWaitingForMosaic(isOptionalArg(args, "coverageCollection")), method = isOptionalArg(args, "method")))
+      case "CoverageCollection.mosaic" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.mean" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.mean(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.min" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.min(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.max" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.max(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.sum" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.sum(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.or" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.or(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.and" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.and(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.median" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.median(coverageCollectionRddList(args("coverageCollection"))))
+      case "CoverageCollection.mode" =>
+        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+        coverageRddList += (UUID -> CoverageCollection.mode(coverageCollectionRddList(args("coverageCollection"))))
       case "CoverageCollection.addStyles" =>
         if (isBatch == 0) {
-          CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          val visParam: VisualizationParam = new VisualizationParam
+          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+          CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")), visParam = visParam)
         }
         else {
           CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
@@ -132,6 +153,10 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.multiply" =>
         coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+      case "Coverage.multiply" =>
+        coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+      case "Coverage.normalizedDifference" =>
+        coverageRddList += (UUID -> Coverage.normalizedDifference(coverageRddList(args("coverage")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
       case "Coverage.binarization" =>
         coverageRddList += (UUID -> Coverage.binarization(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toInt))
       case "Coverage.and" =>
@@ -298,7 +323,11 @@ object Trigger {
 
       case "Coverage.addStyles" =>
         if (isBatch == 0) {
-          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")))
+          val visParam: VisualizationParam = new VisualizationParam
+          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+
+
+          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
         }
         else {
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")))
@@ -587,18 +616,19 @@ object Trigger {
 
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
-              curUserId: String): Unit = {
+              curDagId: String): Unit = {
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
-    userId = curUserId
+    dagId = curDagId
 
     val time1: Long = System.currentTimeMillis()
-    timeId = time1.toString
+
     val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
     println(jsonObject)
 
     isBatch = jsonObject.getString("isBatch").toInt
     if (isBatch == 0) {
+      layerName = jsonObject.getString("layerName")
       val map: JSONObject = jsonObject.getJSONObject("map")
       level = map.getString("level").toInt
       val spatialRange: Array[Double] = map.getString("spatialRange")
@@ -608,7 +638,7 @@ object Trigger {
       windowExtent = new Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
 
       val jedis: Jedis = new JedisUtil().getJedis
-      val key: String = userId + timeId + ":solvedTile:" + level
+      val key: String = dagId + ":solvedTile:" + level
       jedis.select(1)
 
       val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)
@@ -668,23 +698,22 @@ object Trigger {
 
 
   def main(args: Array[String]): Unit = {
-    userId = "1234567890123" // 告知boot业务编号，应当由命令行参数获取，on-the-fly
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/complexmap.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/landsat7.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
-    userId = Random.nextInt().toString
+    dagId = Random.nextInt().toString
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    runMain(sc, workTaskJson, userId)
+    runMain(sc, workTaskJson, dagId)
 
     //    Thread.sleep(1000000)
 

@@ -1,52 +1,43 @@
 package whu.edu.cn.oge
 
 import geotrellis.layer._
-import geotrellis.layer.stitch.TileLayoutStitcher
-import geotrellis.proj4.{CRS, WebMercator}
-import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.mapalgebra.focal
+import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.local._
-import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import geotrellis.raster.{ByteArrayTile, ByteCellType, ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleConstantNoDataCellType, FloatArrayTile, FloatCellType, Histogram, IntArrayTile, MultibandTile, Raster, TargetCell, Tile, TileLayout, UByteConstantNoDataCellType}
+import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.{CellType, DoubleConstantNoDataCellType, MultibandTile, Tile, TileLayout, UByteConstantNoDataCellType}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
-import geotrellis.spark.store.file.{FileLayerManager, FileLayerWriter}
+import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
-import geotrellis.store.index.ZCurveKeyIndexMethod
+import geotrellis.store.index.RowMajorKeyIndexMethod
 import geotrellis.vector.{Extent, Geometry}
 import io.minio.MinioClient
+import javafx.scene.paint.Color
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.json4s.DefaultFormats
-import org.json4s.jackson.Serialization
+import org.json.JSONObject
 import redis.clients.jedis.Jedis
-import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey}
-import whu.edu.cn.geocube.application.tritonClient.examples._
+import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.geocube.util._
+import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
-import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, makeCoverageRDD}
+import whu.edu.cn.util.CoverageUtil.{coverageTemplate, makeCoverageRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
-import java.io.{BufferedWriter, File, FileWriter}
-import java.text.SimpleDateFormat
-import java.time.Instant
 import scala.collection.mutable
 import scala.language.postfixOps
-import scala.math._
-import scala.util.control.Breaks.{break, breakable}
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
-  val tileDifference: Int = 0
 
   def load(implicit sc: SparkContext, coverageId: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
-    val key: String = Trigger.userId + Trigger.timeId + ":solvedTile:" + level
+    val key: String = Trigger.dagId + ":solvedTile:" + level
     val jedis: Jedis = new JedisUtil().getJedis
     jedis.select(1)
 
@@ -69,7 +60,7 @@ object Coverage {
       a.union(b)
     })
 
-    val union: geotrellis.vector.Geometry = unionTileExtent.union(queryGeometry)
+    val union: geotrellis.vector.Geometry = unionTileExtent.intersection(queryGeometry)
 
     jedis.close()
 
@@ -155,6 +146,19 @@ object Coverage {
   def multiply(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Multiply(tile1, tile2))
+  }
+
+  def normalizedDifference(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), bandNames: List[String]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    if (bandNames.length != 2) {
+      throw new IllegalArgumentException(s"输入的波段数量不为2，输入了${bandNames.length}个波段")
+    }
+    else {
+      val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = selectBands(coverage, List(bandNames.head))
+      val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = selectBands(coverage, List(bandNames(1)))
+      coverageTemplate(coverage1, coverage2, (tile1, tile2) => {
+        Divide(Subtract(tile1, tile2), Add(tile1, tile2))
+      })
+    }
   }
 
   /**
@@ -527,6 +531,10 @@ object Coverage {
     coverage._1.first()._1.measurementName.toList
   }
 
+  def bandNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Int = {
+    coverage._1.first()._1.measurementName.length
+  }
+
   /**
    * get the target bands from original coverage
    *
@@ -547,19 +555,19 @@ object Coverage {
       val errorMessage = s"Error: Bands not found: ${missingElements.mkString(", ")}"
       throw new IllegalArgumentException(errorMessage)
     }
-    val indexedList: mutable.ListBuffer[(String, Int)] = bandsAlready.zipWithIndex
-    val indicesToRemove: mutable.ListBuffer[Int] = indexedList.filterNot(t => {
-      bands.contains(t._1)
-    }).map(t => t._2)
+
+    val indexList: List[Int] = bands.map(bandsAlready.indexOf)
 
     (coverage._1.map(t => {
       val bandNames: mutable.ListBuffer[String] = t._1.measurementName
-      indicesToRemove.sorted.reverse.foreach(bandNames.remove)
       val tileBands: Vector[Tile] = t._2.bands
-      val filteredVector: Vector[Tile] = tileBands.zipWithIndex.filterNot { case (_, index) =>
-        indicesToRemove.contains(index)
-      }.map(_._1)
-      (SpaceTimeBandKey(t._1.spaceTimeKey, bandNames), MultibandTile(filteredVector))
+      val newBandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      for (index <- indexList) {
+        newBandNames += bandNames(index)
+        newTileBands :+= tileBands(index)
+      }
+      (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(newTileBands))
     }), coverage._2)
 
   }
@@ -1480,75 +1488,828 @@ object Coverage {
   }), TileLayerMetadata(CellType.fromName("float64"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
 
-  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Unit = {
-    //    val outputPath = "/mnt/storage/on-the-fly" // TODO datas/on-the-fly
-    //    val TMSList = new mutable.ArrayBuffer[mutable.Map[String, Any]]()
-    //
-    //    val resampledCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = resampleToTargetZoom(coverage, Trigger.level, "Bilinear")
-    //
-    //    val tiled = resampledCoverage.map(t => {
-    //      (t._1.spaceTimeKey.spatialKey, t._2)
-    //    })
-    //    val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
-    //    val cellType = resampledCoverage._2.cellType
-    //    val srcLayout = resampledCoverage._2.layout
-    //    val srcExtent = resampledCoverage._2.extent
-    //    val srcCrs = resampledCoverage._2.crs
-    //    val srcBounds = resampledCoverage._2.bounds
-    //    val newBounds = Bounds(srcBounds.get.minKey.spatialKey, srcBounds.get.maxKey.spatialKey)
-    //    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
-    //
-    //    val (zoom, reprojected): (Int, RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
-    //      TileLayerRDD(tiled, rasterMetaData)
-    //        .reproject(WebMercator, layoutScheme)
-    //
-    //    // Create the attributes store that will tell us information about our catalog.
-    //    val attributeStore = FileAttributeStore(outputPath)
-    //    // Create the writer that we will use to store the tiles in the local catalog.
-    //    val writer: FileLayerWriter = FileLayerWriter(attributeStore)
-    //
-    //    val layerIDAll: String = Trigger.userId + Trigger.timeId
-    //    // Pyramiding up the zoom levels, write our tiles out to the local file system.
-    //
-    //    println("Final Front End Level = " + Trigger.level)
-    //    println("Final Back End Level = " + zoom)
-    //
-    //    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-    //      if (z == Trigger.level) {
-    //        val layerId = LayerId(layerIDAll, z)
-    //        println(layerId)
-    //        // If the layer exists already, delete it out before writing
-    //        if (attributeStore.layerExists(layerId)) new FileLayerManager(attributeStore).delete(layerId)
-    //        writer.write(layerId, rdd, ZCurveKeyIndexMethod)
-    //      }
-    //    }
-    //
-    //    TMSList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-dag/" + layerIDAll + "/{z}/{x}/{y}.png")))
-    //    // 清空list
-    //    //    Trigger.coverageRDDList.clear()
-    //    //    Trigger.coverageRDDListWaitingForMosaic.clear()
-    //    //    Trigger.tableRDDList.clear()
-    //    //    Trigger.featureRDDList.clear()
-    //    //    Trigger.kernelRDDList.clear()
-    //    //    Trigger.coverageLoad.clear()
-    //    //    Trigger.filterEqual.clear()
-    //    //    Trigger.filterAnd.clear()
-    //    //    Trigger.cubeRDDList.clear()
-    //    //    Trigger.cubeLoad.clear()
-    //
-    //    //TODO 回调服务
-    //
-    //    val resultSet: Map[String, ArrayBuffer[mutable.Map[String, Any]]] = Map(
-    //      "raster" -> TMSList,
-    //      "vector" -> ArrayBuffer.empty[mutable.Map[String, Any]],
-    //      "table" -> ArrayBuffer.empty[mutable.Map[String, Any]],
-    //      "rasterCube" -> new ArrayBuffer[mutable.Map[String, Any]](),
-    //      "vectorCube" -> new ArrayBuffer[mutable.Map[String, Any]]()
-    //    )
-    //    implicit val formats = DefaultFormats
-    //    val jsonStr: String = Serialization.write(resultSet)
-    //    val deliverWordID: String = "{\"workID\":\"" + Trigger.userId + Trigger.timeId + "\"}"
-    //    HttpUtil.postResponse(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", jsonStr, deliverWordID)
+  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+    var coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+
+    // 从波段开始
+    val bands: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
+    // 如果用户选择了波段
+    if (visParam.getBands.nonEmpty) {
+      // 首先验证选择的波段数量是不是1-3之间
+      // 如果在1-3之间
+      if (visParam.getBands.length <= 3) {
+        // 判断选择的波段是不是在已经的波段中都存在
+        // 如果都存在
+        if (visParam.getBands.forall(bands.contains)) {
+          // 选择的波段数量
+          val bandNum: Int = visParam.getBands.length
+          // min的数量
+          val minNum: Int = visParam.getMin.length
+          // max的数量
+          val maxNum: Int = visParam.getMax.length
+          // gain的数量
+          val gainNum: Int = visParam.getGain.length
+          // bias的数量
+          val biasNum: Int = visParam.getBias.length
+          // gamma的数量
+          val gammaNum: Int = visParam.getGamma.length
+          // 分类讨论
+          // 如果波段数量是1
+          if (bandNum == 1) {
+            // 判断数量是否对应
+            if (minNum > 1 || maxNum > 1 || gainNum > 1 || biasNum > 1 || gammaNum > 1) {
+              throw new IllegalArgumentException("波段数量与参数数量不相符")
+            }
+            else {
+              // 判断是否同时存在最小最大值拉伸和线性拉伸
+              if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
+                throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
+              }
+              else {
+                // 先把波段挑出来
+                coverageVis = selectBands(coverageVis, visParam.getBands)
+                // 如果存在最小最大值拉伸
+                if (minNum * maxNum != 0) {
+                  // 首先找到现有的最小最大值
+                  val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                  val minVis: Double = visParam.getMin.headOption.getOrElse(0.0)
+                  val maxVis: Double = visParam.getMax.headOption.getOrElse(1.0)
+                  val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+                  val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+                  coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((_, tile) => {
+                    Add(Multiply(tile, gainBand), biasBand)
+                  }))), coverageVis._2)
+                }
+                // 如果存在线性拉伸
+                else if (gainNum * biasNum != 0) {
+                  coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((_, tile) => {
+                    Add(Multiply(tile, visParam.getGain.headOption.getOrElse(1.0)), visParam.getBias.headOption.getOrElse(0.0))
+                  }))), coverageVis._2)
+                }
+                // 如果存在gamma值
+                if (gammaNum != 0) {
+                  coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((_, tile) => {
+                    Pow(tile, visParam.getGamma.headOption.getOrElse(1.0))
+                  }))), coverageVis._2)
+                }
+                // 如果存在palette
+                if (visParam.getPalette.nonEmpty) {
+                  val paletteVis: List[String] = visParam.getPalette
+                  val colorVis: List[Color] = paletteVis.map(t => {
+                    try {
+                      val color: Color = Color.valueOf(t)
+                      color
+                    } catch {
+                      case e: Exception =>
+                        throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+                    }
+                  })
+                  val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+                  val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                  val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+                  coverageVis = (coverageVis._1.map(t => {
+                    val bandR: Tile = t._2.bands.head.mapDouble(d => {
+                      var R: Double = 0.0
+                      for (i <- colorRGB.indices) {
+                        if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                          R = colorRGB(i)._1 * 255.0
+                        }
+                      }
+                      R
+                    })
+                    val bandG: Tile = t._2.bands.head.mapDouble(d => {
+                      var G: Double = 0.0
+                      for (i <- colorRGB.indices) {
+                        if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                          G = colorRGB(i)._2 * 255.0
+                        }
+                      }
+                      G
+                    })
+                    val bandB: Tile = t._2.bands.head.mapDouble(d => {
+                      var B: Double = 0.0
+                      for (i <- colorRGB.indices) {
+                        if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                          B = colorRGB(i)._3 * 255.0
+                        }
+                      }
+                      B
+                    })
+                    (t._1, MultibandTile(bandR, bandG, bandB))
+                  }), coverage._2)
+                }
+              }
+            }
+          }
+          // 如果波段数量是2
+          else if (bandNum == 2) {
+            // 排除palette
+            if (visParam.getPalette.nonEmpty) {
+              throw new IllegalArgumentException("palette不能应用于2个波段的影像！")
+            }
+            else {
+              // 判断数量是否对应
+              if (minNum > 2 || maxNum > 2 || gainNum > 2 || biasNum > 2 || gammaNum > 2) {
+                throw new IllegalArgumentException("波段数量与参数数量不相符")
+              }
+              else {
+                // 判断是否同时存在最小最大值拉伸和线性拉伸
+                if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
+                  throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
+                }
+                else {
+                  // 先把波段挑出来
+                  coverageVis = selectBands(coverageVis, visParam.getBands)
+                  // 如果存在最小最大值拉伸
+                  if (minNum * maxNum != 0) {
+                    // 首先找到现有的最小最大值
+                    val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    var minVis0: Double = 0.0
+                    var minVis1: Double = 0.0
+                    var maxVis0: Double = 0.0
+                    var maxVis1: Double = 0.0
+                    // 判断min的数量
+                    if (minNum == 1) {
+                      minVis0 = visParam.getMin.head
+                      minVis1 = visParam.getMin.head
+                    }
+                    else if (minNum == 2) {
+                      minVis0 = visParam.getMin.head
+                      minVis1 = visParam.getMin(1)
+                    }
+                    if (maxNum == 1) {
+                      maxVis0 = visParam.getMax.head
+                      maxVis1 = visParam.getMax.head
+                    }
+                    else if (maxNum == 2) {
+                      maxVis0 = visParam.getMax.head
+                      maxVis1 = visParam.getMax(1)
+                    }
+                    val gainBand0: Double = (maxVis0 - minVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                    val biasBand0: Double = (minMaxBand0._2 * minVis0 - minMaxBand0._1 * maxVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                    val gainBand1: Double = (maxVis1 - minVis1) / (minMaxBand1._2 - minMaxBand1._1)
+                    val biasBand1: Double = (minMaxBand1._2 * minVis1 - minMaxBand1._1 * maxVis1) / (minMaxBand1._2 - minMaxBand1._1)
+
+                    coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                      if (i == 0) {
+                        Add(Multiply(tile, gainBand0), biasBand0)
+                      }
+                      else {
+                        Add(Multiply(tile, gainBand1), biasBand1)
+                      }
+                    }))), coverageVis._2)
+                  }
+                  // 如果存在线性拉伸
+                  else if (gainNum * biasNum != 0) {
+                    var gainVis0: Double = 1.0
+                    var gainVis1: Double = 1.0
+                    var biasVis0: Double = 0.0
+                    var biasVis1: Double = 0.0
+                    if (gainNum == 1) {
+                      gainVis0 = visParam.getGain.head
+                      gainVis1 = visParam.getGain.head
+                    }
+                    else if (gainNum == 2) {
+                      gainVis0 = visParam.getGain.head
+                      gainVis1 = visParam.getGain(1)
+                    }
+                    if (biasNum == 1) {
+                      biasVis0 = visParam.getBias.head
+                      biasVis1 = visParam.getBias.head
+                    }
+                    else if (biasNum == 2) {
+                      biasVis0 = visParam.getBias.head
+                      biasVis1 = visParam.getBias(1)
+                    }
+                    coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                      if (i == 0) {
+                        Add(Multiply(tile, gainVis0), biasVis0)
+                      }
+                      else {
+                        Add(Multiply(tile, gainVis1), biasVis1)
+                      }
+                    }))), coverageVis._2)
+                  }
+                  // 如果存在gamma值
+                  if (gammaNum != 0) {
+                    var gammaVis0: Double = 1.0
+                    var gammaVis1: Double = 1.0
+                    if (gammaNum == 1) {
+                      gammaVis0 = visParam.getGamma.head
+                      gammaVis1 = visParam.getGamma.head
+                    }
+                    else if (gammaNum == 2) {
+                      gammaVis0 = visParam.getGamma.head
+                      gammaVis1 = visParam.getGamma(1)
+                    }
+                    coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                      if (i == 0) {
+                        Pow(tile, gammaVis0)
+                      }
+                      else {
+                        Pow(tile, gammaVis1)
+                      }
+                    }))), coverageVis._2)
+                  }
+                }
+              }
+            }
+          }
+          // 如果波段数量是3
+          else {
+            // 排除palette
+            if (visParam.getPalette.nonEmpty) {
+              throw new IllegalArgumentException("palette不能应用于3个波段的影像！")
+            }
+            else {
+              // 判断数量是否对应
+              if (minNum > 3 || minNum == 2 || maxNum > 3 || maxNum == 2 || gainNum > 3 || gainNum == 2 || biasNum > 3 || biasNum == 2 || gammaNum > 3 || gammaNum == 2) {
+                throw new IllegalArgumentException("波段数量与参数数量不相符")
+              }
+              else {
+                // 判断是否同时存在最小最大值拉伸和线性拉伸
+                if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
+                  throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
+                }
+                else {
+                  // 先把波段挑出来
+                  coverageVis = selectBands(coverageVis, visParam.getBands)
+                  // 如果存在最小最大值拉伸
+                  if (minNum * maxNum != 0) {
+                    // 首先找到现有的最小最大值
+                    val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand2: (Double, Double) = coverageVis._1.map(t => t._2.bands(2).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    var minVis0: Double = 0.0
+                    var minVis1: Double = 0.0
+                    var minVis2: Double = 0.0
+                    var maxVis0: Double = 0.0
+                    var maxVis1: Double = 0.0
+                    var maxVis2: Double = 0.0
+                    // 判断min的数量
+                    if (minNum == 1) {
+                      minVis0 = visParam.getMin.head
+                      minVis1 = visParam.getMin.head
+                      minVis2 = visParam.getMin.head
+                    }
+                    else if (minNum == 3) {
+                      minVis0 = visParam.getMin.head
+                      minVis1 = visParam.getMin(1)
+                      minVis2 = visParam.getMin(2)
+                    }
+                    if (maxNum == 1) {
+                      maxVis0 = visParam.getMax.head
+                      maxVis1 = visParam.getMax.head
+                      maxVis2 = visParam.getMax.head
+                    }
+                    else if (maxNum == 3) {
+                      maxVis0 = visParam.getMax.head
+                      maxVis1 = visParam.getMax(1)
+                      maxVis2 = visParam.getMax(2)
+                    }
+                    val gainBand0: Double = (maxVis0 - minVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                    val biasBand0: Double = (minMaxBand0._2 * minVis0 - minMaxBand0._1 * maxVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                    val gainBand1: Double = (maxVis1 - minVis1) / (minMaxBand1._2 - minMaxBand1._1)
+                    val biasBand1: Double = (minMaxBand1._2 * minVis1 - minMaxBand1._1 * maxVis1) / (minMaxBand1._2 - minMaxBand1._1)
+                    val gainBand2: Double = (maxVis2 - minVis2) / (minMaxBand2._2 - minMaxBand2._1)
+                    val biasBand2: Double = (minMaxBand2._2 * minVis2 - minMaxBand2._1 * maxVis2) / (minMaxBand2._2 - minMaxBand2._1)
+
+                    coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                      if (i == 0) {
+                        Add(Multiply(tile, gainBand0), biasBand0)
+                      }
+                      else if (i == 1) {
+                        Add(Multiply(tile, gainBand1), biasBand1)
+                      }
+                      else {
+                        Add(Multiply(tile, gainBand2), biasBand2)
+                      }
+                    }))), coverageVis._2)
+                  }
+                  // 如果存在线性拉伸
+                  else if (gainNum * biasNum != 0) {
+                    var gainVis0: Double = 1.0
+                    var gainVis1: Double = 1.0
+                    var gainVis2: Double = 1.0
+                    var biasVis0: Double = 0.0
+                    var biasVis1: Double = 0.0
+                    var biasVis2: Double = 0.0
+
+                    if (gainNum == 1) {
+                      gainVis0 = visParam.getGain.head
+                      gainVis1 = visParam.getGain.head
+                      gainVis2 = visParam.getGain.head
+                    }
+                    else if (gainNum == 3) {
+                      gainVis0 = visParam.getGain.head
+                      gainVis1 = visParam.getGain(1)
+                      gainVis2 = visParam.getGain(2)
+                    }
+                    if (biasNum == 1) {
+                      biasVis0 = visParam.getBias.head
+                      biasVis1 = visParam.getBias.head
+                      biasVis2 = visParam.getBias.head
+                    }
+                    else if (biasNum == 3) {
+                      biasVis0 = visParam.getBias.head
+                      biasVis1 = visParam.getBias(1)
+                      biasVis2 = visParam.getBias(2)
+                    }
+                    coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                      if (i == 0) {
+                        Add(Multiply(tile, gainVis0), biasVis0)
+                      }
+                      else if (i == 1) {
+                        Add(Multiply(tile, gainVis1), biasVis1)
+                      }
+                      else {
+                        Add(Multiply(tile, gainVis2), biasVis2)
+                      }
+                    }))), coverageVis._2)
+                  }
+                  // 如果存在gamma值
+                  if (gammaNum != 0) {
+                    var gammaVis0: Double = 1.0
+                    var gammaVis1: Double = 1.0
+                    var gammaVis2: Double = 1.0
+                    if (gammaNum == 1) {
+                      gammaVis0 = visParam.getGamma.head
+                      gammaVis1 = visParam.getGamma.head
+                      gammaVis2 = visParam.getGamma.head
+                    }
+                    else if (gammaNum == 3) {
+                      gammaVis0 = visParam.getGamma.head
+                      gammaVis1 = visParam.getGamma(1)
+                      gammaVis2 = visParam.getGamma(2)
+                    }
+                    coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                      if (i == 0) {
+                        Pow(tile, gammaVis0)
+                      }
+                      else if (i == 1) {
+                        Pow(tile, gammaVis1)
+                      }
+                      else {
+                        Pow(tile, gammaVis2)
+                      }
+                    }))), coverageVis._2)
+                  }
+                }
+              }
+            }
+          }
+        }
+        // 如果不存在，则报错
+        else {
+          throw new IllegalArgumentException("Error: 选择的波段不存在，请重新选择")
+        }
+      }
+      // 如果不在1-3之间，则报错
+      else {
+        throw new IllegalArgumentException("Error: 选择的波段数量不是1-3之间的范围")
+      }
+    }
+    // 如果用户没选择波段
+    else {
+      // 波段数量
+      val bandNumber: Int = bandNum(coverage)
+      // min的数量
+      val minNum: Int = visParam.getMin.length
+      // max的数量
+      val maxNum: Int = visParam.getMax.length
+      // gain的数量
+      val gainNum: Int = visParam.getGain.length
+      // bias的数量
+      val biasNum: Int = visParam.getBias.length
+      // gamma的数量
+      val gammaNum: Int = visParam.getGamma.length
+      // 如果只有一个波段
+      if (bandNumber == 1) {
+        if (minNum > 1 || maxNum > 1 || gainNum > 1 || biasNum > 1 || gammaNum > 1) {
+          throw new IllegalArgumentException("波段数量与参数数量不相符")
+        }
+        else {
+          // 如果存在最小最大值拉伸
+          if (minNum * maxNum != 0) {
+            // 首先找到现有的最小最大值
+            val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+            val minVis: Double = visParam.getMin.headOption.getOrElse(0.0)
+            val maxVis: Double = visParam.getMax.headOption.getOrElse(1.0)
+            val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+            val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+            coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((_, tile) => {
+              Add(Multiply(tile, gainBand), biasBand)
+            }))), coverageVis._2)
+          }
+          // 如果存在线性拉伸
+          else if (gainNum * biasNum != 0) {
+            coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((_, tile) => {
+              Add(Multiply(tile, visParam.getGain.headOption.getOrElse(1.0)), visParam.getBias.headOption.getOrElse(0.0))
+            }))), coverageVis._2)
+          }
+          // 如果存在gamma值
+          if (gammaNum != 0) {
+            coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((_, tile) => {
+              Pow(tile, visParam.getGamma.headOption.getOrElse(1.0))
+            }))), coverageVis._2)
+          }
+          // 如果存在palette
+          if (visParam.getPalette.nonEmpty) {
+            val paletteVis: List[String] = visParam.getPalette
+            val colorVis: List[Color] = paletteVis.map(t => {
+              try {
+                val color: Color = Color.valueOf(t)
+                color
+              } catch {
+                case e: Exception =>
+                  throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+              }
+            })
+            val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+            val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+            val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+            coverageVis = (coverageVis._1.map(t => {
+              val bandR: Tile = t._2.bands.head.mapDouble(d => {
+                var R: Double = 0.0
+                for (i <- colorRGB.indices) {
+                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                    R = colorRGB(i)._1 * 255.0
+                  }
+                }
+                R
+              })
+              val bandG: Tile = t._2.bands.head.mapDouble(d => {
+                var G: Double = 0.0
+                for (i <- colorRGB.indices) {
+                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                    G = colorRGB(i)._2 * 255.0
+                  }
+                }
+                G
+              })
+              val bandB: Tile = t._2.bands.head.mapDouble(d => {
+                var B: Double = 0.0
+                for (i <- colorRGB.indices) {
+                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                    B = colorRGB(i)._3 * 255.0
+                  }
+                }
+                B
+              })
+              (t._1, MultibandTile(bandR, bandG, bandB))
+            }), coverage._2)
+          }
+        }
+      }
+      // 如果有2个波段
+      else if (bandNumber == 2) {
+        // 排除palette
+        if (visParam.getPalette.nonEmpty) {
+          throw new IllegalArgumentException("palette不能应用于2个波段的影像！")
+        }
+        else {
+          // 判断数量是否对应
+          if (minNum > 2 || maxNum > 2 || gainNum > 2 || biasNum > 2 || gammaNum > 2) {
+            throw new IllegalArgumentException("波段数量与参数数量不相符")
+          }
+          else {
+            // 判断是否同时存在最小最大值拉伸和线性拉伸
+            if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
+              throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
+            }
+            else {
+              // 如果存在最小最大值拉伸
+              if (minNum * maxNum != 0) {
+                // 首先找到现有的最小最大值
+                val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                var minVis0: Double = 0.0
+                var minVis1: Double = 0.0
+                var maxVis0: Double = 0.0
+                var maxVis1: Double = 0.0
+                // 判断min的数量
+                if (minNum == 1) {
+                  minVis0 = visParam.getMin.head
+                  minVis1 = visParam.getMin.head
+                }
+                else if (minNum == 2) {
+                  minVis0 = visParam.getMin.head
+                  minVis1 = visParam.getMin(1)
+                }
+                if (maxNum == 1) {
+                  maxVis0 = visParam.getMax.head
+                  maxVis1 = visParam.getMax.head
+                }
+                else if (maxNum == 2) {
+                  maxVis0 = visParam.getMax.head
+                  maxVis1 = visParam.getMax(1)
+                }
+                val gainBand0: Double = (maxVis0 - minVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                val biasBand0: Double = (minMaxBand0._2 * minVis0 - minMaxBand0._1 * maxVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                val gainBand1: Double = (maxVis1 - minVis1) / (minMaxBand1._2 - minMaxBand1._1)
+                val biasBand1: Double = (minMaxBand1._2 * minVis1 - minMaxBand1._1 * maxVis1) / (minMaxBand1._2 - minMaxBand1._1)
+
+                coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                  if (i == 0) {
+                    Add(Multiply(tile, gainBand0), biasBand0)
+                  }
+                  else {
+                    Add(Multiply(tile, gainBand1), biasBand1)
+                  }
+                }))), coverageVis._2)
+              }
+              // 如果存在线性拉伸
+              else if (gainNum * biasNum != 0) {
+                var gainVis0: Double = 1.0
+                var gainVis1: Double = 1.0
+                var biasVis0: Double = 0.0
+                var biasVis1: Double = 0.0
+                if (gainNum == 1) {
+                  gainVis0 = visParam.getGain.head
+                  gainVis1 = visParam.getGain.head
+                }
+                else if (gainNum == 2) {
+                  gainVis0 = visParam.getGain.head
+                  gainVis1 = visParam.getGain(1)
+                }
+                if (biasNum == 1) {
+                  biasVis0 = visParam.getBias.head
+                  biasVis1 = visParam.getBias.head
+                }
+                else if (biasNum == 2) {
+                  biasVis0 = visParam.getBias.head
+                  biasVis1 = visParam.getBias(1)
+                }
+                coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                  if (i == 0) {
+                    Add(Multiply(tile, gainVis0), biasVis0)
+                  }
+                  else {
+                    Add(Multiply(tile, gainVis1), biasVis1)
+                  }
+                }))), coverageVis._2)
+              }
+              // 如果存在gamma值
+              if (gammaNum != 0) {
+                var gammaVis0: Double = 1.0
+                var gammaVis1: Double = 1.0
+                if (gammaNum == 1) {
+                  gammaVis0 = visParam.getGamma.head
+                  gammaVis1 = visParam.getGamma.head
+                }
+                else if (gammaNum == 2) {
+                  gammaVis0 = visParam.getGamma.head
+                  gammaVis1 = visParam.getGamma(1)
+                }
+                coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                  if (i == 0) {
+                    Pow(tile, gammaVis0)
+                  }
+                  else {
+                    Pow(tile, gammaVis1)
+                  }
+                }))), coverageVis._2)
+              }
+            }
+          }
+        }
+      }
+      // 如果有3个波段
+      else {
+        coverageVis = (coverageVis.map(t => {
+          (SpaceTimeBandKey(t._1.spaceTimeKey, t._1.measurementName.take(3)), MultibandTile(t._2.bands.take(3)))
+        }), coverageVis._2)
+        // 排除palette
+        if (visParam.getPalette.nonEmpty) {
+          throw new IllegalArgumentException("palette不能应用于3个波段的影像！")
+        }
+        else {
+          // 判断数量是否对应
+          if (minNum > 3 || minNum == 2 || maxNum > 3 || maxNum == 2 || gainNum > 3 || gainNum == 2 || biasNum > 3 || biasNum == 2 || gammaNum > 3 || gammaNum == 2) {
+            throw new IllegalArgumentException("波段数量与参数数量不相符")
+          }
+          else {
+            // 判断是否同时存在最小最大值拉伸和线性拉伸
+            if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
+              throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
+            }
+            else {
+              // 如果存在最小最大值拉伸
+              if (minNum * maxNum != 0) {
+                // 首先找到现有的最小最大值
+                val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand2: (Double, Double) = coverageVis._1.map(t => t._2.bands(2).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                var minVis0: Double = 0.0
+                var minVis1: Double = 0.0
+                var minVis2: Double = 0.0
+                var maxVis0: Double = 0.0
+                var maxVis1: Double = 0.0
+                var maxVis2: Double = 0.0
+                // 判断min的数量
+                if (minNum == 1) {
+                  minVis0 = visParam.getMin.head
+                  minVis1 = visParam.getMin.head
+                  minVis2 = visParam.getMin.head
+                }
+                else if (minNum == 3) {
+                  minVis0 = visParam.getMin.head
+                  minVis1 = visParam.getMin(1)
+                  minVis2 = visParam.getMin(2)
+                }
+                if (maxNum == 1) {
+                  maxVis0 = visParam.getMax.head
+                  maxVis1 = visParam.getMax.head
+                  maxVis2 = visParam.getMax.head
+                }
+                else if (maxNum == 3) {
+                  maxVis0 = visParam.getMax.head
+                  maxVis1 = visParam.getMax(1)
+                  maxVis2 = visParam.getMax(2)
+                }
+                val gainBand0: Double = (maxVis0 - minVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                val biasBand0: Double = (minMaxBand0._2 * minVis0 - minMaxBand0._1 * maxVis0) / (minMaxBand0._2 - minMaxBand0._1)
+                val gainBand1: Double = (maxVis1 - minVis1) / (minMaxBand1._2 - minMaxBand1._1)
+                val biasBand1: Double = (minMaxBand1._2 * minVis1 - minMaxBand1._1 * maxVis1) / (minMaxBand1._2 - minMaxBand1._1)
+                val gainBand2: Double = (maxVis2 - minVis2) / (minMaxBand2._2 - minMaxBand2._1)
+                val biasBand2: Double = (minMaxBand2._2 * minVis2 - minMaxBand2._1 * maxVis2) / (minMaxBand2._2 - minMaxBand2._1)
+
+                coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                  if (i == 0) {
+                    Add(Multiply(tile, gainBand0), biasBand0)
+                  }
+                  else if (i == 1) {
+                    Add(Multiply(tile, gainBand1), biasBand1)
+                  }
+                  else {
+                    Add(Multiply(tile, gainBand2), biasBand2)
+                  }
+                }))), coverageVis._2)
+              }
+              // 如果存在线性拉伸
+              else if (gainNum * biasNum != 0) {
+                var gainVis0: Double = 1.0
+                var gainVis1: Double = 1.0
+                var gainVis2: Double = 1.0
+                var biasVis0: Double = 0.0
+                var biasVis1: Double = 0.0
+                var biasVis2: Double = 0.0
+
+                if (gainNum == 1) {
+                  gainVis0 = visParam.getGain.head
+                  gainVis1 = visParam.getGain.head
+                  gainVis2 = visParam.getGain.head
+                }
+                else if (gainNum == 3) {
+                  gainVis0 = visParam.getGain.head
+                  gainVis1 = visParam.getGain(1)
+                  gainVis2 = visParam.getGain(2)
+                }
+                if (biasNum == 1) {
+                  biasVis0 = visParam.getBias.head
+                  biasVis1 = visParam.getBias.head
+                  biasVis2 = visParam.getBias.head
+                }
+                else if (biasNum == 3) {
+                  biasVis0 = visParam.getBias.head
+                  biasVis1 = visParam.getBias(1)
+                  biasVis2 = visParam.getBias(2)
+                }
+                coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                  if (i == 0) {
+                    Add(Multiply(tile, gainVis0), biasVis0)
+                  }
+                  else if (i == 1) {
+                    Add(Multiply(tile, gainVis1), biasVis1)
+                  }
+                  else {
+                    Add(Multiply(tile, gainVis2), biasVis2)
+                  }
+                }))), coverageVis._2)
+              }
+              // 如果存在gamma值
+              if (gammaNum != 0) {
+                var gammaVis0: Double = 1.0
+                var gammaVis1: Double = 1.0
+                var gammaVis2: Double = 1.0
+                if (gammaNum == 1) {
+                  gammaVis0 = visParam.getGamma.head
+                  gammaVis1 = visParam.getGamma.head
+                  gammaVis2 = visParam.getGamma.head
+                }
+                else if (gammaNum == 3) {
+                  gammaVis0 = visParam.getGamma.head
+                  gammaVis1 = visParam.getGamma(1)
+                  gammaVis2 = visParam.getGamma(2)
+                }
+                coverageVis = (coverageVis._1.map(t => (t._1, t._2.mapBands((i, tile) => {
+                  if (i == 0) {
+                    Pow(tile, gammaVis0)
+                  }
+                  else if (i == 1) {
+                    Pow(tile, gammaVis1)
+                  }
+                  else {
+                    Pow(tile, gammaVis2)
+                  }
+                }))), coverageVis._2)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
+    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
+    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverageVis._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+
+    var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
+
+    // TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
+    // 大于0是上采样
+    if (COGUtil.tileDifference > 0) {
+      // 首先对其进行上采样
+      // 上采样必须考虑范围缩小，不然非常占用内存
+      val levelUp: Int = COGUtil.tileDifference
+      val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
+      val extentOrigin: Extent = layoutOrigin.extent
+      val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
+      val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
+      val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
+      val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
+
+      val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
+      val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
+      coverageTMS = coverageTMS.reproject(coverageTMS.metadata.crs, layoutNew)._2
+    }
+
+    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+      coverageTMS.reproject(tmsCrs, layoutScheme)
+
+    val outputPath: String = "/mnt/storage/on-the-fly"
+    // Create the attributes store that will tell us information about our catalog.
+    val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+    // Create the writer that we will use to store the tiles in the local catalog.
+    val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+
+    if (zoom < Trigger.level) {
+      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+    }
+
+    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+      if (z == Trigger.level) {
+        val layerId: LayerId = LayerId(Trigger.dagId, z)
+        println(layerId)
+        // If the layer exists already, delete it out before writing
+        if (attributeStore.layerExists(layerId)) {
+          //        new FileLayerManager(attributeStore).delete(layerId)
+          try {
+            writer.overwrite(layerId, rdd)
+          } catch {
+            case e: Exception =>
+              e.printStackTrace()
+          }
+        }
+        else {
+          writer.write(layerId, rdd, RowMajorKeyIndexMethod)
+        }
+      }
+    }
+
+
+    // 清空list
+    Trigger.optimizedDagMap.clear()
+    Trigger.coverageCollectionMetadata.clear()
+    Trigger.lazyFunc.clear()
+    Trigger.coverageCollectionRddList.clear()
+    Trigger.coverageRddList.clear()
+    // TODO lrx: 以下为未检验
+    Trigger.tableRddList.clear()
+    Trigger.kernelRddList.clear()
+    Trigger.featureRddList.clear()
+    Trigger.cubeRDDList.clear()
+    Trigger.cubeLoad.clear()
+    JsonToArg.dagMap.clear()
+
+    // 回调服务
+    val jsonObject: JSONObject = new JSONObject
+    val rasterJsonObject: JSONObject = new JSONObject
+    if (visParam.getFormat == "png") {
+      rasterJsonObject.append(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
+    }
+    else {
+      rasterJsonObject.append(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-jpg/" + Trigger.dagId + "/{z}/{x}/{y}.jpg")
+    }
+    jsonObject.append("raster", rasterJsonObject)
+
+    val deliverWordID: String = Trigger.dagId
+    HttpUtil.postResponse(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", jsonObject.toString, deliverWordID)
   }
 
   def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Unit = {

@@ -19,7 +19,8 @@ import scala.collection.mutable
 // TODO lrx: 这里要检查Extent和Resolution的单位和值对不对
 object COGUtil {
   var tileDifference = 0
-  val TypeArray: Array[Int] = Array( //"???",
+  var extent: Extent = _
+  final val TypeArray: Array[Int] = Array( //"???",
     0, //
     1, // byte //8-bit unsigned integer
     1, // ascii//8-bit byte that contains a 7-bit ASCII code; the last byte must be NUL (binary zero)
@@ -140,7 +141,7 @@ object COGUtil {
         tileLevel = tileOffsets.length - 1
       }
       else if (tileLevel < 0) {
-        tileDifference = -tileLevel - 1
+        tileDifference = -tileLevel
         tileLevel = 0
       }
     }
@@ -154,6 +155,7 @@ object COGUtil {
     // 将传入的范围改为数据所在坐标系下，方便两个范围进行相交
     // 传入的范围始终是 4326 坐标系下的
     val queryMbrReproj: Extent = Reproject(queryMbr, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
+    extent = queryMbrReproj
     if (!coverageMetadata.getCrs.isGeographic) {
       flag = true
       flagReader = true
@@ -211,8 +213,9 @@ object COGUtil {
             t.setExtent(extent)
             t.setRotation(geoTrans(5))
             // 前端的分辨率只是为了查询TMS层级的
-            t.setResolution(wReso * Math.pow(2, tileLevel))
-            t.setSpatialKey(new SpatialKey(j, i))
+            t.setResolutionCol(wReso * Math.pow(2, tileLevel))
+            t.setResolutionRow(hReso * Math.pow(2, tileLevel))
+            t.setSpatialKey(new SpatialKey(j - pLeft, i - pLower))
             t.setCoverageId(coverageMetadata.getCoverageID)
             t.setPath(coverageMetadata.getPath)
             t.setTime(coverageMetadata.getTime)

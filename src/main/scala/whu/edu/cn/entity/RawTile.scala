@@ -23,7 +23,8 @@ class RawTile extends Serializable {
   var byteCount: Long = _
   var tileBuf: Array[Byte] = Array.empty[Byte]
   var rotation: Double = _
-  var resolution: Double = _
+  var resolutionCol: Double = _
+  var resolutionRow: Double = _
   var crs: CRS = _
   var dataType: OGEDataType = _
   var tile: Tile = _
@@ -140,12 +141,20 @@ class RawTile extends Serializable {
     this.rotation = rotation
   }
 
-  def getResolution: Double = {
-    this.resolution
+  def getResolutionCol: Double = {
+    this.resolutionCol
   }
 
-  def setResolution(resolution: Double): Unit = {
-    this.resolution = resolution
+  def setResolutionCol(resolutionCol: Double): Unit = {
+    this.resolutionCol = resolutionCol
+  }
+
+  def getResolutionRow: Double = {
+    this.resolutionRow
+  }
+
+  def setResolutionRow(resolutionRow: Double): Unit = {
+    this.resolutionRow = resolutionRow
   }
 
   def getCrs: CRS = {

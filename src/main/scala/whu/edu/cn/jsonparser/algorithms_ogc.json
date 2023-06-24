@@ -882,7 +882,7 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "input",
+        "name": "coverage",
         "type": "Covergae",
         "description": "The input covergae"
       },
@@ -1621,11 +1621,94 @@
         "name": "coverageCollection",
         "type": "CoverageCollection",
         "description": "The coverage from which the left operand bands are taken"
-      },
+      }
+    ]
+  },
+  "CoverageCollection.mean": {
+    "description": "mean the coverages",
+    "returns": "Coverage",
+    "args": [
       {
-        "name": "method",
-        "type": "String",
-        "description": "the method to mosaic the coverages"
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.min": {
+    "description": "min the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.max": {
+    "description": "max the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.sum": {
+    "description": "sum the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.or": {
+    "description": "or the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.and": {
+    "description": "and the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.median": {
+    "description": "median the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.mode": {
+    "description": "mode the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
       }
     ]
   },

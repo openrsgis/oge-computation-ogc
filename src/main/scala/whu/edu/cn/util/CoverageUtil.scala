@@ -27,9 +27,18 @@ object CoverageUtil {
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
     })
-    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._3, extents._4)
+//    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
+//      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
+//    }
+
+
     val firstTile: RawTile = coverageRawTiles.first()
-    val tl: TileLayout = TileLayout(((extents._3 - extents._1) / firstTile.getResolution / 256.0).toInt, ((extents._4 - extents._2) / firstTile.getResolution / 256.0).toInt, 256, 256)
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1) / firstTile.getResolutionCol / 256.0).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2) / firstTile.getResolutionRow / 256.0).toInt, 1)
+
+    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
+
+    val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
     val ld: LayoutDefinition = LayoutDefinition(extent, tl)
     val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
     val crs: CRS = firstTile.getCrs
@@ -43,7 +52,7 @@ object CoverageUtil {
       val measurementRank: Int = tile.getMeasurementRank
       val measurement: String = tile.getMeasurement
       val Tile: Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      val k: SpaceTimeKey = SpaceTimeKey(colNum - colRowInstant._1, rowNum - colRowInstant._2, phenomenonTime)
+      val k: SpaceTimeKey = SpaceTimeKey(colNum, rowNum, phenomenonTime)
       val v: Tile = Tile
       (k, (measurementRank, measurement, v))
     })
@@ -57,6 +66,7 @@ object CoverageUtil {
     })
     (multibandTileRdd, tileLayerMetadata)
   }
+
 
   def checkProjResoExtent(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = {
     val tile1: (SpaceTimeBandKey, MultibandTile) = coverage1.first()
@@ -121,8 +131,8 @@ object CoverageUtil {
         var extent: Extent = extent1.intersection(extent2).orNull
 
         // 先重投影，重投影到原始范围重投影后的范围、这个范围除以256, 顺势进行裁剪
-        val layoutCols: Int = math.max(((extent.xmax - extent.xmin) / reso / 256.0).toInt, 1)
-        val layoutRows: Int = math.max(((extent.ymax - extent.ymin) / reso / 256.0).toInt, 1)
+        val layoutCols: Int = math.max(math.ceil((extent.xmax - extent.xmin) / reso / 256.0).toInt, 1)
+        val layoutRows: Int = math.max(math.ceil((extent.ymax - extent.ymin) / reso / 256.0).toInt, 1)
         val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
         // Extent必须进行重新计算，因为layoutCols和layoutRows加了黑边，导致范围变化了
         val newExtent: Extent = new Extent(extent.xmin, extent.ymin, extent.xmin + reso * 256.0 * layoutCols, extent.ymin + reso * 256.0 * layoutRows)

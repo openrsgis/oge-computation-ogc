@@ -8,8 +8,9 @@ import scala.collection.mutable
 import scala.io.{BufferedSource, Source}
 import scala.util.control.Breaks
 
+// TODO lrx: 解析的时候加上数据类型？
 object JsonToArg {
-  var jsonAlgorithms: String = "/home/geocube/oge/oge-server/dag-boot/algorithms_ogc.json"
+  var jsonAlgorithms: String = "/mnt/storage/algorithms_ogc.json"
   var dagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
 
   def numberOfArgs(functionName: String): Int = {
