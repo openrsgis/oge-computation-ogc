@@ -215,7 +215,7 @@ object load {
       MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
         .reproject(tmsCrs, layoutScheme)
 
-    val outputPath: String = "/home/geocube/oge/on-the-fly"
+    val outputPath: String = "/mnt/storage/on-the-fly"
     // Create the attributes store that will tell us information about our catalog.
     val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
     // Create the writer that we will use to store the tiles in the local catalog.

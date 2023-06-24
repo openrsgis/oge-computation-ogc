@@ -2252,7 +2252,7 @@ object Coverage {
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
 
-    val outputPath: String = "/home/geocube/oge/on-the-fly"
+    val outputPath: String = "/mnt/storage/on-the-fly"
     // Create the attributes store that will tell us information about our catalog.
     val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
     // Create the writer that we will use to store the tiles in the local catalog.
@@ -2263,23 +2263,23 @@ object Coverage {
     }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      //if (z == Trigger.level) {
-      val layerId: LayerId = LayerId(Trigger.dagId, z)
-      println(layerId)
-      // If the layer exists already, delete it out before writing
-      if (attributeStore.layerExists(layerId)) {
-        //        new FileLayerManager(attributeStore).delete(layerId)
-        try {
-          writer.overwrite(layerId, rdd)
-        } catch {
-          case e: Exception =>
-            e.printStackTrace()
+      if (z == Trigger.level) {
+        val layerId: LayerId = LayerId(Trigger.dagId, z)
+        println(layerId)
+        // If the layer exists already, delete it out before writing
+        if (attributeStore.layerExists(layerId)) {
+          //        new FileLayerManager(attributeStore).delete(layerId)
+          try {
+            writer.overwrite(layerId, rdd)
+          } catch {
+            case e: Exception =>
+              e.printStackTrace()
+          }
+        }
+        else {
+          writer.write(layerId, rdd, RowMajorKeyIndexMethod)
         }
       }
-      else {
-        writer.write(layerId, rdd, RowMajorKeyIndexMethod)
-      }
-      //}
     }
 
 
