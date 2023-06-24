@@ -9,5 +9,9 @@ class MinIOUtil {
     .credentials(MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
     .build()
 
-  def getMinioClient: MinioClient = minioClient
+
+  def getMinioClient: MinioClient = {
+    minioClient.setTimeout(1000, 1000, 1000)
+    minioClient
+  }
 }
