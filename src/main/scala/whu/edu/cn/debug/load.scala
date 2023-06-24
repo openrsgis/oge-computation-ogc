@@ -12,10 +12,11 @@ import geotrellis.spark.store.file.{FileLayerReader, FileLayerWriter}
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index._
-import geotrellis.vector.{Extent, Geometry}
+import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, RawTile, SpaceTimeBandKey}
 import whu.edu.cn.oge.Coverage
 import whu.edu.cn.oge.CoverageCollection.mosaic

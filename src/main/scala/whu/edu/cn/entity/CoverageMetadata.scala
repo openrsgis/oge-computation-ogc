@@ -1,7 +1,7 @@
 package whu.edu.cn.entity
 
 import geotrellis.proj4.CRS
-import geotrellis.vector.Geometry
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.entity.OGEDataType.OGEDataType
 
 import java.time.{LocalDate, LocalDateTime}

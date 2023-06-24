@@ -17,12 +17,11 @@ import geotrellis.proj4
 import geotrellis.raster.{DoubleCellType, MultibandTile, Raster, RasterExtent, Tile, TileLayout, mask}
 import geotrellis.vector
 import geotrellis.vector.interpolation.{NonLinearSemivariogram, Semivariogram, Spherical}
-import geotrellis.vector.{Extent, Point, PointFeature}
+import geotrellis.vector.{Extent, PointFeature, interpolation}
 import org.geotools.referencing.CRS
 import geotrellis.spark._
 import geotrellis.raster.interpolation._
 import geotrellis.raster.render.{ColorRamp, ColorRamps}
-import geotrellis.vector.interpolation
 import whu.edu.cn.geocube.core.entity
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.logging.{Log, LogFactory}

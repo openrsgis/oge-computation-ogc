@@ -243,9 +243,9 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length()!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2)))
+            if(geoObjectKeysNoDuplicated.length!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2)))
             }
 
           }
@@ -584,9 +584,9 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length()!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2)))
+            if(geoObjectKeysNoDuplicated.length!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2)))
             }
 
           }
@@ -851,9 +851,9 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length()!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2), keys(3)))
+            if(geoObjectKeysNoDuplicated.length!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2), keys(3)))
             }
 
           }
@@ -1126,10 +1126,10 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length()!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2), keys(3)))
-              //geoObjectsAndDimensionKeysResults.append(Array(geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1).toString(), keys(1), keys(2)))
+            if(geoObjectKeysNoDuplicated.length!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2), keys(3)))
+              //geoObjectsAndDimensionKeysResults.append(Array(geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1).toString(), keys(1), keys(2)))
             }
 
           }

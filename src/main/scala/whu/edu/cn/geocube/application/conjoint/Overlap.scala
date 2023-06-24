@@ -3,9 +3,9 @@ package whu.edu.cn.geocube.application.conjoint
 import geotrellis.layer.{SpaceTimeKey, SpatialKey}
 import geotrellis.raster.Tile
 import geotrellis.spark.TileLayerRDD
-import geotrellis.vector.Geometry
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.locationtech.jts.geom.Geometry
 import org.opengis.feature.simple.SimpleFeature
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.geocube.core.cube.vector.GeoObjectRDD
