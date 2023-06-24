@@ -11,12 +11,13 @@ import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.RowMajorKeyIndexMethod
-import geotrellis.vector.{Extent, Geometry}
+import geotrellis.vector.Extent
 import io.minio.MinioClient
 import javafx.scene.paint.Color
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.json.JSONObject
+import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.geocube.util._
@@ -45,7 +46,7 @@ object Coverage {
     val queryGeometry: Geometry = metaList.head.getGeom
 
     // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    val unionTileExtent: geotrellis.vector.Geometry = zIndexStrArray.map(zIndexStr => {
+    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
       val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
       val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
       val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
@@ -54,13 +55,16 @@ object Coverage {
       // TODO lrx: 这里还需要存前端的实际瓦片瓦片，这里只存了编号
       jedis.sadd(key, zIndexStr)
       jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
-      val geometry: geotrellis.vector.Geometry = new Extent(lonMinOfTile, latMinOfTile, lonMaxOfTile, latMaxOfTile).toPolygon()
+      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
       geometry
     }).reduce((a, b) => {
       a.union(b)
     })
 
-    val union: geotrellis.vector.Geometry = unionTileExtent.intersection(queryGeometry)
+    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
     jedis.close()
 
@@ -1105,7 +1109,7 @@ object Coverage {
    * @param geom     The geometry used to clip.
    * @return
    */
-  //  def clip(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), geom: geotrellis.vector.Geometry
+  //  def clip(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), geom: Geometry
   //          ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
   //    val RDDExtent = coverage._2.extent
   //    val reso = coverage._2.cellSize.resolution

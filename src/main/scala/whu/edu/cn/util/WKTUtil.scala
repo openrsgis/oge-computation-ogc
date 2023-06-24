@@ -2,10 +2,9 @@ package whu.edu.cn.util
 
 import com.alibaba.fastjson.JSON.parseObject
 import com.alibaba.fastjson.JSONObject
-import geotrellis.vector.GeometryCollection
 import org.geotools.geojson.GeoJSONUtil
 import org.geotools.geojson.geom.GeometryJSON
-import org.locationtech.jts.geom.{Geometry, GeometryFactory}
+import org.locationtech.jts.geom.{Geometry, GeometryCollection, GeometryFactory}
 import org.locationtech.jts.io.{ParseException, WKTReader, WKTWriter}
 
 import java.io.{IOException, StringWriter}

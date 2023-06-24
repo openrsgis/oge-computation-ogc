@@ -14,7 +14,7 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local.{Add, Divide, Multiply, Subtract}
 import geotrellis.raster.render.ColorRamp
 import geotrellis.raster.{ByteArrayTile, DoubleArrayTile, DoubleConstantNoDataCellType, MultibandTile, Raster, Tile}
-import geotrellis.vector.{Extent, Geometry}
+import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, Partitioner, SparkConf, SparkContext, TaskContext}
 import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}

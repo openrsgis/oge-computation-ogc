@@ -373,7 +373,7 @@ class QueryParams extends Serializable {
         //add every measurementName
         while (rs.next) {
           //          val res = rs.getString(1).split("/").head
-          //          println(res.length())
+          //          println(res.length)
           //
           //          val res1 = res.substring(1,res.length-1)
           //          res1.foreach(e=>{

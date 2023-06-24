@@ -5,7 +5,7 @@ import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 import geotrellis.vector.reproject.Reproject
 import io.minio.{GetObjectArgs, MinioClient}
-import org.locationtech.jts.geom.Envelope
+import org.locationtech.jts.geom.{Envelope, Geometry}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile}
 import whu.edu.cn.util.GlobalConstantUtil.MINIO_HEAD_SIZE
 
@@ -51,7 +51,7 @@ object COGUtil {
    * @param bandCounts    多波段
    * @return 后端瓦片
    */
-  def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, queryGeometry: geotrellis.vector.Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
+  def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
     var bandCount = 1
     if (bandCounts.length > 1) throw new RuntimeException("bandCount 参数最多传一个")
     if (bandCounts.length == 1) bandCount = bandCounts(0)
@@ -120,7 +120,7 @@ object COGUtil {
    * @param productName
    * @return
    */
-  def getTiles(level: Int, coverageMetadata: CoverageMetadata, queryGeometry: geotrellis.vector.Geometry, tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], cell: mutable.ArrayBuffer[Double], geoTrans: mutable.ArrayBuffer[Double], tileByteCounts: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], bandCount: Int): mutable.ArrayBuffer[RawTile] = {
+  def getTiles(level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Geometry, tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], cell: mutable.ArrayBuffer[Double], geoTrans: mutable.ArrayBuffer[Double], tileByteCounts: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], bandCount: Int): mutable.ArrayBuffer[RawTile] = {
     var tileLevel: Int = 0
     var resolutionTMS: Double = .0
     // 地图 zoom 为0时的分辨率，以下按zoom递增

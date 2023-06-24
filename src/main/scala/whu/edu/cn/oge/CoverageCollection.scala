@@ -7,6 +7,7 @@ import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory, Polygon}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity._
 import whu.edu.cn.trigger.Trigger
@@ -40,7 +41,7 @@ object CoverageCollection {
     jedis.select(1)
 
     // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    val unionTileExtent: geotrellis.vector.Geometry = zIndexStrArray.map(zIndexStr => {
+    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
       val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
       val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
       val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
@@ -49,12 +50,15 @@ object CoverageCollection {
       // TODO lrx: 这里还需要存前端的实际瓦片瓦片，这里只存了编号
       jedis.sadd(key, zIndexStr)
       jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
-      val geometry: geotrellis.vector.Geometry = new Extent(lonMinOfTile, latMinOfTile, lonMaxOfTile, latMaxOfTile).toPolygon()
+      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
       geometry
     }).reduce((a, b) => {
       a.union(b)
     })
-    val union: geotrellis.vector.Geometry = unionTileExtent.intersection(extent)
+    val union: Geometry = unionTileExtent.intersection(extent)
     jedis.close()
 
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
