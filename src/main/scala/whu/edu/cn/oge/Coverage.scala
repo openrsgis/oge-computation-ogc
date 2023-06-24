@@ -1,5 +1,6 @@
 package whu.edu.cn.oge
 
+import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.local._
@@ -16,12 +17,12 @@ import io.minio.MinioClient
 import javafx.scene.paint.Color
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.json.JSONObject
 import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.geocube.util._
 import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.oge.HttpRequest.sendPost
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{coverageTemplate, makeCoverageRDD}
@@ -29,7 +30,6 @@ import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
 import scala.collection.mutable
-import scala.language.postfixOps
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -88,7 +88,7 @@ object Coverage {
     val tileNum: Int = tileRDDFlat.count().toInt
     println("tileNum = " + tileNum)
     tileRDDFlat.unpersist()
-    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 90))
+    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.map(t => {
       val time1: Long = System.currentTimeMillis()
       val client: MinioClient = new MinIOUtil().getMinioClient
@@ -1535,7 +1535,15 @@ object Coverage {
                 // 如果存在最小最大值拉伸
                 if (minNum * maxNum != 0) {
                   // 首先找到现有的最小最大值
-                  val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                  val minMaxBand: (Double, Double) = coverageVis._1.map(t => {
+                    val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+                    if (noNaNArray.nonEmpty) {
+                      (noNaNArray.min, noNaNArray.max)
+                    }
+                    else {
+                      (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                    }
+                  }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
                   val minVis: Double = visParam.getMin.headOption.getOrElse(0.0)
                   val maxVis: Double = visParam.getMax.headOption.getOrElse(1.0)
                   val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
@@ -1569,7 +1577,15 @@ object Coverage {
                     }
                   })
                   val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
-                  val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                  val minMaxBand: (Double, Double) = coverageVis._1.map(t => {
+                    val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+                    if (noNaNArray.nonEmpty) {
+                      (noNaNArray.min, noNaNArray.max)
+                    }
+                    else {
+                      (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                    }
+                  }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
                   val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
                   coverageVis = (coverageVis._1.map(t => {
                     val bandR: Tile = t._2.bands.head.mapDouble(d => {
@@ -1627,8 +1643,24 @@ object Coverage {
                   // 如果存在最小最大值拉伸
                   if (minNum * maxNum != 0) {
                     // 首先找到现有的最小最大值
-                    val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-                    val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand0: (Double, Double) = coverageVis._1.map(t => {
+                      val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+                      if (noNaNArray.nonEmpty) {
+                        (noNaNArray.min, noNaNArray.max)
+                      }
+                      else {
+                        (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                      }
+                    }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand1: (Double, Double) = coverageVis._1.map(t => {
+                      val noNaNArray: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+                      if (noNaNArray.nonEmpty) {
+                        (noNaNArray.min, noNaNArray.max)
+                      }
+                      else {
+                        (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                      }
+                    }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
                     var minVis0: Double = 0.0
                     var minVis1: Double = 0.0
                     var maxVis0: Double = 0.0
@@ -1742,9 +1774,33 @@ object Coverage {
                   // 如果存在最小最大值拉伸
                   if (minNum * maxNum != 0) {
                     // 首先找到现有的最小最大值
-                    val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-                    val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-                    val minMaxBand2: (Double, Double) = coverageVis._1.map(t => t._2.bands(2).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand0: (Double, Double) = coverageVis._1.map(t => {
+                      val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+                      if (noNaNArray.nonEmpty) {
+                        (noNaNArray.min, noNaNArray.max)
+                      }
+                      else {
+                        (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                      }
+                    }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand1: (Double, Double) = coverageVis._1.map(t => {
+                      val noNaNArray: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+                      if (noNaNArray.nonEmpty) {
+                        (noNaNArray.min, noNaNArray.max)
+                      }
+                      else {
+                        (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                      }
+                    }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                    val minMaxBand2: (Double, Double) = coverageVis._1.map(t => {
+                      val noNaNArray: Array[Double] = t._2.bands(2).toArrayDouble().filter(!_.isNaN)
+                      if (noNaNArray.nonEmpty) {
+                        (noNaNArray.min, noNaNArray.max)
+                      }
+                      else {
+                        (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                      }
+                    }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
                     var minVis0: Double = 0.0
                     var minVis1: Double = 0.0
                     var minVis2: Double = 0.0
@@ -1897,7 +1953,15 @@ object Coverage {
           // 如果存在最小最大值拉伸
           if (minNum * maxNum != 0) {
             // 首先找到现有的最小最大值
-            val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+            val minMaxBand: (Double, Double) = coverageVis._1.map(t => {
+              val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+              if (noNaNArray.nonEmpty) {
+                (noNaNArray.min, noNaNArray.max)
+              }
+              else {
+                (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+              }
+            }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
             val minVis: Double = visParam.getMin.headOption.getOrElse(0.0)
             val maxVis: Double = visParam.getMax.headOption.getOrElse(1.0)
             val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
@@ -1931,7 +1995,15 @@ object Coverage {
               }
             })
             val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
-            val minMaxBand: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+            val minMaxBand: (Double, Double) = coverageVis._1.map(t => {
+              val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+              if (noNaNArray.nonEmpty) {
+                (noNaNArray.min, noNaNArray.max)
+              }
+              else {
+                (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+              }
+            }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
             val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
             coverageVis = (coverageVis._1.map(t => {
               val bandR: Tile = t._2.bands.head.mapDouble(d => {
@@ -1986,8 +2058,24 @@ object Coverage {
               // 如果存在最小最大值拉伸
               if (minNum * maxNum != 0) {
                 // 首先找到现有的最小最大值
-                val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-                val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand0: (Double, Double) = coverageVis._1.map(t => {
+                  val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+                  if (noNaNArray.nonEmpty) {
+                    (noNaNArray.min, noNaNArray.max)
+                  }
+                  else {
+                    (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                  }
+                }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand1: (Double, Double) = coverageVis._1.map(t => {
+                  val noNaNArray: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+                  if (noNaNArray.nonEmpty) {
+                    (noNaNArray.min, noNaNArray.max)
+                  }
+                  else {
+                    (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                  }
+                }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
                 var minVis0: Double = 0.0
                 var minVis1: Double = 0.0
                 var maxVis0: Double = 0.0
@@ -2102,9 +2190,33 @@ object Coverage {
               // 如果存在最小最大值拉伸
               if (minNum * maxNum != 0) {
                 // 首先找到现有的最小最大值
-                val minMaxBand0: (Double, Double) = coverageVis._1.map(t => t._2.bands(0).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-                val minMaxBand1: (Double, Double) = coverageVis._1.map(t => t._2.bands(1).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-                val minMaxBand2: (Double, Double) = coverageVis._1.map(t => t._2.bands(2).findMinMaxDouble).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand0: (Double, Double) = coverageVis._1.map(t => {
+                  val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+                  if (noNaNArray.nonEmpty) {
+                    (noNaNArray.min, noNaNArray.max)
+                  }
+                  else {
+                    (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                  }
+                }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand1: (Double, Double) = coverageVis._1.map(t => {
+                  val noNaNArray: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+                  if (noNaNArray.nonEmpty) {
+                    (noNaNArray.min, noNaNArray.max)
+                  }
+                  else {
+                    (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                  }
+                }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+                val minMaxBand2: (Double, Double) = coverageVis._1.map(t => {
+                  val noNaNArray: Array[Double] = t._2.bands(2).toArrayDouble().filter(!_.isNaN)
+                  if (noNaNArray.nonEmpty) {
+                    (noNaNArray.min, noNaNArray.max)
+                  }
+                  else {
+                    (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+                  }
+                }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
                 var minVis0: Double = 0.0
                 var minVis1: Double = 0.0
                 var minVis2: Double = 0.0
@@ -2305,15 +2417,18 @@ object Coverage {
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
     if (visParam.getFormat == "png") {
-      rasterJsonObject.append(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
+      rasterJsonObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
     }
     else {
-      rasterJsonObject.append(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-jpg/" + Trigger.dagId + "/{z}/{x}/{y}.jpg")
+      rasterJsonObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-jpg/" + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
-    jsonObject.append("raster", rasterJsonObject)
+    jsonObject.put("raster", rasterJsonObject)
 
-    val deliverWordID: String = Trigger.dagId
-    HttpUtil.postResponse(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", jsonObject.toString, deliverWordID)
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("workID", Trigger.dagId)
+    outJsonObject.put("json", jsonObject)
+
+    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
   }
 
   def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Unit = {
