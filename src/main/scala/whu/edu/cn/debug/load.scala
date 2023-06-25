@@ -41,13 +41,27 @@ object load {
     // LC08_L1TP_124038_20181211_20181226_01_T1
     // LE07_L1TP_125039_20130110_20161126_01_T1
 
-    loadLandsatCollection()
+    ndviLandsat7()
     val time2: Long = System.currentTimeMillis()
     println("Total Time is " + (time2 - time1))
 
 
     println("_")
 
+  }
+
+  def ndviLandsat7(): Unit = {
+
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+    val sc = new SparkContext(conf)
+
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", 6)
+    val coverageDouble: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(coverage)
+    val ndwi: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.normalizedDifference(coverageDouble, List("B4", "B3"))
+
+    makeTIFF(coverage, "ls")
+    makeTIFF(coverageDouble, "lsD")
+    makeTIFF(ndwi, "lsNDWI")
   }
 
   def loadLandsatCollection(): Unit = {
