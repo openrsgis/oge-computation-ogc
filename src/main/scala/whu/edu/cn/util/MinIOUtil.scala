@@ -8,10 +8,9 @@ class MinIOUtil {
     .endpoint(MINIO_ENDPOINT)
     .credentials(MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
     .build()
-
+  minioClient.setTimeout(1000, 1000, 1000)
 
   def getMinioClient: MinioClient = {
-    minioClient.setTimeout(1000, 1000, 1000)
     minioClient
   }
 }

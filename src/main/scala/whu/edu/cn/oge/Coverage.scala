@@ -20,7 +20,6 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
-import whu.edu.cn.geocube.util._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge.HttpRequest.sendPost
 import whu.edu.cn.trigger.Trigger
@@ -38,10 +37,6 @@ object Coverage {
   def load(implicit sc: SparkContext, coverageId: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
-    val key: String = Trigger.dagId + ":solvedTile:" + level
-    val jedis: Jedis = new JedisUtil().getJedis
-    jedis.select(1)
-
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId)
     val queryGeometry: Geometry = metaList.head.getGeom
 
@@ -52,9 +47,7 @@ object Coverage {
       val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
       val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
       val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
-      // TODO lrx: 这里还需要存前端的实际瓦片瓦片，这里只存了编号
-      jedis.sadd(key, zIndexStr)
-      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
+
       val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
       val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
       val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
@@ -65,8 +58,6 @@ object Coverage {
     })
 
     val union: Geometry = unionTileExtent.intersection(queryGeometry)
-
-    jedis.close()
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
@@ -2429,6 +2420,17 @@ object Coverage {
     outJsonObject.put("json", jsonObject)
 
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+
+
+    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+    val jedis: Jedis = new JedisUtil().getJedis
+    jedis.select(1)
+    zIndexStrArray.foreach(zIndexStr => {
+      val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+      jedis.sadd(key, "cached")
+      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
+    })
+    jedis.close()
   }
 
   def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Unit = {

@@ -7,14 +7,13 @@ import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory, Polygon}
-import redis.clients.jedis.Jedis
+import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import whu.edu.cn.entity._
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
-import whu.edu.cn.util.{COGUtil, GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.util.{COGUtil, MinIOUtil, ZCurveUtil}
 
 import java.time.LocalDateTime
 import scala.collection.mutable
@@ -36,10 +35,6 @@ object CoverageCollection {
   def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
     val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
 
-    val key: String = Trigger.dagId + ":solvedTile:" + level
-    val jedis: Jedis = new JedisUtil().getJedis
-    jedis.select(1)
-
     // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
     val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
       val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
@@ -47,9 +42,7 @@ object CoverageCollection {
       val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
       val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
       val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
-      // TODO lrx: 这里还需要存前端的实际瓦片瓦片，这里只存了编号
-      jedis.sadd(key, zIndexStr)
-      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
+
       val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
       val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
       val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
@@ -59,7 +52,6 @@ object CoverageCollection {
       a.union(b)
     })
     val union: Geometry = unionTileExtent.intersection(extent)
-    jedis.close()
 
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
