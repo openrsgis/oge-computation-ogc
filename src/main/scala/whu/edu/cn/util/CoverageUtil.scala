@@ -40,7 +40,7 @@ object CoverageUtil {
 
     val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
     val ld: LayoutDefinition = LayoutDefinition(extent, tl)
-    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
+    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString + "raw")
     val crs: CRS = firstTile.getCrs
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)

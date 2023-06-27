@@ -11,11 +11,11 @@ object Service {
   def getCoverageCollection(productName: String, dateTime: String = null, extent: String = null): CoverageCollectionMetadata = {
     val coverageCollectionMetadata: CoverageCollectionMetadata = new CoverageCollectionMetadata()
     coverageCollectionMetadata.setProductName(productName)
-    if (extent.nonEmpty) {
+    if (extent != null) {
       coverageCollectionMetadata.setExtent(extent)
     }
-    if (dateTime.nonEmpty) {
-      val timeArray = dateTime.replace("[", "").replace("]", "").split(",")
+    if (dateTime != null) {
+      val timeArray: Array[String] = dateTime.replace("[", "").replace("]", "").split(",")
       coverageCollectionMetadata.setStartTime(timeArray.head)
       coverageCollectionMetadata.setEndTime(timeArray(1))
     }

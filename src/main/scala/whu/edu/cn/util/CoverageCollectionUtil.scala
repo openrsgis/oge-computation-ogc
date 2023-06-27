@@ -170,7 +170,7 @@ object CoverageCollectionUtil {
         case "sum" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            (t._1, tiles.reduce((a, b) => Add(a, b)))
+            (t._1, tiles.reduce((a, b) => Add(Mean(a, b), Mean(a, b))))
           })
         case "or" =>
           groupedTiles.map(t => {
@@ -191,7 +191,7 @@ object CoverageCollectionUtil {
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
             tiles.head.cellType.toString() match {
-              case "int32" =>
+              case "int32" | "int32raw" =>
                 val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
                 tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
                   val data: Array[Int] = tile.toArray()
@@ -207,7 +207,7 @@ object CoverageCollectionUtil {
                 })
                 val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
                 (t._1, medianTile)
-              case "float32" =>
+              case "float32" | "float32raw" =>
                 val bandArrays: Array[Array[Float]] = Array.ofDim[Float](tiles.size, tiles.head.rows * tiles.head.cols)
                 tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
                   val data: Array[Float] = tile.toArrayDouble().map(_.toFloat)
@@ -223,7 +223,7 @@ object CoverageCollectionUtil {
                 })
                 val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
                 (t._1, medianTile)
-              case "float64" =>
+              case "float64" | "float64raw" =>
                 val bandArrays: Array[Array[Double]] = Array.ofDim[Double](tiles.size, tiles.head.rows * tiles.head.cols)
                 tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
                   val data: Array[Double] = tile.toArrayDouble()
@@ -245,7 +245,7 @@ object CoverageCollectionUtil {
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
             tiles.head.cellType.toString() match {
-              case "int32" =>
+              case "int32" | "int32raw" =>
                 val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
                 tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
                   val data: Array[Int] = tile.toArray()
@@ -259,7 +259,7 @@ object CoverageCollectionUtil {
                 })
                 val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
                 (t._1, modeTile)
-              case "float32" =>
+              case "float32" | "float32raw" =>
                 val bandArrays: Array[Array[Float]] = Array.ofDim[Float](tiles.size, tiles.head.rows * tiles.head.cols)
                 tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
                   val data: Array[Float] = tile.toArrayDouble().map(_.toFloat)
@@ -273,7 +273,7 @@ object CoverageCollectionUtil {
                 })
                 val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
                 (t._1, modeTile)
-              case "float64" =>
+              case "float64" | "float64raw" =>
                 val bandArrays: Array[Array[Double]] = Array.ofDim[Double](tiles.size, tiles.head.rows * tiles.head.cols)
                 tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
                   val data: Array[Double] = tile.toArrayDouble()

@@ -617,6 +617,7 @@ object Trigger {
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
               curDagId: String): Unit = {
+
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
     dagId = curDagId
@@ -700,7 +701,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/ndvi.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/debug.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

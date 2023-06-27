@@ -27,8 +27,8 @@ object OGEDataType extends Enumeration with Serializable {
     val priority1: Int = member1.asInstanceOf[OGEDataValue].priority
     val priority2: Int = member2.asInstanceOf[OGEDataValue].priority
 
-    if (priority1 == 1 && priority2 == 1) int32
-    else if (priority1 <= 2 && priority2 <= 2) float32
-    else float64
+    if (priority1 == 1 && priority2 == 1) int32raw
+    else if (priority1 <= 2 && priority2 <= 2) float32raw
+    else float64raw
   }
 }

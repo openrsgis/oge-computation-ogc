@@ -2,13 +2,23 @@
   "layerName": "ndvi",
   "isBatch": "0",
   "map": {
-    "level": 7,
+    "level": 8,
     "spatialRange": [
-      111.23,
-      29.31,
-      116.8,
-      31.98
+      108.96538519283936,
+      30.62873907845347,
+      115.86675117004316,
+      32.92170774242992
     ]
+  },
+  "3": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.toDouble",
+      "arguments": {
+        "coverage": {
+          "argumentReference": "_MAPPING_VAR_0_0"
+        }
+      }
+    }
   },
   "2": {
     "functionInvocationValue": {
@@ -20,12 +30,12 @@
           ]
         },
         "coverage": {
-          "argumentReference": "_MAPPING_VAR_0_0"
+          "valueReference": "3"
         }
       }
     }
   },
-  "3": {
+  "4": {
     "functionInvocationValue": {
       "functionName": "Coverage.selectBands",
       "arguments": {
@@ -35,7 +45,7 @@
           ]
         },
         "coverage": {
-          "argumentReference": "_MAPPING_VAR_0_0"
+          "valueReference": "3"
         }
       }
     }
@@ -52,7 +62,7 @@
                 "valueReference": "2"
               },
               "coverage2": {
-                "valueReference": "3"
+                "valueReference": "4"
               }
             }
           }
@@ -65,7 +75,7 @@
                 "valueReference": "2"
               },
               "coverage2": {
-                "valueReference": "3"
+                "valueReference": "4"
               }
             }
           }
@@ -111,26 +121,13 @@
                       ]
                     },
                     "productID": {
-                      "constantValue": "LE07_L1TP_C01_T1"
+                      "constantValue": "LE07_L1T_C01_T1"
                     }
                   }
                 }
               }
             }
           }
-        },
-        "max": {
-          "constantValue": 1
-        },
-        "min": {
-          "constantValue": 0
-        },
-        "palette": {
-          "constantValue": [
-            "red",
-            "blue",
-            "yellow"
-          ]
         }
       }
     }
