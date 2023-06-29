@@ -1,4 +1,4 @@
-package whu.edu.cn.oge;
+package whu.edu.cn.util;
 
 import java.io.*;
 import java.net.URL;
@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * java发送http的get和post请求
  */
-public class HttpRequest {
+public class HttpRequestUtil {
     /**
      * 向指定URL发送GET方式的请求
      *

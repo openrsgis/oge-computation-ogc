@@ -50,6 +50,17 @@ object load {
 
   }
 
+  def ndviLandsatCollection(): Unit = {
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+    val sc = new SparkContext(conf)
+    val collectionMeta = new CoverageCollectionMetadata
+    collectionMeta.setStartTime("2013-01-01 00:00:00")
+    collectionMeta.setEndTime("2013-12-31 00:00:00")
+    val landsatCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = loadCoverageCollection(sc, productName = "LE07_L1TP_C01_T1", startTime = collectionMeta.getStartTime, endTime = collectionMeta.getEndTime, extent = Extent(111.23, 29.31, 116.8, 31.98), level = 5)
+    val landsatCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(landsatCollection)
+    makeTIFF(landsatCoverage, "collection2coverage")
+  }
+
   def ndviLandsat7(): Unit = {
 
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
@@ -155,7 +166,7 @@ object load {
       val time2: Long = System.currentTimeMillis()
       println("Get Tile Time is " + (time2 - time1))
       tile
-    }).cache()
+    })
     makeCoverageRDD(rawTileRdd)
   }
 
@@ -191,7 +202,7 @@ object load {
         val time2: Long = System.currentTimeMillis()
         println("Get Tile Time is " + (time2 - time1))
         tile
-      }).cache())
+      }))
     })
 
     makeCoverageCollectionRDD(rawTileRdd)
@@ -208,13 +219,20 @@ object load {
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
-  def makeTIFF(coverage: TileLayerRDD[SpatialKey], name: String): Unit = {
-
-    val tileArray: Array[(SpatialKey, Tile)] = coverage.collect()
+  def makeTIFF(coverage: MultibandTileLayerRDD[SpatialKey], name: String): Unit = {
+    val tileArray: Array[(SpatialKey, MultibandTile)] = coverage.collect()
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
-    val stitchedTile: Raster[Tile] = Raster(tile, coverage.metadata.extent)
-    val writePath: String = "D:/cog/out/" + name + "_" + "" + ".tiff"
+    val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage.metadata.extent)
+    val writePath: String = "D:/cog/out/" + name + ".tiff"
     GeoTiff(stitchedTile, coverage.metadata.crs).write(writePath)
+  }
+
+  def makePNG(coverage: MultibandTileLayerRDD[SpatialKey], name: String): Unit = {
+    val tileArray: Array[(SpatialKey, MultibandTile)] = coverage.collect()
+    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
+    val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage.metadata.extent)
+    val writePath: String = "D:/cog/out/" + name + ".png"
+    stitchedTile.tile.renderPng().write(writePath)
   }
 
   def makeTMS(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), layerName: String): Unit = {
@@ -250,7 +268,7 @@ object load {
         }
       }
       else {
-        writer.write(layerId, rdd, RowMajorKeyIndexMethod)
+        writer.write(layerId, rdd, ZCurveKeyIndexMethod)
       }
     }
   }

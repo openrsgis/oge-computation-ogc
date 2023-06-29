@@ -51,7 +51,10 @@ object CoverageCollection {
     }).reduce((a, b) => {
       a.union(b)
     })
-    val union: Geometry = unionTileExtent.intersection(extent)
+    var union: Geometry = unionTileExtent
+    if (extent != null) {
+      union = unionTileExtent.intersection(extent)
+    }
 
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
@@ -84,7 +87,7 @@ object CoverageCollection {
         val time2: Long = System.currentTimeMillis()
         println("Get Tile Time is " + (time2 - time1))
         tile
-      }).cache())
+      }))
     })
 
     makeCoverageCollectionRDD(rawTileRdd)

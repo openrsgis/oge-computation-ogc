@@ -4,16 +4,16 @@ import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.local._
+import io.minio.MinioClient
 import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{CellType, DoubleConstantNoDataCellType, MultibandTile, Tile, TileLayout, UByteConstantNoDataCellType}
+import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
-import geotrellis.store.index.RowMajorKeyIndexMethod
+import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
-import io.minio.MinioClient
 import javafx.scene.paint.Color
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
@@ -21,10 +21,10 @@ import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactor
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
-import whu.edu.cn.oge.HttpRequest.sendPost
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{coverageTemplate, makeCoverageRDD}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
@@ -87,7 +87,7 @@ object Coverage {
       val time2: Long = System.currentTimeMillis()
       println("Get Tile Time is " + (time2 - time1))
       tile
-    }).cache()
+    })
     makeCoverageRDD(rawTileRdd)
   }
 
@@ -1416,8 +1416,8 @@ object Coverage {
    * @return
    */
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("int8")))
-  }), TileLayerMetadata(CellType.fromName("int8"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(ByteCellType))
+  }), TileLayerMetadata(ByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a unsigned 8-bit integer.
@@ -1426,8 +1426,8 @@ object Coverage {
    * @return
    */
   def toUint8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("uint8")))
-  }), TileLayerMetadata(CellType.fromName("uint8"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(UByteCellType))
+  }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a signed 16-bit integer.
@@ -1436,8 +1436,8 @@ object Coverage {
    * @return
    */
   def toInt16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("int16")))
-  }), TileLayerMetadata(CellType.fromName("int16"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(ShortCellType))
+  }), TileLayerMetadata(ShortCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a unsigned 16-bit integer.
@@ -1446,8 +1446,8 @@ object Coverage {
    * @return
    */
   def toUint16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("uint16")))
-  }), TileLayerMetadata(CellType.fromName("uint16"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(UShortCellType))
+  }), TileLayerMetadata(UShortCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a signed 32-bit integer.
@@ -1457,8 +1457,8 @@ object Coverage {
    */
   def toInt32(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("int32")))
-  }), TileLayerMetadata(CellType.fromName("int32"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(IntCellType))
+  }), TileLayerMetadata(IntCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a 32-bit float.
@@ -1468,8 +1468,8 @@ object Coverage {
    */
   def toFloat(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("float32")))
-  }), TileLayerMetadata(CellType.fromName("float32"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(FloatCellType))
+  }), TileLayerMetadata(FloatCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a 64-bit float.
@@ -1479,8 +1479,8 @@ object Coverage {
    */
   def toDouble(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(CellType.fromName("float64")))
-  }), TileLayerMetadata(CellType.fromName("float64"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(DoubleCellType))
+  }), TileLayerMetadata(DoubleCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
@@ -2384,25 +2384,10 @@ object Coverage {
           }
         }
         else {
-          writer.write(layerId, rdd, RowMajorKeyIndexMethod)
+          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
         }
       }
     }
-
-
-    // 清空list
-    Trigger.optimizedDagMap.clear()
-    Trigger.coverageCollectionMetadata.clear()
-    Trigger.lazyFunc.clear()
-    Trigger.coverageCollectionRddList.clear()
-    Trigger.coverageRddList.clear()
-    // TODO lrx: 以下为未检验
-    Trigger.tableRddList.clear()
-    Trigger.kernelRddList.clear()
-    Trigger.featureRddList.clear()
-    Trigger.cubeRDDList.clear()
-    Trigger.cubeLoad.clear()
-    JsonToArg.dagMap.clear()
 
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
@@ -2431,6 +2416,27 @@ object Coverage {
       jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
     })
     jedis.close()
+
+
+    // 清空list
+    Trigger.optimizedDagMap.clear()
+    Trigger.coverageCollectionMetadata.clear()
+    Trigger.lazyFunc.clear()
+    Trigger.coverageCollectionRddList.clear()
+    Trigger.coverageRddList.clear()
+    Trigger.zIndexStrArray.clear()
+    JsonToArg.dagMap.clear()
+    // TODO lrx: 以下为未检验
+    Trigger.tableRddList.clear()
+    Trigger.kernelRddList.clear()
+    Trigger.featureRddList.clear()
+    Trigger.cubeRDDList.clear()
+    Trigger.cubeLoad.clear()
+
+    if (sc.master.contains("local")) {
+      whu.edu.cn.debug.load.makeTIFF(reprojected, "lsOrigin")
+    }
+
   }
 
   def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Unit = {

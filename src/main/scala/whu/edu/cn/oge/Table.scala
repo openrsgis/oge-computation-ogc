@@ -3,7 +3,7 @@ package whu.edu.cn.oge
 import com.alibaba.fastjson.{JSON, JSONObject}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
-import whu.edu.cn.oge.HttpRequest.sendPost
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import java.io.{BufferedWriter, File, FileWriter}
 import scala.collection.mutable

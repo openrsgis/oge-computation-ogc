@@ -15,6 +15,7 @@ object GlobalConstantUtil {
   final val MINIO_SECRET_KEY: String = "ypfamily608"
   final val MINIO_BUCKET_NAME: String = "oge"
   final val MINIO_HEAD_SIZE: Int = 350000
+  final val MINIO_MAX_CONNECTIONS: Int = 100
   // PostgreSQL 基础配置
   final val POSTGRESQL_URL: String = "jdbc:postgresql://125.220.153.28:31340/oge"
   final val POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
