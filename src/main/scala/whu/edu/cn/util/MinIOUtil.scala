@@ -4,20 +4,11 @@ import io.minio._
 import whu.edu.cn.util.GlobalConstantUtil.{MINIO_ACCESS_KEY, MINIO_ENDPOINT, MINIO_MAX_CONNECTIONS, MINIO_SECRET_KEY}
 
 class MinIOUtil {
-  //  private val minioClient: MinioClient = MinioClient.builder()
-  //    .endpoint(MINIO_ENDPOINT)
-  //    .credentials(MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
-  //    .build()
-  //  minioClient.setTimeout(1000, 1000, 1000)
-  //
-  //  def getMinioClient: MinioClient = {
-  //    minioClient
-  //  }
 
   private val connectionPool: Array[MinioClient] = Array.fill(MINIO_MAX_CONNECTIONS)(createMinioClient())
 
   private def createMinioClient(): MinioClient = {
-    val minioClient: MinioClient = MinioClient.builder()
+    lazy val minioClient: MinioClient = MinioClient.builder()
       .endpoint(MINIO_ENDPOINT)
       .credentials(MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
       .build()
@@ -27,7 +18,7 @@ class MinIOUtil {
 
   def getMinioClient: MinioClient = {
     // 从连接池中获取可用的 MinioClient
-    val client: Option[MinioClient] = connectionPool.synchronized {
+    lazy val client: Option[MinioClient] = connectionPool.synchronized {
       connectionPool.find(_ != null)
     }
 
