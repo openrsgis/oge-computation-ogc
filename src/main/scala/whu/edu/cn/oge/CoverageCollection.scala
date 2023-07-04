@@ -65,8 +65,10 @@ object CoverageCollection {
         .map(t => {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val client: MinioClient = new MinIOUtil().getMinioClient
+            val minIOUtil = new MinIOUtil()
+            val client: MinioClient = minIOUtil.getMinioClient
             val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
+            minIOUtil.releaseMinioClient(client)
             tiles
           }
           val time2: Long = System.currentTimeMillis()

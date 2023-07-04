@@ -62,18 +62,25 @@ object Coverage {
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
-      .map(t => { // 合并所有的元数据（追加了范围）
-        val time1: Long = System.currentTimeMillis()
-        val rawTiles: mutable.ArrayBuffer[RawTile] = {
-          val client: MinioClient = new MinIOUtil().getMinioClient
-          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
-          tiles
-        }
-        val time2: Long = System.currentTimeMillis()
-        println("Get Tiles Meta Time is " + (time2 - time1))
-        // 根据元数据和范围查询后端瓦片
-        if (rawTiles.nonEmpty) rawTiles
-        else mutable.Buffer.empty[RawTile]
+      .mapPartitions(par => {
+        val minIOUtil = new MinIOUtil()
+        val client: MinioClient = minIOUtil.getMinioClient
+        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
+          val time1: Long = System.currentTimeMillis()
+          val rawTiles: mutable.ArrayBuffer[RawTile] = {
+            val client: MinioClient = minIOUtil.getMinioClient
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
+            minIOUtil.releaseMinioClient(client)
+            tiles
+          }
+          val time2: Long = System.currentTimeMillis()
+          println("Get Tiles Meta Time is " + (time2 - time1))
+          // 根据元数据和范围查询后端瓦片
+          if (rawTiles.nonEmpty) rawTiles
+          else mutable.Buffer.empty[RawTile]
+        })
+        minIOUtil.releaseMinioClient(client)
+        result
       }).flatMap(t => t).persist()
 
     val tileNum: Int = tileRDDFlat.count().toInt
@@ -2405,7 +2412,6 @@ object Coverage {
     outJsonObject.put("json", jsonObject)
 
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-
 
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
     val jedis: Jedis = new JedisUtil().getJedis

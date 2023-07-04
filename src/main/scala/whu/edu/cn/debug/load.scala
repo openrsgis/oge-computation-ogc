@@ -41,7 +41,7 @@ object load {
     // LC08_L1TP_124038_20181211_20181226_01_T1
     // LE07_L1TP_125039_20130110_20161126_01_T1
 
-    ndviLandsat7()
+    loadLandsat8()
     val time2: Long = System.currentTimeMillis()
     println("Total Time is " + (time2 - time1))
 
@@ -113,9 +113,8 @@ object load {
     val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", 6)
     val coverage1Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage1, List("B1", "B2", "B3"))
     makeTIFF(coverage1Select, "c1")
-    makeTMS(sc, coverage1Select, "aah")
     val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LC08_L1TP_124039_20180109_20180119_01_T1", 5)
-    val coverage2Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage2, List("B1", "B2"))
+    val coverage2Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage2, List("B1", "B2", "B3"))
     makeTIFF(coverage2Select, "c2")
 
 
