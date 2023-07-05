@@ -2,6 +2,7 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
+import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.local._
 import io.minio.MinioClient
@@ -28,8 +29,9 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks.{break, breakable}
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -1313,91 +1315,183 @@ object Coverage {
 
       (t._1, MultibandTile(Array(rTile, gTile, bTile)))
     })
-    (rgbRdd,coverage._2)
+    (rgbRdd, coverage._2)
   }
 
   /**
-   * Computes the windowed entropy using the specified kernel centered on each input pixel. Entropy is computed as
-   * -sum(p * log2(p)), where p is the normalized probability of occurrence of the values encountered in each window.
+   * Computes the windowed entropy using the specified kernel centered on each input pixel.
+   * Entropy is computed as
+   * -sum(p * log2(p)), where p is the normalized probability
+   * of occurrence of the values encountered in each window.
    *
    * @param coverage The coverage to compute the entropy.
-   * @param radius   The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square.
+   * @param radius   The radius of the square neighborhood to compute the entropy,
+   *                 1 for a 3×3 square.
    * @return
    */
-  //  def entropy(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), radius: Int
-  //             ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val leftNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(0, 1), t._2))
-  //    })
-  //    val rightNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(2, 1), t._2))
-  //    })
-  //    val upNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(1, 0), t._2))
-  //    })
-  //    val downNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(1, 2), t._2))
-  //    })
-  //    val leftUpNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(0, 0), t._2))
-  //    })
-  //    val upRightNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(2, 0), t._2))
-  //    })
-  //    val rightDownNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(2, 2), t._2))
-  //    })
-  //    val downLeftNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(0, 2), t._2))
-  //    })
-  //    val midNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(1, 1), t._2))
-  //    })
-  //    val unionRDD = leftNeighborRDD.union(rightNeighborRDD).union(upNeighborRDD).union(downNeighborRDD).union(leftUpNeighborRDD).union(upRightNeighborRDD).union(rightDownNeighborRDD).union(downLeftNeighborRDD).union(midNeighborRDD)
-  //      .filter(t => {
-  //        t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < coverage._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < coverage._2.layout.layoutRows
-  //      })
-  //    val groupRDD = unionRDD.groupByKey().map(t => {
-  //      val listBuffer = new ListBuffer[(SpatialKey, Tile)]()
-  //      val list = t._2.toList
-  //      for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
-  //        var flag = false
-  //        breakable {
-  //          for (tile <- list) {
-  //            if (key.equals(tile._1)) {
-  //              listBuffer.append(tile)
-  //              flag = true
-  //              break
-  //            }
-  //          }
-  //        }
-  //        if (flag == false) {
-  //          listBuffer.append((key, ByteArrayTile(Array.fill[Byte](256 * 256)(-128), 256, 256, ByteCellType).mutable))
-  //        }
-  //      }
-  //      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(listBuffer)
-  //      (t._1, tile.crop(251, 251, 516, 516).convert(CellType.fromName("int16")))
-  //    })
-  //    val entropyRDD: RDD[(SpaceTimeBandKey, Tile)] = groupRDD.map(t => {
-  //      val tile = FloatArrayTile(Array.fill[Float](256 * 256)(Float.NaN), 256, 256, FloatCellType).mutable
-  //      for (i <- 5 to 260) {
-  //        for (j <- 5 to 260) {
-  //          val focalArea = t._2.crop(i - radius, j - radius, i + radius, j + radius)
-  //
-  //          val hist = focalArea.histogram.binCounts()
-  //
-  //          var entropyValue: Float = 0
-  //          for (u <- hist) {
-  //            val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
-  //            entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
-  //          }
-  //          tile.setDouble(i - 5, j - 5, -entropyValue)
-  //        }
-  //      }
-  //      (t._1, tile)
-  //    })
-  //    (entropyRDD, coverage._2)
-  //  }
+  def entropy(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+              radius: Int)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+
+    val leftNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t =>
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0),
+          t._1.measurementName),
+          (SpatialKey(0, 1), t._2))
+      )
+    val rightNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t =>
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0),
+          t._1.measurementName),
+          (SpatialKey(2, 1), t._2))
+      )
+
+    val upNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t =>
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0),
+          t._1.measurementName),
+          (SpatialKey(1, 0), t._2))
+      )
+
+    val downNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t =>
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0),
+          t._1.measurementName),
+          (SpatialKey(1, 2), t._2))
+      )
+
+    val leftUpNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t => {
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0),
+          t._1.measurementName),
+          (SpatialKey(0, 0), t._2))
+      })
+    val upRightNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t => {
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0),
+          t._1.measurementName),
+          (SpatialKey(2, 0), t._2))
+      })
+    val rightDownNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t => {
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0),
+          t._1.measurementName),
+          (SpatialKey(2, 2), t._2))
+      })
+    val downLeftNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t => {
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0),
+          t._1.measurementName),
+          (SpatialKey(0, 2), t._2))
+      })
+    val midNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      coverage._1.map(t => {
+        (SpaceTimeBandKey(
+          SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0),
+          t._1.measurementName),
+          (SpatialKey(1, 1), t._2))
+      })
+
+    val unionRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
+      leftNeighborRDD.union(rightNeighborRDD)
+        .union(upNeighborRDD).union(downNeighborRDD)
+        .union(leftUpNeighborRDD).union(upRightNeighborRDD)
+        .union(rightDownNeighborRDD).union(downLeftNeighborRDD)
+        .union(midNeighborRDD)
+        .filter(t => {
+          t._1.spaceTimeKey.spatialKey._1 >= 0 &&
+            t._1.spaceTimeKey.spatialKey._2 >= 0 &&
+            t._1.spaceTimeKey.spatialKey._1 < coverage._2.layout.layoutCols &&
+            t._1.spaceTimeKey.spatialKey._2 < coverage._2.layout.layoutRows
+        })
+
+
+    // 修改为对3（多）波段处理
+    val groupRDD: RDD[(SpaceTimeBandKey, MultibandTile)] =
+      unionRDD.groupByKey().map(t => {
+        val listBuffer = new ListBuffer[(SpatialKey, MultibandTile)]()
+        val list: immutable.Seq[(SpatialKey, MultibandTile)] = t._2.toList
+        for (key <- List(
+          SpatialKey(0, 0),
+          SpatialKey(0, 1),
+          SpatialKey(0, 2),
+          SpatialKey(1, 0),
+          SpatialKey(1, 1),
+          SpatialKey(1, 2),
+          SpatialKey(2, 0),
+          SpatialKey(2, 1),
+          SpatialKey(2, 2))) {
+          var flag = false
+
+          // 所有瓦片波段数一致，选取其一
+          var numOfBands: Int = list.head._2.bandCount
+          breakable {
+            for (tile <- list) {
+              if (key.equals(tile._1)) {
+                listBuffer.append(tile)
+                flag = true
+                break
+              }
+            }
+          }
+          if (!flag) {
+            // 将多个波段的瓦片值都设置为全 -128
+            val tempTileArray = new ListBuffer[Tile]();
+            for (i <- 0 to numOfBands) {
+              tempTileArray.append(ByteArrayTile(
+                Array.fill[Byte](256 * 256)(-128),
+                256, 256, ByteCellType).mutable)
+            }
+            listBuffer.append((key,
+              MultibandTile(tempTileArray)))
+          }
+        }
+        val (tile, (_, _), (_, _)) =
+          TileLayoutStitcher.stitch(listBuffer)
+
+        (t._1, tile.crop(
+          251, 251, 516, 516)
+          .convert(CellType.fromName("int16")))
+      })
+
+    val entropyRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
+
+      val numOfBands: Int = t._2.bandCount
+      val tempTileArray = new ListBuffer[MutableArrayTile]
+      tempTileArray.append(FloatArrayTile(
+        Array.fill[Float](256 * 256)(Float.NaN),
+        256, 256, FloatCellType).mutable)
+
+      tempTileArray.foreach(tempTile => {
+        for (i <- 5 to 260; j <- 5 to 260) {
+          val focalArea: Tile =
+            tempTile.crop(i - radius, j - radius,
+              i + radius, j + radius)
+
+          val hist: Seq[(Int, Long)] = focalArea.histogram.binCounts()
+          var entropyValue: Float = 0
+          for (u <- hist) {
+            val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
+            entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
+          }
+          tempTile.setDouble(i - 5, j - 5, -entropyValue)
+        }
+      }) // end foreach
+
+      (t._1, MultibandTile(tempTileArray))
+
+    })
+    (entropyRdd, coverage._2)
+  }
 
 
   //  /**
