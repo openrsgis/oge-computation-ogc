@@ -1512,9 +1512,10 @@ object Coverage {
    * @param coverage The coverage to get the metadata
    * @return
    */
-  //  def metadata(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
-  //    TileLayerMetadata.toString
-  //  }
+    def metadata(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+    : String = {
+      TileLayerMetadata.toString
+    }
 
   /**
    * Casts the input value to a signed 8-bit integer.
