@@ -2,7 +2,9 @@ package whu.edu.cn.util
 
 import geotrellis.layer._
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellType, MultibandTile, Tile, TileLayout}
+import geotrellis.raster.mapalgebra.focal
+import geotrellis.raster.mapalgebra.focal.{Neighborhood, TargetCell}
+import geotrellis.raster.{CellType, GridBounds, MultibandTile, TargetCell, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
@@ -27,9 +29,9 @@ object CoverageUtil {
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
     })
-    //    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
-    //      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
-    //    }
+//    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
+//      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
+//    }
 
 
     val firstTile: RawTile = coverageRawTiles.first()
@@ -40,7 +42,7 @@ object CoverageUtil {
 
     val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
     val ld: LayoutDefinition = LayoutDefinition(extent, tl)
-    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString + "raw")
+    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
     val crs: CRS = firstTile.getCrs
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
@@ -148,18 +150,20 @@ object CoverageUtil {
         var coverage1tileLayerRdd: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage1Rdd
         // 如果flag=1， 代表第一张影像的分辨率较低
         if (flag == 1) {
+          // 对影像进行瓦片大小重切分
+          val srcExtent1: Extent = coverage1._2.layout.extent
+          val tileLayout1: TileLayout = coverage1._2.layout.tileLayout
           val tileRatio1: Int = (math.log(resoRatio) / math.log(2)).toInt
           if (tileRatio1 != 0) {
-            // 对影像进行瓦片大小重切分
             val newTileSize1: Int = 256 / math.pow(2, tileRatio1).toInt
-            val coverage1Retiled: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage1Rdd.regrid(newTileSize1)
-            // 进行裁剪
+            val newTileLayout1: TileLayout = TileLayout(tileLayout1.layoutCols * math.pow(2, tileRatio1).toInt, tileLayout1.layoutRows * math.pow(2, tileRatio1).toInt, newTileSize1, newTileSize1)
+            val newLayout1: LayoutDefinition = LayoutDefinition(srcExtent1, newTileLayout1)
+            val (_, coverage1Retiled) = coverage1Rdd.reproject(coverage1Rdd.metadata.crs, newLayout1)
+
             val cropExtent1: Extent = extent.reproject(crs, coverage1Retiled.metadata.crs)
             coverage1tileLayerRdd = coverage1Retiled.crop(cropExtent1)
           }
         }
-
-
 
         val (_, reprojectedRdd1): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
           coverage1tileLayerRdd.reproject(crs, ld)
@@ -192,12 +196,16 @@ object CoverageUtil {
         var coverage2tileLayerRdd: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage2Rdd
         // 如果flag=2， 代表第二张影像的分辨率较低
         if (flag == 2) {
+          // 对影像进行瓦片大小重切分
+          val srcExtent2: Extent = coverage2._2.layout.extent
+          val tileLayout2: TileLayout = coverage2._2.layout.tileLayout
           val tileRatio2: Int = (math.log(resoRatio) / math.log(2)).toInt
           if (tileRatio2 != 0) {
-            // 对影像进行瓦片大小重切分
-            val newTileSize2: Int = 256 / math.pow(2, tileRatio2).toInt
-            val coverage2Retiled: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = coverage2Rdd.regrid(newTileSize2)
-            // 进行裁剪
+            val newTileSize2: Int = math.max(256 / math.pow(2, tileRatio2).toInt, 1)
+            val newTileLayout2: TileLayout = TileLayout(tileLayout2.layoutCols * math.pow(2, tileRatio2).toInt, tileLayout2.layoutRows * math.pow(2, tileRatio2).toInt, newTileSize2, newTileSize2)
+            val newLayout2: LayoutDefinition = LayoutDefinition(srcExtent2, newTileLayout2)
+            val (_, coverage2Retiled) = coverage2Rdd.reproject(coverage2Rdd.metadata.crs, newLayout2)
+
             val cropExtent2: Extent = extent.reproject(crs, coverage2Retiled.metadata.crs)
             coverage2tileLayerRdd = coverage2Retiled.crop(cropExtent2)
           }
@@ -301,4 +309,28 @@ object CoverageUtil {
     (coverage._1.map(t => (t._1, funcMulti(t._2))), TileLayerMetadata(cellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
   }
 
+  def focalMethods(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                   focalFunc: (Tile,Neighborhood,Option[GridBounds[Int]],TargetCell) => Tile, radius: Int):(RDD[
+    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
+    kernelType match {
+      case "square" => {
+        val neighborhood = focal.Square(radius)
+        val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = (coverage._1.map(t => {
+          (t._1, MultibandTile(t._2.bands.map(b => {
+            focalFunc(b, neighborhood, None, focal.TargetCell.All)
+          })))
+        }))
+        (coverageRdd, coverage._2)
+      }
+      case "circle" => {
+        val neighborhood = focal.Circle(radius)
+        val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = (coverage._1.map(t => {
+          (t._1, MultibandTile(t._2.bands.map(b => {
+            focal.Max(b, neighborhood, None, focal.TargetCell.All)
+          })))
+        }))
+        (coverageRdd, coverage._2)
+      }
+    }
+  }
 }

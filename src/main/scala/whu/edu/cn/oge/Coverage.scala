@@ -4,16 +4,16 @@ import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.local._
-import io.minio.MinioClient
 import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{reproject => _, _}
+import geotrellis.raster.{CellType, DoubleConstantNoDataCellType, MultibandTile, Tile, TileLayout, UByteConstantNoDataCellType}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
-import geotrellis.store.index.ZCurveKeyIndexMethod
+import geotrellis.store.index.RowMajorKeyIndexMethod
 import geotrellis.vector.Extent
+import io.minio.MinioClient
 import javafx.scene.paint.Color
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
@@ -23,10 +23,12 @@ import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, Visualiza
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
-import whu.edu.cn.util.CoverageUtil.{coverageTemplate, makeCoverageRDD}
-import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.CoverageUtil.{coverageTemplate, focalMethods, makeCoverageRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
+import geotrellis.raster.mapalgebra.focal
+import geotrellis.raster.mapalgebra.focal.TargetCell
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import scala.collection.mutable
 
@@ -62,25 +64,18 @@ object Coverage {
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
-      .mapPartitions(par => {
-        val minIOUtil = new MinIOUtil()
-        val client: MinioClient = minIOUtil.getMinioClient
-        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
-          val time1: Long = System.currentTimeMillis()
-          val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val client: MinioClient = minIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
-            minIOUtil.releaseMinioClient(client)
-            tiles
-          }
-          val time2: Long = System.currentTimeMillis()
-          println("Get Tiles Meta Time is " + (time2 - time1))
-          // 根据元数据和范围查询后端瓦片
-          if (rawTiles.nonEmpty) rawTiles
-          else mutable.Buffer.empty[RawTile]
-        })
-        minIOUtil.releaseMinioClient(client)
-        result
+      .map(t => { // 合并所有的元数据（追加了范围）
+        val time1: Long = System.currentTimeMillis()
+        val rawTiles: mutable.ArrayBuffer[RawTile] = {
+          val client: MinioClient = new MinIOUtil().getMinioClient
+          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
+          tiles
+        }
+        val time2: Long = System.currentTimeMillis()
+        println("Get Tiles Meta Time is " + (time2 - time1))
+        // 根据元数据和范围查询后端瓦片
+        if (rawTiles.nonEmpty) rawTiles
+        else mutable.Buffer.empty[RawTile]
       }).flatMap(t => t).persist()
 
     val tileNum: Int = tileRDDFlat.count().toInt
@@ -94,7 +89,7 @@ object Coverage {
       val time2: Long = System.currentTimeMillis()
       println("Get Tile Time is " + (time2 - time1))
       tile
-    })
+    }).cache()
     makeCoverageRDD(rawTileRdd)
   }
 
@@ -493,35 +488,39 @@ object Coverage {
    * Returns an coverage containing all bands copied from the first input and selected bands from the second input,
    * optionally overwriting bands in the first coverage with the same name.
    *
-   * @param coverage1 first coverage
-   * @param coverage2 second coverage
-   * @param names     the name of selected bands in coverage2
-   * @param overwrite if true, overwrite bands in the first coverage with the same name
+   * @param dstCoverage first coverage
+   * @param srcCoverage second coverage
+   * @param names       the name of selected bands in coverage2
+   * @param overwrite   if true, overwrite bands in the first coverage with the same name. Otherwise the bands in the first coverage will be kept.
    * @return
    */
-  //  def addBands(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //               coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //               names: List[String], overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val coverage1BandNames = bandNames(coverage1)
-  //    val coverage2BandNames = bandNames(coverage2)
-  //    val intersectBandNames = coverage1BandNames.intersect(coverage2BandNames)
-  //    //select bands from coverage2
-  //    val coverage2SelectBand: RDD[(SpaceTimeBandKey, Tile)] = coverage2._1.filter(t => {
-  //      names.contains(t._1._measurementName)
-  //    })
-  //    if (!overwrite) {
-  //      //coverage2不重写coverage1中相同的波段，把coverage2中与coverage1相交的波段过滤掉
-  //      (coverage2SelectBand.filter(t => {
-  //        !intersectBandNames.contains(t._1._measurementName)
-  //      }).union(coverage1._1), coverage1._2)
-  //    }
-  //    else {
-  //      //coverage2重写coverage1中相同的波段，把coverage1中与coverage2相交的波段过滤掉
-  //      (coverage1._1.filter(t => {
-  //        !intersectBandNames.contains(t._1._measurementName)
-  //      }).union(coverage2SelectBand), coverage1._2)
-  //    }
-  //  }
+  //这里与GEE逻辑存在出入，GEE会在overwrite==false时将重名的band加上后缀，而不是直接忽略
+  def addBands(dstCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+               srcCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+               names: List[String] = List(""), overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)],
+    TileLayerMetadata[SpaceTimeKey]) = {
+    val dstCoverageBandNames = bandNames(dstCoverage)
+    val srcCoverageBandNames = bandNames(srcCoverage)
+    val intersectBandNames = dstCoverageBandNames.intersect(srcCoverageBandNames)
+    //select bands from coverage2
+    val srcCoverageSelectedBand: RDD[(SpaceTimeBandKey, MultibandTile)] = srcCoverage._1.filter(t => {
+      names.contains(t._1._measurementName)
+    })
+    if (!overwrite) {
+      //dstCoverage不重写srcCoverage中相同的波段，把dstCoverage中的波段加入到srcCoverage中
+      val dstCoverageSelectedBand: RDD[(SpaceTimeBandKey, MultibandTile)] = dstCoverage._1.filter(t => {
+        !intersectBandNames.contains(t._1._measurementName)
+      })
+      val dstCoverageNewBand: RDD[(SpaceTimeBandKey, MultibandTile)] = dstCoverageSelectedBand.union(srcCoverageSelectedBand)
+      (dstCoverageNewBand, dstCoverage._2)
+    } else {
+      //dstCoverage重写srcCoverage中相同的波段，把重名波段进行替换
+      val dstCoverageNewBand: RDD[(SpaceTimeBandKey, MultibandTile)] = dstCoverage._1.filter(t => {
+        !intersectBandNames.contains(t._1._measurementName)
+      }).union(srcCoverageSelectedBand)
+      (dstCoverageNewBand, dstCoverage._2)
+    }
+  }
 
   /**
    * get all the bands in rdd
@@ -578,37 +577,49 @@ object Coverage {
    * Returns a map of the coverage's band types.
    *
    * @param coverage The coverage from which the left operand bands are taken.
-   * @return
+   * @return Map[String, String]  key: band name, value: band type
    */
-  //  def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
-  //    val bandTypesArray = coverage._1.map(t => (t._1.measurementName, t._2.cellType)).distinct().collect()
-  //    var bandTypesMap = Map[String, String]()
-  //    for (band <- bandTypesArray) {
-  //      bandTypesMap = bandTypesMap + (band._1 -> band._2.toString())
-  //    }
-  //    bandTypesMap
-  //  }
+  def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
+    var bandTypesMap: Map[String, String] = Map()
+    var bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
+    coverage._1.first()._2.bands.foreach(tile => {
+      bandTypesMap = bandTypesMap + (bandNames.head -> tile.cellType.toString())
+      bandNames = bandNames.tail
+    })
+    bandTypesMap
+  }
 
 
   /**
-   * Rename the bands of an coverage.Returns the renamed coverage.
+   * Rename the bands of a coverage.Returns the renamed coverage.
    *
    * @param coverage The coverage to which to apply the operations.
-   * @param name     The new names for the bands. Must match the number of bands in the coverage.
+   * @param name     :List[String]     The new names for the bands. Must match the number of bands in the coverage.
    * @return
    */
-  //  def rename(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //             name: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val nameList = name.replace("[", "").replace("]", "").split(",")
-  //    val bandnames = bandNames(coverage)
-  //    if (bandnames.length == nameList.length) {
-  //      val namesMap = (bandnames zip nameList).toMap
-  //      (coverage._1.map(t => {
-  //        (SpaceTimeBandKey(t._1.spaceTimeKey, namesMap(t._1.measurementName)), t._2)
-  //      }), coverage._2)
-  //    }
-  //    else coverage
-  //  }
+  def rename(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+             name: List[String]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
+
+
+    if (bandNames.length != name.length) {
+      val errorMessage = s"Error: The number of bands in the coverage is ${bandNames.length}, but the number of names is ${name.length}."
+      throw new IllegalArgumentException(errorMessage)
+    }
+
+    val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+      val tileBands: Vector[Tile] = t._2.bands
+      val newBandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      for (index <- name.indices) {
+        newBandNames += name(index)
+        newTileBands :+= tileBands(index)
+      }
+      (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(newTileBands))
+    })
+    (newCoverageRdd, coverage._2)
+
+  }
 
   /**
    * Raises the first value to the power of the second for each matched pair of bands in coverage1 and coverage2.
@@ -654,28 +665,10 @@ object Coverage {
    * @param radius     The radius of the kernel to use.
    * @return
    */
-  //  def focalMean(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-  //                radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    kernelType match {
-  //      case "square" => {
-  //        val neighborhood = focal.Square(radius)
-  //        print(neighborhood.extent)
-  //        val coverageFocalMeaned = coverage._1.map(t => {
-  //          val cellType = t._2.cellType
-  //          (t._1, focal.Mean(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
-  //        })
-  //        (coverageFocalMeaned, coverage._2)
-  //      }
-  //      case "circle" => {
-  //        val neighborhood = focal.Circle(radius)
-  //        val coverageFocalMeaned = coverage._1.map(t => {
-  //          val cellType = t._2.cellType
-  //          (t._1, focal.Mean(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
-  //        })
-  //        (coverageFocalMeaned, coverage._2)
-  //      }
-  //    }
-  //  }
+  def focalMean(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    focalMethods(coverage, kernelType, focal.Mean.apply, radius)
+  }
 
   /**
    * Applies a morphological median filter to each band of an coverage using a named or custom kernel.
@@ -685,83 +678,39 @@ object Coverage {
    * @param radius     The radius of the kernel to use.
    * @return
    */
-  //  def focalMedian(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-  //                  radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    kernelType match {
-  //      case "square" => {
-  //        val neighborhood = focal.Square(radius)
-  //        val coverageFocalMedianed = coverage._1.map(t => {
-  //          val cellType = t._2.cellType
-  //          (t._1, focal.Median(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
-  //        })
-  //        (coverageFocalMedianed, coverage._2)
-  //      }
-  //      case "circle" => {
-  //        val neighborhood = focal.Circle(radius)
-  //        val coverageFocalMedianed = coverage._1.map(t => {
-  //          val cellType = t._2.cellType
-  //          (t._1, focal.Median(t._2.convert(CellType.fromName("float32")), neighborhood, None, TargetCell.All).convert(cellType))
-  //        })
-  //        (coverageFocalMedianed, coverage._2)
-  //      }
-  //    }
-  //  }
+  def focalMedian(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  kernelType: String,
+                  radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    focalMethods(coverage, kernelType, focal.Median.apply, radius)
+  }
 
   /**
    * Applies a morphological max filter to each band of an coverage using a named or custom kernel.
    *
    * @param coverage   The coverage to which to apply the operations.
-   * @param kernelType The type of kernel to use.
+   * @param kernelType The type of kernel to use. Options include: 'circle', 'square'. It only supports square and
+   *                   circle kernels by now.
    * @param radius     The radius of the kernel to use.
    * @return
    */
-  //  def focalMax(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-  //               radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    kernelType match {
-  //      case "square" => {
-  //        val neighborhood = focal.Square(radius)
-  //        val coverageFocalMaxed = coverage._1.map(t => {
-  //          (t._1, focal.Max(t._2, neighborhood, None, TargetCell.All))
-  //        })
-  //        (coverageFocalMaxed, coverage._2)
-  //      }
-  //      case "circle" => {
-  //        val neighborhood = focal.Circle(radius)
-  //        val coverageFocalMaxed = coverage._1.map(t => {
-  //          (t._1, focal.Max(t._2, neighborhood, None, TargetCell.All))
-  //        })
-  //        (coverageFocalMaxed, coverage._2)
-  //      }
-  //    }
-  //  }
+  def focalMax(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+               radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    focalMethods(coverage, kernelType, focal.Max.apply, radius)
+  }
 
   /**
    * Applies a morphological min filter to each band of an coverage using a named or custom kernel.
    *
    * @param coverage   The coverage to which to apply the operations.
-   * @param kernelType The type of kernel to use.
+   * @param kernelType The type of kernel to use. Options include: 'circle', 'square'. It only supports square and
+   *                   circle kernels by now.
    * @param radius     The radius of the kernel to use.
    * @return
    */
-  //  def focalMin(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-  //               radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    kernelType match {
-  //      case "square" => {
-  //        val neighborhood = focal.Square(radius)
-  //        val coverageFocalMined = coverage._1.map(t => {
-  //          (t._1, focal.Min(t._2, neighborhood, None, TargetCell.All))
-  //        })
-  //        (coverageFocalMined, coverage._2)
-  //      }
-  //      case "circle" => {
-  //        val neighborhood = focal.Circle(radius)
-  //        val coverageFocalMined = coverage._1.map(t => {
-  //          (t._1, focal.Min(t._2, neighborhood, None, TargetCell.All))
-  //        })
-  //        (coverageFocalMined, coverage._2)
-  //      }
-  //    }
-  //  }
+  def focalMin(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+               radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    focalMethods(coverage, kernelType, focal.Min.apply, radius)
+  }
 
   /**
    * Applies a morphological mode filter to each band of an coverage using a named or custom kernel.
@@ -771,33 +720,29 @@ object Coverage {
    * @param radius     The radius of the kernel to use.
    * @return
    */
-  //  def focalMode(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-  //                radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    kernelType match {
-  //      case "square" => {
-  //        val neighborhood = focal.Square(radius)
-  //        val coverageFocalMeaned = coverage._1.map(t => {
-  //          (t._1, focal.Mode(t._2, neighborhood, None, TargetCell.All))
-  //        })
-  //        (coverageFocalMeaned, coverage._2)
-  //      }
-  //      case "circle" => {
-  //        val neighborhood = focal.Circle(radius)
-  //        val coverageFocalMeaned = coverage._1.map(t => {
-  //          (t._1, focal.Mode(t._2, neighborhood, None, TargetCell.All))
-  //        })
-  //        (coverageFocalMeaned, coverage._2)
-  //      }
-  //    }
-  //  }
-
+  def focalMode(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    focalMethods(coverage, kernelType, focal.Mode.apply, radius)
+  }
+  //TODO: 添加padding的方法
   /**
-   * Convolves each band of an coverage with the given kernel.
+   * Convolves each band of an coverage with the given kernel. Coverages will be padded with Zeroes.
    *
    * @param coverage The coverage to convolve.
    * @param kernel   The kernel to convolve with.
    * @return
    */
+  def convolve(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernel: focal
+  .Kernel): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val resultRdd : RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+      (t._1, t._2.mapBands((i, tile) => {
+        focal.Convolve(tile, kernel, bounds = None, target = TargetCell.All)
+      }
+      ))
+    }
+    )
+    (resultRdd,coverage._2)
+  }
   //  def convolve(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
   //               kernel: focal.Kernel): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
   //    val leftNeighborRDD = coverage._1.map(t => {
@@ -1423,8 +1368,8 @@ object Coverage {
    * @return
    */
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(ByteCellType))
-  }), TileLayerMetadata(ByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("int8")))
+  }), TileLayerMetadata(CellType.fromName("int8"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a unsigned 8-bit integer.
@@ -1433,8 +1378,8 @@ object Coverage {
    * @return
    */
   def toUint8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(UByteCellType))
-  }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("uint8")))
+  }), TileLayerMetadata(CellType.fromName("uint8"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a signed 16-bit integer.
@@ -1443,8 +1388,8 @@ object Coverage {
    * @return
    */
   def toInt16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(ShortCellType))
-  }), TileLayerMetadata(ShortCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("int16")))
+  }), TileLayerMetadata(CellType.fromName("int16"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a unsigned 16-bit integer.
@@ -1453,8 +1398,8 @@ object Coverage {
    * @return
    */
   def toUint16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(UShortCellType))
-  }), TileLayerMetadata(UShortCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("uint16")))
+  }), TileLayerMetadata(CellType.fromName("uint16"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a signed 32-bit integer.
@@ -1464,8 +1409,8 @@ object Coverage {
    */
   def toInt32(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(IntCellType))
-  }), TileLayerMetadata(IntCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("int32")))
+  }), TileLayerMetadata(CellType.fromName("int32"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a 32-bit float.
@@ -1475,8 +1420,8 @@ object Coverage {
    */
   def toFloat(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(FloatCellType))
-  }), TileLayerMetadata(FloatCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("float32")))
+  }), TileLayerMetadata(CellType.fromName("float32"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
   /**
    * Casts the input value to a 64-bit float.
@@ -1486,8 +1431,8 @@ object Coverage {
    */
   def toDouble(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => {
-    (t._1, t._2.convert(DoubleCellType))
-  }), TileLayerMetadata(DoubleCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (t._1, t._2.convert(CellType.fromName("float64")))
+  }), TileLayerMetadata(CellType.fromName("float64"), coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
@@ -2391,10 +2336,25 @@ object Coverage {
           }
         }
         else {
-          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+          writer.write(layerId, rdd, RowMajorKeyIndexMethod)
         }
       }
     }
+
+
+    // 清空list
+    Trigger.optimizedDagMap.clear()
+    Trigger.coverageCollectionMetadata.clear()
+    Trigger.lazyFunc.clear()
+    Trigger.coverageCollectionRddList.clear()
+    Trigger.coverageRddList.clear()
+    // TODO lrx: 以下为未检验
+    Trigger.tableRddList.clear()
+    Trigger.kernelRddList.clear()
+    Trigger.featureRddList.clear()
+    Trigger.cubeRDDList.clear()
+    Trigger.cubeLoad.clear()
+    JsonToArg.dagMap.clear()
 
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
