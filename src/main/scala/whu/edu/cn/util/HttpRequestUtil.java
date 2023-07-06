@@ -60,7 +60,7 @@ public class HttpRequestUtil {
      * @return URL 代表远程资源的响应
      */
     public static String sendPost(String url, String param) {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         try {
             URL realUrl = new URL(url);
             //打开和URL之间的连接
@@ -84,13 +84,13 @@ public class HttpRequestUtil {
             BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             String line;
             while ((line = in.readLine()) != null) {
-                result += "\n" + line;
+                result.append("\n").append(line);
             }
         } catch (Exception e) {
             System.out.println("发送POST请求出现异常" + e);
             e.printStackTrace();
         }
-        return result;
+        return result.toString();
     }
     public static void writeTIFF(String spec, String writePath) throws IOException {
         //中文会格式错误

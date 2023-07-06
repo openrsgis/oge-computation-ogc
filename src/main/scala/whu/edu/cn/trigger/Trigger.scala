@@ -12,7 +12,8 @@ import whu.edu.cn.entity.OGEClassType.OGEClassType
 import whu.edu.cn.entity.{CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
-import whu.edu.cn.util.{JedisUtil, ZCurveUtil}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, ZCurveUtil}
 
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
@@ -70,493 +71,523 @@ object Trigger {
   }
 
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
-    funcName match {
 
-      // Service
-      case "Service.getCoverageCollection" =>
-        lazyFunc += (UUID -> (funcName, args))
-        coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
-      case "Service.getCoverage" =>
-        coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
-      case "Service.getTable" =>
-        tableRddList += (UUID -> isOptionalArg(args, "productID"))
-      case "Service.getFeatureCollection" =>
-        featureRddList += (UUID -> isOptionalArg(args, "productID"))
 
-      // Filter // TODO lrx: 待完善Filter类的函数
-      case "Filter.equals" =>
-        lazyFunc += (UUID -> (funcName, args))
-      case "Filter.and" =>
-        lazyFunc += (UUID -> (funcName, args))
+    try {
 
-      // Collection
-      case "Collection.map" =>
-        if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
-          isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
-          coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
-        }
+      funcName match {
 
-      // CoverageCollection
-      case "CoverageCollection.filter" =>
-        coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
-      case "CoverageCollection.mosaic" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.mean" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.mean(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.min" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.min(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.max" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.max(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.sum" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.sum(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.or" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.or(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.and" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.and(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.median" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.median(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.mode" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.mode(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.addStyles" =>
-        if (isBatch == 0) {
+        // Service
+        case "Service.getCoverageCollection" =>
+          lazyFunc += (UUID -> (funcName, args))
+          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
+        case "Service.getCoverage" =>
+          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
+        case "Service.getTable" =>
+          tableRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeatureCollection" =>
+          featureRddList += (UUID -> isOptionalArg(args, "productID"))
+
+        // Filter // TODO lrx: 待完善Filter类的函数
+        case "Filter.equals" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.and" =>
+          lazyFunc += (UUID -> (funcName, args))
+
+        // Collection
+        case "Collection.map" =>
+          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
+            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
+            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
+          }
+
+        // CoverageCollection
+        case "CoverageCollection.filter" =>
+          coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
+        case "CoverageCollection.mosaic" =>
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-          val visParam: VisualizationParam = new VisualizationParam
-          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")), visParam = visParam)
-        }
-        else {
-          CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
-        }
+          coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.mean" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.mean(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.min" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.min(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.max" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.max(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.sum" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.sum(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.or" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.or(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.and" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.and(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.median" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.median(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.mode" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.mode(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.addStyles" =>
+          if (isBatch == 0) {
+            isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+            val visParam: VisualizationParam = new VisualizationParam
+            visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+            CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")), visParam = visParam)
+          }
+          else {
+            CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
+          }
 
-      // TODO lrx: 这里要改造
-      // Table
-      case "Table.getDownloadUrl" =>
-        Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = "fileName")
-      case "Table.addStyles" =>
-        Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
+        // TODO lrx: 这里要改造
+        // Table
+        case "Table.getDownloadUrl" =>
+          Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = "fileName")
+        case "Table.addStyles" =>
+          Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
-      // Coverage
-      case "Coverage.subtract" =>
-        coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.add" =>
-        coverageRddList += (UUID -> Coverage.add(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.divide" =>
-        coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.multiply" =>
-        coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.multiply" =>
-        coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.normalizedDifference" =>
-        coverageRddList += (UUID -> Coverage.normalizedDifference(coverageRddList(args("coverage")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
-      case "Coverage.binarization" =>
-        coverageRddList += (UUID -> Coverage.binarization(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toInt))
-      case "Coverage.and" =>
-        coverageRddList += (UUID -> Coverage.and(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.or" =>
-        coverageRddList += (UUID -> Coverage.or(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.not" =>
-        coverageRddList += (UUID -> Coverage.not(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.ceil" =>
-        coverageRddList += (UUID -> Coverage.ceil(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.floor" =>
-        coverageRddList += (UUID -> Coverage.floor(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.sin" =>
-        coverageRddList += (UUID -> Coverage.sin(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.cos" =>
-        coverageRddList += (UUID -> Coverage.cos(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.sinh" =>
-        coverageRddList += (UUID -> Coverage.sinh(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.cosh" =>
-        coverageRddList += (UUID -> Coverage.cosh(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.asin" =>
-        coverageRddList += (UUID -> Coverage.asin(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.acos" =>
-        coverageRddList += (UUID -> Coverage.acos(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.atan" =>
-        coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.atan2" =>
-        coverageRddList += (UUID -> Coverage.atan2(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.eq" =>
-        coverageRddList += (UUID -> Coverage.eq(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.gt" =>
-        coverageRddList += (UUID -> Coverage.gt(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.gte" =>
-        coverageRddList += (UUID -> Coverage.gte(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.selectBands" =>
-        coverageRddList += (UUID -> Coverage.selectBands(coverage = coverageRddList(args("coverage")), bands = args("bands").substring(1, args("bands").length - 1).split(",").toList))
-      //      case "Coverage.addBands" =>
-      //        val names: List[String] = List("B3")
-      //        coverageRddList += (UUID -> Coverage.addBands(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), names = names))
-      case "Coverage.bandNames" =>
-        val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
-        println("******************test bandNames***********************")
-        println(bandNames)
-        println(bandNames.length)
+        // Coverage
+        case "Coverage.subtract" =>
+          coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.add" =>
+          coverageRddList += (UUID -> Coverage.add(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.divide" =>
+          coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.multiply" =>
+          coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.multiply" =>
+          coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.normalizedDifference" =>
+          coverageRddList += (UUID -> Coverage.normalizedDifference(coverageRddList(args("coverage")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
+        case "Coverage.binarization" =>
+          coverageRddList += (UUID -> Coverage.binarization(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toInt))
+        case "Coverage.and" =>
+          coverageRddList += (UUID -> Coverage.and(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.or" =>
+          coverageRddList += (UUID -> Coverage.or(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.not" =>
+          coverageRddList += (UUID -> Coverage.not(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.ceil" =>
+          coverageRddList += (UUID -> Coverage.ceil(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.floor" =>
+          coverageRddList += (UUID -> Coverage.floor(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.sin" =>
+          coverageRddList += (UUID -> Coverage.sin(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.cos" =>
+          coverageRddList += (UUID -> Coverage.cos(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.sinh" =>
+          coverageRddList += (UUID -> Coverage.sinh(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.cosh" =>
+          coverageRddList += (UUID -> Coverage.cosh(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.asin" =>
+          coverageRddList += (UUID -> Coverage.asin(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.acos" =>
+          coverageRddList += (UUID -> Coverage.acos(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.atan" =>
+          coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.atan2" =>
+          coverageRddList += (UUID -> Coverage.atan2(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.eq" =>
+          coverageRddList += (UUID -> Coverage.eq(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.gt" =>
+          coverageRddList += (UUID -> Coverage.gt(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.gte" =>
+          coverageRddList += (UUID -> Coverage.gte(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.selectBands" =>
+          coverageRddList += (UUID -> Coverage.selectBands(coverage = coverageRddList(args("coverage")), bands = args("bands").substring(1, args("bands").length - 1).split(",").toList))
+        //      case "Coverage.addBands" =>
+        //        val names: List[String] = List("B3")
+        //        coverageRddList += (UUID -> Coverage.addBands(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), names = names))
+        case "Coverage.bandNames" =>
+          val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
+          println("******************test bandNames***********************")
+          println(bandNames)
+          println(bandNames.length)
 
-      case "Coverage.abs" =>
-        coverageRddList += (UUID -> Coverage.abs(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.neq" =>
-        coverageRddList += (UUID -> Coverage.neq(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.signum" =>
-        coverageRddList += (UUID -> Coverage.signum(coverage = coverageRddList(args("coverage"))))
-      //      case "Coverage.bandTypes" =>
-      //        val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
-      //        println(bandTypes)
-      //        println(bandTypes.size)
-      //      case "Coverage.rename" =>
-      //        coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name")))
-      case "Coverage.pow" =>
-        coverageRddList += (UUID -> Coverage.pow(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.mini" =>
-        coverageRddList += (UUID -> Coverage.mini(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      case "Coverage.maxi" =>
-        coverageRddList += (UUID -> Coverage.maxi(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      //      case "Coverage.focalMean" =>
-      //        coverageRddList += (UUID -> Coverage.focalMean(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMedian" =>
-      //        coverageRddList += (UUID -> Coverage.focalMedian(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMin" =>
-      //        coverageRddList += (UUID -> Coverage.focalMin(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMax" =>
-      //        coverageRddList += (UUID -> Coverage.focalMax(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMode" =>
-      //        coverageRddList += (UUID -> Coverage.focalMode(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.convolve" =>
-      //        coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
-      case "Coverage.projection" =>
-        val projection: String = Coverage.projection(coverage = coverageRddList(args("coverage")))
-        println(projection)
-      //      case "Coverage.histogram" =>
-      //        val hist = Coverage.histogram(coverage = coverageRddList(args("coverage")))
-      //        println(hist)
-      //      case "Coverage.reproject" =>
-      //        coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
-      //      case "Coverage.resample" =>
-      //        coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
-      //      case "Coverage.gradient" =>
-      //        coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
-      //      case "Coverage.clip" =>
-      //        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
-      //      case "Coverage.clamp" =>
-      //        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
-      //      case "Coverage.rgbToHsv" =>
-      //        coverageRddList += (UUID -> Coverage.rgbToHsv(coverageRed = coverageRddList(args("coverageRed")), coverageGreen = coverageRddList(args("coverageGreen")), coverageBlue = coverageRddList(args("coverageBlue"))))
-      //      case "Coverage.hsvToRgb" =>
-      //        coverageRddList += (UUID -> Coverage.hsvToRgb(coverageHue = coverageRddList(args("coverageHue")), coverageSaturation = coverageRddList(args("coverageSaturation")), coverageValue = coverageRddList(args("coverageValue"))))
-      //      case "Coverage.entropy" =>
-      //        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
-      //      case "Coverage.NDVI" =>
-      //        coverageRddList += (UUID -> Coverage.NDVI(NIR = coverageRddList(args("NIR")), Red = coverageRddList(args("Red"))))
-      //      case "Coverage.cbrt" =>
-      //        coverageRddList += (UUID -> Coverage.cbrt(coverage = coverageRddList(args("coverage"))))
-      //      case "Coverage.metadata" =>
-      //        val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
-      //        println(metadataString)
-      case "Coverage.toInt8" =>
-        coverageRddList += (UUID -> Coverage.toInt8(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.toUint8" =>
-        coverageRddList += (UUID -> Coverage.toUint8(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.toInt16" =>
-        coverageRddList += (UUID -> Coverage.toInt16(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.toUint16" =>
-        coverageRddList += (UUID -> Coverage.toUint16(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.toInt32" =>
-        coverageRddList += (UUID -> Coverage.toInt32(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.toFloat" =>
-        coverageRddList += (UUID -> Coverage.toFloat(coverage = coverageRddList(args("coverage"))))
-      case "Coverage.toDouble" =>
-        coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.abs" =>
+          coverageRddList += (UUID -> Coverage.abs(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.neq" =>
+          coverageRddList += (UUID -> Coverage.neq(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.signum" =>
+          coverageRddList += (UUID -> Coverage.signum(coverage = coverageRddList(args("coverage"))))
+        //      case "Coverage.bandTypes" =>
+        //        val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
+        //        println(bandTypes)
+        //        println(bandTypes.size)
+        //      case "Coverage.rename" =>
+        //        coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name")))
+        case "Coverage.pow" =>
+          coverageRddList += (UUID -> Coverage.pow(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.mini" =>
+          coverageRddList += (UUID -> Coverage.mini(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.maxi" =>
+          coverageRddList += (UUID -> Coverage.maxi(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        //      case "Coverage.focalMean" =>
+        //        coverageRddList += (UUID -> Coverage.focalMean(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+        //      case "Coverage.focalMedian" =>
+        //        coverageRddList += (UUID -> Coverage.focalMedian(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+        //      case "Coverage.focalMin" =>
+        //        coverageRddList += (UUID -> Coverage.focalMin(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+        //      case "Coverage.focalMax" =>
+        //        coverageRddList += (UUID -> Coverage.focalMax(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+        //      case "Coverage.focalMode" =>
+        //        coverageRddList += (UUID -> Coverage.focalMode(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+        //      case "Coverage.convolve" =>
+        //        coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
+        case "Coverage.projection" =>
+          val projection: String = Coverage.projection(coverage = coverageRddList(args("coverage")))
+          println(projection)
+        //      case "Coverage.histogram" =>
+        //        val hist = Coverage.histogram(coverage = coverageRddList(args("coverage")))
+        //        println(hist)
+        //      case "Coverage.reproject" =>
+        //        coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
+        //      case "Coverage.resample" =>
+        //        coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
+        //      case "Coverage.gradient" =>
+        //        coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
+        //      case "Coverage.clip" =>
+        //        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
+        //      case "Coverage.clamp" =>
+        //        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
+        //      case "Coverage.rgbToHsv" =>
+        //        coverageRddList += (UUID -> Coverage.rgbToHsv(coverageRed = coverageRddList(args("coverageRed")), coverageGreen = coverageRddList(args("coverageGreen")), coverageBlue = coverageRddList(args("coverageBlue"))))
+        //      case "Coverage.hsvToRgb" =>
+        //        coverageRddList += (UUID -> Coverage.hsvToRgb(coverageHue = coverageRddList(args("coverageHue")), coverageSaturation = coverageRddList(args("coverageSaturation")), coverageValue = coverageRddList(args("coverageValue"))))
+        //      case "Coverage.entropy" =>
+        //        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+        //      case "Coverage.NDVI" =>
+        //        coverageRddList += (UUID -> Coverage.NDVI(NIR = coverageRddList(args("NIR")), Red = coverageRddList(args("Red"))))
+        //      case "Coverage.cbrt" =>
+        //        coverageRddList += (UUID -> Coverage.cbrt(coverage = coverageRddList(args("coverage"))))
+        //      case "Coverage.metadata" =>
+        //        val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
+        //        println(metadataString)
+        case "Coverage.toInt8" =>
+          coverageRddList += (UUID -> Coverage.toInt8(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.toUint8" =>
+          coverageRddList += (UUID -> Coverage.toUint8(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.toInt16" =>
+          coverageRddList += (UUID -> Coverage.toInt16(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.toUint16" =>
+          coverageRddList += (UUID -> Coverage.toUint16(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.toInt32" =>
+          coverageRddList += (UUID -> Coverage.toInt32(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.toFloat" =>
+          coverageRddList += (UUID -> Coverage.toFloat(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.toDouble" =>
+          coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
 
-      // Kernel
-      case "Kernel.fixed" =>
-        val kernel = Kernel.fixed(weights = args("weights"))
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.square" =>
-        val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.prewitt" =>
-        val kernel = Kernel.prewitt(axis = args("axis"))
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.kirsch" =>
-        val kernel = Kernel.kirsch(axis = args("axis"))
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.sobel" =>
-        val kernel = Kernel.sobel(axis = args("axis"))
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
+        // Kernel
+        case "Kernel.fixed" =>
+          val kernel = Kernel.fixed(weights = args("weights"))
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.square" =>
+          val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.prewitt" =>
+          val kernel = Kernel.prewitt(axis = args("axis"))
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.kirsch" =>
+          val kernel = Kernel.kirsch(axis = args("axis"))
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.sobel" =>
+          val kernel = Kernel.sobel(axis = args("axis"))
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
 
-      case "Kernel.laplacian4" =>
-        val kernel = Kernel.laplacian4()
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.laplacian8" =>
-        val kernel = Kernel.laplacian8()
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.laplacian8" =>
-        val kernel = Kernel.laplacian8()
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
-      case "Kernel.add" =>
-        val kernel = Kernel.add(kernel1 = kernelRddList(args("kernel1")), kernel2 = kernelRddList(args("kernel2")))
-        kernelRddList += (UUID -> kernel)
-        print(kernel.tile.asciiDraw())
+        case "Kernel.laplacian4" =>
+          val kernel = Kernel.laplacian4()
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.laplacian8" =>
+          val kernel = Kernel.laplacian8()
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.laplacian8" =>
+          val kernel = Kernel.laplacian8()
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
+        case "Kernel.add" =>
+          val kernel = Kernel.add(kernel1 = kernelRddList(args("kernel1")), kernel2 = kernelRddList(args("kernel2")))
+          kernelRddList += (UUID -> kernel)
+          print(kernel.tile.asciiDraw())
 
-      // Terrain
-      //      case "Terrain.slope" =>
-      //        coverageRddList += (UUID -> Terrain.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
-      //      case "Terrain.aspect" =>
-      //        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+        // Terrain
+        //      case "Terrain.slope" =>
+        //        coverageRddList += (UUID -> Terrain.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        //      case "Terrain.aspect" =>
+        //        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
-      case "Coverage.addStyles" =>
-        if (isBatch == 0) {
-          val visParam: VisualizationParam = new VisualizationParam
-          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-
-
-          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
-        }
-        else {
-          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")))
-        }
+        case "Coverage.addStyles" =>
+          if (isBatch == 0) {
+            val visParam: VisualizationParam = new VisualizationParam
+            visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
 
 
-      //Feature
-      case "Feature.load" =>
-        var dateTime = isOptionalArg(args, "dateTime")
-        if (dateTime == "null")
-          dateTime = null
-        println("dateTime:" + dateTime)
-        if (dateTime != null) {
-          if (isOptionalArg(args, "crs") != null)
-            featureRddList += (UUID -> Feature.load(sc, args("productName"), args("dateTime"), args("crs")))
+            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+          }
+          else {
+            Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")))
+          }
+
+
+        //Feature
+        case "Feature.load" =>
+          var dateTime = isOptionalArg(args, "dateTime")
+          if (dateTime == "null")
+            dateTime = null
+          println("dateTime:" + dateTime)
+          if (dateTime != null) {
+            if (isOptionalArg(args, "crs") != null)
+              featureRddList += (UUID -> Feature.load(sc, args("productName"), args("dateTime"), args("crs")))
+            else
+              featureRddList += (UUID -> Feature.load(sc, args("productName"), args("dateTime")))
+          }
           else
-            featureRddList += (UUID -> Feature.load(sc, args("productName"), args("dateTime")))
-        }
-        else
-          featureRddList += (UUID -> Feature.load(sc, args("productName")))
-      case "Feature.point" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.point(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.point(sc, args("coors"), args("properties")))
-      case "Feature.lineString" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.lineString(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.lineString(sc, args("coors"), args("properties")))
-      case "Feature.linearRing" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.linearRing(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.linearRing(sc, args("coors"), args("properties")))
-      case "Feature.polygon" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.polygon(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.polygon(sc, args("coors"), args("properties")))
-      case "Feature.multiPoint" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.multiPoint(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.multiPoint(sc, args("coors"), args("properties")))
-      case "Feature.multiLineString" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.multiLineString(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.multiLineString(sc, args("coors"), args("properties")))
-      case "Feature.multiPolygon" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties")))
-      case "Feature.geometry" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("properties"), args("crs")))
-        else
-          featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("properties")))
-      case "Feature.area" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.area(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.area(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.bounds" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.bounds(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.bounds(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.centroid" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.centroid(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.centroid(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.buffer" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.buffer(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble, args("crs")))
-        else
-          featureRddList += (UUID -> Feature.buffer(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble))
-      case "Feature.convexHull" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.convexHull(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.convexHull(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.coordinates" =>
-        featureRddList += (UUID -> Feature.coordinates(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.reproject" =>
-        featureRddList += (UUID -> Feature.reproject(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("tarCrsCode")))
-      case "Feature.isUnbounded" =>
-        featureRddList += (UUID -> Feature.isUnbounded(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.getType" =>
-        featureRddList += (UUID -> Feature.getType(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.projection" =>
-        featureRddList += (UUID -> Feature.projection(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.toGeoJSONString" =>
-        featureRddList += (UUID -> Feature.toGeoJSONString(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.getLength" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.getLength(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.getLength(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.geometries" =>
-        featureRddList += (UUID -> Feature.geometries(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.dissolve" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.dissolve(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.dissolve(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.contains" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.contains(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.contains(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.containedIn" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.containedIn(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.containedIn(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.disjoint" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.disjoint(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.disjoint(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.distance" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.distance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.distance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.difference" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.difference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.difference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.intersection" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.intersection(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.intersection(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.intersects" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.symmetricDifference" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.symmetricDifference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.symmetricDifference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.union" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.union(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
-        else
-          featureRddList += (UUID -> Feature.union(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.withDistance" =>
-        if (isOptionalArg(args, "crs") != null)
-          featureRddList += (UUID -> Feature.withDistance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble, args("crs")))
-        else
-          featureRddList += (UUID -> Feature.withDistance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble))
-      case "Feature.copyProperties" =>
-        val propertyList = args("properties").replace("[", "").replace("]", "")
-          .replace("\"", "").split(",").toList
-        featureRddList += (UUID -> Feature.copyProperties(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-          featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], propertyList))
-      case "Feature.get" =>
-        featureRddList += (UUID -> Feature.get(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-      case "Feature.getNumber" =>
-        featureRddList += (UUID -> Feature.getNumber(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-      case "Feature.getString" =>
-        featureRddList += (UUID -> Feature.getString(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-      case "Feature.getArray" =>
-        featureRddList += (UUID -> Feature.getArray(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-      case "Feature.propertyNames" =>
-        featureRddList += (UUID -> Feature.propertyNames(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.set" =>
-        featureRddList += (UUID -> Feature.set(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-      case "Feature.setGeometry" =>
-        featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-          featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      case "Feature.setGeometry" =>
-        featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-          featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-      //      case "Feature.inverseDistanceWeighted" =>
-      //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-      //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+            featureRddList += (UUID -> Feature.load(sc, args("productName")))
+        case "Feature.point" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.point(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.point(sc, args("coors"), args("properties")))
+        case "Feature.lineString" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.lineString(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.lineString(sc, args("coors"), args("properties")))
+        case "Feature.linearRing" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.linearRing(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.linearRing(sc, args("coors"), args("properties")))
+        case "Feature.polygon" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.polygon(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.polygon(sc, args("coors"), args("properties")))
+        case "Feature.multiPoint" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.multiPoint(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.multiPoint(sc, args("coors"), args("properties")))
+        case "Feature.multiLineString" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.multiLineString(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.multiLineString(sc, args("coors"), args("properties")))
+        case "Feature.multiPolygon" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties")))
+        case "Feature.geometry" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("properties"), args("crs")))
+          else
+            featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("properties")))
+        case "Feature.area" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.area(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.area(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.bounds" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.bounds(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.bounds(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.centroid" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.centroid(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.centroid(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.buffer" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.buffer(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble, args("crs")))
+          else
+            featureRddList += (UUID -> Feature.buffer(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble))
+        case "Feature.convexHull" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.convexHull(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.convexHull(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.coordinates" =>
+          featureRddList += (UUID -> Feature.coordinates(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.reproject" =>
+          featureRddList += (UUID -> Feature.reproject(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("tarCrsCode")))
+        case "Feature.isUnbounded" =>
+          featureRddList += (UUID -> Feature.isUnbounded(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.getType" =>
+          featureRddList += (UUID -> Feature.getType(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.projection" =>
+          featureRddList += (UUID -> Feature.projection(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.toGeoJSONString" =>
+          featureRddList += (UUID -> Feature.toGeoJSONString(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.getLength" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.getLength(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.getLength(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.geometries" =>
+          featureRddList += (UUID -> Feature.geometries(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.dissolve" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.dissolve(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.dissolve(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.contains" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.contains(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.contains(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.containedIn" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.containedIn(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.containedIn(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.disjoint" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.disjoint(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.disjoint(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.distance" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.distance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.distance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.difference" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.difference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.difference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.intersection" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.intersection(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.intersection(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.intersects" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.symmetricDifference" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.symmetricDifference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.symmetricDifference(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.union" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.union(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
+          else
+            featureRddList += (UUID -> Feature.union(sc, featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.withDistance" =>
+          if (isOptionalArg(args, "crs") != null)
+            featureRddList += (UUID -> Feature.withDistance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble, args("crs")))
+          else
+            featureRddList += (UUID -> Feature.withDistance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+              featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble))
+        case "Feature.copyProperties" =>
+          val propertyList = args("properties").replace("[", "").replace("]", "")
+            .replace("\"", "").split(",").toList
+          featureRddList += (UUID -> Feature.copyProperties(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+            featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], propertyList))
+        case "Feature.get" =>
+          featureRddList += (UUID -> Feature.get(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
+        case "Feature.getNumber" =>
+          featureRddList += (UUID -> Feature.getNumber(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
+        case "Feature.getString" =>
+          featureRddList += (UUID -> Feature.getString(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
+        case "Feature.getArray" =>
+          featureRddList += (UUID -> Feature.getArray(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
+        case "Feature.propertyNames" =>
+          featureRddList += (UUID -> Feature.propertyNames(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.set" =>
+          featureRddList += (UUID -> Feature.set(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
+        case "Feature.setGeometry" =>
+          featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+            featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.setGeometry" =>
+          featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+            featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        //      case "Feature.inverseDistanceWeighted" =>
+        //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+        //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
 
-      //Cube
-      case "Service.getCollections" =>
-        cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
-      case "Collections.toCube" =>
-        cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
-      case "Cube.NDWI" =>
-        cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
-      case "Cube.binarization" =>
-        cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
-          threshold = isOptionalArg(args, "threshold").toDouble))
-      case "Cube.subtract" =>
-        cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
-          certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
-      case "Cube.overlayAnalysis" =>
-        cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
-      case "Cube.addStyles" =>
-        Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
+        //Cube
+        case "Service.getCollections" =>
+          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
+        case "Collections.toCube" =>
+          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
+        case "Cube.NDWI" =>
+          cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
+        case "Cube.binarization" =>
+          cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
+            threshold = isOptionalArg(args, "threshold").toDouble))
+        case "Cube.subtract" =>
+          cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
+            certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
+        case "Cube.overlayAnalysis" =>
+          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
+        case "Cube.addStyles" =>
+          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
+      }
+
+    }catch{
+      case e:Throwable => throw e
+    }finally {
+      // 清空list
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      // TODO forDece: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
     }
   }
 
   def lambda(implicit sc: SparkContext, list: mutable.ArrayBuffer[Tuple3[String, String, mutable.Map[String, String]]]): Unit = {
     for (i <- list.indices) {
-      func(sc, list(i)._1, list(i)._2, list(i)._3)
+        try {
+          func(sc, list(i)._1, list(i)._2, list(i)._3)
+        } catch {
+          case e: Throwable =>
+            throw new RuntimeException("Error occur in lambda: " +
+              "UUID = " + list(i)._1 + "\t" +
+              "funcName = " + list(i)._2 + "\n" + e)
+        }
     }
   }
 
@@ -690,10 +721,29 @@ object Trigger {
       optimizedDAGList.foreach(println(_))
     })
 
-    lambda(sc, optimizedDagMap("0"))
 
-    val time2: Long = System.currentTimeMillis()
-    println(time2 - time1)
+    try {
+      lambda(sc, optimizedDagMap("0"))
+    } catch {
+      case e: Throwable =>
+        e.toString
+
+
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("workID", Trigger.dagId)
+        outJsonObject.put("json", new JSONObject().put("error",e.toString))
+
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+
+        // 打印至后端控制台
+        e.printStackTrace()
+    } finally {
+      val time2: Long = System.currentTimeMillis()
+      println(time2 - time1)
+
+    }
+
 
   }
 
