@@ -29,9 +29,9 @@ object CoverageUtil {
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
     })
-//    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
-//      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
-//    }
+    //    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
+    //      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
+    //    }
 
 
     val firstTile: RawTile = coverageRawTiles.first()
@@ -310,8 +310,8 @@ object CoverageUtil {
   }
 
   def focalMethods(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-                   focalFunc: (Tile,Neighborhood,Option[GridBounds[Int]],TargetCell) => Tile, radius: Int):(RDD[
-    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
+                   focalFunc: (Tile, Neighborhood, Option[GridBounds[Int]], TargetCell) => Tile, radius: Int): (RDD[
+    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     kernelType match {
       case "square" => {
         val neighborhood = focal.Square(radius)

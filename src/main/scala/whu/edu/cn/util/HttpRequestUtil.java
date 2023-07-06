@@ -6,6 +6,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+
 /**
  * java发送http的get和post请求
  */
@@ -50,8 +51,6 @@ public class HttpRequestUtil {
     }
 
 
-
-
     /**
      * 向指定URL发送POST方式的请求
      *
@@ -92,6 +91,7 @@ public class HttpRequestUtil {
         }
         return result.toString();
     }
+
     public static void writeTIFF(String spec, String writePath) throws IOException {
         //中文会格式错误
         URL url = new URL(spec);
