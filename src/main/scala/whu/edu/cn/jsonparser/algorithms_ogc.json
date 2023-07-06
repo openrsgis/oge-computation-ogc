@@ -1026,18 +1026,18 @@
     ]
   },
   "Coverage.bandTypes": {
-    "description": "Returns a dictionary of the image's band types.",
+    "description": " Returns a map of the coverage's band types.",
     "returns": "Map",
     "args": [
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The image from which the left operand bands are taken."
+        "description": "The coverage from which the left operand bands are taken."
       }
     ]
   },
   "Coverage.rename": {
-    "description": "Rename the bands of an image.Returns the renamed image.",
+    "description": "Rename the bands of a coverage.Returns the renamed coverage.",
     "returns": "Coverage",
     "args": [
       {
@@ -1076,6 +1076,32 @@
         "name": "coverage2",
         "type": "Coverage",
         "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.addBands": {
+    "description": "Returns an coverage containing all bands copied from the first input and selected bands from the second input,optionally overwriting bands in the first coverage with the same name.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "dstCoverage",
+        "type": "Coverage",
+        "description": "first coverage."
+      },
+      {
+        "name": "srcCoverage",
+        "type": "Coverage",
+        "description": "second coverage."
+      },
+      {
+        "name": "names",
+        "type": "List<String>",
+        "description": "the name of selected bands in srcCoverage"
+      },
+      {
+        "name": "overwrite",
+        "type": "Boolean",
+        "description": "if true, overwrite bands in the first coverage with the same name. Otherwise the bands in the first coverage will be kept."
       }
     ]
   },
@@ -1177,7 +1203,7 @@
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The image to convolve."
+        "description": "The coverage to convolve."
       },
       {
         "name": "kernel",
@@ -1404,44 +1430,24 @@
     ]
   },
   "Coverage.rgbToHsv": {
-    "description": "Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1], and produces three bands: hue, saturation and value with values in the range [0, 1].",
+    "description": "Transforms the coverage from the RGB color space to the HSV color space.Expects a 3 band coverage in the range [0, 255], and produces three bands: hue, saturation and value with values in the range [0, 1].",
     "returns": "Coverage",
     "args": [
       {
-        "name": "coverageRed",
+        "name": "coverage",
         "type": "Coverage",
-        "description": "The Red coverage."
-      },
-      {
-        "name": "coverageGreen",
-        "type": "Coverage",
-        "description": "The Green coverage."
-      },
-      {
-        "name": "coverageBlue",
-        "type": "Coverage",
-        "description": "The Blue coverage."
+        "description": "he coverage with three bands: R, G, B."
       }
     ]
   },
   "Coverage.hsvToRgb": {
-    "description": "Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1], and produces three bands: red, green and blue with values in the range [0, 255].",
+    "description": "Transforms the coverage from the HSV color space to the RGB color space.Expects a 3 band coverage with hue, saturation and value in the ranges [0, 1], and produces three bands: R, G, B with values in the range [0, 255].",
     "returns": "Coverage",
     "args": [
       {
-        "name": "coverageHue",
+        "name": "coverage",
         "type": "Coverage",
-        "description": "The Hue coverage."
-      },
-      {
-        "name": "coverageSaturation",
-        "type": "Coverage",
-        "description": "The Saturation coverage."
-      },
-      {
-        "name": "coverageValue",
-        "type": "Coverage",
-        "description": "The Value coverage."
+        "description": "The coverage with three bands: H, S, V."
       }
     ]
   },
@@ -1489,7 +1495,7 @@
     ]
   },
   "Coverage.metadata": {
-    "description": "Return the metadata of the input.",
+    "description": "Return the metadata of the input coverage.",
     "returns": "String",
     "args": [
       {
