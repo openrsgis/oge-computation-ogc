@@ -16,15 +16,12 @@ import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, RawTile, SpaceTimeBandKey}
-import whu.edu.cn.oge.Coverage
 import whu.edu.cn.oge.CoverageCollection.mosaic
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.makeCoverageCollectionRDD
-import whu.edu.cn.util.CoverageUtil.makeCoverageRDD
 import whu.edu.cn.util.MinIOUtil
-import whu.edu.cn.util.PostgresqlServiceUtil.{queryCoverage, queryCoverageCollection}
+import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 
 import java.time.LocalDateTime
 import scala.collection.mutable
