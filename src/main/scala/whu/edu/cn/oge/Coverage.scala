@@ -865,14 +865,19 @@ object Coverage {
    * @param coverage The coverage to which to compute the histogram.
    * @return
    */
-  //  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
-  //    val histRDD: RDD[Histogram[Int]] = coverage._1.map(t => {
-  //      t._2.histogram
-  //    })
-  //    histRDD.reduce((a, b) => {
-  //      a.merge(b)
-  //    }).binCounts().toMap[Int, Long]
-  //  }
+  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
+
+    val histRDD: RDD[Histogram[Int]] = coverage._1.map(t => {
+      t._2.histogram
+    }).flatMap(t => {
+      t
+    })
+
+    histRDD.reduce((a, b) => {
+      a.merge(b)
+    }).binCounts().toMap[Int, Long]
+
+  }
 
   /**
    * Returns the projection of an coverage.
@@ -1177,62 +1182,62 @@ object Coverage {
    * @param coverageBlue  The Blue coverage.
    * @return
    */
-  //  def rgbToHsv(coverageRed: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //               coverageGreen: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //               coverageBlue: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val coverageRedRDD = coverageRed._1.map(t => {
-  //      (t._1.spaceTimeKey, t._2)
-  //    })
-  //    val coverageGreenRDD = coverageGreen._1.map(t => {
-  //      (t._1.spaceTimeKey, t._2)
-  //    })
-  //    val coverageBlueRDD = coverageBlue._1.map(t => {
-  //      (t._1.spaceTimeKey, t._2)
-  //    })
-  //    val joinRDD = coverageRedRDD.join(coverageBlueRDD).join(coverageGreenRDD).map(t => {
-  //      (t._1, (t._2._1._1, t._2._1._2, t._2._2))
-  //    })
-  //    val hsvRDD: RDD[List[(SpaceTimeBandKey, Tile)]] = joinRDD.map(t => {
-  //      val hTile = t._2._1.convert(CellType.fromName("float32")).mutable
-  //      val sTile = t._2._2.convert(CellType.fromName("float32")).mutable
-  //      val vTile = t._2._3.convert(CellType.fromName("float32")).mutable
+  //    def rgbToHsv(coverageRed: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+  //                 coverageGreen: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+  //                 coverageBlue: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  //      val coverageRedRDD = coverageRed._1.map(t => {
+  //        (t._1.spaceTimeKey, t._2)
+  //      })
+  //      val coverageGreenRDD = coverageGreen._1.map(t => {
+  //        (t._1.spaceTimeKey, t._2)
+  //      })
+  //      val coverageBlueRDD = coverageBlue._1.map(t => {
+  //        (t._1.spaceTimeKey, t._2)
+  //      })
+  //      val joinRDD = coverageRedRDD.join(coverageBlueRDD).join(coverageGreenRDD).map(t => {
+  //        (t._1, (t._2._1._1, t._2._1._2, t._2._2))
+  //      })
+  //      val hsvRDD: RDD[List[(SpaceTimeBandKey, Tile)]] = joinRDD.map(t => {
+  //        val hTile = t._2._1.convert(CellType.fromName("float32")).mutable
+  //        val sTile = t._2._2.convert(CellType.fromName("float32")).mutable
+  //        val vTile = t._2._3.convert(CellType.fromName("float32")).mutable
   //
-  //      for (i <- 0 to 255) {
-  //        for (j <- 0 to 255) {
-  //          val r: Double = t._2._1.getDouble(i, j) / 255
-  //          val g: Double = t._2._2.getDouble(i, j) / 255
-  //          val b: Double = t._2._3.getDouble(i, j) / 255
-  //          val ma = max(max(r, g), b)
-  //          val mi = min(min(r, g), b)
-  //          if (ma == mi) {
-  //            hTile.setDouble(i, j, 0)
+  //        for (i <- 0 to 255) {
+  //          for (j <- 0 to 255) {
+  //            val r: Double = t._2._1.getDouble(i, j) / 255
+  //            val g: Double = t._2._2.getDouble(i, j) / 255
+  //            val b: Double = t._2._3.getDouble(i, j) / 255
+  //            val ma = max(max(r, g), b)
+  //            val mi = min(min(r, g), b)
+  //            if (ma == mi) {
+  //              hTile.setDouble(i, j, 0)
+  //            }
+  //            else if (ma == r && g >= b) {
+  //              hTile.setDouble(i, j, 60 * ((g - b) / (ma - mi)))
+  //            }
+  //            else if (ma == r && g < b) {
+  //              hTile.setDouble(i, j, 60 * ((g - b) / (ma - mi)) + 360)
+  //            }
+  //            else if (ma == g) {
+  //              hTile.setDouble(i, j, 60 * ((b - r) / (ma - mi)) + 120)
+  //            }
+  //            else if (ma == b) {
+  //              hTile.setDouble(i, j, 60 * ((r - g) / (ma - mi)) + 240)
+  //            }
+  //            if (ma == 0) {
+  //              sTile.setDouble(i, j, 0)
+  //            }
+  //            else {
+  //              sTile.setDouble(i, j, (ma - mi) / ma)
+  //            }
+  //            vTile.setDouble(i, j, ma)
   //          }
-  //          else if (ma == r && g >= b) {
-  //            hTile.setDouble(i, j, 60 * ((g - b) / (ma - mi)))
-  //          }
-  //          else if (ma == r && g < b) {
-  //            hTile.setDouble(i, j, 60 * ((g - b) / (ma - mi)) + 360)
-  //          }
-  //          else if (ma == g) {
-  //            hTile.setDouble(i, j, 60 * ((b - r) / (ma - mi)) + 120)
-  //          }
-  //          else if (ma == b) {
-  //            hTile.setDouble(i, j, 60 * ((r - g) / (ma - mi)) + 240)
-  //          }
-  //          if (ma == 0) {
-  //            sTile.setDouble(i, j, 0)
-  //          }
-  //          else {
-  //            sTile.setDouble(i, j, (ma - mi) / ma)
-  //          }
-  //          vTile.setDouble(i, j, ma)
   //        }
-  //      }
   //
-  //      List((SpaceTimeBandKey(t._1, "Hue"), hTile), (SpaceTimeBandKey(t._1, "Saturation"), sTile), (SpaceTimeBandKey(t._1, "Value"), vTile))
-  //    })
-  //    (hsvRDD.flatMap(t => t), TileLayerMetadata(CellType.fromName("float32"), coverageRed._2.layout, coverageRed._2.extent, coverageRed._2.crs, coverageRed._2.bounds))
-  //  }
+  //        List((SpaceTimeBandKey(t._1, "Hue"), hTile), (SpaceTimeBandKey(t._1, "Saturation"), sTile), (SpaceTimeBandKey(t._1, "Value"), vTile))
+  //      })
+  //      (hsvRDD.flatMap(t => t), TileLayerMetadata(CellType.fromName("float32"), coverageRed._2.layout, coverageRed._2.extent, coverageRed._2.crs, coverageRed._2.bounds))
+  //    }
 
   /**
    * Transforms the coverage from the HSV color space to the RGB color space. Expects a 3 band coverage in the range [0, 1],
