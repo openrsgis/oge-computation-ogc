@@ -12,7 +12,8 @@ import whu.edu.cn.entity.OGEClassType.OGEClassType
 import whu.edu.cn.entity.{CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
-import whu.edu.cn.util.{JedisUtil, ZCurveUtil}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, ZCurveUtil}
 
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
@@ -70,6 +71,10 @@ object Trigger {
   }
 
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
+
+
+    try {
+
     funcName match {
 
       // Service
@@ -551,11 +556,37 @@ object Trigger {
       case "Cube.addStyles" =>
         Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
     }
+
+    }catch{
+      case e:Throwable => throw e
+    }finally {
+      // 清空list
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      // TODO forDece: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
+    }
   }
 
   def lambda(implicit sc: SparkContext, list: mutable.ArrayBuffer[Tuple3[String, String, mutable.Map[String, String]]]): Unit = {
     for (i <- list.indices) {
-      func(sc, list(i)._1, list(i)._2, list(i)._3)
+        try {
+          func(sc, list(i)._1, list(i)._2, list(i)._3)
+        } catch {
+          case e: Throwable =>
+            throw new RuntimeException("Error occur in lambda: " +
+              "UUID = " + list(i)._1 + "\t" +
+              "funcName = " + list(i)._2 + "\n" + e)
+        }
     }
   }
 
@@ -689,10 +720,29 @@ object Trigger {
       optimizedDAGList.foreach(println(_))
     })
 
-    lambda(sc, optimizedDagMap("0"))
 
-    val time2: Long = System.currentTimeMillis()
-    println(time2 - time1)
+    try {
+      lambda(sc, optimizedDagMap("0"))
+    } catch {
+      case e: Throwable =>
+        e.toString
+
+
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("workID", Trigger.dagId)
+        outJsonObject.put("json", new JSONObject().put("error",e.toString))
+
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+
+        // 打印至后端控制台
+        e.printStackTrace()
+    } finally {
+      val time2: Long = System.currentTimeMillis()
+      println(time2 - time1)
+
+    }
+
 
   }
 

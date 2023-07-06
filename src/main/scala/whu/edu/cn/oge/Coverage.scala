@@ -1417,7 +1417,7 @@ object Coverage {
 
     val entropyRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
 
-      val numOfBands: Int = t._2.bandCount
+//      val numOfBands: Int = t._2.bandCount
       val tempTileArray = new ListBuffer[MutableArrayTile]
       tempTileArray.append(FloatArrayTile(
         Array.fill[Float](256 * 256)(Float.NaN),
