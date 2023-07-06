@@ -193,9 +193,10 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.gte(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.selectBands" =>
         coverageRddList += (UUID -> Coverage.selectBands(coverage = coverageRddList(args("coverage")), bands = args("bands").substring(1, args("bands").length - 1).split(",").toList))
-      //      case "Coverage.addBands" =>
-      //        val names: List[String] = List("B3")
-      //        coverageRddList += (UUID -> Coverage.addBands(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), names = names))
+      case "Coverage.addBands" =>
+        val names: List[String] = args("names").split(",").toList
+        coverageRddList += (UUID -> Coverage.addBands(dstCoverage = coverageRddList(args("coverage1")), srcCoverage =
+          coverageRddList(args("coverage2")), names = names))
       case "Coverage.bandNames" =>
         val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
         println("******************test bandNames***********************")
@@ -208,30 +209,28 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.neq(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.signum" =>
         coverageRddList += (UUID -> Coverage.signum(coverage = coverageRddList(args("coverage"))))
-      //      case "Coverage.bandTypes" =>
-      //        val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
-      //        println(bandTypes)
-      //        println(bandTypes.size)
-      //      case "Coverage.rename" =>
-      //        coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name")))
+      case "Coverage.bandTypes" =>
+        val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
+      case "Coverage.rename" =>
+        coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name").split(",").toList))
       case "Coverage.pow" =>
         coverageRddList += (UUID -> Coverage.pow(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.mini" =>
         coverageRddList += (UUID -> Coverage.mini(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.maxi" =>
         coverageRddList += (UUID -> Coverage.maxi(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-      //      case "Coverage.focalMean" =>
-      //        coverageRddList += (UUID -> Coverage.focalMean(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMedian" =>
-      //        coverageRddList += (UUID -> Coverage.focalMedian(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMin" =>
-      //        coverageRddList += (UUID -> Coverage.focalMin(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMax" =>
-      //        coverageRddList += (UUID -> Coverage.focalMax(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.focalMode" =>
-      //        coverageRddList += (UUID -> Coverage.focalMode(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
-      //      case "Coverage.convolve" =>
-      //        coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
+      case "Coverage.focalMean" =>
+        coverageRddList += (UUID -> Coverage.focalMean(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      case "Coverage.focalMedian" =>
+        coverageRddList += (UUID -> Coverage.focalMedian(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      case "Coverage.focalMin" =>
+        coverageRddList += (UUID -> Coverage.focalMin(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      case "Coverage.focalMax" =>
+        coverageRddList += (UUID -> Coverage.focalMax(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      case "Coverage.focalMode" =>
+        coverageRddList += (UUID -> Coverage.focalMode(coverage = coverageRddList(args("coverage")), kernelType = args("kernelType"), radius = args("radius").toInt))
+      case "Coverage.convolve" =>
+        coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
       case "Coverage.projection" =>
         val projection: String = Coverage.projection(coverage = coverageRddList(args("coverage")))
         println(projection)
@@ -248,18 +247,18 @@ object Trigger {
       //        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
       //      case "Coverage.clamp" =>
       //        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
-      //      case "Coverage.rgbToHsv" =>
-      //        coverageRddList += (UUID -> Coverage.rgbToHsv(coverageRed = coverageRddList(args("coverageRed")), coverageGreen = coverageRddList(args("coverageGreen")), coverageBlue = coverageRddList(args("coverageBlue"))))
-      //      case "Coverage.hsvToRgb" =>
-      //        coverageRddList += (UUID -> Coverage.hsvToRgb(coverageHue = coverageRddList(args("coverageHue")), coverageSaturation = coverageRddList(args("coverageSaturation")), coverageValue = coverageRddList(args("coverageValue"))))
-      //      case "Coverage.entropy" =>
-      //        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+      case "Coverage.rgbToHsv" =>
+        coverageRddList += (UUID -> Coverage.rgbToHsv(coverage=coverageRddList(args("coverage"))))
+      case "Coverage.hsvToRgb" =>
+        coverageRddList += (UUID -> Coverage.hsvToRgb(coverage=coverageRddList(args("coverage"))))
+      case "Coverage.entropy" =>
+        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
       //      case "Coverage.NDVI" =>
       //        coverageRddList += (UUID -> Coverage.NDVI(NIR = coverageRddList(args("NIR")), Red = coverageRddList(args("Red"))))
       //      case "Coverage.cbrt" =>
       //        coverageRddList += (UUID -> Coverage.cbrt(coverage = coverageRddList(args("coverage"))))
-      //      case "Coverage.metadata" =>
-      //        val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
+      case "Coverage.metadata" =>
+        val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
       //        println(metadataString)
       case "Coverage.toInt8" =>
         coverageRddList += (UUID -> Coverage.toInt8(coverage = coverageRddList(args("coverage"))))

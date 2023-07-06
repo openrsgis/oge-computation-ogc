@@ -2,6 +2,7 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
+import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.local._
 import io.minio.MinioClient
@@ -499,7 +500,7 @@ object Coverage {
    *
    * @param dstCoverage first coverage
    * @param srcCoverage second coverage
-   * @param names       the name of selected bands in coverage2
+   * @param names       the name of selected bands in srcCoverage
    * @param overwrite   if true, overwrite bands in the first coverage with the same name. Otherwise the bands in the first coverage will be kept.
    * @return
    */
@@ -733,7 +734,7 @@ object Coverage {
                 radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     focalMethods(coverage, kernelType, focal.Mode.apply, radius)
   }
-  //TODO: 添加padding的方法
+  //TODO: 完整地对运算逻辑进行测试
   /**
    * Convolves each band of an coverage with the given kernel. Coverages will be padded with Zeroes.
    *
@@ -743,75 +744,68 @@ object Coverage {
    */
   def convolve(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernel: focal
   .Kernel): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val resultRdd : RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
-      (t._1, t._2.mapBands((i, tile) => {
-        focal.Convolve(tile, kernel, bounds = None, target = TargetCell.All)
+    val leftNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(0, 1), t._2))
+    })
+    val rightNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(2, 1), t._2))
+    })
+    val upNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(1, 0), t._2))
+    })
+    val downNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(1, 2), t._2))
+    })
+    val leftUpNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(0, 0), t._2))
+    })
+    val upRightNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(2, 0), t._2))
+    })
+    val rightDownNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(2, 2), t._2))
+    })
+    val downLeftNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(0, 2), t._2))
+    })
+    val midNeighborRDD = coverage._1.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(1, 1), t._2))
+    })
+    val unionRDD = leftNeighborRDD.union(rightNeighborRDD).union(upNeighborRDD).union(downNeighborRDD).union(leftUpNeighborRDD).union(upRightNeighborRDD).union(rightDownNeighborRDD).union(downLeftNeighborRDD).union(midNeighborRDD)
+      .filter(t => {
+        t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < coverage._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < coverage._2.layout.layoutRows
+      })
+    val groupRDD : RDD[(SpaceTimeBandKey, MultibandTile)] = unionRDD.groupByKey().map(t => {
+      val listBuffer = new ListBuffer[(SpatialKey, MultibandTile)]()
+      val list = t._2.toList
+      for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
+        var flag = false
+        breakable {
+          for (tile <- list) {
+            if (key.equals(tile._1)) {
+              listBuffer.append(tile)
+              flag = true
+              break
+            }
+          }
+        }
+        if (flag == false) {
+          listBuffer.append((key, MultibandTile(ByteArrayTile(Array.fill[Byte](256 * 256)(-128), 256, 256,
+            ByteCellType).mutable)))
+        }
       }
-      ))
-    }
-    )
-    (resultRdd,coverage._2)
+      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(listBuffer)
+      (t._1, tile.crop(251, 251, 516, 516).convert(CellType.fromName("int16")))
+    })
+
+    val convolvedRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
+      (t._1, t._2.mapBands((_,tile) =>{
+        focal.Convolve(tile,kernel,None,TargetCell.All).crop(5,5,260,260)
+      }))
+    })
+    (convolvedRDD, coverage._2)
+
   }
-  //  def convolve(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //               kernel: focal.Kernel): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val leftNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(0, 1), t._2))
-  //    })
-  //    val rightNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(2, 1), t._2))
-  //    })
-  //    val upNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(1, 0), t._2))
-  //    })
-  //    val downNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(1, 2), t._2))
-  //    })
-  //    val leftUpNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(0, 0), t._2))
-  //    })
-  //    val upRightNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0), t._1.measurementName), (SpatialKey(2, 0), t._2))
-  //    })
-  //    val rightDownNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(2, 2), t._2))
-  //    })
-  //    val downLeftNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0), t._1.measurementName), (SpatialKey(0, 2), t._2))
-  //    })
-  //    val midNeighborRDD = coverage._1.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0), t._1.measurementName), (SpatialKey(1, 1), t._2))
-  //    })
-  //    val unionRDD = leftNeighborRDD.union(rightNeighborRDD).union(upNeighborRDD).union(downNeighborRDD).union(leftUpNeighborRDD).union(upRightNeighborRDD).union(rightDownNeighborRDD).union(downLeftNeighborRDD).union(midNeighborRDD)
-  //      .filter(t => {
-  //        t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < coverage._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < coverage._2.layout.layoutRows
-  //      })
-  //    val groupRDD = unionRDD.groupByKey().map(t => {
-  //      val listBuffer = new ListBuffer[(SpatialKey, Tile)]()
-  //      val list = t._2.toList
-  //      for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
-  //        var flag = false
-  //        breakable {
-  //          for (tile <- list) {
-  //            if (key.equals(tile._1)) {
-  //              listBuffer.append(tile)
-  //              flag = true
-  //              break
-  //            }
-  //          }
-  //        }
-  //        if (flag == false) {
-  //          listBuffer.append((key, ByteArrayTile(Array.fill[Byte](256 * 256)(-128), 256, 256, ByteCellType).mutable))
-  //        }
-  //      }
-  //      val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(listBuffer)
-  //      (t._1, tile.crop(251, 251, 516, 516).convert(CellType.fromName("int16")))
-  //    })
-  //
-  //    val convolvedRDD: RDD[(SpaceTimeBandKey, Tile)] = groupRDD.map(t => {
-  //      (t._1, focal.Convolve(t._2, kernel, None, TargetCell.All).crop(5, 5, 260, 260))
-  //    })
-  //    (convolvedRDD, coverage._2)
-  //  }
 
   /**
    * Return the histogram of the coverage, a map of bin label value and its associated count.
@@ -1127,7 +1121,7 @@ object Coverage {
    * Expects a 3 band coverage in the range [0, 255],
    * and produces three bands: hue, saturation and value with values in the range [0, 1].
    *
-   * @param coverage The coverage with three band: R, G, B.
+   * @param coverage The coverage with three bands: R, G, B.
    * @return
    */
   def rgbToHsv(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
@@ -1204,7 +1198,7 @@ object Coverage {
    * Expects a 3 band coverage in the range [0, 1],
    * and produces three bands: red, green and blue with values in the range [0, 255].
    *
-   * @param coverage The coverage with three band: H, S, V
+   * @param coverage The coverage with three bands: H, S, V
    * @return
    */
   def hsvToRgb(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
@@ -1465,15 +1459,15 @@ object Coverage {
   //  }
 
   /**
-   * Return the metadata of the input.
+   * Return the metadata of the input coverage.
    *
    * @param coverage The coverage to get the metadata
    * @return
    */
-    def metadata(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
-    : String = {
-      TileLayerMetadata.toString
-    }
+  def metadata(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+  : String = {
+    TileLayerMetadata.toString
+  }
 
   /**
    * Casts the input value to a signed 8-bit integer.
