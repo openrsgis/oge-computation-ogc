@@ -29,6 +29,7 @@ import whu.edu.cn.util.PostgresqlServiceUtil.{queryCoverage, queryCoverageCollec
 import java.time.LocalDateTime
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import geotrellis.raster.mapalgebra.focal
 
 object load {
   def main(args: Array[String]): Unit = {
@@ -41,7 +42,7 @@ object load {
     // LC08_L1TP_124038_20181211_20181226_01_T1
     // LE07_L1TP_125039_20130110_20161126_01_T1
 
-    loadLandsat8()
+    testCoverage()
     val time2: Long = System.currentTimeMillis()
     println("Total Time is " + (time2 - time1))
 
@@ -50,6 +51,22 @@ object load {
 
   }
 
+  def testCoverage(): Unit={
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("Test")
+    val sc = new SparkContext(conf)
+    val array = Array[Int](1,2,3,4,5,6,7,8,9)
+
+    val coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
+  .makeFakeCoverage(sc,array,3,3)
+    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
+      .makeFakeCoverage(sc,array,3,3)
+    val coverage : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.add(coverage1,
+      coverage2)
+    for(band<-coverage1._1.first()._2.bands){
+      val arr = band.toArray()
+      println(arr.mkString(","))
+    }
+  }
   def ndviLandsatCollection(): Unit = {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)

@@ -29,8 +29,11 @@ import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
+import geotrellis.spark.partition.SpacePartitioner
+import jp.ne.opt.chronoscala.Imports.richZonedDateTime
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 
+import java.time.ZonedDateTime
 import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks.{break, breakable}
@@ -101,6 +104,48 @@ object Coverage {
       tile
     })
     makeCoverageRDD(rawTileRdd)
+  }
+
+  /*
+  生成虚拟coverage
+  测试函数，不进入正式版本中 TODO：在master分支中删除该函数
+  Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
+  可以使用isNoData方法来判断一个值是否是NoData值
+  */
+  def makeFakeCoverage(implicit sc: SparkContext , array:Array[Int], cols: Int,rows: Int):
+  (RDD[
+    (SpaceTimeBandKey,
+    MultibandTile)],
+    TileLayerMetadata[SpaceTimeKey]) = {
+    val tile = MultibandTile(ArrayTile(arr = array,cols,rows))
+    val key=SpaceTimeBandKey(SpaceTimeKey(0,0,ZonedDateTime.now()),ListBuffer[String]("111"))
+    val rdd : RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key,tile)))
+    val metadata = TileLayerMetadata[SpaceTimeKey](
+      cellType = IntConstantNoDataCellType,
+      layout = LayoutDefinition(Extent(0.0,0.0,1.0,1.0),TileLayout(1,1,3,3)),
+      extent = Extent(0.0,0.0,1.0,1.0),
+      crs=CRS.fromEpsgCode(4326),
+      bounds=KeyBounds(SpaceTimeKey(0,0,0),SpaceTimeKey(0,0,0))
+    )
+    (rdd,metadata)
+  }
+
+  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Double], cols: Int, rows: Int):
+  (RDD[
+    (SpaceTimeBandKey,
+      MultibandTile)],
+    TileLayerMetadata[SpaceTimeKey]) = {
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows))
+    val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), ListBuffer[String]("111"))
+    val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
+    val metadata = TileLayerMetadata[SpaceTimeKey](
+      cellType = IntConstantNoDataCellType,
+      layout = LayoutDefinition(Extent(0.0, 0.0, 1.0, 1.0), TileLayout(1, 1, 3, 3)),
+      extent = Extent(0.0, 0.0, 1.0, 1.0),
+      crs = CRS.fromEpsgCode(4326),
+      bounds = KeyBounds(SpaceTimeKey(0, 0, 0), SpaceTimeKey(0, 0, 0))
+    )
+    (rdd, metadata)
   }
 
   /**
