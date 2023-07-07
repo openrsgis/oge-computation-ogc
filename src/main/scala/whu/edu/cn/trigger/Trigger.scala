@@ -584,10 +584,11 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-          throw new RuntimeException("Error occur in lambda: " +
+          throw new Exception("Error occur in lambda: " +
             "UUID = " + list(i)._1 + "\t" +
             "funcName = " + list(i)._2 + "\n" +
-            "InnerError = " + e.getMessage + "\n" +
+            "innerErrorType = " + e.getClass + "\n" +
+            "innerErrorInfo = " + e.getMessage + "\n" +
             e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
       }
     }
