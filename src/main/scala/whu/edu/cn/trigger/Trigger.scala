@@ -70,6 +70,7 @@ object Trigger {
 
   }
 
+  @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
 
 
@@ -585,7 +586,9 @@ object Trigger {
         case e: Throwable =>
           throw new RuntimeException("Error occur in lambda: " +
             "UUID = " + list(i)._1 + "\t" +
-            "funcName = " + list(i)._2 + "\n" + e)
+            "funcName = " + list(i)._2 + "\n" +
+            "InnerError = " + e.getMessage + "\n" +
+            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
       }
     }
   }
@@ -725,15 +728,17 @@ object Trigger {
       lambda(sc, optimizedDagMap("0"))
     } catch {
       case e: Throwable =>
-        e.toString
-
+        val errorJson = new JSONObject
+        errorJson.put("error", e.toString)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
         outJsonObject.put("workID", Trigger.dagId)
-        outJsonObject.put("json", new JSONObject().put("error", e.toString))
+        outJsonObject.put("json", errorJson)
 
-        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+        println("Error json = " + outJsonObject)
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
 
         // 打印至后端控制台
         e.printStackTrace()
