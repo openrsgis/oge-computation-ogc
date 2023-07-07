@@ -858,14 +858,19 @@ object Coverage {
    * @param coverage The coverage to which to compute the histogram.
    * @return
    */
-  //  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
-  //    val histRDD: RDD[Histogram[Int]] = coverage._1.map(t => {
-  //      t._2.histogram
-  //    })
-  //    histRDD.reduce((a, b) => {
-  //      a.merge(b)
-  //    }).binCounts().toMap[Int, Long]
-  //  }
+  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
+
+    val histRDD: RDD[Histogram[Int]] = coverage._1.map(t => {
+      t._2.histogram
+    }).flatMap(t => {
+      t
+    })
+
+    histRDD.reduce((a, b) => {
+      a.merge(b)
+    }).binCounts().toMap[Int, Long]
+
+  }
 
   /**
    * Returns the projection of an coverage.
@@ -1237,6 +1242,7 @@ object Coverage {
     // 使用原来的 TileLayerMetadata
     (hsvRdd, coverage._2)
   }
+
 
   /**
    * Transforms the coverage from the HSV color space to the RGB color space.
