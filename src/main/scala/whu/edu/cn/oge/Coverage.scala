@@ -1230,7 +1230,7 @@ object Coverage {
 
       val tileRows: Int = t._2._1.rows
       val tileCols: Int = t._2._1.cols
-      for (i <- 0 until  tileRows; j <- 0 until tileCols) {
+      for (i <- 0 until tileRows; j <- 0 until tileCols) {
         val r: Double = t._2._1.getDouble(i, j) / 255
         val g: Double = t._2._2.getDouble(i, j) / 255
         val b: Double = t._2._3.getDouble(i, j) / 255
@@ -1327,7 +1327,7 @@ object Coverage {
 
       val tileRows: Int = t._2._1.rows
       val tileCols: Int = t._2._1.cols
-      for (i <- 0 until  tileRows; j <- 0 until tileCols) {
+      for (i <- 0 until tileRows; j <- 0 until tileCols) {
         val h: Double = t._2._1.getDouble(i, j)
         val s: Double = t._2._2.getDouble(i, j)
         val v: Double = t._2._3.getDouble(i, j)
@@ -1498,11 +1498,12 @@ object Coverage {
                 break
               }
             }
-          }
+          } // end breakable
+
           if (!flag) {
             // 将多个波段的瓦片值都设置为全 -128
             val tempTileArray = new ListBuffer[Tile]();
-            for (i <- 0 to numOfBands) {
+            for (i <- 0 until numOfBands) {
               tempTileArray.append(ByteArrayTile(
                 Array.fill[Byte](256 * 256)(-128),
                 256, 256, ByteCellType).mutable)
@@ -1525,7 +1526,8 @@ object Coverage {
           Array.fill[Float](256 * 256)(Float.NaN),
           256, 256, FloatCellType).mutable
 
-        for (i <- 5 to 260; j <- 5 to 260) {
+        println(tile.rows)
+        for (i <- 5 until (tile.rows + 5); j <- 5 until (tile.cols + 5)) {
           val focalArea: Tile =
             tile.crop(i - radius, j - radius,
               i + radius, j + radius)
@@ -1536,7 +1538,17 @@ object Coverage {
             val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
             entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
           }
+          try{
+            if (i>256+5||j>256+5){
+              println(i)
+              println(j)
+            }
           tempTile.setDouble(i - 5, j - 5, -entropyValue)
+          }catch{
+            case e: Throwable =>
+              println((i,j).toString())
+              e.printStackTrace()
+          }
         }
 
         tempTile
