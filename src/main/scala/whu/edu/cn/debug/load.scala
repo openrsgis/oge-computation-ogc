@@ -62,7 +62,9 @@ object load {
       .makeFakeCoverage(sc,array,3,3)
     val coverage : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.add(coverage1,
       coverage2)
-    for(band<-coverage1._1.first()._2.bands){
+
+    val coverageHsv = Coverage.hsvToRgb(coverage1)
+    for(band<-coverageHsv._1.first()._2.bands){
       val arr = band.toArray()
       println(arr.mkString(","))
     }

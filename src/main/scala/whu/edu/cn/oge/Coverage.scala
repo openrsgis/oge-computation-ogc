@@ -112,22 +112,24 @@ object Coverage {
   Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
   可以使用isNoData方法来判断一个值是否是NoData值
   */
-  def makeFakeCoverage(implicit sc: SparkContext , array:Array[Int], cols: Int,rows: Int):
+  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Int], cols: Int, rows: Int):
   (RDD[
     (SpaceTimeBandKey,
-    MultibandTile)],
+      MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array,cols,rows))
-    val key=SpaceTimeBandKey(SpaceTimeKey(0,0,ZonedDateTime.now()),ListBuffer[String]("111"))
-    val rdd : RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key,tile)))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
+      ArrayTile(arr = array, cols, rows),
+      ArrayTile(arr = array, cols, rows))
+    val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), ListBuffer[String]("111", "0", "2"))
+    val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
       cellType = IntConstantNoDataCellType,
-      layout = LayoutDefinition(Extent(0.0,0.0,1.0,1.0),TileLayout(1,1,3,3)),
-      extent = Extent(0.0,0.0,1.0,1.0),
-      crs=CRS.fromEpsgCode(4326),
-      bounds=KeyBounds(SpaceTimeKey(0,0,0),SpaceTimeKey(0,0,0))
+      layout = LayoutDefinition(Extent(0.0, 0.0, 1.0, 1.0), TileLayout(1, 1, 3, 3)),
+      extent = Extent(0.0, 0.0, 1.0, 1.0),
+      crs = CRS.fromEpsgCode(4326),
+      bounds = KeyBounds(SpaceTimeKey(0, 0, 0), SpaceTimeKey(0, 0, 0))
     )
-    (rdd,metadata)
+    (rdd, metadata)
   }
 
   def makeFakeCoverage(implicit sc: SparkContext, array: Array[Double], cols: Int, rows: Int):
@@ -183,8 +185,21 @@ object Coverage {
    * @return
    */
   def divide(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-             coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+             coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Divide(tile1, tile2))
+  }
+
+  /**
+   *
+   * @param coverage coverage rdd
+   * @param num      constNum
+   * @return
+   */
+  def divide(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+             num: Double)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage, tile => Divide(tile, num))
   }
 
   /**
@@ -199,6 +214,14 @@ object Coverage {
                coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Multiply(tile1, tile2))
   }
+
+
+  def multiply(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+               num: Double)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage, tile => Multiply(tile, num))
+  }
+
 
   def normalizedDifference(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), bandNames: List[String]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     if (bandNames.length != 2) {
@@ -1180,7 +1203,14 @@ object Coverage {
 
     // TODO: 如何区分 RGB? 我这里默认索引 RGB 顺序
 
-    // 保留原来的 SpaceTimeBandKey
+    coverage._1.map(t =>
+      if (!t._2.bandCount.equals(3)) {
+        throw new IllegalArgumentException
+        ("Tile' s bandCount must be three!")
+      }
+    )
+
+    // 保留原来的 SpaceTimeBandKey, 分离三通道
     val coverageRRdd: RDD[(SpaceTimeBandKey, Tile)] =
       coverage._1.map(t => (t._1, t._2.band(0)))
     val coverageGRdd: RDD[(SpaceTimeBandKey, Tile)] =
@@ -1198,7 +1228,9 @@ object Coverage {
       val sTile: MutableArrayTile = t._2._2.convert(CellType.fromName("float32")).mutable
       val vTile: MutableArrayTile = t._2._3.convert(CellType.fromName("float32")).mutable
 
-      for (i <- 0 to 255; j <- 0 to 255) {
+      val tileRows: Int = t._2._1.rows
+      val tileCols: Int = t._2._1.cols
+      for (i <- 0 until  tileRows; j <- 0 until tileCols) {
         val r: Double = t._2._1.getDouble(i, j) / 255
         val g: Double = t._2._2.getDouble(i, j) / 255
         val b: Double = t._2._3.getDouble(i, j) / 255
@@ -1256,6 +1288,13 @@ object Coverage {
   def hsvToRgb(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
+    coverage._1.map(t =>
+      if (!t._2.bandCount.equals(3)) {
+        throw new IllegalArgumentException
+        ("Tile' s bandCount must be three!")
+      }
+    )
+
     // TODO: 默认索引 hsv
     val coverageHRdd: RDD[(SpaceTimeBandKey, Tile)] =
       coverage._1.map(t => (t._1, t._2.band(0)))
@@ -1275,7 +1314,9 @@ object Coverage {
       val gTile: MutableArrayTile = t._2._2.convert(CellType.fromName("uint8")).mutable
       val bTile: MutableArrayTile = t._2._3.convert(CellType.fromName("uint8")).mutable
 
-      for (i <- 0 to 255; j <- 0 to 255) {
+      val tileRows: Int = t._2._1.rows
+      val tileCols: Int = t._2._1.cols
+      for (i <- 0 until  tileRows; j <- 0 until tileCols) {
         val h: Double = t._2._1.getDouble(i, j)
         val s: Double = t._2._2.getDouble(i, j)
         val v: Double = t._2._3.getDouble(i, j)
