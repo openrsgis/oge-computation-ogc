@@ -4,8 +4,10 @@ import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{Neighborhood, TargetCell}
-import geotrellis.raster.{CellType, GridBounds, MultibandTile, TargetCell, Tile, TileLayout}
+import geotrellis.raster.mapalgebra.local.LocalTileBinaryOp
+import geotrellis.raster.{CellType, GridBounds, MultibandTile, NODATA, TargetCell, Tile, TileLayout, isNoData}
 import geotrellis.spark._
+import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{RawTile, SpaceTimeBandKey}
@@ -29,9 +31,9 @@ object CoverageUtil {
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
     })
-//    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
-//      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
-//    }
+    //    if (colRowInstant._1 != 0 || colRowInstant._2 != 0 || (colRowInstant._3 != colRowInstant._6)) {
+    //      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
+    //    }
 
 
     val firstTile: RawTile = coverageRawTiles.first()
@@ -310,8 +312,8 @@ object CoverageUtil {
   }
 
   def focalMethods(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
-                   focalFunc: (Tile,Neighborhood,Option[GridBounds[Int]],TargetCell) => Tile, radius: Int):(RDD[
-    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
+                   focalFunc: (Tile, Neighborhood, Option[GridBounds[Int]], TargetCell) => Tile, radius: Int): (RDD[
+    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     kernelType match {
       case "square" => {
         val neighborhood = focal.Square(radius)
@@ -333,4 +335,49 @@ object CoverageUtil {
       }
     }
   }
+}
+
+//取余运算
+object Mod extends LocalTileBinaryOp {
+  def combine(z1: Int, z2: Int) = {
+    if (isNoData(z1) || isNoData(z2)) NODATA
+    else z1 % z2
+  }
+
+  override def combine(z1: Double, z2: Double): Double = {
+    if (isNoData(z1) || isNoData(z2)) NODATA
+    else z1 % z2
+  }
+}
+trait ModMethods extends MethodExtensions[Tile] {
+  /** Mod a constant Int value to each cell. */
+  def localMod(i: Int): Tile = Mod(self, i)
+
+  /** Mod a constant Int value to each cell. */
+  def %(i: Int): Tile = localMod(i)
+
+  /** Mod a constant Int value to each cell. */
+  def %:(i: Int): Tile = localMod(i)
+
+  /** Mod a constant Double value to each cell. */
+  def localMod(d: Double): Tile = Mod(self, d)
+
+  /** Mod a constant Double value to each cell. */
+  def %(d: Double): Tile = localMod(d)
+
+  /** Mod a constant Double value to each cell. */
+  def %:(d: Double): Tile = localMod(d)
+
+  /** Mod the values of each cell in each raster. */
+  def localMod(r: Tile): Tile = Mod(self, r)
+
+  /** Mod the values of each cell in each raster. */
+  def %(r: Tile): Tile = localMod(r)
+
+}
+
+object Cbrt extends Serializable{
+  def apply(r:Tile) =
+    r.dualMap {z:Int => if(isNoData(z)) NODATA else math.cbrt(z).toInt}
+              {z:Double => if(z == Double.NaN) NODATA else math.cbrt(z)}
 }

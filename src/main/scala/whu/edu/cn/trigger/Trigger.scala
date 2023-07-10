@@ -149,6 +149,9 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.add" =>
         coverageRddList += (UUID -> Coverage.add(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+      case "Coverage.mod" =>
+        coverageRddList += (UUID -> Coverage.mod(coverage1 = coverageRddList(args("coverage1")), coverage2 =
+          coverageRddList(args("coverage2"))))
       case "Coverage.divide" =>
         coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.multiply" =>
@@ -262,6 +265,10 @@ object Trigger {
       //        coverageRddList += (UUID -> Coverage.cbrt(coverage = coverageRddList(args("coverage"))))
       case "Coverage.metadata" =>
         val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
+        println(metadataString)
+      case "Coverage.mask" =>
+        coverageRddList += (UUID -> Coverage.mask(coverageRddList(args("coverage1")), coverageRddList(args
+        ("coverage2")), args("readMask").toInt, args("writeMask").toInt))
       //        println(metadataString)
       case "Coverage.toInt8" =>
         coverageRddList += (UUID -> Coverage.toInt8(coverage = coverageRddList(args("coverage"))))
