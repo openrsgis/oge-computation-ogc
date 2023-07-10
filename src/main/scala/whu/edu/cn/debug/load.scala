@@ -63,7 +63,7 @@ object load {
     val coverage : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.add(coverage1,
       coverage2)
 
-    val coverageHsv = Coverage.hsvToRgb(coverage1)
+    val coverageHsv = Coverage.rgbToHsv(coverage1)
     for(band<-coverageHsv._1.first()._2.bands){
       val arr = band.toArray()
       println(arr.mkString(","))

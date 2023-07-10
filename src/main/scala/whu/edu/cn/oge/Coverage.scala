@@ -1337,7 +1337,7 @@ object Coverage {
         val q: Double = v * (1 - f * s)
         val u: Double = v * (1 - (1 - f) * s)
 
-        (h / 60) % 6 match {
+        ((h / 60) % 6).toInt match {
           case 0 =>
             rTile.set(i, j, (v * 255).toInt)
             gTile.set(i, j, (u * 255).toInt)
