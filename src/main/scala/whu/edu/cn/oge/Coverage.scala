@@ -1295,6 +1295,17 @@ object Coverage {
       }
     )
 
+    def isCoverageEqual(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                        coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+    : Boolean = {
+      // 相减后判断是否全 0
+      subtract(coverage1, coverage2).map(multiTile =>
+        multiTile._2.bands.filter(
+          tile => math.abs(tile.findMinMax._2) < 1e-6)
+      ).isEmpty()
+
+    }
+
     // TODO: 默认索引 hsv
     val coverageHRdd: RDD[(SpaceTimeBandKey, Tile)] =
       coverage._1.map(t => (t._1, t._2.band(0)))
