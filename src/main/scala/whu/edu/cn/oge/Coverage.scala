@@ -780,6 +780,7 @@ object Coverage {
     focalMethods(coverage, kernelType, focal.Mode.apply, radius)
   }
   //TODO: 完整地对运算逻辑进行测试
+
   /**
    * Convolves each band of an coverage with the given kernel. Coverages will be padded with Zeroes.
    *
@@ -820,7 +821,7 @@ object Coverage {
       .filter(t => {
         t._1.spaceTimeKey.spatialKey._1 >= 0 && t._1.spaceTimeKey.spatialKey._2 >= 0 && t._1.spaceTimeKey.spatialKey._1 < coverage._2.layout.layoutCols && t._1.spaceTimeKey.spatialKey._2 < coverage._2.layout.layoutRows
       })
-    val groupRDD : RDD[(SpaceTimeBandKey, MultibandTile)] = unionRDD.groupByKey().map(t => {
+    val groupRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = unionRDD.groupByKey().map(t => {
       val listBuffer = new ListBuffer[(SpatialKey, MultibandTile)]()
       val list = t._2.toList
       for (key <- List(SpatialKey(0, 0), SpatialKey(0, 1), SpatialKey(0, 2), SpatialKey(1, 0), SpatialKey(1, 1), SpatialKey(1, 2), SpatialKey(2, 0), SpatialKey(2, 1), SpatialKey(2, 2))) {
@@ -844,8 +845,8 @@ object Coverage {
     })
 
     val convolvedRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
-      (t._1, t._2.mapBands((_,tile) =>{
-        focal.Convolve(tile,kernel,None,TargetCell.All).crop(5,5,260,260)
+      (t._1, t._2.mapBands((_, tile) => {
+        focal.Convolve(tile, kernel, None, TargetCell.All).crop(5, 5, 260, 260)
       }))
     })
     (convolvedRDD, coverage._2)
@@ -1467,17 +1468,14 @@ object Coverage {
       })
 
     val entropyRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
+      val newMultiTile: MultibandTile = t._2.mapBands((_, tile) => {
+        val tempTile: MutableArrayTile = FloatArrayTile(
+          Array.fill[Float](256 * 256)(Float.NaN),
+          256, 256, FloatCellType).mutable
 
-      val numOfBands: Int = t._2.bandCount
-      val tempTileArray = new ListBuffer[MutableArrayTile]
-      tempTileArray.append(FloatArrayTile(
-        Array.fill[Float](256 * 256)(Float.NaN),
-        256, 256, FloatCellType).mutable)
-
-      tempTileArray.foreach(tempTile => {
         for (i <- 5 to 260; j <- 5 to 260) {
           val focalArea: Tile =
-            tempTile.crop(i - radius, j - radius,
+            tile.crop(i - radius, j - radius,
               i + radius, j + radius)
 
           val hist: Seq[(Int, Long)] = focalArea.histogram.binCounts()
@@ -1488,9 +1486,12 @@ object Coverage {
           }
           tempTile.setDouble(i - 5, j - 5, -entropyValue)
         }
-      }) // end foreach
 
-      (t._1, MultibandTile(tempTileArray))
+        tempTile
+      })
+
+
+      (t._1, newMultiTile)
 
     })
     (entropyRdd, coverage._2)
