@@ -12,7 +12,8 @@ import whu.edu.cn.entity.OGEClassType.OGEClassType
 import whu.edu.cn.entity.{CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
-import whu.edu.cn.util.{JedisUtil, ZCurveUtil}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, ZCurveUtil}
 
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
@@ -69,73 +70,78 @@ object Trigger {
 
   }
 
+  @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
-    funcName match {
 
-      // Service
-      case "Service.getCoverageCollection" =>
-        lazyFunc += (UUID -> (funcName, args))
-        coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
-      case "Service.getCoverage" =>
-        coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
-      case "Service.getTable" =>
-        tableRddList += (UUID -> isOptionalArg(args, "productID"))
-      case "Service.getFeatureCollection" =>
-        featureRddList += (UUID -> isOptionalArg(args, "productID"))
 
-      // Filter // TODO lrx: 待完善Filter类的函数
-      case "Filter.equals" =>
-        lazyFunc += (UUID -> (funcName, args))
-      case "Filter.and" =>
-        lazyFunc += (UUID -> (funcName, args))
+    try {
 
-      // Collection
-      case "Collection.map" =>
-        if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
-          isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
-          coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
-        }
+      funcName match {
 
-      // CoverageCollection
-      case "CoverageCollection.filter" =>
-        coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
-      case "CoverageCollection.mosaic" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.mean" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.mean(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.min" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.min(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.max" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.max(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.sum" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.sum(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.or" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.or(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.and" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.and(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.median" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.median(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.mode" =>
-        isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-        coverageRddList += (UUID -> CoverageCollection.mode(coverageCollectionRddList(args("coverageCollection"))))
-      case "CoverageCollection.addStyles" =>
-        if (isBatch == 0) {
+        // Service
+        case "Service.getCoverageCollection" =>
+          lazyFunc += (UUID -> (funcName, args))
+          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
+        case "Service.getCoverage" =>
+          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
+        case "Service.getTable" =>
+          tableRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeatureCollection" =>
+          featureRddList += (UUID -> isOptionalArg(args, "productID"))
+
+        // Filter // TODO lrx: 待完善Filter类的函数
+        case "Filter.equals" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.and" =>
+          lazyFunc += (UUID -> (funcName, args))
+
+        // Collection
+        case "Collection.map" =>
+          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
+            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
+            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
+          }
+
+        // CoverageCollection
+        case "CoverageCollection.filter" =>
+          coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
+        case "CoverageCollection.mosaic" =>
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
-          val visParam: VisualizationParam = new VisualizationParam
-          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")), visParam = visParam)
-        }
-        else {
-          CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
-        }
+          coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.mean" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.mean(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.min" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.min(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.max" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.max(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.sum" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.sum(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.or" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.or(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.and" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.and(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.median" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.median(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.mode" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.mode(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.addStyles" =>
+          if (isBatch == 0) {
+            isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+            val visParam: VisualizationParam = new VisualizationParam
+            visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+            CoverageCollection.visualizeOnTheFly(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")), visParam = visParam)
+          }
+          else {
+            CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
+          }
 
       // TODO lrx: 这里要改造
       // Table
@@ -543,29 +549,58 @@ object Trigger {
       //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
       //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
 
-      //Cube
-      case "Service.getCollections" =>
-        cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
-      case "Collections.toCube" =>
-        cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
-      case "Cube.NDWI" =>
-        cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
-      case "Cube.binarization" =>
-        cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
-          threshold = isOptionalArg(args, "threshold").toDouble))
-      case "Cube.subtract" =>
-        cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
-          certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
-      case "Cube.overlayAnalysis" =>
-        cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
-      case "Cube.addStyles" =>
-        Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
+        //Cube
+        case "Service.getCollections" =>
+          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
+        case "Collections.toCube" =>
+          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
+        case "Cube.NDWI" =>
+          cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
+        case "Cube.binarization" =>
+          cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
+            threshold = isOptionalArg(args, "threshold").toDouble))
+        case "Cube.subtract" =>
+          cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
+            certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
+        case "Cube.overlayAnalysis" =>
+          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
+        case "Cube.addStyles" =>
+          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
+      }
+
+    } catch {
+      case e: Throwable => throw e
+    } finally {
+      // 清空list
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      // TODO forDece: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
     }
   }
 
   def lambda(implicit sc: SparkContext, list: mutable.ArrayBuffer[Tuple3[String, String, mutable.Map[String, String]]]): Unit = {
     for (i <- list.indices) {
-      func(sc, list(i)._1, list(i)._2, list(i)._3)
+      try {
+        func(sc, list(i)._1, list(i)._2, list(i)._3)
+      } catch {
+        case e: Throwable =>
+          throw new Exception("Error occur in lambda: " +
+            "UUID = " + list(i)._1 + "\t" +
+            "funcName = " + list(i)._2 + "\n" +
+            "innerErrorType = " + e.getClass + "\n" +
+            "innerErrorInfo = " + e.getMessage + "\n" +
+            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+      }
     }
   }
 
@@ -699,10 +734,31 @@ object Trigger {
       optimizedDAGList.foreach(println(_))
     })
 
-    lambda(sc, optimizedDagMap("0"))
 
-    val time2: Long = System.currentTimeMillis()
-    println(time2 - time1)
+    try {
+      lambda(sc, optimizedDagMap("0"))
+    } catch {
+      case e: Throwable =>
+        val errorJson = new JSONObject
+        errorJson.put("error", e.toString)
+
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("workID", Trigger.dagId)
+        outJsonObject.put("json", errorJson)
+
+        println("Error json = " + outJsonObject)
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
+
+        // 打印至后端控制台
+        e.printStackTrace()
+    } finally {
+      val time2: Long = System.currentTimeMillis()
+      println(time2 - time1)
+
+    }
+
 
   }
 
