@@ -326,7 +326,7 @@ object CoverageUtil {
         val neighborhood = focal.Circle(radius)
         val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = (coverage._1.map(t => {
           (t._1, MultibandTile(t._2.bands.map(b => {
-            focal.Max(b, neighborhood, None, focal.TargetCell.All)
+            focalFunc(b, neighborhood, None, focal.TargetCell.All)
           })))
         }))
         (coverageRdd, coverage._2)

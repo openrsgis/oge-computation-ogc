@@ -161,6 +161,9 @@ object Trigger {
         coverageRddList += (UUID -> Coverage.binarization(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toInt))
       case "Coverage.and" =>
         coverageRddList += (UUID -> Coverage.and(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+      case "Coverage.xor" =>
+        coverageRddList += (UUID -> Coverage.xor(coverage1 = coverageRddList(args("coverage1")), coverage2 =
+          coverageRddList(args("coverage2"))))
       case "Coverage.or" =>
         coverageRddList += (UUID -> Coverage.or(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.not" =>
