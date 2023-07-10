@@ -1516,7 +1516,7 @@ object Coverage {
           TileLayoutStitcher.stitch(listBuffer)
 
         (t._1, tile.crop(
-          251, 251, 516, 516)
+          251, 251, 506, 506)
           .convert(CellType.fromName("int16")))
       })
 
@@ -1539,7 +1539,7 @@ object Coverage {
             entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
           }
           try{
-            if (i>256+5||j>256+5){
+            if (i>256 + 5||j>256 + 5){
               println(i)
               println(j)
             }
