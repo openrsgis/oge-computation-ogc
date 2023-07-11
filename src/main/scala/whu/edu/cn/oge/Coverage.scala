@@ -1212,9 +1212,9 @@ object Coverage {
       val tileRows: Int = t._2._1.rows
       val tileCols: Int = t._2._1.cols
       for (i <- 0 until tileRows; j <- 0 until tileCols) {
-        val r: Double = t._2._1.getDouble(i, j) / 255
-        val g: Double = t._2._2.getDouble(i, j) / 255
-        val b: Double = t._2._3.getDouble(i, j) / 255
+        val r: Double = t._2._1.getDouble(i, j) / 255.0
+        val g: Double = t._2._2.getDouble(i, j) / 255.0
+        val b: Double = t._2._3.getDouble(i, j) / 255.0
         val cMax: Double = math.max(math.max(r, g), b)
         val cMin: Double = math.min(math.min(r, g), b)
         if (cMax.equals(cMin)) {
