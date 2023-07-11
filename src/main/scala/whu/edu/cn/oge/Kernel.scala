@@ -89,6 +89,10 @@ object Kernel {
     }
   }
 
+  def plain(axis: String): Kernel = {
+    focal.Kernel(IntArrayTile(Array[Int](1,1,1,1,0,1,1,1,1), 3, 3))
+  }
+
 //  def robert(axis: String): Kernel = {
 //    if (axis == "y") {
 //      focal.Kernel(IntArrayTile(Array[Int](0, -1, 1, 0), 2, 2))

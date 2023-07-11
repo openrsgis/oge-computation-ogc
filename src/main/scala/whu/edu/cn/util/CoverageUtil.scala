@@ -4,8 +4,10 @@ import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{Neighborhood, TargetCell}
-import geotrellis.raster.{CellType, GridBounds, MultibandTile, TargetCell, Tile, TileLayout}
+import geotrellis.raster.mapalgebra.local.LocalTileBinaryOp
+import geotrellis.raster.{CellType, GridBounds, MultibandTile, NODATA, TargetCell, Tile, TileLayout, isNoData}
 import geotrellis.spark._
+import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{RawTile, SpaceTimeBandKey}
@@ -326,11 +328,56 @@ object CoverageUtil {
         val neighborhood = focal.Circle(radius)
         val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = (coverage._1.map(t => {
           (t._1, MultibandTile(t._2.bands.map(b => {
-            focal.Max(b, neighborhood, None, focal.TargetCell.All)
+            focalFunc(b, neighborhood, None, focal.TargetCell.All)
           })))
         }))
         (coverageRdd, coverage._2)
       }
     }
   }
+}
+
+//取余运算
+object Mod extends LocalTileBinaryOp {
+  def combine(z1: Int, z2: Int) = {
+    if (isNoData(z1) || isNoData(z2)) NODATA
+    else z1 % z2
+  }
+
+  override def combine(z1: Double, z2: Double): Double = {
+    if (isNoData(z1) || isNoData(z2)) NODATA
+    else z1 % z2
+  }
+}
+trait ModMethods extends MethodExtensions[Tile] {
+  /** Mod a constant Int value to each cell. */
+  def localMod(i: Int): Tile = Mod(self, i)
+
+  /** Mod a constant Int value to each cell. */
+  def %(i: Int): Tile = localMod(i)
+
+  /** Mod a constant Int value to each cell. */
+  def %:(i: Int): Tile = localMod(i)
+
+  /** Mod a constant Double value to each cell. */
+  def localMod(d: Double): Tile = Mod(self, d)
+
+  /** Mod a constant Double value to each cell. */
+  def %(d: Double): Tile = localMod(d)
+
+  /** Mod a constant Double value to each cell. */
+  def %:(d: Double): Tile = localMod(d)
+
+  /** Mod the values of each cell in each raster. */
+  def localMod(r: Tile): Tile = Mod(self, r)
+
+  /** Mod the values of each cell in each raster. */
+  def %(r: Tile): Tile = localMod(r)
+
+}
+
+object Cbrt extends Serializable{
+  def apply(r:Tile) =
+    r.dualMap {z:Int => if(isNoData(z)) NODATA else math.cbrt(z).toInt}
+              {z:Double => if(z == Double.NaN) NODATA else math.cbrt(z)}
 }
