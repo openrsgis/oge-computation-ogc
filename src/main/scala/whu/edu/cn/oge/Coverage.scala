@@ -29,9 +29,6 @@ import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
-import geotrellis.spark.partition.SpacePartitioner
-import jp.ne.opt.chronoscala.Imports.richZonedDateTime
-import shapeless.ops.nat.Mod
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import java.time.{Instant, ZonedDateTime}
