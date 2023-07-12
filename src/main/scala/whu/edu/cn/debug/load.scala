@@ -52,20 +52,22 @@ object load {
   }
 
   def testCoverage(): Unit={
+    val NoData: Int = -2147483648
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("Test")
     val sc = new SparkContext(conf)
-    val array = Array[Double](0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+    val array = Array[Double](Double.NaN, -1, Double.NaN, 0.45, 5, 6, 7, 8, 10)
 
-    val coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-  .makeFakeCoverage(sc,array,3,3)
+    var coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
+      .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222"),3,3)
+    val array2 = Array[Int](NoData, NoData, 3, 4, 5, 6, 7, 8, 9)
     val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc,array,3,3)
-    val coverage : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.add(coverage1,
-      coverage2)
+      .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222"), 3, 3)
+    coverage1 = Coverage.toInt8(coverage1)
 
-    val coverageHsv = Coverage.hsvToRgb(coverage1)
-    for(band<-coverageHsv._1.first()._2.bands){
-      val arr: Array[Double] = band.toArrayDouble()
+    val coverage = Coverage.toInt8(coverage1)
+    //    println(coverage)
+    for(band<-coverage.first()._2.bands){
+      val arr = band.toArrayDouble()
       println(arr.mkString(","))
     }
   }
