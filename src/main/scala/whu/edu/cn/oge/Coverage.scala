@@ -1213,7 +1213,12 @@ object Coverage {
 
     // TODO: 如何区分 RGB? 我这里默认索引 RGB 顺序
 
-    // 保留原来的 SpaceTimeBandKey
+    if (!coverage._1.first()._2.bandCount.equals(3)){
+      throw new
+          IllegalArgumentException("Tile' s bandCount must be three!")
+    }
+
+    // 保留原来的 SpaceTimeBandKey, 分离三通道
     val coverageRRdd: RDD[(SpaceTimeBandKey, Tile)] =
       coverage._1.map(t => (t._1, t._2.band(0)))
     val coverageGRdd: RDD[(SpaceTimeBandKey, Tile)] =
@@ -1231,10 +1236,12 @@ object Coverage {
       val sTile: MutableArrayTile = t._2._2.convert(CellType.fromName("float32")).mutable
       val vTile: MutableArrayTile = t._2._3.convert(CellType.fromName("float32")).mutable
 
-      for (i <- 0 to 255; j <- 0 to 255) {
-        val r: Double = t._2._1.getDouble(i, j) / 255
-        val g: Double = t._2._2.getDouble(i, j) / 255
-        val b: Double = t._2._3.getDouble(i, j) / 255
+      val tileRows: Int = t._2._1.rows
+      val tileCols: Int = t._2._1.cols
+      for (i <- 0 until tileRows; j <- 0 until tileCols) {
+        val r: Double = t._2._1.getDouble(i, j) / 255.0
+        val g: Double = t._2._2.getDouble(i, j) / 255.0
+        val b: Double = t._2._3.getDouble(i, j) / 255.0
         val cMax: Double = math.max(math.max(r, g), b)
         val cMin: Double = math.min(math.min(r, g), b)
         if (cMax.equals(cMin)) {
@@ -1289,6 +1296,23 @@ object Coverage {
   def hsvToRgb(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
+    if (!coverage._1.first()._2.bandCount.equals(3)){
+      throw new
+          IllegalArgumentException("Tile' s bandCount must be three!")
+    }
+
+
+    def isCoverageEqual(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                        coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+    : Boolean = {
+      // 相减后判断是否全 0
+      subtract(coverage1, coverage2).map(multiTile =>
+        multiTile._2.bands.filter(
+          tile => math.abs(tile.findMinMax._2) < 1e-6)
+      ).isEmpty()
+
+    }
+
     // TODO: 默认索引 hsv
     val coverageHRdd: RDD[(SpaceTimeBandKey, Tile)] =
       coverage._1.map(t => (t._1, t._2.band(0)))
@@ -1308,17 +1332,19 @@ object Coverage {
       val gTile: MutableArrayTile = t._2._2.convert(CellType.fromName("uint8")).mutable
       val bTile: MutableArrayTile = t._2._3.convert(CellType.fromName("uint8")).mutable
 
-      for (i <- 0 to 255; j <- 0 to 255) {
-        val h: Double = t._2._1.getDouble(i, j)
+      val tileRows: Int = t._2._1.rows
+      val tileCols: Int = t._2._1.cols
+      for (i <- 0 until tileRows; j <- 0 until tileCols) {
+        val h: Double = t._2._1.getDouble(i, j) * 360.0
         val s: Double = t._2._2.getDouble(i, j)
         val v: Double = t._2._3.getDouble(i, j)
 
-        val f: Double = (h / 60) - i
+        val f: Double = (h / 60) - ((h / 60).toInt % 6)
         val p: Double = v * (1 - s)
         val q: Double = v * (1 - f * s)
         val u: Double = v * (1 - (1 - f) * s)
 
-        (h / 60) % 6 match {
+        ((h / 60).toInt % 6) match {
           case 0 =>
             rTile.set(i, j, (v * 255).toInt)
             gTile.set(i, j, (u * 255).toInt)
@@ -1479,11 +1505,12 @@ object Coverage {
                 break
               }
             }
-          }
+          } // end breakable
+
           if (!flag) {
             // 将多个波段的瓦片值都设置为全 -128
             val tempTileArray = new ListBuffer[Tile]();
-            for (i <- 0 to numOfBands) {
+            for (i <- 0 until numOfBands) {
               tempTileArray.append(ByteArrayTile(
                 Array.fill[Byte](256 * 256)(-128),
                 256, 256, ByteCellType).mutable)
@@ -1496,7 +1523,7 @@ object Coverage {
           TileLayoutStitcher.stitch(listBuffer)
 
         (t._1, tile.crop(
-          251, 251, 516, 516)
+          251, 251, 506, 506)
           .convert(CellType.fromName("int16")))
       })
 
@@ -1506,7 +1533,8 @@ object Coverage {
           Array.fill[Float](256 * 256)(Float.NaN),
           256, 256, FloatCellType).mutable
 
-        for (i <- 5 to 260; j <- 5 to 260) {
+        println(tile.rows)
+        for (i <- 5 until (tile.rows + 5); j <- 5 until (tile.cols + 5)) {
           val focalArea: Tile =
             tile.crop(i - radius, j - radius,
               i + radius, j + radius)
@@ -1517,7 +1545,17 @@ object Coverage {
             val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
             entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
           }
+          try{
+            if (i>256 + 5||j>256 + 5){
+              println(i)
+              println(j)
+            }
           tempTile.setDouble(i - 5, j - 5, -entropyValue)
+          }catch{
+            case e: Throwable =>
+              println((i,j).toString())
+              e.printStackTrace()
+          }
         }
 
         tempTile
