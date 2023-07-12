@@ -1481,11 +1481,6 @@
         "description": "The coverage to resample."
       },
       {
-        "name": "level",
-        "type": "Int",
-        "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
-      },
-      {
         "name": "mode",
         "type": "String",
         "description": "The interpolation mode to use"
