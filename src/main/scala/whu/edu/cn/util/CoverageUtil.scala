@@ -376,8 +376,29 @@ trait ModMethods extends MethodExtensions[Tile] {
 
 }
 
-object Cbrt extends Serializable{
-  def apply(r:Tile) =
-    r.dualMap {z:Int => if(isNoData(z)) NODATA else math.cbrt(z).toInt}
-              {z:Double => if(z == Double.NaN) NODATA else math.cbrt(z)}
+object Cbrt extends Serializable {
+  def apply(r: Tile) =
+    r.dualMap { z: Int => if (isNoData(z)) NODATA else math.cbrt(z).toInt } { z: Double => if (z == Double.NaN) Double.NaN else math.cbrt(z) }
+}
+
+object RemapWithoutDefaultValue extends Serializable {
+  def apply(r: Tile, m: Map[Int, Double]) = {
+
+    r.dualMap {
+      z: Int => if (m.contains(z.toInt)) m(z).toInt else z
+    } {
+      z: Double => if (m.contains(z.toInt)) m(z.toInt) else z
+    }
+  }
+
+}
+
+object RemapWithDefaultValue extends Serializable {
+  def apply(r: Tile, m: Map[Int, Double], num: Double) = {
+    r.dualMap {
+      z: Int => if (m.contains(z)) m(z).toInt else num.toInt
+    } {
+      z: Double => if (m.contains(z.toInt)) m(z.toInt) else num
+    }
+  }
 }

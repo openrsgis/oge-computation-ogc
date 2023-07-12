@@ -246,6 +246,14 @@ object Trigger {
       case "Coverage.projection" =>
         val projection: String = Coverage.projection(coverage = coverageRddList(args("coverage")))
         println(projection)
+        case "Coverage.remap" =>
+          coverageRddList+=(UUID ->Coverage.remap(coverage = coverageRddList(args("coverage")), args("from").slice(1,
+            args("from").length-1).split(',').toList.map(_.toInt), args("to").slice(1,
+            args("to").length - 1).split(',').toList.map(_.toDouble),Option(isOptionalArg(args,"defaultValue")
+            .toDouble)))
+        case "Coverage.polynomial" =>
+          coverageRddList+=(UUID -> Coverage.polynomial(coverage = coverageRddList(args("coverage")),args("l").slice(1,
+            args("l").length - 1).split(',').toList.map(_.toDouble)))
       //      case "Coverage.histogram" =>
       //        val hist = Coverage.histogram(coverage = coverageRddList(args("coverage")))
       //        println(hist)
