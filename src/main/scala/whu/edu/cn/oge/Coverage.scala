@@ -118,7 +118,9 @@ object Coverage {
     (SpaceTimeBandKey,
       MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array, cols, rows), ArrayTile(arr = array, cols, rows))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
+      ArrayTile(arr = array, cols, rows),
+    ArrayTile(arr = array, cols, rows))
     val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
