@@ -151,6 +151,8 @@ object Trigger {
         Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
       // Coverage
+      case "Coverage.date" =>
+        coverageRddList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
       case "Coverage.subtract" =>
         coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.add" =>
@@ -251,14 +253,14 @@ object Trigger {
       //        println(hist)
       //      case "Coverage.reproject" =>
       //        coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), newProjectionCode = args("crsCode").toInt, resolution = args("resolution").toInt))
-      //      case "Coverage.resample" =>
-      //        coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
-      //      case "Coverage.gradient" =>
-      //        coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
-      //      case "Coverage.clip" =>
-      //        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
-      //      case "Coverage.clamp" =>
-      //        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
+      case "Coverage.resample" =>
+        coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), mode = args("mode")))
+      case "Coverage.gradient" =>
+        coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
+      case "Coverage.clip" =>
+        coverageRddList += (UUID -> Coverage.clip(coverage = coverageRddList(args("coverage")), geom = featureRddList(args("geom")).asInstanceOf[Geometry]))
+      case "Coverage.clamp" =>
+        coverageRddList += (UUID -> Coverage.clamp(coverage = coverageRddList(args("coverage")), low = args("low").toInt, high = args("high").toInt))
       case "Coverage.rgbToHsv" =>
         coverageRddList += (UUID -> Coverage.rgbToHsv(coverage=coverageRddList(args("coverage"))))
       case "Coverage.hsvToRgb" =>

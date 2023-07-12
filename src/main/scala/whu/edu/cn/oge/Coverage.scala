@@ -33,6 +33,7 @@ import geotrellis.spark.partition.SpacePartitioner
 import jp.ne.opt.chronoscala.Imports.richZonedDateTime
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 
+import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
 import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ListBuffer
@@ -146,6 +147,16 @@ object Coverage {
       bounds = KeyBounds(SpaceTimeKey(0, 0, 0), SpaceTimeKey(0, 0, 0))
     )
     (rdd, metadata)
+  }
+
+  /**
+   * return the acquisition date of the given coverage
+   *
+   * @param coverage the coverage rdd for operation
+   * @return
+   */
+  def date(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    coverage._1.first()._1.getSpaceTimeKey().time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
   }
 
   /**
