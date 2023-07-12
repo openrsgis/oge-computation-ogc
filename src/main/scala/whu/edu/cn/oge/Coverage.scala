@@ -28,7 +28,7 @@ import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, foca
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 import geotrellis.raster.mapalgebra.focal
-import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, CellwiseMedianCalc, CursorMedianCalc, FocalCalculation, IntArrayTileResult, Median, MedianModeCalculation, Neighborhood, Square, TargetCell}
+import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, CellwiseMedianCalc, Cursor, CursorCalculation, CursorMedianCalc, DoubleArrayTileResult, FocalCalculation, IntArrayTileResult, Median, MedianModeCalculation, Neighborhood, Square, TargetCell}
 import geotrellis.spark.partition.SpacePartitioner
 import jp.ne.opt.chronoscala.Imports.richZonedDateTime
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -1399,8 +1399,15 @@ object Coverage {
    * @return
    */
   def entropy(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+              kernelType: String,
               radius: Int)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    focalMethods(coverage, kernelType, Entropy.apply, radius)
+
+
+
+
 
 
     // 交叉熵处理内部类
@@ -1413,7 +1420,7 @@ object Coverage {
       : FocalCalculation[Tile] = {
         n match {
           case Square(ext) =>
-            new CellwiseEntropyCalc(tile, n, bounds, ext, target)
+            new CellwiseEntropyCalcDouble(tile, n, bounds, ext, target)
           case _ =>
             throw new RuntimeException("这个还没写！")
         }
@@ -1429,71 +1436,21 @@ object Coverage {
     }
 
 
-    trait EntropyCalculation {
 
-      var currRangeMax = 0
+    class CellwiseEntropyCalcDouble(r: Tile,
+                                    n: Neighborhood,
+                                    bounds: Option[GridBounds[Int]],
+                                    extent: Int,
+                                    target: TargetCell)
+      extends CellwiseCalculation[Tile](r, n, bounds, target)
+        with DoubleArrayTileResult {
+
+      println(s"Calc extent = ${extent}")
 
       // [灰度值, 出现次数]
-      var greyMap: mutable.Map[Int, Int] = null
-      var d2: Int = 0
+      val greyMap = new mutable.HashMap[Int, Int]()
+      var currRangeMax = 0
 
-      def initArray(extent: Int): Unit = {
-        greyMap = new mutable.HashMap[Int, Int]()
-      }
-
-      def reset(): Unit = {
-        greyMap.clear()
-        currRangeMax = 0
-      }
-
-      /**
-       * just add value to map
-       */
-      def addValue(v: Int): Unit = {
-        if (!greyMap.contains(v)) {
-          greyMap.put(v, 0)
-          currRangeMax += 1
-        } else {
-          greyMap(v) += 1
-          currRangeMax += 1
-        }
-      }
-
-      def removeValue(v: Int): Unit = {
-        if (greyMap.contains(v) &&
-          greyMap(v) > 0 &&
-          currRangeMax > 0) {
-          greyMap(v) -= 1
-          currRangeMax -= 1
-        }
-      }
-
-      /** Calculates the median. If you use this,
-       * make sure you've been only calling addValueOrdered
-       */
-      def solveEntropy = {
-        /*        if (currArrMax == 0) NODATA else {
-          if (currArrMax % 2 == 0) {
-            (arr(currArrMax / 2) + arr(currArrMax / 2 - 1)) / 2
-          } else {
-            arr(currArrMax / 2)
-          }
-        }
-      }*/
-      }
-    }
-
-
-    class CellwiseEntropyCalc(r: Tile,
-                              n: Neighborhood,
-                              bounds: Option[GridBounds[Int]],
-                              extent: Int,
-                              target: TargetCell)
-      extends CellwiseCalculation[Tile](r, n, bounds, target)
-        with IntArrayTileResult
-        with EntropyCalculation {
-
-      initArray(extent)
 
       private final def isIllegalData(v: Int)
       : Boolean = {
@@ -1504,21 +1461,47 @@ object Coverage {
       def add(r: Tile, x: Int, y: Int): Unit = {
         val v = r.get(x, y)
         // assert v isData
-        if (!isIllegalData(v)) {
-          addValue(v)
+        if (isIllegalData(v)) {
+          assert(false)
+        } else if (!greyMap.contains(v)) {
+          greyMap.put(v, 0)
+          currRangeMax += 1
+        } else {
+          greyMap(v) += 1
+          currRangeMax += 1
         }
       }
 
       def remove(r: Tile, x: Int, y: Int): Unit = {
         val v = r.get(x, y)
-        if (!isIllegalData(v)) {
-          removeValue(v)
+        if (isIllegalData(v)) {
+          assert(false)
+        } else if (greyMap.contains(v) &&
+          greyMap(v) > 0 &&
+          currRangeMax > 0) {
+          greyMap(v) -= 1
+          currRangeMax -= 1
         }
       }
 
       def setValue(x: Int, y: Int): Unit = {
-        resultTile.set(x, y, solveEntropy)
+        resultTile.setDouble(x, y,
+          if (currRangeMax == 0) NODATA else {
+
+            var sum = 0.0
+            for (kv <- greyMap) if (kv._2 > 0) {
+              val p: Double = kv._2.toDouble / currRangeMax.toDouble
+              sum -= p * math.log10(p) / math.log10(2)
+            }
+            sum
+          })
       }
+
+      def reset(): Unit = {
+        greyMap.clear()
+        currRangeMax = 0
+      }
+
     }
 
 
