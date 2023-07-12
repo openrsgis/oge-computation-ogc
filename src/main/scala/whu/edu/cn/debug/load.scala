@@ -58,16 +58,16 @@ object load {
     val array = Array[Double](Double.NaN, -1, Double.NaN, 0.45, 5, 6, 7, 8, 10)
 
     var coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222"),3,3)
+      .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222","333"),3,3)
     val array2 = Array[Int](NoData, NoData, 3, 4, 5, 6, 7, 8, 9)
     val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222"), 3, 3)
-//    coverage1 = Coverage.toInt8(coverage1)
+      .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222","333"), 3, 3)
+    coverage1 = Coverage.entropy(coverage1,5)
 
     val coverage = Coverage.rgbToHsv(coverage1)
     //    println(coverage)
-    for(band<-coverage.first()._2.bands){
-      val arr = band.toArrayDouble()
+    for(band<-coverage1.first()._2.bands){
+      val arr: Array[Double] = band.toArrayDouble()
       println(arr.mkString(","))
     }
   }

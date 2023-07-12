@@ -133,7 +133,9 @@ object Coverage {
     (SpaceTimeBandKey,
       MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array, cols, rows), ArrayTile(arr = array, cols, rows),ArrayTile(arr = array, cols, rows))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
+      ArrayTile(arr = array, cols, rows)
+      ,ArrayTile(arr = array, cols, rows))
     val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
@@ -1378,6 +1380,11 @@ object Coverage {
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
 
+    // 所有瓦片波段数一致，选取其一
+    val numOfBands: Int = coverage._1.first()._2.bandCount
+    val rows: Int = coverage._1.first()._2.rows
+    val cols: Int = coverage._1.first()._2.cols
+
     val leftNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
       coverage._1.map(t =>
         (SpaceTimeBandKey(
@@ -1476,8 +1483,7 @@ object Coverage {
           SpatialKey(2, 2))) {
           var flag = false
 
-          // 所有瓦片波段数一致，选取其一
-          var numOfBands: Int = list.head._2.bandCount
+
           breakable {
             for (tile <- list) {
               if (key.equals(tile._1)) {
@@ -1493,8 +1499,8 @@ object Coverage {
             val tempTileArray = new ListBuffer[Tile]();
             for (i <- 0 until numOfBands) {
               tempTileArray.append(ByteArrayTile(
-                Array.fill[Byte](256 * 256)(-128),
-                256, 256, ByteCellType).mutable)
+                Array.fill[Byte](rows * cols)(-128),
+                rows, cols , ByteCellType).mutable)
             }
             listBuffer.append((key,
               MultibandTile(tempTileArray)))
@@ -1511,7 +1517,7 @@ object Coverage {
     val entropyRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
       val newMultiTile: MultibandTile = t._2.mapBands((_, tile) => {
         val tempTile: MutableArrayTile = FloatArrayTile(
-          Array.fill[Float](256 * 256)(Float.NaN),
+          Array.fill[Float](rows * cols)(Float.NaN),
           256, 256, FloatCellType).mutable
 
         println(tile.rows)
@@ -1527,7 +1533,7 @@ object Coverage {
             entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
           }
           try{
-            if (i>256 + 5||j>256 + 5){
+            if (i>rows + 5||j>cols + 5){
               println(i)
               println(j)
             }
