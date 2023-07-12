@@ -110,7 +110,7 @@ object Coverage {
   Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
   可以使用isNoData方法来判断一个值是否是NoData值
   */
-  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Int], cols: Int, rows: Int):
+  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Double], cols: Int, rows: Int):
   (RDD[
     (SpaceTimeBandKey,
       MultibandTile)],
@@ -130,7 +130,7 @@ object Coverage {
     (rdd,metadata)
   }
 
-  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Double], cols: Int, rows: Int):
+  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Int], cols: Int, rows: Int):
   (RDD[
     (SpaceTimeBandKey,
       MultibandTile)],
@@ -1309,16 +1309,16 @@ object Coverage {
       val tileRows: Int = t._2._1.rows
       val tileCols: Int = t._2._1.cols
       for (i <- 0 until tileRows; j <- 0 until tileCols) {
-        val h: Double = t._2._1.getDouble(i, j)
+        val h: Double = t._2._1.getDouble(i, j) * 360.0
         val s: Double = t._2._2.getDouble(i, j)
         val v: Double = t._2._3.getDouble(i, j)
 
-        val f: Double = (h / 60) - i
+        val f: Double = (h / 60) - ((h / 60).toInt % 6)
         val p: Double = v * (1 - s)
         val q: Double = v * (1 - f * s)
         val u: Double = v * (1 - (1 - f) * s)
 
-        ((h / 60) % 6).toInt match {
+        ((h / 60).toInt % 6) match {
           case 0 =>
             rTile.set(i, j, (v * 255).toInt)
             gTile.set(i, j, (u * 255).toInt)
