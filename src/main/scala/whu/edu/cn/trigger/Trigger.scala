@@ -272,7 +272,7 @@ object Trigger {
       case "Coverage.hsvToRgb" =>
         coverageRddList += (UUID -> Coverage.hsvToRgb(coverage=coverageRddList(args("coverage"))))
       case "Coverage.entropy" =>
-        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+        coverageRddList += (UUID -> Coverage.entropy(coverage = coverageRddList(args("coverage")),"square", radius = args("radius").toInt))
       //      case "Coverage.NDVI" =>
       //        coverageRddList += (UUID -> Coverage.NDVI(NIR = coverageRddList(args("NIR")), Red = coverageRddList(args("Red"))))
       //      case "Coverage.cbrt" =>
