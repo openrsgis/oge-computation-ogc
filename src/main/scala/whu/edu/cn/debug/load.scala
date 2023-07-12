@@ -55,30 +55,20 @@ object load {
     val NoData: Int = -2147483648
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("Test")
     val sc = new SparkContext(conf)
-    val array = Array[Double](1, 2, 3, 4, 5, 6, 7, 8 ,9)
+    val array = Array[Double](Double.NaN, -1, Double.NaN, 0.45, 5, 6, 7, 8, 10)
 
-    val coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-  .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222"),3,3)
-    val array2 = Array[Int](2, 4, 6 ,8, 10, 12, 14, 16, 18)
+    var coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
+      .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222"),3,3)
+    val array2 = Array[Int](NoData, NoData, 3, 4, 5, 6, 7, 8, 9)
     val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
       .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222"), 3, 3)
+    coverage1 = Coverage.toInt8(coverage1)
 
-    val coverage = Coverage.resample(coverage2, "Bilinear")
-//    println(coverage)
+    val coverage = Coverage.toInt8(coverage1)
+    //    println(coverage)
     for(band<-coverage.first()._2.bands){
-      var num = 0
-      band.foreachDouble(data => {
-        if (num == 8) {
-          print(data + "\n")
-          num = 0
-        } else {
-          print(data + ", ")
-          num = num + 1
-        }
-
-      })
-      println()
-//      println(arr.mkString(", "))
+      val arr = band.toArrayDouble()
+      println(arr.mkString(","))
     }
   }
   def ndviLandsatCollection(): Unit = {
