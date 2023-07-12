@@ -110,15 +110,13 @@ object Coverage {
   Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
   可以使用isNoData方法来判断一个值是否是NoData值
   */
-  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Double], cols: Int, rows: Int):
+  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Int], names: mutable.ListBuffer[String], cols: Int, rows: Int):
   (RDD[
     (SpaceTimeBandKey,
       MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
-      ArrayTile(arr = array, cols, rows),
-      ArrayTile(arr = array, cols, rows))
-    val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), ListBuffer[String]("111", "0", "2"))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows), ArrayTile(arr = array, cols, rows))
+    val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
       cellType = IntConstantNoDataCellType,
@@ -127,19 +125,19 @@ object Coverage {
       crs = CRS.fromEpsgCode(4326),
       bounds = KeyBounds(SpaceTimeKey(0, 0, 0), SpaceTimeKey(0, 0, 0))
     )
-    (rdd,metadata)
+    (rdd, metadata)
   }
 
-  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Int], cols: Int, rows: Int):
+  def makeFakeCoverage(implicit sc: SparkContext, array: Array[Double], names: mutable.ListBuffer[String], cols: Int, rows: Int):
   (RDD[
     (SpaceTimeBandKey,
       MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array, cols, rows))
-    val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), ListBuffer[String]("111"))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows), ArrayTile(arr = array, cols, rows),ArrayTile(arr = array, cols, rows))
+    val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
-      cellType = IntConstantNoDataCellType,
+      cellType = DoubleConstantNoDataCellType,
       layout = LayoutDefinition(Extent(0.0, 0.0, 1.0, 1.0), TileLayout(1, 1, 3, 3)),
       extent = Extent(0.0, 0.0, 1.0, 1.0),
       crs = CRS.fromEpsgCode(4326),
@@ -1196,12 +1194,10 @@ object Coverage {
 
     // TODO: 如何区分 RGB? 我这里默认索引 RGB 顺序
 
-    coverage._1.map(t =>
-      if (!t._2.bandCount.equals(3)) {
-        throw new IllegalArgumentException
-        ("Tile' s bandCount must be three!")
-      }
-    )
+    if (!coverage._1.first()._2.bandCount.equals(3)){
+      throw new
+          IllegalArgumentException("Tile' s bandCount must be three!")
+    }
 
     // 保留原来的 SpaceTimeBandKey, 分离三通道
     val coverageRRdd: RDD[(SpaceTimeBandKey, Tile)] =
@@ -1281,12 +1277,11 @@ object Coverage {
   def hsvToRgb(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    coverage._1.map(t =>
-      if (!t._2.bandCount.equals(3)) {
-        throw new IllegalArgumentException
-        ("Tile' s bandCount must be three!")
-      }
-    )
+    if (!coverage._1.first()._2.bandCount.equals(3)){
+      throw new
+          IllegalArgumentException("Tile' s bandCount must be three!")
+    }
+
 
     def isCoverageEqual(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                         coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))

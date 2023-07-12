@@ -62,9 +62,9 @@ object load {
     val array2 = Array[Int](NoData, NoData, 3, 4, 5, 6, 7, 8, 9)
     val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
       .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222"), 3, 3)
-    coverage1 = Coverage.toInt8(coverage1)
+//    coverage1 = Coverage.toInt8(coverage1)
 
-    val coverage = Coverage.toInt8(coverage1)
+    val coverage = Coverage.rgbToHsv(coverage1)
     //    println(coverage)
     for(band<-coverage.first()._2.bands){
       val arr = band.toArrayDouble()
