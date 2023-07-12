@@ -1251,11 +1251,11 @@
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The input image."
+        "description": "The input coverage."
       },
       {
-        "name": "coefficients",
-        "type": "List<float>",
+        "name": "l",
+        "type": "List<Double>",
         "description": "The polynomial coefficients in increasing order of degree starting with the constant term."
       }
     ]
@@ -1407,6 +1407,27 @@
       }
     ]
   },
+  "Coverage.slice": {
+    "description": "Selects a contiguous group of bands from a coverage by position.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage from which to select bands."
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "Where to start the selection."
+      },
+      {
+        "name": "end",
+        "type": "Int",
+        "description": "Where to end the selection."
+      }
+    ]
+  },
   "Coverage.histogram": {
     "description": "Return the histogram of the image, a map of bin label value and its associated count.",
     "returns": "Map",
@@ -1460,14 +1481,35 @@
         "description": "The coverage to resample."
       },
       {
-        "name": "level",
-        "type": "Int",
-        "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
-      },
-      {
         "name": "mode",
         "type": "String",
         "description": "The interpolation mode to use"
+      }
+    ]
+  },
+  "Coverage.remap": {
+    "description": "Maps from input values to output values, represented by two parallel lists. Any input values not included in the input list are either set to defaultValue if it is given, or masked if it isn't. Note that inputs containing floating point values might sometimes fail to match due to floating point precision errors.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to remap."
+      },
+      {
+        "name": "from",
+        "type": "List[Int]",
+        "description": "The key list of the map."
+      },
+      {
+        "name": "to",
+        "type": "List[Double]",
+        "description": "The value list of the map."
+      },
+      {
+        "name": "defaultValue",
+        "type": "Option[Int]",
+        "description": "Any input values not included in the input list are either set to defaultValue if it is given, or masked if it isn't."
       }
     ]
   },
