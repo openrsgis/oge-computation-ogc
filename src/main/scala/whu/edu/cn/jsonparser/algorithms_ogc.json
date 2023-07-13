@@ -873,21 +873,21 @@
     ]
   },
   "Coverage.divide": {
-  "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
-  "returns": "Coverage",
-  "args": [
-    {
-      "name": "coverage1",
-      "type": "Coverage",
-      "description": "The image from which the left operand bands are taken."
-    },
-    {
-      "name": "coverage2",
-      "type": "Coverage",
-      "description": "The image from which the right operand bands are taken."
-    }
-  ]
-},
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
   "Coverage.and": {
     "description": "Returns 1 iff both values are non-zero for each matched pair of bands in coverage1 and coverage2. If both have only 1 band, the 2 band will match.",
     "returns": "Coverage",

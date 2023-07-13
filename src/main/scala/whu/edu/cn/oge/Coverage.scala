@@ -115,7 +115,7 @@ object Coverage {
     TileLayerMetadata[SpaceTimeKey]) = {
     val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
       ArrayTile(arr = array, cols, rows),
-    ArrayTile(arr = array, cols, rows))
+      ArrayTile(arr = array, cols, rows))
     val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
@@ -1142,7 +1142,7 @@ object Coverage {
     val sobely = geotrellis.raster.mapalgebra.focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
     val tilex = convolve(coverage, sobelx)
     val tiley = convolve(coverage, sobely)
-    add(abs(tilex), abs(tiley))
+    sqrt(add(pow(tilex,2), pow(tiley,2)))
   }
 
 
@@ -1414,6 +1414,8 @@ object Coverage {
     focalMethods(coverage, "square", Entropy.apply, radius)
   }
 
+
+  //Local caculation.
   protected def stack(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), nums: Int):
   (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
