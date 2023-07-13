@@ -18,7 +18,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, RawTile, SpaceTimeBandKey}
-import whu.edu.cn.oge.{Coverage, Kernel}
+import whu.edu.cn.oge.Coverage
 import whu.edu.cn.oge.CoverageCollection.mosaic
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.makeCoverageCollectionRDD
@@ -58,16 +58,19 @@ object load {
     val array = Array[Double](Double.NaN, -1, Double.NaN, 0.45, 5, 6, 7, 8, 10)
 
     var coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222"),3,3)
-    val array2 = Array[Int](NoData, NoData, 3, 4, 5, 6, 7, 8, 9)
-    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222"), 3, 3)
-    coverage1 = Coverage.toInt8(coverage1)
+      .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222","333"),3,3)
 
-    val coverage = Coverage.toInt8(coverage1)
+
+    val array2 = Array[Int](123,231,99,123,255,255,128,234,132)
+    var coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
+      .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222","333"), 3, 3)
+    coverage2 = Coverage.entropy(coverage2,"square",5)
+//    coverage1 = Coverage.focalMax(coverage1,"square",5)
+
+    val coverage = Coverage.rgbToHsv(coverage1)
     //    println(coverage)
-    for(band<-coverage.first()._2.bands){
-      val arr = band.toArrayDouble()
+    for(band<-coverage2.first()._2.bands){
+      val arr: Array[Double] = band.toArrayDouble()
       println(arr.mkString(","))
     }
   }

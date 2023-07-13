@@ -3,9 +3,9 @@ package whu.edu.cn.util
 import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
-import geotrellis.raster.mapalgebra.focal.{Neighborhood, TargetCell}
+import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
 import geotrellis.raster.mapalgebra.local.LocalTileBinaryOp
-import geotrellis.raster.{CellType, GridBounds, MultibandTile, NODATA, TargetCell, Tile, TileLayout, isNoData}
+import geotrellis.raster.{CellType, GridBounds, MultibandTile, NODATA, Tile, TileLayout, isNoData}
 import geotrellis.spark._
 import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
@@ -339,7 +339,7 @@ object CoverageUtil {
 
 //取余运算
 object Mod extends LocalTileBinaryOp {
-  def combine(z1: Int, z2: Int) = {
+  def combine(z1: Int, z2: Int): Int = {
     if (isNoData(z1) || isNoData(z2)) NODATA
     else z1 % z2
   }
@@ -349,6 +349,7 @@ object Mod extends LocalTileBinaryOp {
     else z1 % z2
   }
 }
+
 trait ModMethods extends MethodExtensions[Tile] {
   /** Mod a constant Int value to each cell. */
   def localMod(i: Int): Tile = Mod(self, i)
@@ -377,12 +378,12 @@ trait ModMethods extends MethodExtensions[Tile] {
 }
 
 object Cbrt extends Serializable {
-  def apply(r: Tile) =
+  def apply(r: Tile): Tile =
     r.dualMap { z: Int => if (isNoData(z)) NODATA else math.cbrt(z).toInt } { z: Double => if (z == Double.NaN) Double.NaN else math.cbrt(z) }
 }
 
 object RemapWithoutDefaultValue extends Serializable {
-  def apply(r: Tile, m: Map[Int, Double]) = {
+  def apply(r: Tile, m: Map[Int, Double]): Tile = {
 
     r.dualMap {
       z: Int => if (m.contains(z.toInt)) m(z).toInt else z
@@ -394,11 +395,106 @@ object RemapWithoutDefaultValue extends Serializable {
 }
 
 object RemapWithDefaultValue extends Serializable {
-  def apply(r: Tile, m: Map[Int, Double], num: Double) = {
+  def apply(r: Tile, m: Map[Int, Double], num: Double): Tile = {
     r.dualMap {
       z: Int => if (m.contains(z)) m(z).toInt else num.toInt
     } {
       z: Double => if (m.contains(z.toInt)) m(z.toInt) else num
     }
   }
+}
+
+
+// 交叉熵处理类
+object Entropy {
+  def calculation(tile: Tile,
+                  n: Neighborhood,
+                  bounds: Option[GridBounds[Int]],
+                  target: TargetCell = TargetCell.All)
+  : FocalCalculation[Tile] = {
+    n match {
+      case Square(ext) =>
+        new CellEntropyCalcDouble(tile, n, bounds, ext, target)
+      case _ =>
+        throw new RuntimeException("这个非正方形的还没写！")
+    }
+  }
+
+  def apply(tile: Tile,
+            n: Neighborhood,
+            bounds: Option[GridBounds[Int]],
+            target: TargetCell = TargetCell.All)
+  : Tile =
+    calculation(tile, n, bounds, target).execute()
+
+}
+
+
+class CellEntropyCalcDouble(r: Tile,
+                            n: Neighborhood,
+                            bounds: Option[GridBounds[Int]],
+                            extent: Int,
+                            target: TargetCell)
+  extends CellwiseCalculation[Tile](r, n, bounds, target)
+    with DoubleArrayTileResult {
+
+  //  println(s"Calc extent = ${extent}")
+
+  // map[灰度值, 出现次数]
+  val grayMap = new mutable.HashMap[Int, Int]()
+  var currRangeMax = 0
+
+
+  private final def isIllegalData(v: Int): Boolean = {
+    isNoData(v) && (v < 0 || v > 255)
+  }
+
+
+  def add(r: Tile, x: Int, y: Int): Unit = {
+    val v: Int = r.get(x, y)
+    // assert v isData
+    if (isIllegalData(v)) {
+      //      assert(false)
+    } else if (!grayMap.contains(v)) {
+      grayMap.put(v, 1)
+      currRangeMax += 1
+    } else {
+      grayMap(v) += 1
+      currRangeMax += 1
+    }
+  }
+
+  def remove(r: Tile, x: Int, y: Int): Unit = {
+    val v: Int = r.get(x, y)
+    if (isIllegalData(v)) {
+      //      assert(false)
+    } else if (grayMap.contains(v) &&
+      grayMap(v) > 0 &&
+      currRangeMax > 0) {
+      grayMap(v) -= 1
+      currRangeMax -= 1
+      if (grayMap(v).equals(0)) {
+        grayMap.remove(v)
+      }
+    }
+  }
+
+  def setValue(x: Int, y: Int): Unit = {
+    resultTile.setDouble(x, y,
+      if (currRangeMax == 0) NODATA else {
+
+        var sum = 0.0
+        for (kv <- grayMap) if (kv._2 > 0) {
+          val p: Double = kv._2.toDouble / currRangeMax.toDouble
+          sum -= kv._2 * p * math.log10(p) / math.log10(2)
+        }
+        sum
+      })
+  }
+
+  def reset(): Unit = {
+    grayMap.clear()
+    currRangeMax = 0
+  }
+
 }
