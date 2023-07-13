@@ -349,6 +349,7 @@ object Mod extends LocalTileBinaryOp {
     else z1 % z2
   }
 }
+
 trait ModMethods extends MethodExtensions[Tile] {
   /** Mod a constant Int value to each cell. */
   def localMod(i: Int): Tile = Mod(self, i)
@@ -404,8 +405,6 @@ object RemapWithDefaultValue extends Serializable {
 }
 
 
-
-
 // 交叉熵处理类
 object Entropy {
   def calculation(tile: Tile,
@@ -439,7 +438,7 @@ class CellEntropyCalcDouble(r: Tile,
   extends CellwiseCalculation[Tile](r, n, bounds, target)
     with DoubleArrayTileResult {
 
-//  println(s"Calc extent = ${extent}")
+  //  println(s"Calc extent = ${extent}")
 
   // map[灰度值, 出现次数]
   val grayMap = new mutable.HashMap[Int, Int]()
@@ -474,7 +473,7 @@ class CellEntropyCalcDouble(r: Tile,
       currRangeMax > 0) {
       grayMap(v) -= 1
       currRangeMax -= 1
-      if (grayMap(v).equals(0)){
+      if (grayMap(v).equals(0)) {
         grayMap.remove(v)
       }
     }
