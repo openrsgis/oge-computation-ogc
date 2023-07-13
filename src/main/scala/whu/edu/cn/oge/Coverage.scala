@@ -2583,7 +2583,7 @@ object Coverage {
     Trigger.cubeLoad.clear()
 
     if (sc.master.contains("local")) {
-      whu.edu.cn.debug.load.makeTIFF(reprojected, "lsOrigin")
+      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
     }
 
   }
