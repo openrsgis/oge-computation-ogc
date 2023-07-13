@@ -30,6 +30,7 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
+import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
 import scala.collection.mutable
 
@@ -145,6 +146,16 @@ object Coverage {
       bounds = KeyBounds(SpaceTimeKey(0, 0, 0), SpaceTimeKey(0, 0, 0))
     )
     (rdd, metadata)
+  }
+
+  /**
+   * return the acquisition date of the given coverage
+   *
+   * @param coverage the coverage rdd for operation
+   * @return
+   */
+  def date(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    coverage._1.first()._1.getSpaceTimeKey().time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
   }
 
   /**

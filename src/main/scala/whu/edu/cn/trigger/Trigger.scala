@@ -151,6 +151,8 @@ object Trigger {
         Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
       // Coverage
+      case "Coverage.date" =>
+        coverageRddList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
       case "Coverage.subtract" =>
         coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
       case "Coverage.add" =>
