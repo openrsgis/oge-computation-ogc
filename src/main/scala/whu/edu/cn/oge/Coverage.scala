@@ -2,11 +2,12 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
-import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
+import geotrellis.raster.mapalgebra.focal
+import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
-import io.minio.MinioClient
 import geotrellis.raster.resample.Bilinear
+import io.minio.MinioClient
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -23,21 +24,14 @@ import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.COGUtil.{getDouble, getTileBuf, tileQuery}
+import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, focalMethods, makeCoverageRDD}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
-import geotrellis.raster.mapalgebra.focal
-import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, CellwiseMedianCalc, Cursor, CursorCalculation, CursorMedianCalc, DoubleArrayTileResult, FocalCalculation, IntArrayTileResult, Median, MedianModeCalculation, Neighborhood, Square, TargetCell}
-import geotrellis.spark.partition.SpacePartitioner
-import jp.ne.opt.chronoscala.Imports.richZonedDateTime
-import whu.edu.cn.geocube.util.EntropyUtil
-import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import java.time.{Instant, ZonedDateTime}
-import scala.collection.{immutable, mutable}
-import scala.collection.mutable.ListBuffer
-import scala.util.control.Breaks.{break, breakable}
+import scala.collection.mutable
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -1406,7 +1400,7 @@ object Coverage {
               radius: Int)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    focalMethods(coverage, kernelType, EntropyUtil.apply, radius)
+    focalMethods(coverage, kernelType, Entropy.apply, radius)
   }
 
   protected def stack(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), nums: Int):
