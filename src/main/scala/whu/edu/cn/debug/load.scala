@@ -59,6 +59,8 @@ object load {
 
     var coverage1 : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
       .makeFakeCoverage(sc,array,mutable.ListBuffer[String]("111","222","333"),3,3)
+
+
     val array2 = Array[Int](123,231,99,123,255,255,128,234,132)
     var coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
       .makeFakeCoverage(sc, array2,mutable.ListBuffer[String]("111","222","333"), 3, 3)
