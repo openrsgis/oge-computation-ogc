@@ -2,11 +2,12 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
-import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
+import geotrellis.raster.mapalgebra.focal
+import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
-import io.minio.MinioClient
 import geotrellis.raster.resample.Bilinear
+import io.minio.MinioClient
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -23,20 +24,14 @@ import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.COGUtil.{getDouble, getTileBuf, tileQuery}
+import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, focalMethods, makeCoverageRDD}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
-import geotrellis.raster.mapalgebra.focal
-import geotrellis.raster.mapalgebra.focal.TargetCell
-import geotrellis.spark.partition.SpacePartitioner
-import jp.ne.opt.chronoscala.Imports.richZonedDateTime
-import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import java.time.{Instant, ZonedDateTime}
-import scala.collection.{immutable, mutable}
-import scala.collection.mutable.ListBuffer
-import scala.util.control.Breaks.{break, breakable}
+import scala.collection.mutable
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -117,7 +112,9 @@ object Coverage {
     (SpaceTimeBandKey,
       MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array, cols, rows), ArrayTile(arr = array, cols, rows))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
+      ArrayTile(arr = array, cols, rows),
+    ArrayTile(arr = array, cols, rows))
     val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
@@ -135,7 +132,9 @@ object Coverage {
     (SpaceTimeBandKey,
       MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val tile = MultibandTile(ArrayTile(arr = array, cols, rows), ArrayTile(arr = array, cols, rows))
+    val tile = MultibandTile(ArrayTile(arr = array, cols, rows),
+      ArrayTile(arr = array, cols, rows)
+      , ArrayTile(arr = array, cols, rows))
     val key = SpaceTimeBandKey(SpaceTimeKey(0, 0, ZonedDateTime.now()), names)
     val rdd: RDD[(SpaceTimeBandKey, MultibandTile)] = sc.parallelize(Seq((key, tile)))
     val metadata = TileLayerMetadata[SpaceTimeKey](
@@ -201,7 +200,8 @@ object Coverage {
    * @return
    */
   def divide(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-             coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+             coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Divide(tile1, tile2))
   }
 
@@ -261,8 +261,9 @@ object Coverage {
 
   /**
    * Compute a polynomial at each pixel using the given coefficients.
+   *
    * @param coverage The input coverage.
-   * @param l The polynomial coefficients in increasing order of degree starting with the constant term.
+   * @param l        The polynomial coefficients in increasing order of degree starting with the constant term.
    * @return
    */
   def polynomial(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), l: List[Double]):
@@ -827,7 +828,8 @@ object Coverage {
    * @param radius     The radius of the kernel to use.
    * @return
    */
-  def focalMean(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+  def focalMean(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                kernelType: String,
                 radius: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     focalMethods(coverage, kernelType, focal.Mean.apply, radius)
   }
@@ -900,7 +902,7 @@ object Coverage {
       throw new IllegalArgumentException("Start index out of range!")
     if (end < 0 || end > coverage._1.count())
       throw new IllegalArgumentException("End index out of range!")
-    if(end <= start)
+    if (end <= start)
       throw new IllegalArgumentException("End index should be greater than the start index!")
     val bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName.slice(start, end)
     val newBands: Vector[Tile] = coverage._1.first()._2.bands.slice(start, end)
@@ -911,22 +913,23 @@ object Coverage {
 
   /**
    * Maps from input values to output values, represented by two parallel lists. Any input values not included in the input list are either set to defaultValue if it is given, or masked if it isn't.
+   *
    * @param coverage
    * @param from
    * @param to
    * @param defaultValue
    * @return
    */
-  def remap(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),from:List[Int],
-            to:List[Double],defaultValue:Option[Double]=None): (RDD[(SpaceTimeBandKey, MultibandTile)],
-    TileLayerMetadata[SpaceTimeKey])={
-    if (to.length!=from.length){
+  def remap(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), from: List[Int],
+            to: List[Double], defaultValue: Option[Double] = None): (RDD[(SpaceTimeBandKey, MultibandTile)],
+    TileLayerMetadata[SpaceTimeKey]) = {
+    if (to.length != from.length) {
       throw new IllegalArgumentException("The length of two lists not same!")
     }
-    if(defaultValue == None){
-      coverageTemplate(coverage,(tile)=>RemapWithoutDefaultValue(tile,from.zip(to).toMap))
-    }else{
-      coverageTemplate(coverage,(tile)=>RemapWithDefaultValue(tile,from.zip(to).toMap,defaultValue.get))
+    if (defaultValue == None) {
+      coverageTemplate(coverage, (tile) => RemapWithoutDefaultValue(tile, from.zip(to).toMap))
+    } else {
+      coverageTemplate(coverage, (tile) => RemapWithDefaultValue(tile, from.zip(to).toMap, defaultValue.get))
     }
   }
 
@@ -1144,7 +1147,7 @@ object Coverage {
           ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val RDDExtent: Extent = coverage._2.extent
     val reso: Double = coverage._2.cellSize.resolution
-    val coverageRDDWithExtent= coverage._1.map(t => {
+    val coverageRDDWithExtent = coverage._1.map(t => {
       val tileExtent = Extent(RDDExtent.xmin + t._1.spaceTimeKey.col * reso * 256, RDDExtent.ymax - (t._1.spaceTimeKey.row + 1) * 256 * reso,
         RDDExtent.xmin + (t._1.spaceTimeKey.col + 1) * reso * 256, RDDExtent.ymax - t._1.spaceTimeKey.row * 256 * reso)
       (t._1, (t._2, tileExtent))
@@ -1213,7 +1216,7 @@ object Coverage {
 
     // TODO: 如何区分 RGB? 我这里默认索引 RGB 顺序
 
-    if (!coverage._1.first()._2.bandCount.equals(3)){
+    if (!coverage._1.first()._2.bandCount.equals(3)) {
       throw new
           IllegalArgumentException("Tile' s bandCount must be three!")
     }
@@ -1296,7 +1299,7 @@ object Coverage {
   def hsvToRgb(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    if (!coverage._1.first()._2.bandCount.equals(3)){
+    if (!coverage._1.first()._2.bandCount.equals(3)) {
       throw new
           IllegalArgumentException("Tile' s bandCount must be three!")
     }
@@ -1393,179 +1396,11 @@ object Coverage {
    * @return
    */
   def entropy(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+              kernelType: String,
               radius: Int)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-
-    val leftNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t =>
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row, 0),
-          t._1.measurementName),
-          (SpatialKey(0, 1), t._2))
-      )
-    val rightNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t =>
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row, 0),
-          t._1.measurementName),
-          (SpatialKey(2, 1), t._2))
-      )
-
-    val upNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t =>
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row + 1, 0),
-          t._1.measurementName),
-          (SpatialKey(1, 0), t._2))
-      )
-
-    val downNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t =>
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row - 1, 0),
-          t._1.measurementName),
-          (SpatialKey(1, 2), t._2))
-      )
-
-    val leftUpNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t => {
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row + 1, 0),
-          t._1.measurementName),
-          (SpatialKey(0, 0), t._2))
-      })
-    val upRightNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t => {
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row + 1, 0),
-          t._1.measurementName),
-          (SpatialKey(2, 0), t._2))
-      })
-    val rightDownNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t => {
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col - 1, t._1.spaceTimeKey.row - 1, 0),
-          t._1.measurementName),
-          (SpatialKey(2, 2), t._2))
-      })
-    val downLeftNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t => {
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col + 1, t._1.spaceTimeKey.row - 1, 0),
-          t._1.measurementName),
-          (SpatialKey(0, 2), t._2))
-      })
-    val midNeighborRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      coverage._1.map(t => {
-        (SpaceTimeBandKey(
-          SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, 0),
-          t._1.measurementName),
-          (SpatialKey(1, 1), t._2))
-      })
-
-    val unionRDD: RDD[(SpaceTimeBandKey, (SpatialKey, MultibandTile))] =
-      leftNeighborRDD.union(rightNeighborRDD)
-        .union(upNeighborRDD).union(downNeighborRDD)
-        .union(leftUpNeighborRDD).union(upRightNeighborRDD)
-        .union(rightDownNeighborRDD).union(downLeftNeighborRDD)
-        .union(midNeighborRDD)
-        .filter(t => {
-          t._1.spaceTimeKey.spatialKey._1 >= 0 &&
-            t._1.spaceTimeKey.spatialKey._2 >= 0 &&
-            t._1.spaceTimeKey.spatialKey._1 < coverage._2.layout.layoutCols &&
-            t._1.spaceTimeKey.spatialKey._2 < coverage._2.layout.layoutRows
-        })
-
-
-    // 修改为对3（多）波段处理
-    val groupRDD: RDD[(SpaceTimeBandKey, MultibandTile)] =
-      unionRDD.groupByKey().map(t => {
-        val listBuffer = new ListBuffer[(SpatialKey, MultibandTile)]()
-        val list: immutable.Seq[(SpatialKey, MultibandTile)] = t._2.toList
-        for (key <- List(
-          SpatialKey(0, 0),
-          SpatialKey(0, 1),
-          SpatialKey(0, 2),
-          SpatialKey(1, 0),
-          SpatialKey(1, 1),
-          SpatialKey(1, 2),
-          SpatialKey(2, 0),
-          SpatialKey(2, 1),
-          SpatialKey(2, 2))) {
-          var flag = false
-
-          // 所有瓦片波段数一致，选取其一
-          var numOfBands: Int = list.head._2.bandCount
-          breakable {
-            for (tile <- list) {
-              if (key.equals(tile._1)) {
-                listBuffer.append(tile)
-                flag = true
-                break
-              }
-            }
-          } // end breakable
-
-          if (!flag) {
-            // 将多个波段的瓦片值都设置为全 -128
-            val tempTileArray = new ListBuffer[Tile]();
-            for (i <- 0 until numOfBands) {
-              tempTileArray.append(ByteArrayTile(
-                Array.fill[Byte](256 * 256)(-128),
-                256, 256, ByteCellType).mutable)
-            }
-            listBuffer.append((key,
-              MultibandTile(tempTileArray)))
-          }
-        }
-        val (tile, (_, _), (_, _)) =
-          TileLayoutStitcher.stitch(listBuffer)
-
-        (t._1, tile.crop(
-          251, 251, 506, 506)
-          .convert(CellType.fromName("int16")))
-      })
-
-    val entropyRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRDD.map(t => {
-      val newMultiTile: MultibandTile = t._2.mapBands((_, tile) => {
-        val tempTile: MutableArrayTile = FloatArrayTile(
-          Array.fill[Float](256 * 256)(Float.NaN),
-          256, 256, FloatCellType).mutable
-
-        println(tile.rows)
-        for (i <- 5 until (tile.rows + 5); j <- 5 until (tile.cols + 5)) {
-          val focalArea: Tile =
-            tile.crop(i - radius, j - radius,
-              i + radius, j + radius)
-
-          val hist: Seq[(Int, Long)] = focalArea.histogram.binCounts()
-          var entropyValue: Float = 0
-          for (u <- hist) {
-            val p: Float = u._2.toFloat / ((radius * 2 + 1) * (radius * 2 + 1))
-            entropyValue = entropyValue + p * (Math.log10(p) / Math.log10(2)).toFloat
-          }
-          try{
-            if (i>256 + 5||j>256 + 5){
-              println(i)
-              println(j)
-            }
-          tempTile.setDouble(i - 5, j - 5, -entropyValue)
-          }catch{
-            case e: Throwable =>
-              println((i,j).toString())
-              e.printStackTrace()
-          }
-        }
-
-        tempTile
-      })
-
-
-      (t._1, newMultiTile)
-
-    })
-    (entropyRdd, coverage._2)
+    focalMethods(coverage, "square", Entropy.apply, radius)
   }
 
   protected def stack(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), nums: Int):
