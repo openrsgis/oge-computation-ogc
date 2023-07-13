@@ -1400,7 +1400,7 @@ object Coverage {
               radius: Int)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    focalMethods(coverage, kernelType, Entropy.apply, radius)
+    focalMethods(coverage, "square", Entropy.apply, radius)
   }
 
   protected def stack(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), nums: Int):
