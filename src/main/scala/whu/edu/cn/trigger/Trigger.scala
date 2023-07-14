@@ -73,9 +73,20 @@ object Trigger {
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
 
+    def sendNotice(notice: JSONObject): Unit = {
+
+      val noticeJson = new JSONObject
+      noticeJson.put("workID", Trigger.dagId)
+      noticeJson.put("notice", notice.toJSONString)
+
+      sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverNotice",
+        noticeJson.toJSONString)
+    }
+
 
     try {
 
+      val tempNoticeJson = new JSONObject
       funcName match {
 
         // Service
@@ -151,8 +162,8 @@ object Trigger {
           Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
         // Coverage
-//        case "Coverage.date" =>
-//          coverageRddList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
+        //        case "Coverage.date" =>
+        //          coverageRddList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
           coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.add" =>
@@ -214,8 +225,12 @@ object Trigger {
         case "Coverage.bandNames" =>
           val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
           println("******************test bandNames***********************")
+
+
           println(bandNames)
           println(bandNames.length)
+
+          tempNoticeJson.put("bandNames",bandNames)
 
         case "Coverage.abs" =>
           coverageRddList += (UUID -> Coverage.abs(coverage = coverageRddList(args("coverage"))))
@@ -578,6 +593,11 @@ object Trigger {
           Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
       }
 
+
+      // 发送给 boot
+      sendNotice(tempNoticeJson)
+
+
     } catch {
       case e: Throwable => throw e
     } finally {
@@ -598,7 +618,9 @@ object Trigger {
     }
   }
 
-  def lambda(implicit sc: SparkContext, list: mutable.ArrayBuffer[Tuple3[String, String, mutable.Map[String, String]]]): Unit = {
+  def lambda(implicit sc: SparkContext,
+             list: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])])
+  : Unit = {
     for (i <- list.indices) {
       try {
         func(sc, list(i)._1, list(i)._2, list(i)._3)

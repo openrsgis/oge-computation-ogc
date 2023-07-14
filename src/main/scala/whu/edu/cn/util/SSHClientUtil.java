@@ -16,7 +16,7 @@ public class SSHClientUtil {
     private static final Logger log = LoggerFactory.getLogger(SSHClientUtil.class);
     private static ChannelExec channelExec;
     private static Session session = null;
-    private static int timeout = 60000;
+    private static final int timeout = 60000;
     /**
      * 连接远程服务器
      * @param host ip地址
