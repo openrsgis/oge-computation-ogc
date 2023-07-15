@@ -970,7 +970,13 @@ object Coverage {
    * @param coverage The coverage to which to compute the histogram.
    * @return
    */
-  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
+  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),scale: Int): Map[Int, Long] = {
+
+    val resampledRDD = coverage._1.map(t => {
+      val tile = t._2
+      val resampledTile = tile.resample(tile.cols * scale, tile.rows * scale)
+      (t._1, resampledTile)
+    })
 
     val histRDD: RDD[Histogram[Int]] = coverage._1.map(t => {
       t._2.histogram
