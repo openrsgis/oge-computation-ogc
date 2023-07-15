@@ -19,6 +19,7 @@ import scala.collection.mutable
 // TODO lrx: 这里要检查Extent和Resolution的单位和值对不对
 object COGUtil {
   var tileDifference = 0
+  var tmsLevel = 0
   var extent: Extent = _
   final val TypeArray: Array[Int] = Array( //"???",
     0, //
@@ -52,6 +53,7 @@ object COGUtil {
    * @return 后端瓦片
    */
   def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
+    tmsLevel = level
     var bandCount = 1
     if (bandCounts.length > 1) throw new RuntimeException("bandCount 参数最多传一个")
     if (bandCounts.length == 1) bandCount = bandCounts(0)
