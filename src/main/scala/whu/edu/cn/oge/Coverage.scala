@@ -102,7 +102,7 @@ object Coverage {
     makeCoverageRDD(rawTileRdd)
   }
 
-  /*
+  /**
   生成虚拟coverage
   测试函数，不进入正式版本中 TODO：在master分支中删除该函数
   Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
