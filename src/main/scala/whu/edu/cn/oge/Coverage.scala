@@ -1466,9 +1466,9 @@ object Coverage {
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted =
       (coverage._1.map(t => {
-        (t._1, t._2.convert(ByteCellType))
-      }), TileLayerMetadata(ByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+        (t._1, t._2.convert(ByteConstantNoDataCellType))
+      }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
   /**
@@ -1480,9 +1480,9 @@ object Coverage {
   def toUint8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(UByteConstantNoDataCellType))
+    }), TileLayerMetadata(UByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
 
   }
 
@@ -1495,9 +1495,9 @@ object Coverage {
    */
   def toInt16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(ShortConstantNoDataCellType))
+    }), TileLayerMetadata(ShortConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
   /**
@@ -1508,9 +1508,10 @@ object Coverage {
    */
   def toUint16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(UShortConstantNoDataCellType))
+    }), TileLayerMetadata(UShortConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs,
+      coverage._2.bounds))
+    coverageConverted
   }
 
 
@@ -1523,9 +1524,9 @@ object Coverage {
   def toInt32(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(IntConstantNoDataCellType))
+    }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
   /**
@@ -1537,8 +1538,8 @@ object Coverage {
   def toFloat(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+      (t._1, t._2.convert(FloatConstantNoDataCellType))
+    }), TileLayerMetadata(FloatConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
     and(coverageConverted, coverage)
   }
 
@@ -1551,8 +1552,8 @@ object Coverage {
   def toDouble(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(DoubleCellType))
-    }), TileLayerMetadata(DoubleCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+      (t._1, t._2.convert(DoubleConstantNoDataCellType))
+    }), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
     and(coverageConverted, coverage)
   }
 
