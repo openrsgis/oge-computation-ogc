@@ -87,6 +87,9 @@ object Trigger {
     try {
 
       val tempNoticeJson = new JSONObject
+
+
+      tempNoticeJson.put("test","1234")
       funcName match {
 
         // Service
@@ -798,13 +801,14 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/debug.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/NDVI.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
+    dagId = "12345678"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
