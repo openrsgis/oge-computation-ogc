@@ -1,0 +1,22 @@
+{
+  "Landsat8_OLI": {
+    "band_name": ["coastal", "blue", "green", "red", "NIR", "SWIR1", "SWIR2", "PAN", "CIRRUS", "#TIRS1", "#TIRS2"],
+    "band_index": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "value": [1895.33, 2067, 1893, 1603, 972.6, 245.0, 79.72, 1723.88, 399.7, 0, 0]
+  },
+  "Landsat7_ETM+": {
+    "band_name": ["blue", "green", "red", "NIR", "SWIR1", "#TIR1", "#TIR2", "SWIR2", "PAN"],
+    "band_index": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "value": [1970, 1842, 1547, 1044, 225.7, 0, 0, 82.06, 1369]
+  },
+  "Landsat5_TM": {
+    "band_name": ["blue", "green", "red", "NIR", "SWIR1", "#TIR", "SWIR2"],
+    "band_index": [1, 2, 3, 4, 5, 6, 7],
+    "value": [1958, 1827, 1551, 1036, 214.9, 0, 80.65]
+  },
+  "Landsat4_TM": {
+    "band_name": ["blue", "green", "red", "NIR", "SWIR1", "#TIR", "SWIR2"],
+    "band_index": [1, 2, 3, 4, 5, 6, 7],
+    "value": [1958, 1826, 1554, 1033, 214.7, 0, 80.70]
+  }
+}
