@@ -89,7 +89,7 @@ object Trigger {
       val tempNoticeJson = new JSONObject
 
 
-      tempNoticeJson.put("test","1234")
+      tempNoticeJson.put("test", "1234")
       funcName match {
 
         // Service
@@ -233,7 +233,7 @@ object Trigger {
           println(bandNames)
           println(bandNames.length)
 
-          tempNoticeJson.put("bandNames",bandNames)
+          tempNoticeJson.put("bandNames", bandNames)
 
         case "Coverage.abs" =>
           coverageRddList += (UUID -> Coverage.abs(coverage = coverageRddList(args("coverage"))))
@@ -602,22 +602,23 @@ object Trigger {
 
 
     } catch {
-      case e: Throwable => throw e
-    } finally {
-      // 清空list
-      Trigger.optimizedDagMap.clear()
-      Trigger.coverageCollectionMetadata.clear()
-      Trigger.lazyFunc.clear()
-      Trigger.coverageCollectionRddList.clear()
-      Trigger.coverageRddList.clear()
-      Trigger.zIndexStrArray.clear()
-      JsonToArg.dagMap.clear()
-      // TODO forDece: 以下为未检验
-      Trigger.tableRddList.clear()
-      Trigger.kernelRddList.clear()
-      Trigger.featureRddList.clear()
-      Trigger.cubeRDDList.clear()
-      Trigger.cubeLoad.clear()
+      case e: Throwable =>
+        // 清空list
+        Trigger.optimizedDagMap.clear()
+        Trigger.coverageCollectionMetadata.clear()
+        Trigger.lazyFunc.clear()
+        Trigger.coverageCollectionRddList.clear()
+        Trigger.coverageRddList.clear()
+        Trigger.zIndexStrArray.clear()
+        JsonToArg.dagMap.clear()
+        // TODO forDece: 以下为未检验
+        Trigger.tableRddList.clear()
+        Trigger.kernelRddList.clear()
+        Trigger.featureRddList.clear()
+        Trigger.cubeRDDList.clear()
+        Trigger.cubeLoad.clear()
+
+        throw e
     }
   }
 
