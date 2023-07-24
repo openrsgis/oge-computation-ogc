@@ -73,9 +73,23 @@ object Trigger {
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
 
+    def sendNotice(notice: JSONObject): Unit = {
+
+      val noticeJson = new JSONObject
+      noticeJson.put("workID", Trigger.dagId)
+      noticeJson.put("notice", notice.toJSONString)
+
+      sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverNotice",
+        noticeJson.toJSONString)
+    }
+
 
     try {
 
+      val tempNoticeJson = new JSONObject
+
+
+      tempNoticeJson.put("test", "1234")
       funcName match {
 
         // Service
@@ -151,8 +165,8 @@ object Trigger {
           Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
         // Coverage
-//        case "Coverage.date" =>
-//          coverageRddList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
+        //        case "Coverage.date" =>
+        //          coverageRddList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
           coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.add" =>
@@ -214,8 +228,12 @@ object Trigger {
         case "Coverage.bandNames" =>
           val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
           println("******************test bandNames***********************")
+
+
           println(bandNames)
           println(bandNames.length)
+
+          tempNoticeJson.put("bandNames", bandNames)
 
         case "Coverage.abs" =>
           coverageRddList += (UUID -> Coverage.abs(coverage = coverageRddList(args("coverage"))))
@@ -578,27 +596,35 @@ object Trigger {
           Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
       }
 
+
+      // 发送给 boot
+      sendNotice(tempNoticeJson)
+
+
     } catch {
-      case e: Throwable => throw e
-    } finally {
-      // 清空list
-      Trigger.optimizedDagMap.clear()
-      Trigger.coverageCollectionMetadata.clear()
-      Trigger.lazyFunc.clear()
-      Trigger.coverageCollectionRddList.clear()
-      Trigger.coverageRddList.clear()
-      Trigger.zIndexStrArray.clear()
-      JsonToArg.dagMap.clear()
-      // TODO forDece: 以下为未检验
-      Trigger.tableRddList.clear()
-      Trigger.kernelRddList.clear()
-      Trigger.featureRddList.clear()
-      Trigger.cubeRDDList.clear()
-      Trigger.cubeLoad.clear()
+      case e: Throwable =>
+        // 清空list
+        Trigger.optimizedDagMap.clear()
+        Trigger.coverageCollectionMetadata.clear()
+        Trigger.lazyFunc.clear()
+        Trigger.coverageCollectionRddList.clear()
+        Trigger.coverageRddList.clear()
+        Trigger.zIndexStrArray.clear()
+        JsonToArg.dagMap.clear()
+        // TODO forDece: 以下为未检验
+        Trigger.tableRddList.clear()
+        Trigger.kernelRddList.clear()
+        Trigger.featureRddList.clear()
+        Trigger.cubeRDDList.clear()
+        Trigger.cubeLoad.clear()
+
+        throw e
     }
   }
 
-  def lambda(implicit sc: SparkContext, list: mutable.ArrayBuffer[Tuple3[String, String, mutable.Map[String, String]]]): Unit = {
+  def lambda(implicit sc: SparkContext,
+             list: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])])
+  : Unit = {
     for (i <- list.indices) {
       try {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
@@ -776,13 +802,14 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/debug.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/NDVI.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
+    dagId = "12345678"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
