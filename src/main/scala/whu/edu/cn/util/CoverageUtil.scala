@@ -4,8 +4,8 @@ import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
-import geotrellis.raster.mapalgebra.local.LocalTileBinaryOp
-import geotrellis.raster.{CellType, GridBounds, MultibandTile, NODATA, Tile, TileLayout, isNoData}
+import geotrellis.raster.mapalgebra.local.{LocalTileBinaryOp, LocalTileComparatorOp}
+import geotrellis.raster.{ArrayTile, CellType, GridBounds, MultibandTile, NODATA, Tile, TileLayout, isNoData}
 import geotrellis.spark._
 import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
@@ -305,29 +305,210 @@ object CoverageUtil {
     (coverage._1.map(t => (t._1, funcMulti(t._2))), TileLayerMetadata(cellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
   }
 
+  //获取指定位置的tile
+   def getTileFromCoverage(coverage: Map[SpaceTimeBandKey, MultibandTile]
+                                  ,spaceTimeBandKey: SpaceTimeBandKey) :Option[MultibandTile]={
+   coverage.get(spaceTimeBandKey)
+  }
   def focalMethods(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
                    focalFunc: (Tile, Neighborhood, Option[GridBounds[Int]], TargetCell) => Tile, radius: Int): (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    var neighborhood: Neighborhood = null
     kernelType match {
       case "square" => {
-        val neighborhood = focal.Square(radius)
-        val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = (coverage._1.map(t => {
-          (t._1, MultibandTile(t._2.bands.map(b => {
-            focalFunc(b, neighborhood, None, focal.TargetCell.All)
-          })))
-        }))
-        (coverageRdd, coverage._2)
+        neighborhood = focal.Square(radius)
       }
       case "circle" => {
-        val neighborhood = focal.Circle(radius)
-        val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = (coverage._1.map(t => {
-          (t._1, MultibandTile(t._2.bands.map(b => {
-            focalFunc(b, neighborhood, None, focal.TargetCell.All)
-          })))
-        }))
-        (coverageRdd, coverage._2)
+        neighborhood = focal.Circle(radius)
       }
     }
+
+    //根据当前tile的col和row，查询相邻瓦块，查询对应的位置的值进行填充，没有的视为0
+    val coverage1= coverage.collect().toMap
+
+    val coverageRdd :RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+      val col = t._1.spaceTimeKey.col
+      val row = t._1.spaceTimeKey.row
+      val time0 = t._1.spaceTimeKey.time
+
+      val cols = t._2.cols
+      val rows = t._2.rows
+
+      var arrayBuffer :mutable.ArrayBuffer[Tile] = new mutable.ArrayBuffer[Tile] {}
+      for(index <- t._2.bands.indices){
+        val arrBuffer: Array[Double] = Array.ofDim[Double]((cols + 2 * radius) * (rows + 2 * radius))
+        //arr转换为Tile，并拷贝原tile数据
+        val tilePadded: Tile = ArrayTile(arrBuffer, cols + 2 * radius, rows + 2 * radius).convert(t._2.cellType)
+        for (i <- 0 until (cols)) {
+          for (j <- 0 until (rows)) {
+            tilePadded.mutable.set(i + radius, j + radius, t._2.bands(index).get(i, j))
+          }
+        }
+        //填充八邻域数据及自身数据，使用mutable进行性能优化
+        //左上
+        var tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row - 1, time0), t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(0 + x, 0 + y, tiles.toList.head.bands(index).get(cols - radius + x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(0 + x, 0 + y, 0)
+            }
+          }
+        }
+        //上
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col, row - 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, 0 + y, 0)
+            }
+          }
+        }
+
+        //右上
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row - 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, 0 + y, 0)
+            }
+          }
+        }
+        //左
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(0 + x, radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(0 + x, radius + y, 0)
+            }
+          }
+        }
+
+        //右
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(cols + radius + x, radius + y, tiles.toList.head.bands(index).get(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(cols + radius + x, radius + y, 0)
+            }
+          }
+        }
+
+        //左下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(x, rows + radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(x, rows + radius + y, 0)
+            }
+          }
+        }
+
+        //下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, rows + radius + y, 0)
+            }
+          }
+        }
+        //右下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, rows + radius + y, 0)
+            }
+          }
+        }
+
+        //运算
+        val tilePaddedRes: Tile = focalFunc(tilePadded, neighborhood, None, focal.TargetCell.All)
+
+
+        //将tilePaddedRes 中的值转移进tile
+        for (i <- 0 until (cols)) {
+          for (j <- 0 until (rows)) {
+            t._2.bands(index).mutable.set(i, j, tilePaddedRes.get(i + radius, j + radius))
+//            t._2.bands(index).mutable.set(i, j, 1)
+          }
+        }
+      }
+      (t._1,t._2)
+    })
+    (coverageRdd, coverage._2)
   }
 }
 
@@ -492,14 +673,3 @@ class CellEntropyCalcDouble(r: Tile,
   }
 
 }
-
-//
-//def padding(coverage:(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),cellLength:Int):(RDD[
-//  (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
-//  val rasterMetaData:TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverage._2.cellType, coverage._2.layout,
-//    coverage._2.extent, coverage._2.crs, coverage._2.bounds)
-//  val coverageRdd : RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] =
-//    MultibandTileLayerRDD(coverage._1,rasterMetaData)
-//
-//  coverage
-//}
