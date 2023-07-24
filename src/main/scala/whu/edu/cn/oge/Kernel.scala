@@ -26,9 +26,9 @@ object Kernel {
   /**
    * Generates a square-shaped boolean kernel
    *
-   * @param radius The radius of the kernel to generate.
+   * @param radius    The radius of the kernel to generate.
    * @param normalize Normalize the kernel values to sum to 1
-   * @param value Scale each value by this amount
+   * @param value     Scale each value by this amount
    * @return
    */
   def square(radius: Int, normalize: Boolean, value: Double): Kernel = {
@@ -81,26 +81,114 @@ object Kernel {
    * @return
    */
   def sobel(axis: String): Kernel = {
-    if (axis == "y") {
-      focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
-    }
-    else {
-      focal.Kernel(IntArrayTile(Array[Int](-1, 0, 1, -2, 0, 2, -1, 0, 1), 3, 3))
+    axis match {
+      case "y" =>
+        focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
+      case "x" =>
+        focal.Kernel(IntArrayTile(Array[Int](-1, 0, 1, -2, 0, 2, -1, 0, 1), 3, 3))
+      case _ =>
+        throw new IllegalArgumentException("expect 'x' or 'y' !")
+
     }
   }
 
   def plain(axis: String): Kernel = {
-    focal.Kernel(IntArrayTile(Array[Int](1,1,1,1,0,1,1,1,1), 3, 3))
+    focal.Kernel(IntArrayTile(Array[Int](1, 1, 1, 1, 0, 1, 1, 1, 1), 3, 3))
   }
 
-//  def robert(axis: String): Kernel = {
-//    if (axis == "y") {
-//      focal.Kernel(IntArrayTile(Array[Int](0, -1, 1, 0), 2, 2))
-//    }
-//    else {
-//      focal.Kernel(IntArrayTile(Array[Int](1, 0, 0, -1), 2, 2))
-//    }
-//  }
+
+  //noinspection DuplicatedCode
+  def chebyshev(radius: Int): Kernel = {
+
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Int](n * n)
+
+    // 根据到中心的距离计算每个元素的值
+    for (i <- 0 until n; j <- 0 until n) {
+      val distance: Int = math.max(math.abs(i - radius), math.abs(j - radius))
+      matrix.update(i * n + j, distance)
+    }
+
+    focal.Kernel(IntArrayTile(matrix, n, n))
+
+
+  }
+
+  //noinspection DuplicatedCode
+  def circle(radius: Int): Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    var sum: Int = 0
+    // 确定位置
+    for (i <- 0 until n; j <- 0 until n) {
+      val distance: Double = math.sqrt(
+        (i - radius) * (i - radius) + (j - radius) * (j - radius)
+      )
+      if (distance <= radius) {
+        matrix.update(i * n + j, 1.0)
+        sum += 1
+      }
+    }
+    focal.Kernel(DoubleArrayTile(matrix.map(_ / sum), n, n))
+
+  }
+
+
+  //noinspection DuplicatedCode
+  def compass(magnitude: Float = 1, normalize: Boolean = false): Kernel = {
+    val matrix: Array[Int] = Array[Int](1, 1, -1, 1, -2, -1, 1, 1, -1)
+
+    focal.Kernel(DoubleArrayTile(
+      if (normalize) matrix.map(_.toDouble * magnitude).map(_ / 5)
+      else matrix.map(_.toDouble * magnitude),
+      3, 3))
+
+  }
+
+
+  //noinspection DuplicatedCode
+  def diamond(radius: Int): Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    var sum: Int = 0
+    // 确定位置
+    for (i <- 0 until n; j <- 0 until n) {
+      val distance: Double = math.abs(i - radius) + math.abs(j - radius)
+      if (distance <= radius) {
+        matrix.update(i * n + j, 1.0)
+        sum += 1
+      }
+    }
+
+    focal.Kernel(DoubleArrayTile(matrix.map(_ / sum), n, n))
+  }
+
+  //noinspection DuplicatedCode
+  def euclidean(radius: Int): Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    // 计算欧氏距离
+    for (i <- 0 until n; j <- 0 until n) {
+      val distance: Double = math.sqrt(
+        (i - radius) * (i - radius) + (j - radius) * (j - radius)
+      )
+      matrix.update(i * n + j, distance)
+    }
+
+    focal.Kernel(DoubleArrayTile(matrix, n, n))
+
+  }
+
+
+
+  //  def robert(axis: String): Kernel = {
+  //    if (axis == "y") {
+  //      focal.Kernel(IntArrayTile(Array[Int](0, -1, 1, 0), 2, 2))
+  //    }
+  //    else {
+  //      focal.Kernel(IntArrayTile(Array[Int](1, 0, 0, -1), 2, 2))
+  //    }
+  //  }
 
   /**
    * Generates a 3x3 laplacian-4 edge-detection kernel
