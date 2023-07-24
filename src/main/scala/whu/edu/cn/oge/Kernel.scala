@@ -1,17 +1,28 @@
 package whu.edu.cn.oge
 
-import geotrellis.raster.mapalgebra.focal._
+
 import geotrellis.raster.mapalgebra.{focal, local}
-import geotrellis.raster.{DoubleArrayTile, IntArrayTile}
+import geotrellis.raster.{DoubleArrayTile, IntArrayTile, isData, isNoData}
 
 object Kernel {
+
+  val genKernel: (Array[Double], Int, Boolean, Float) => focal.Kernel =
+    (matrix: Array[Double], n: Int, normalize: Boolean, magnitude: Float) => {
+      val sum: Double = matrix.filter(t => t > 0).sum
+      focal.Kernel(DoubleArrayTile(
+        if (normalize) matrix.map(_ / sum).map(_ * magnitude)
+        else matrix.map(_ * magnitude),
+        n, n))
+    }
+
+
   /**
    * Creates a Kernel
    *
    * @param weights A 2-D list to use as the weights of the kernel
    * @return
    */
-  def fixed(weights: String): Kernel = {
+  def fixed(weights: String): focal.Kernel = {
     val subKernel = weights.substring(2, weights.length - 2).split("],\\[").map(t => {
       t.split(",")
     })
@@ -31,7 +42,7 @@ object Kernel {
    * @param value     Scale each value by this amount
    * @return
    */
-  def square(radius: Int, normalize: Boolean, value: Double): Kernel = {
+  def square(radius: Int, normalize: Boolean, value: Double): focal.Kernel = {
     if (normalize) {
       val kernelArray = Array.fill[Double]((2 * radius + 1) * (2 * radius + 1))(1.0 / ((2 * radius + 1) * (2 * radius + 1)))
       focal.Kernel(DoubleArrayTile(kernelArray, 2 * radius + 1, 2 * radius + 1))
@@ -49,7 +60,7 @@ object Kernel {
    * @param axis Specify the direction of the convolution kernel,x/y
    * @return
    */
-  def prewitt(axis: String): Kernel = {
+  def prewitt(axis: String): focal.Kernel = {
     if (axis == "y") {
       focal.Kernel(IntArrayTile(Array[Int](1, 1, 1, 0, 0, 0, -1, -1, -1), 3, 3))
     }
@@ -64,7 +75,7 @@ object Kernel {
    * @param axis Specify the direction of the convolution kernel,x/y
    * @return
    */
-  def kirsch(axis: String): Kernel = {
+  def kirsch(axis: String): focal.Kernel = {
     if (axis == "y") {
       focal.Kernel(IntArrayTile(Array[Int](5, 5, 5, -3, 0, -3, -3, -3, -3), 3, 3))
     }
@@ -80,7 +91,7 @@ object Kernel {
    * @param axis Specify the direction of the convolution kernel,x/y
    * @return
    */
-  def sobel(axis: String): Kernel = {
+  def sobel(axis: String): focal.Kernel = {
     axis match {
       case "y" =>
         focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
@@ -92,13 +103,16 @@ object Kernel {
     }
   }
 
-  def plain(axis: String): Kernel = {
+  def plain(axis: String): focal.Kernel = {
     focal.Kernel(IntArrayTile(Array[Int](1, 1, 1, 1, 0, 1, 1, 1, 1), 3, 3))
   }
 
 
   //noinspection DuplicatedCode
-  def chebyshev(radius: Int): Kernel = {
+  def chebyshev(radius: Int,
+                normalize: Boolean = false,
+                magnitude: Float = 1)
+  : focal.Kernel = {
 
     val n: Int = radius * 2 + 1
     val matrix = new Array[Int](n * n)
@@ -109,16 +123,18 @@ object Kernel {
       matrix.update(i * n + j, distance)
     }
 
-    focal.Kernel(IntArrayTile(matrix, n, n))
 
+    genKernel(matrix.map(_.toDouble), n, normalize, magnitude)
 
   }
 
   //noinspection DuplicatedCode
-  def circle(radius: Int): Kernel = {
+  def circle(radius: Int,
+             normalize: Boolean = true,
+             magnitude: Float = 1)
+  : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
-    var sum: Int = 0
     // 确定位置
     for (i <- 0 until n; j <- 0 until n) {
       val distance: Double = math.sqrt(
@@ -126,16 +142,18 @@ object Kernel {
       )
       if (distance <= radius) {
         matrix.update(i * n + j, 1.0)
-        sum += 1
       }
     }
-    focal.Kernel(DoubleArrayTile(matrix.map(_ / sum), n, n))
+
+    genKernel(matrix, n, normalize, magnitude)
 
   }
 
 
   //noinspection DuplicatedCode
-  def compass(magnitude: Float = 1, normalize: Boolean = false): Kernel = {
+  def compass(magnitude: Float = 1,
+              normalize: Boolean = false)
+  : focal.Kernel = {
     val matrix: Array[Int] = Array[Int](1, 1, -1, 1, -2, -1, 1, 1, -1)
 
     focal.Kernel(DoubleArrayTile(
@@ -147,24 +165,30 @@ object Kernel {
 
 
   //noinspection DuplicatedCode
-  def diamond(radius: Int): Kernel = {
+  def diamond(radius: Int,
+              normalize: Boolean = true,
+              magnitude: Float = 1)
+  : focal.Kernel = {
+
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
-    var sum: Int = 0
     // 确定位置
     for (i <- 0 until n; j <- 0 until n) {
       val distance: Double = math.abs(i - radius) + math.abs(j - radius)
       if (distance <= radius) {
         matrix.update(i * n + j, 1.0)
-        sum += 1
       }
     }
 
-    focal.Kernel(DoubleArrayTile(matrix.map(_ / sum), n, n))
+    genKernel(matrix, n, normalize, magnitude)
+    //    focal.Kernel(DoubleArrayTile(matrix.map(_ / sum), n, n))
   }
 
   //noinspection DuplicatedCode
-  def euclidean(radius: Int): Kernel = {
+  def euclidean(radius: Int,
+                normalize: Boolean = false,
+                magnitude: Float = 1)
+  : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
     // 计算欧氏距离
@@ -175,13 +199,47 @@ object Kernel {
       matrix.update(i * n + j, distance)
     }
 
-    focal.Kernel(DoubleArrayTile(matrix, n, n))
+    genKernel(matrix, n, normalize, magnitude)
 
   }
 
 
+  //noinspection DuplicatedCode
+  def gaussian(radius: Int,
+               sigma: Float = 1,
+               normalize: Boolean = true,
+               magnitude: Float = 1)
+  : focal.Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    // 计算高斯分布
+    for (i <- 0 until n; j <- 0 until n) {
+      val squareDistance: Double =
+        (i - radius) * (i - radius) + (j - radius) * (j - radius)
 
-  //  def robert(axis: String): Kernel = {
+      matrix.update(i * n + j,
+        1.0 / (2 * math.Pi * sigma * sigma)
+          * math.exp(-squareDistance / (2 * sigma * sigma))
+      )
+    }
+
+    genKernel(matrix, n, normalize, magnitude)
+
+
+  }
+
+  def inverse(kernel: focal.Kernel): focal.Kernel = {
+    focal.Kernel(
+      kernel.tile.mapDouble(t => {
+        if (isNoData(t) || t.equals(0.0)) t
+        else 1.0 / t
+      })
+    )
+  }
+
+
+
+  //  def robert(axis: String): focal.Kernel = {
   //    if (axis == "y") {
   //      focal.Kernel(IntArrayTile(Array[Int](0, -1, 1, 0), 2, 2))
   //    }
@@ -195,7 +253,7 @@ object Kernel {
    *
    * @return
    */
-  def laplacian4(): Kernel = {
+  def laplacian4(): focal.Kernel = {
     focal.Kernel(IntArrayTile(Array[Int](0, 1, 0, 1, -4, 1, 0, 1, 0), 3, 3))
   }
 
@@ -204,7 +262,7 @@ object Kernel {
    *
    * @return
    */
-  def laplacian8(): Kernel = {
+  def laplacian8(): focal.Kernel = {
     focal.Kernel(IntArrayTile(Array[Int](1, 1, 1, 1, -8, 1, 1, 1, 1), 3, 3))
   }
 
@@ -215,8 +273,11 @@ object Kernel {
    * @param kernel2 The second kernel
    * @return
    */
-  def add(kernel1: Kernel, kernel2: Kernel): Kernel = {
+  def add(kernel1: focal.Kernel, kernel2: focal.Kernel): focal.Kernel = {
     focal.Kernel(local.Add(kernel1.tile, kernel2.tile))
   }
+
+
+
 }
 
