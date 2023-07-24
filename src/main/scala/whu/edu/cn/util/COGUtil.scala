@@ -19,6 +19,7 @@ import scala.collection.mutable
 // TODO lrx: 这里要检查Extent和Resolution的单位和值对不对
 object COGUtil {
   var tileDifference = 0
+  var tmsLevel = 0 // Scaling levels of the front-end TMS
   var extent: Extent = _
   final val TypeArray: Array[Int] = Array( //"???",
     0, //
@@ -52,6 +53,7 @@ object COGUtil {
    * @return 后端瓦片
    */
   def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
+    tmsLevel = level
     var bandCount = 1
     if (bandCounts.length > 1) throw new RuntimeException("bandCount 参数最多传一个")
     if (bandCounts.length == 1) bandCount = bandCounts(0)
@@ -127,6 +129,7 @@ object COGUtil {
     val resolutionTMSArray: Array[Double] = Array(156543.033928, 78271.516964, 39135.758482, 19567.879241, 9783.939621, 4891.969810, 2445.984905, 1222.992453, 611.496226, 305.748113, 152.874057, 76.437028, 38.218514, 19.109257, 9.554629, 4.777314, 2.388657, 1.194329, 0.597164, 0.298582, 0.149291)
     val resolutionOrigin: Double = coverageMetadata.getResolution
     System.out.println("resolutionOrigin = " + resolutionOrigin)
+    println("tileOffsets.length = " + tileOffsets.length)
 
     if (level == -1) {
       tileLevel = 0

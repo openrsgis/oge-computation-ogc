@@ -1,5 +1,7 @@
 package whu.edu.cn.util;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
@@ -18,10 +20,9 @@ public class HttpRequestUtil {
      * @return URL 代表远程资源的响应
      */
     public static String sendGet(String url) {
-        String result = "";
-        String urlName = url;
+        StringBuilder result = new StringBuilder();
         try {
-            URL realUrl = new URL(urlName);
+            URL realUrl = new URL(url);
             //打开和URL之间的连接
             URLConnection conn = realUrl.openConnection();
             //设置通用的请求属性
@@ -41,13 +42,13 @@ public class HttpRequestUtil {
             BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             String line;
             while ((line = in.readLine()) != null) {
-                result += line;
+                result.append(line);
             }
         } catch (Exception e) {
             System.out.println("发送GET请求出现异常" + e);
             e.printStackTrace();
         }
-        return result;
+        return result.toString();
     }
 
 
@@ -58,6 +59,7 @@ public class HttpRequestUtil {
      * @param param 请求参数
      * @return URL 代表远程资源的响应
      */
+    @NotNull
     public static String sendPost(String url, String param) {
         StringBuilder result = new StringBuilder();
         try {
