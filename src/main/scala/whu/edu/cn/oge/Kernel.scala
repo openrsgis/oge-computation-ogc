@@ -277,6 +277,32 @@ object Kernel {
     focal.Kernel(local.Add(kernel1.tile, kernel2.tile))
   }
 
+  //noinspection DuplicatedCode
+  def manhattan(radius: Int,
+                normalize: Boolean = false,
+                magnitude: Float = 1)
+  : focal.Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    // 计算曼哈顿分布
+    for (i <- 0 until n; j <- 0 until n) {
+      val distance: Double = math.abs(i - radius) + math.abs(j - radius)
+
+      matrix.update(i * n + j, distance)
+    }
+
+    genKernel(matrix, n, normalize, magnitude)
+
+  }
+
+//
+//  def octagon(radius: Int,
+//              normalize: Boolean = true,
+//              magnitude: Float = 1)
+//  : focal.Kernel = {
+//
+//
+//  }
 
 
 }
