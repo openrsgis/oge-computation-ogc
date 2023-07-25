@@ -295,14 +295,26 @@ object Kernel {
 
   }
 
-//
-//  def octagon(radius: Int,
-//              normalize: Boolean = true,
-//              magnitude: Float = 1)
-//  : focal.Kernel = {
-//
-//
-//  }
+
+  //noinspection DuplicatedCode
+  def octagon(radius: Int,
+              normalize: Boolean = true,
+              magnitude: Float = 1)
+  : focal.Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    // 圈正八边形范围，睡一觉想明白了，正方形加菱形 hh
+    for (i <- 0 until n; j <- 0 until n) {
+      val distance: Double = math.abs(i - radius) + math.abs(j - radius)
+
+      if (distance <= math.sqrt(2) * radius) {
+        matrix.update(i * n + j, 1.0)
+      }
+    }
+
+    genKernel(matrix, n, normalize, magnitude)
+
+  }
 
 
 }
