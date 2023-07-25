@@ -328,6 +328,19 @@ object Coverage {
   }
 
   /**
+   * binaryAnd
+   * if both have only 1 band, the 2 band will match.
+   *
+   * @param coverage1 First coverage rdd to operate.
+   * @param coverage2 Second coverage rdd to operate.
+   * @return
+   */
+  def bitwiseAnd(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+          coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage1, coverage2, (tile1, tile2) => And(tile1, tile2))
+  }
+
+  /**
    * Returns 1 iff both values are non-zero for each matched pair of bands in coverage1 and coverage2.
    * if both have only 1 band, the 2 band will match.
    *
@@ -337,21 +350,37 @@ object Coverage {
    */
   def and(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
           coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    coverageTemplate(coverage1, coverage2, (tile1, tile2) => And(tile1, tile2))
+    coverageTemplate(coverage1, coverage2, (tile1, tile2) => CoverageOverloadUtil.And(tile1, tile2))
   }
 
   /**
-   * Returns 1 iff one coverage is non-zero and the other is non-zero for each matched pair of bands in coverage1 and coverage2.
+   * Calculates the bitwise XOR of the input values for each matched pair of bands in image1 and image2.
    * If both have only 1 band, the 2 band will match
    *
    * @param coverage1 First coverage rdd to operate.
    * @param coverage2 Second coverage rdd to operate.
    * @return
    */
-  def xor(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+  def bitwiseXor(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
           coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Xor(tile1, tile2))
   }
+
+
+  /**
+   * binaryOr
+   * if both have only 1 band, the 2 band will match
+   *
+   * @param coverage1 First coverage rdd to operate.
+   * @param coverage2 Second coverage rdd to operate.
+   * @return
+   */
+  def bitwiseOr(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+         coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage1, coverage2, (tile1, tile2) => Or(tile1, tile2))
+  }
+
+
 
   /**
    * Returns 1 iff either values are non-zero for each matched pair of bands in coverage1 and coverage2.
@@ -362,8 +391,23 @@ object Coverage {
    * @return
    */
   def or(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-         coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    coverageTemplate(coverage1, coverage2, (tile1, tile2) => Or(tile1, tile2))
+               coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage1, coverage2, (tile1, tile2) => CoverageOverloadUtil.Or(tile1, tile2))
+  }
+
+
+
+  /**
+   * binaryNot
+   *
+   * @param coverage the coverage rdd for operation
+   * @return
+   */
+  def bitwiseNot(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    // forDece:
+    // 注意: 该内置方法不支持 浮点
+    // double 或者 float 数据会被四舍五入为 int
+    coverageTemplate(coverage, tile => Not(tile))
   }
 
   /**
@@ -373,8 +417,9 @@ object Coverage {
    * @return
    */
   def not(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    coverageTemplate(coverage, tile => Not(tile))
+    coverageTemplate(coverage, tile => CoverageOverloadUtil.Not(tile))
   }
+
 
   /**
    * Computes the sine of the input in radians.
