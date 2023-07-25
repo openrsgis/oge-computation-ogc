@@ -6,13 +6,13 @@ import geotrellis.raster.{DoubleArrayTile, IntArrayTile, isData, isNoData}
 
 object Kernel {
 
-  val genKernel: (Array[Double], Int, Boolean, Float) => focal.Kernel =
-    (matrix: Array[Double], n: Int, normalize: Boolean, magnitude: Float) => {
+  val genKernel: (Array[Double], Int, Int, Boolean, Float) => focal.Kernel =
+    (matrix: Array[Double], rows: Int, cols: Int, normalize: Boolean, magnitude: Float) => {
       val sum: Double = matrix.filter(t => t > 0).sum
       focal.Kernel(DoubleArrayTile(
         if (normalize) matrix.map(_ / sum).map(_ * magnitude)
         else matrix.map(_ * magnitude),
-        n, n))
+        cols, rows))
     }
 
 
@@ -124,7 +124,7 @@ object Kernel {
     }
 
 
-    genKernel(matrix.map(_.toDouble), n, normalize, magnitude)
+    genKernel(matrix.map(_.toDouble), n, n, normalize, magnitude)
 
   }
 
@@ -145,7 +145,7 @@ object Kernel {
       }
     }
 
-    genKernel(matrix, n, normalize, magnitude)
+    genKernel(matrix, n, n, normalize, magnitude)
 
   }
 
@@ -180,7 +180,7 @@ object Kernel {
       }
     }
 
-    genKernel(matrix, n, normalize, magnitude)
+    genKernel(matrix, n, n, normalize, magnitude)
     //    focal.Kernel(DoubleArrayTile(matrix.map(_ / sum), n, n))
   }
 
@@ -199,7 +199,7 @@ object Kernel {
       matrix.update(i * n + j, distance)
     }
 
-    genKernel(matrix, n, normalize, magnitude)
+    genKernel(matrix, n, n, normalize, magnitude)
 
   }
 
@@ -223,7 +223,7 @@ object Kernel {
       )
     }
 
-    genKernel(matrix, n, normalize, magnitude)
+    genKernel(matrix, n, n, normalize, magnitude)
 
 
   }
@@ -291,7 +291,7 @@ object Kernel {
       matrix.update(i * n + j, distance)
     }
 
-    genKernel(matrix, n, normalize, magnitude)
+    genKernel(matrix, n, n, normalize, magnitude)
 
   }
 
@@ -312,7 +312,25 @@ object Kernel {
       }
     }
 
-    genKernel(matrix, n, normalize, magnitude)
+    genKernel(matrix, n, n, normalize, magnitude)
+
+  }
+
+  //noinspection DuplicatedCode
+  def plus(radius: Int,
+           normalize: Boolean = true,
+           magnitude: Float = 1)
+  : focal.Kernel = {
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    // 圈正八边形范围，睡一觉想明白了，正方形加菱形 hh
+    for (i <- 0 until n; j <- 0 until n) {
+      if (i == radius || j == radius) {
+        matrix.update(i * n + j, 1.0)
+      }
+    }
+
+    genKernel(matrix, n, n, normalize, magnitude)
 
   }
 
