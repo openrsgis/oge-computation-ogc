@@ -334,6 +334,20 @@ object Kernel {
 
   }
 
+  //noinspection DuplicatedCode
+  def rectangle(xRadius: Int,
+                yRadius: Int,
+                normalize: Boolean = true,
+                magnitude: Float = 1)
+  : focal.Kernel = {
+    val rows: Int = yRadius * 2 + 1
+    val cols: Int = xRadius * 2 + 1
+    val matrix = new Array[Double](rows * cols)
+
+    genKernel(matrix.map(_ => 1.0), rows, cols, normalize, magnitude)
+
+  }
+
 
 }
 
