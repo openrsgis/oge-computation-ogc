@@ -2,11 +2,12 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
+import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
-import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
 import io.minio.MinioClient
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
@@ -18,6 +19,7 @@ import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
 import javafx.scene.paint.Color
 import org.apache.spark._
+import org.apache.spark.api.java.JavaRDD.fromRDD
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import redis.clients.jedis.Jedis
@@ -25,7 +27,7 @@ import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, Visualiza
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
-import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, focalMethods, makeCoverageRDD}
+import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, focalMethods, getTileFromCoverage, makeCoverageRDD}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
@@ -102,7 +104,7 @@ object Coverage {
     makeCoverageRDD(rawTileRdd)
   }
 
-  /*
+  /**
   生成虚拟coverage
   测试函数，不进入正式版本中 TODO：在master分支中删除该函数
   Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
@@ -999,23 +1001,209 @@ object Coverage {
    */
   def convolve(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernel: focal
   .Kernel): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-
+    val coverage1= coverage.collect().toMap
+    val radius=kernel.extent
     val convolvedRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage.map(t => {
-      (t._1, t._2.mapBands((_, tile) => {
-        focal.Convolve(tile, kernel, None, TargetCell.All)
-      }))
+      val col = t._1.spaceTimeKey.col
+      val row = t._1.spaceTimeKey.row
+      val time0 = t._1.spaceTimeKey.time
+
+      val cols = t._2.cols
+      val rows = t._2.rows
+
+      var arrayBuffer: mutable.ArrayBuffer[Tile] = new mutable.ArrayBuffer[Tile] {}
+      for (index <- t._2.bands.indices) {
+        val arrBuffer: Array[Double] = Array.ofDim[Double]((cols + 2 * radius) * (rows + 2 * radius))
+        //arr转换为Tile，并拷贝原tile数据
+        val tilePadded: Tile = ArrayTile(arrBuffer, cols + 2 * radius, rows + 2 * radius).convert(t._2.cellType)
+        for (i <- 0 until (cols)) {
+          for (j <- 0 until (rows)) {
+            tilePadded.mutable.set(i + radius, j + radius, t._2.bands(index).get(i, j))
+          }
+        }
+        //填充八邻域数据及自身数据，使用mutable进行性能优化
+        //左上
+        var tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row - 1, time0), t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(0 + x, 0 + y, tiles.toList.head.bands(index).get(cols - radius + x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(0 + x, 0 + y, 0)
+            }
+          }
+        }
+        //上
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col, row - 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, 0 + y, 0)
+            }
+          }
+        }
+
+        //右上
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row - 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, 0 + y, 0)
+            }
+          }
+        }
+        //左
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(0 + x, radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(0 + x, radius + y, 0)
+            }
+          }
+        }
+
+        //右
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(cols + radius + x, radius + y, tiles.toList.head.bands(index).get(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.set(cols + radius + x, radius + y, 0)
+            }
+          }
+        }
+
+        //左下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(x, rows + radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(x, rows + radius + y, 0)
+            }
+          }
+        }
+
+        //下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(radius + x, rows + radius + y, 0)
+            }
+          }
+        }
+        //右下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.set(cols + radius + x, rows + radius + y, 0)
+            }
+          }
+        }
+
+        //运算
+        val tilePaddedRes: Tile = focal.Convolve(tilePadded,kernel,None,TargetCell.All)
+
+
+        //将tilePaddedRes 中的值转移进tile
+        for (i <- 0 until (cols)) {
+          for (j <- 0 until (rows)) {
+            t._2.bands(index).mutable.set(i, j, tilePaddedRes.get(i + radius, j + radius))
+            //            t._2.bands(index).mutable.set(i, j, 1)
+          }
+        }
+      }
+      (t._1, t._2)
     })
     (convolvedRDD, coverage._2)
 
   }
 
+
   /**
-   * Return the histogram of the coverage, a map of bin label value and its associated count.
+   * Generates a Chart from an image. Computes and plots histograms of the values of the bands in the specified region of the image.
    *
-   * @param coverage The coverage to which to compute the histogram.
+   * @param coverage The coverage to which to apply the operations.
+   * @param scale    The pixel scale used when applying the histogram reducer, in meters.
    * @return
    */
-  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[Int, Long] = {
+  def histogram(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), scale: Double): Map[Int, Long] = {
+
+    val resolution: Double = coverage._2.cellSize.resolution
+    val resampledRDD = coverage._1.map(t => {
+      val tile = t._2
+      val resampledTile = tile.resample((tile.cols * scale / resolution).toInt, (tile.rows * scale / resolution).toInt)
+      (t._1, resampledTile)
+    })
 
     val histRDD: RDD[Histogram[Int]] = coverage._1.map(t => {
       t._2.histogram
@@ -1037,117 +1225,138 @@ object Coverage {
    */
   def projection(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = coverage._2.crs.toString()
 
+
   /**
-   * Force an coverage to be computed in a given projection
    *
-   * @param coverage          The coverage to reproject.
-   * @param newProjectionCode The code of new projection
-   * @param resolution        The resolution of reprojected coverage
-   * @return
+   * @param coverage The image to reproject.
+   * @param crs      The CRS to project the image to.
+   * @param scale    resolution
+   * @return The reprojected image.
    */
-  //  def reproject(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //                newProjectionCode: Int, resolution: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val band = coverage._1.first()._1.measurementName
-  //    val resampleTime = Instant.now.getEpochSecond
-  //    val coveragetileRDD = coverage._1.map(t => {
-  //      (t._1.spaceTimeKey.spatialKey, t._2)
-  //    })
-  //    val extent = coverage._2.extent.reproject(coverage._2.crs, CRS.fromEpsgCode(newProjectionCode))
-  //    val tl = TileLayout(((extent.xmax - extent.xmin) / (resolution * 256)).toInt, ((extent.ymax - extent.ymin) / (resolution * 256)).toInt, 256, 256)
-  //    val ld = LayoutDefinition(extent, tl)
-  //    val cellType = coverage._2.cellType
-  //    val srcLayout = coverage._2.layout
-  //    val srcExtent = coverage._2.extent
-  //    val srcCrs = coverage._2.crs
-  //    val srcBounds = coverage._2.bounds
-  //    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
-  //    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
-  //    val coveragetileLayerRDD = TileLayerRDD(coveragetileRDD, rasterMetaData);
-  //    val (_, coveragetileRDDWithMetadata) = coveragetileLayerRDD.reproject(CRS.fromEpsgCode(newProjectionCode), ld, geotrellis.raster.resample.Bilinear)
-  //    val coverageNoband = (coveragetileRDDWithMetadata.mapValues(tile => tile: Tile), coveragetileRDDWithMetadata.metadata)
-  //    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
-  //    val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
-  //    val coverageRDD = coverageNoband.map(t => {
-  //      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
-  //    })
-  //    (coverageRDD, newMetadata)
-  //  }
+  def reproject(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                crs: Int, scale: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val band = coverage._1.first()._1.measurementName
+    val resampleTime = Instant.now.getEpochSecond
+    val coverageTileRDD = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val extent = coverage._2.extent.reproject(coverage._2.crs, CRS.fromEpsgCode(crs))
+    val tl = TileLayout(((extent.xmax - extent.xmin) / (scale * 256)).toInt, ((extent.ymax - extent.ymin) / (scale * 256)).toInt, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val cellType = coverage._2.cellType
+    val srcLayout = coverage._2.layout
+    val srcExtent = coverage._2.extent
+    val srcCrs = coverage._2.crs
+    val srcBounds = coverage._2.bounds
+    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
+    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val coverageTileLayerRDD = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData);
+
+
+//    val coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
+//    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+//    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+//    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
+//    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
+//    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverageVis._1.map(t => {
+//      (t._1.spaceTimeKey.spatialKey, t._2)
+//    })
+//    var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
+//    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+//      coverageTMS.reproject(tmsCrs, layoutScheme)
+
+    val (_, coverageTileRDDWithMetadata) = coverageTileLayerRDD.reproject(CRS.fromEpsgCode(crs), ld, geotrellis.raster.resample.Bilinear)
+          val coverageNoband = (coverageTileRDDWithMetadata.mapValues(tile => tile: MultibandTile), coverageTileRDDWithMetadata.metadata)
+          val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
+          val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
+          val coverageRDD = coverageNoband.map(t => {
+            (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
+          })
+          (coverageRDD, newMetadata)
+  }
 
   /**
    * 自定义重采样方法，功能有局限性，勿用
    *
-   * @param coverage     需要被重采样的图像
-   * @param sourceZoom   原图像的 Zoom 层级
-   * @param targetZoom   输出图像的 Zoom 层级
-   * @param mode         插值方法
-   * @param downSampling 是否下采样，如果sourceZoom > targetZoom，true则采样，false则不处理
-   * @return 和输入图像同类型的新图像
+   * @param coverage   // The coverage to resample
+   * @param targetZoom // The zoom level to which to resample the coverage
+   * @param mode       // The resample method
+   * @return // The resampled coverage
    */
-  //  def resampleToTargetZoom(
-  //                            coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-  //                            targetZoom: Int,
-  //                            mode: String,
-  //                            downSampling: Boolean = true
-  //                          )
-  //  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-  //    val resampleMethod: PointResampleMethod = mode match {
-  //      case "Bilinear" => geotrellis.raster.resample.Bilinear
-  //      case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
-  //      case _ => geotrellis.raster.resample.NearestNeighbor
-  //    }
-  //
-  //    // 求解出原始影像的zoom
-  //    //    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
-  //    //    //    println("srcAcc0 = " + myAcc2.value)
-  //    //
-  //    //    reprojected.map(t => {
-  //    //
-  //    //
-  //    //      //          println("srcRows = " + t._2.rows) 256
-  //    //      //          println("srcRows = " + t._2.cols) 256
-  //    //      myAcc2.add(1)
-  //    //      t
-  //    //    }).collect()
-  //    //    println("srcNumOfTiles = " + myAcc2.value) // 234
-  //    //
-  //    //
-  //
-  //    val level: Int = COGUtil.tileDifference
-  //    println("tileDifference = " + level)
-  //    if (level > 0) {
-  //      val time1 = System.currentTimeMillis()
-  //      val coverageResampled: RDD[(SpaceTimeBandKey, Tile)] = coverage._1.map(t => {
-  //        (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
-  //      })
-  //      val time2 = System.currentTimeMillis()
-  //      println("Resample Time is " + (time2 - time1))
-  //      (coverageResampled,
-  //        TileLayerMetadata(coverage._2.cellType, LayoutDefinition(
-  //          coverage._2.extent,
-  //          TileLayout(coverage._2.layoutCols, coverage._2.layoutRows,
-  //            coverage._2.tileCols * (1 << level), coverage._2.tileRows * (1 << level))
-  //        ), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-  //    }
-  //    else if (level < 0) {
-  //      val time1 = System.currentTimeMillis()
-  //      val coverageResampled: RDD[(SpaceTimeBandKey, Tile)] = coverage._1.map(t => {
-  //        val tileResampled: Tile = t._2.resample(Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt, Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt, resampleMethod)
-  //        (t._1, tileResampled)
-  //      })
-  //      val time2 = System.currentTimeMillis()
-  //      println("Resample Time is " + (time2 - time1))
-  //      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, coverage._2.tileCols / (1 << -level),
-  //        coverage._2.tileRows / (1 << -level))), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-  //      println("coverage._2.tileCols.toDouble = " + coverage._2.tileCols.toDouble)
-  //      (coverageResampled,
-  //        TileLayerMetadata(coverage._2.cellType, LayoutDefinition(
-  //          coverage._2.extent,
-  //          TileLayout(coverage._2.layoutCols, coverage._2.layoutRows,
-  //            Math.ceil(coverage._2.tileCols.toDouble / (1 << -level)).toInt, Math.ceil(coverage._2.tileRows.toDouble / (1 << -level)).toInt)),
-  //          coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-  //    }
-  //    else coverage
-  //  }
+  def resampleToTargetZoom(
+                            coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                            targetZoom: Int,
+                            mode: String
+                          )
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val resampleMethod: PointResampleMethod = mode match {
+      case "Bilinear" => geotrellis.raster.resample.Bilinear
+      case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
+      case _ => geotrellis.raster.resample.NearestNeighbor
+    }
+
+    // 求解出原始影像的zoom
+    //    val myAcc2: LongAccumulator = sc.longAccumulator("myAcc2")
+    //    //    println("srcAcc0 = " + myAcc2.value)
+    //
+    //    reprojected.map(t => {
+    //
+    //
+    //      //          println("srcRows = " + t._2.rows) 256
+    //      //          println("srcRows = " + t._2.cols) 256
+    //      myAcc2.add(1)
+    //      t
+    //    }).collect()
+    //    println("srcNumOfTiles = " + myAcc2.value) // 234
+
+
+    //val level: Int = COGUtil.tileDifference
+    val level: Int = targetZoom - COGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
+
+    if (level > 0) {
+      val time1 = System.currentTimeMillis()
+      val coverageResampled: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+        (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
+      })
+      val time2 = System.currentTimeMillis()
+      println("Resample Time is " + (time2 - time1))
+      (coverageResampled,
+        TileLayerMetadata(coverage._2.cellType, LayoutDefinition(
+          coverage._2.extent,
+          TileLayout(coverage._2.layoutCols, coverage._2.layoutRows,
+            coverage._2.tileCols * (1 << level), coverage._2.tileRows * (1 << level))
+        ), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    }
+    else if (level < 0) {
+      val time1 = System.currentTimeMillis()
+      val coverageResampled: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+
+        val cols = if ((t._2.cols / (1 << -level)) > 1) Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt else 1
+        val rows = if ((t._2.rows / (1 << -level)) > 1) Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt else 1
+        val tileResampled: MultibandTile = t._2.resample(cols, rows, resampleMethod)
+        (t._1, tileResampled)
+      })
+
+
+      var tileCols = if ((coverage._2.tileCols / (1 << -level)) > 1) Math.ceil(coverage._2.tileCols.toDouble / (1 << -level)).toInt else 1
+      var tileRows = if ((coverage._2.tileRows / (1 << -level)) > 1) Math.ceil(coverage._2.tileRows.toDouble / (1 << -level)).toInt else 1
+
+
+      val time2 = System.currentTimeMillis()
+      println("Resample Time is " + (time2 - time1))
+      //      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, coverage._2.tileCols / (1 << -level),
+      //        coverage._2.tileRows / (1 << -level))), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+
+      println("coverage._2.tileCols.toDouble = " + coverage._2.tileCols.toDouble)
+      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(
+        coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, tileCols, tileRows)),
+        coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    }
+    else coverage
+  }
 
 
   /**
@@ -1159,19 +1368,32 @@ object Coverage {
    * @return
    */
 
-  def resample(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), mode: String
+  def resample(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), level: Int, mode: String
               ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO 重采样
     val resampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
       case _ => geotrellis.raster.resample.NearestNeighbor
     }
-
-    val coverageResampled = coverage._1.map(t => {
-      (t._1, t._2.resample(t._2.cols * 3, t._2.rows * 3, resampleMethod))
-    })
-    (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, coverage._2.tileCols * 3,
-      coverage._2.tileRows * 3)), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    if (level > 0) {
+      val coverageResampled = coverage._1.map(t => {
+        (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
+      })
+      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, coverage._2.tileCols * (1 << level),
+        coverage._2.tileRows * (1 << level))), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    }
+    else if (level < 0) {
+      val coverageResampled = coverage._1.map(t => {
+        val cols = if ((t._2.cols / (1 << -level)) > 1) Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt else 1
+        val rows = if ((t._2.rows / (1 << -level)) > 1) Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt else 1
+        (t._1, t._2.resample(cols, rows, resampleMethod))
+      })
+      var tileCols = if ((coverage._2.tileCols / (1 << -level)) > 1) Math.ceil(coverage._2.tileCols.toDouble / (1 << -level)).toInt else 1
+      var tileRows = if ((coverage._2.tileRows / (1 << -level)) > 1) Math.ceil(coverage._2.tileRows.toDouble / (1 << -level)).toInt else 1
+      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, tileCols,
+        tileRows)), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    }
+    else coverage
   }
 
   /**
@@ -1187,7 +1409,7 @@ object Coverage {
     val sobely = geotrellis.raster.mapalgebra.focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
     val tilex = convolve(coverage, sobelx)
     val tiley = convolve(coverage, sobely)
-    sqrt(add(pow(tilex,2), pow(tiley,2)))
+    sqrt(add(pow(tilex, 2), pow(tiley, 2)))
   }
 
 
@@ -1511,9 +1733,9 @@ object Coverage {
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted =
       (coverage._1.map(t => {
-        (t._1, t._2.convert(ByteCellType))
-      }), TileLayerMetadata(ByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+        (t._1, t._2.convert(ByteConstantNoDataCellType))
+      }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
   /**
@@ -1525,9 +1747,9 @@ object Coverage {
   def toUint8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(UByteConstantNoDataCellType))
+    }), TileLayerMetadata(UByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
 
   }
 
@@ -1540,9 +1762,9 @@ object Coverage {
    */
   def toInt16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(ShortConstantNoDataCellType))
+    }), TileLayerMetadata(ShortConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
   /**
@@ -1553,9 +1775,10 @@ object Coverage {
    */
   def toUint16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(UShortConstantNoDataCellType))
+    }), TileLayerMetadata(UShortConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs,
+      coverage._2.bounds))
+    coverageConverted
   }
 
 
@@ -1568,9 +1791,9 @@ object Coverage {
   def toInt32(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+      (t._1, t._2.convert(IntConstantNoDataCellType))
+    }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
   /**
@@ -1582,8 +1805,8 @@ object Coverage {
   def toFloat(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(UByteCellType))
-    }), TileLayerMetadata(UByteCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+      (t._1, t._2.convert(FloatConstantNoDataCellType))
+    }), TileLayerMetadata(FloatConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
     and(coverageConverted, coverage)
   }
 
@@ -1596,8 +1819,8 @@ object Coverage {
   def toDouble(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
               ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val coverageConverted = (coverage._1.map(t => {
-      (t._1, t._2.convert(DoubleCellType))
-    }), TileLayerMetadata(DoubleCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+      (t._1, t._2.convert(DoubleConstantNoDataCellType))
+    }), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
     and(coverageConverted, coverage)
   }
 
