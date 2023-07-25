@@ -338,6 +338,7 @@ object Kernel {
 
   }
 
+
   def roberts(magnitude: Float = 1,
               normalize: Boolean = false)
   : focal.Kernel = {
