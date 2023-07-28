@@ -105,11 +105,11 @@ object Coverage {
   }
 
   /**
-  生成虚拟coverage
-  测试函数，不进入正式版本中 TODO：在master分支中删除该函数
-  Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
-  可以使用isNoData方法来判断一个值是否是NoData值
-  */
+   * 生成虚拟coverage
+   * 测试函数，不进入正式版本中 TODO：在master分支中删除该函数
+   * Int类型的默认NoData值是-2147483648，Double类型的默认NoData值是Double.NaN
+   * 可以使用isNoData方法来判断一个值是否是NoData值
+   */
   def makeFakeCoverage(implicit sc: SparkContext, array: Array[Int], names: mutable.ListBuffer[String], cols: Int, rows: Int):
   (RDD[
     (SpaceTimeBandKey,
@@ -956,8 +956,8 @@ object Coverage {
    */
   def convolve(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernel: focal
   .Kernel): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val coverage1= coverage.collect().toMap
-    val radius=kernel.extent
+    val coverage1 = coverage.collect().toMap
+    val radius = kernel.extent
     val convolvedRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage.map(t => {
       val col = t._1.spaceTimeKey.col
       val row = t._1.spaceTimeKey.row
@@ -973,7 +973,7 @@ object Coverage {
         val tilePadded: Tile = ArrayTile(arrBuffer, cols + 2 * radius, rows + 2 * radius).convert(t._2.cellType)
         for (i <- 0 until (cols)) {
           for (j <- 0 until (rows)) {
-            tilePadded.mutable.set(i + radius, j + radius, t._2.bands(index).get(i, j))
+            tilePadded.mutable.setDouble(i + radius, j + radius, t._2.bands(index).getDouble(i, j))
           }
         }
         //填充八邻域数据及自身数据，使用mutable进行性能优化
@@ -983,14 +983,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(0 + x, 0 + y, tiles.toList.head.bands(index).get(cols - radius + x, rows - radius + y))
+              tilePadded.mutable.setDouble(0 + x, 0 + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, rows - radius + y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(0 + x, 0 + y, 0)
+              tilePadded.mutable.setDouble(0 + x, 0 + y, 0)
             }
           }
         }
@@ -1001,14 +1001,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+              tilePadded.mutable.setDouble(radius + x, 0 + y, tiles.toList.head.bands(index).getDouble(x, rows - radius + y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, 0 + y, 0)
+              tilePadded.mutable.setDouble(radius + x, 0 + y, 0)
             }
           }
         }
@@ -1020,14 +1020,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+              tilePadded.mutable.setDouble(cols + radius + x, 0 + y, tiles.toList.head.bands(index).getDouble(x, rows - radius + y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, 0 + y, 0)
+              tilePadded.mutable.setDouble(cols + radius + x, 0 + y, 0)
             }
           }
         }
@@ -1038,14 +1038,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(0 + x, radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+              tilePadded.mutable.setDouble(0 + x, radius + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(0 + x, radius + y, 0)
+              tilePadded.mutable.setDouble(0 + x, radius + y, 0)
             }
           }
         }
@@ -1057,14 +1057,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(cols + radius + x, radius + y, tiles.toList.head.bands(index).get(x, y))
+              tilePadded.mutable.setDouble(cols + radius + x, radius + y, tiles.toList.head.bands(index).getDouble(x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(cols + radius + x, radius + y, 0)
+              tilePadded.mutable.setDouble(cols + radius + x, radius + y, 0)
             }
           }
         }
@@ -1076,14 +1076,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(x, rows + radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+              tilePadded.mutable.setDouble(x, rows + radius + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(x, rows + radius + y, 0)
+              tilePadded.mutable.setDouble(x, rows + radius + y, 0)
             }
           }
         }
@@ -1095,14 +1095,14 @@ object Coverage {
           //拷贝
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+              tilePadded.mutable.setDouble(radius + x, rows + radius + y, tiles.toList.head.bands(index).getDouble(x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, rows + radius + y, 0)
+              tilePadded.mutable.setDouble(radius + x, rows + radius + y, 0)
             }
           }
         }
@@ -1113,26 +1113,29 @@ object Coverage {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+              tilePadded.mutable.setDouble(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).getDouble(x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, rows + radius + y, 0)
+              tilePadded.mutable.setDouble(cols + radius + x, rows + radius + y, 0)
             }
           }
         }
 
         //运算
-        val tilePaddedRes: Tile = focal.Convolve(tilePadded,kernel,None,TargetCell.All)
+        val tilePaddedRes: Tile = focal.Convolve(tilePadded, kernel, None, TargetCell.All)
 
 
         //将tilePaddedRes 中的值转移进tile
         for (i <- 0 until (cols)) {
           for (j <- 0 until (rows)) {
-            t._2.bands(index).mutable.set(i, j, tilePaddedRes.get(i + radius, j + radius))
+            if (!isNoData(t._2.bands(index).getDouble(i, j)))
+              t._2.bands(index).mutable.setDouble(i, j, tilePaddedRes.getDouble(i + radius, j + radius))
+            else
+              t._2.bands(index).mutable.setDouble(i, j, Double.NaN)
             //            t._2.bands(index).mutable.set(i, j, 1)
           }
         }
@@ -1211,26 +1214,26 @@ object Coverage {
     val coverageTileLayerRDD = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData);
 
 
-//    val coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
-//    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
-//    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
-//    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
-//    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
-//    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverageVis._1.map(t => {
-//      (t._1.spaceTimeKey.spatialKey, t._2)
-//    })
-//    var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
-//    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
-//      coverageTMS.reproject(tmsCrs, layoutScheme)
+    //    val coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
+    //    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    //    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+    //    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
+    //    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
+    //    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverageVis._1.map(t => {
+    //      (t._1.spaceTimeKey.spatialKey, t._2)
+    //    })
+    //    var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
+    //    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+    //      coverageTMS.reproject(tmsCrs, layoutScheme)
 
     val (_, coverageTileRDDWithMetadata) = coverageTileLayerRDD.reproject(CRS.fromEpsgCode(crs), ld, geotrellis.raster.resample.Bilinear)
-          val coverageNoband = (coverageTileRDDWithMetadata.mapValues(tile => tile: MultibandTile), coverageTileRDDWithMetadata.metadata)
-          val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
-          val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
-          val coverageRDD = coverageNoband.map(t => {
-            (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
-          })
-          (coverageRDD, newMetadata)
+    val coverageNoband = (coverageTileRDDWithMetadata.mapValues(tile => tile: MultibandTile), coverageTileRDDWithMetadata.metadata)
+    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
+    val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
+    val coverageRDD = coverageNoband.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
+    })
+    (coverageRDD, newMetadata)
   }
 
   /**
