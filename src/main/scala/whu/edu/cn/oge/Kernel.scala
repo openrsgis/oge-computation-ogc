@@ -238,16 +238,6 @@ object Kernel {
   }
 
 
-
-  //  def robert(axis: String): focal.Kernel = {
-  //    if (axis == "y") {
-  //      focal.Kernel(IntArrayTile(Array[Int](0, -1, 1, 0), 2, 2))
-  //    }
-  //    else {
-  //      focal.Kernel(IntArrayTile(Array[Int](1, 0, 0, -1), 2, 2))
-  //    }
-  //  }
-
   /**
    * Generates a 3x3 laplacian-4 edge-detection kernel
    *
@@ -323,7 +313,7 @@ object Kernel {
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
-    // 圈正八边形范围，睡一觉想明白了，正方形加菱形 hh
+    // 加号
     for (i <- 0 until n; j <- 0 until n) {
       if (i == radius || j == radius) {
         matrix.update(i * n + j, 1.0)
@@ -345,6 +335,53 @@ object Kernel {
     val matrix = new Array[Double](rows * cols)
 
     genKernel(matrix.map(_ => 1.0), rows, cols, normalize, magnitude)
+
+  }
+
+
+  def roberts(magnitude: Float = 1,
+              normalize: Boolean = false)
+  : focal.Kernel = {
+
+    genKernel(Array[Double](1, 0, 0, -1), 2, 2, normalize, magnitude)
+
+  }
+
+  /**
+   *
+   * @param kernel    The kernel to be rotated.
+   * @param rotations Number of 90 deg.
+   *                  rotations to make (negative numbers rotate counterclockwise).
+   * @return
+   */
+  //noinspection DuplicatedCode
+  def rotate(kernel: focal.Kernel,
+             rotations: Int)
+  : focal.Kernel = {
+
+    // 必须行列相等
+    if (kernel.tile.rows != kernel.tile.cols) {
+      throw new IllegalArgumentException("kernel 's rows must be equal to its cols!")
+    }
+
+    // 准备条件
+    val n: Int = kernel.tile.rows
+    val data: Array[Double] = kernel.tile.toArrayDouble()
+    val radius: Int = (n - 1) >> 1
+    val A: Double = -rotations * math.Pi / 2
+
+    val matrix = new Array[Double](n * n)
+
+
+    for (i <- 0 until n; j <- 0 until n) {
+      val newI: Int = // 四舍五入！
+        (-(j - radius) * math.sin(A) + (i - radius) * math.cos(A) + radius + 0.5).toInt
+      val newJ: Int = // 四舍五入！
+        ((j - radius) * math.cos(A) + (i - radius) * math.sin(A) + radius + 0.5).toInt
+      matrix.update(newI * n + newJ, data(i * n + j))
+    }
+
+    focal.Kernel(DoubleArrayTile(matrix, n, n))
 
   }
 
