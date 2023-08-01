@@ -2,9 +2,12 @@ package whu.edu.cn.debug
 
 import com.alibaba.fastjson.JSON.parseObject
 import com.alibaba.fastjson.JSONObject
+import geotrellis.layer.stitch.TileLayoutStitcher
+import geotrellis.raster.Raster
+import geotrellis.raster.render.ColorRamps
 import org.apache.commons.collections.{CollectionUtils, MapUtils}
 import org.apache.commons.lang3.StringUtils
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
 import org.geotools.data.simple.SimpleFeatureIterator
@@ -15,6 +18,7 @@ import org.geotools.geojson.feature.FeatureJSON
 import org.geotools.referencing.crs.DefaultGeographicCRS
 import org.locationtech.jts.geom.{Geometry, LineString}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
+import whu.edu.cn.oge.Feature
 import whu.edu.cn.util.WKTUtil.{jsonToWkt, wktToGeom}
 
 import java.io._
@@ -30,6 +34,49 @@ import scala.collection.mutable.ArrayBuffer
 object FeatureDebug {
   val DEF_GEOM_KEY = "the_geom"
   val DEF_ENCODE = "uft-8"
+
+  def main(args: Array[String]): Unit = {
+
+    //启动spark并读取测试数据
+    val t1 = System.currentTimeMillis()
+    val conf = new SparkConf()
+      .setMaster("local[*]")
+      .setAppName("query")
+    val sc = new SparkContext(conf)
+    val points = Feature.load(sc, "China_EnvironmentMonitor_Vector", "2015010301")
+    val maskGeom = Feature.load(sc, "China_ADM_Country_Vector")
+    val t2 = System.currentTimeMillis()
+    println("启动spark时间:" + (t2 - t1) / 1000)
+
+
+    //反距离加权插值
+    val idw = Feature.inverseDistanceWeighted(sc, points, "PM2.5", maskGeom)
+
+    //结果生成 tiff 和 png
+    CoverageDubug.makeTIFF(idw, "idw")
+    val t3 = System.currentTimeMillis()
+    println("空间插值时间:" + (t3 - t2) / 1000)
+    CoverageDubug.makePNG(idw, "idw")
+    val t4 = System.currentTimeMillis()
+    println("生成png时间:" + (t4 - t3) / 1000)
+
+
+
+
+    //    val t1 = System.currentTimeMillis()
+    //    val conf = new SparkConf()
+    //      .setMaster("local[*]")
+    //      .setAppName("query")
+    //    val sc = new SparkContext(conf)
+    //    val maskGeom = load(sc, "China_ADM_Country_Vector")
+    //    val t2 = System.currentTimeMillis()
+    //    println("启动spark、查元数据的时间:" + (t2 - t1) / 1000)
+    //    val mask = maskGeom.first()
+    //    val t3 = System.currentTimeMillis()
+    //    println("从hbase中取数据的时间:" + (t3 - t2) / 1000)
+  }
+
+
 
   def saveFeatureRDDToShp(input: RDD[(String, (Geometry, mutable.Map[String, Any]))], outputShpPath: String): Unit = {
     val data: util.List[util.Map[String, Any]] = input.map(t => {
