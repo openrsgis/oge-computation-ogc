@@ -14,7 +14,7 @@ import java.util.{Date, UUID}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
-import geotrellis.raster.{DoubleCellType, MultibandTile, Raster, RasterExtent, Tile, TileLayout, mask}
+import geotrellis.raster.{DoubleCellType, DoubleConstantNoDataCellType, MultibandTile, Raster, RasterExtent, Tile, TileLayout, mask}
 import geotrellis.vector
 import geotrellis.vector.interpolation.{NonLinearSemivariogram, Semivariogram, Spherical}
 import geotrellis.vector.{Extent, PointFeature, interpolation}
@@ -64,13 +64,13 @@ object Feature {
     else {
       prefix = productKey + "_" + dataTime
     }
-    val t4 = System.currentTimeMillis()
+    val t3 = System.currentTimeMillis()
     val geometryRdd = getVectorWithPrefixFilter(sc, hbaseTableName, prefix).map(t => {
       t._2._1.setSRID(crs.split(":")(1).toInt)
       t
     })
-    val t5 = System.currentTimeMillis()
-    println("从hbase加载数据的时间：" + (t5 - t4) / 1000)
+    val t4 = System.currentTimeMillis()
+    println("从hbase加载数据的时间：" + (t4 - t3) / 1000)
     geometryRdd
   }
 
@@ -812,7 +812,7 @@ object Feature {
    * @return
    */
   //块金：nugget，基台：sill，变程：range
-  def simpleKriging(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], propertyName: String, modelType: String) = {
+  def simpleKriging(implicit sc: SparkContext,featureRDD: RDD[(String, (Geometry, Map[String, Any]))], propertyName: String, modelType: String) = {
     //Kriging Interpolation for PointsRDD
     val extents = featureRDD.map(t => {
       val coor = t._2._1.getCoordinate
@@ -826,7 +826,7 @@ object Feature {
     val rasterExtent = RasterExtent(extent, cols, rows)
     val points: Array[PointFeature[Double]] = featureRDD.map(t => {
       val p = vector.Point(t._2._1.getCoordinate)
-      // TODO 类型转换，一次转换成Double会报错，这里先转换成String再转换成Double
+      //TODO 直接转换为Double类型会报错
       var data = t._2._2(propertyName).asInstanceOf[String].toDouble
       if (data < 0) {
         data = 100
@@ -838,7 +838,30 @@ object Feature {
     val method = new SimpleKrigingMethods {
       override def self: Traversable[PointFeature[Double]] = points
     }
-    method.simpleKriging(rasterExtent, sv)
+    val originCoverage = method.simpleKriging(rasterExtent, sv)
+
+
+
+    val tl = TileLayout(10, 10, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val crs = geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
+    val time = System.currentTimeMillis()
+    val bounds = Bounds(SpaceTimeKey(0, 0, time), SpaceTimeKey(0, 0, time))
+    //TODO cellType的定义
+    val cellType = DoubleCellType
+    val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+
+    originCoverage.toArrayTile()
+    var list: List[Tile] = List.empty
+    list = list :+ originCoverage
+    val tileRDD = sc.parallelize(list)
+    val imageRDD = tileRDD.map(t => {
+      val k = cn.entity.SpaceTimeBandKey(SpaceTimeKey(0, 0, time), ListBuffer("interpolation"))
+      val v = MultibandTile(t)
+      (k, v)
+    })
+
+    (imageRDD, tileLayerMetadata)
   }
 
   /**
@@ -898,6 +921,7 @@ object Feature {
       val crs = geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
       val time = System.currentTimeMillis()
       val bounds = Bounds(SpaceTimeKey(0, 0, time), SpaceTimeKey(0, 0, time))
+      //TODO cellType的定义
       val cellType = maskRaster.tile.cellType
       val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
@@ -924,29 +948,47 @@ object Feature {
    * @return
    */
   def rasterize(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], propertyName: String) = {
-    val extents = featureRDD.map(t => {
-      val coorArray = t._2._1.getCoordinates
-      val coor = t._2._1.getCoordinate
-      for (item <- coorArray) {
 
-      }
+    val extents = featureRDD.map(t => {
+      val coor = t._2._1.getCoordinate
+//      val coorArray = t._2._1.getCoordinates
+//      for (item <- coorArray) {
+//
+//      }
       (coor.x, coor.y, coor.x, coor.y)
     }).reduce((coor1, coor2) => {
-      (min(coor1._1, coor2._1), min(coor1._2, coor2._2), max(coor1._1, coor2._1), max(coor1._2, coor2._2))
+      (min(coor1._1, coor2._1), min(coor1._2, coor2._2), max(coor1._3, coor2._3), max(coor1._4, coor2._4))
     })
     val extent = Extent(extents._1, extents._2, extents._3, extents._4)
-    //TODO:tileLayOut的定义
-    val tileLayout = TileLayout(10, 10, 256, 256)
-    val layout = LayoutDefinition(extent, tileLayout)
-    val cellType = DoubleCellType
-    val featureRDDforRaster: RDD[vector.Feature[Geometry, Double]] = featureRDD.map(t => {
 
+
+    //TODO:tileLayOut的定义
+    val tl = TileLayout(10, 10, 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val crs = geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
+    val time = System.currentTimeMillis()
+    val bounds = Bounds(SpaceTimeKey(0, 0, time), SpaceTimeKey(0, 0, time))
+    //TODO cellType的定义
+    val cellType = DoubleCellType
+    val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+
+
+
+    val featureRDDforRaster: RDD[vector.Feature[Geometry, Double]] = featureRDD.map(t => {
+      //TODO 直接转换为Double类型会报错
       //val data = t._2._2(propertyName).asInstanceOf[Double]
       val data = t._2._2(propertyName).asInstanceOf[String].toDouble
       val feature = new vector.Feature[Geometry, Double](t._2._1, data)
       feature
     })
-    featureRDDforRaster.rasterize(cellType, layout)
+    val originCoverage = featureRDDforRaster.rasterize(cellType, ld)
+    val imageRDD = originCoverage.map(t => {
+      val k = cn.entity.SpaceTimeBandKey(SpaceTimeKey(0, 0, time), ListBuffer("interpolation"))
+      val v = MultibandTile(t._2)
+      (k, v)
+    })
+
+    (imageRDD, tileLayerMetadata)
   }
 
 

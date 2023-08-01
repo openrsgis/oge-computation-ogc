@@ -49,18 +49,24 @@ object FeatureDebug {
     println("启动spark时间:" + (t2 - t1) / 1000)
 
 
+
+    //原始数据矢量转栅格
+    saveFeatureRDDToShp(points, "D:/cog/out/points.shp")
+    val pointsToRaster = Feature.rasterize(points, "PM2.5")
+    CoverageDubug.makeTIFF(pointsToRaster, "pointsToRaster")
+
     //反距离加权插值
     val idw = Feature.inverseDistanceWeighted(sc, points, "PM2.5", maskGeom)
-
     //结果生成 tiff 和 png
     CoverageDubug.makeTIFF(idw, "idw")
-    val t3 = System.currentTimeMillis()
-    println("空间插值时间:" + (t3 - t2) / 1000)
     CoverageDubug.makePNG(idw, "idw")
-    val t4 = System.currentTimeMillis()
-    println("生成png时间:" + (t4 - t3) / 1000)
 
 
+
+    //简单克里金插值
+//    val skg = Feature.simpleKriging(sc, points, "PM2.5","模型未知")
+//    CoverageDubug.makeTIFF(skg, "skg")
+//    CoverageDubug.makePNG(skg, "skg")
 
 
     //    val t1 = System.currentTimeMillis()
