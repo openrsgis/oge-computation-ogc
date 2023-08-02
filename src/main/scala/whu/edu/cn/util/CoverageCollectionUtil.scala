@@ -155,6 +155,11 @@ object CoverageCollectionUtil {
 
     val mapComputed: Map[Int, Tile] =
       method match {
+        case "cat" =>
+          groupedTiles.map(t =>{
+            val tiles:Iterable[Tile] = t._2
+            (t._1,tiles.reduce((a,b) => CoverageOverloadUtil.Cat(a,b)))
+          })
         case "min" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2

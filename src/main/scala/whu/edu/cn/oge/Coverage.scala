@@ -327,6 +327,14 @@ object Coverage {
     }), TileLayerMetadata(cellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
   }
 
+  /*
+  Combines the given images into a single image which contains all bands from all of the images.
+   */
+  def cat(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var coverageCollection1: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map("c1" -> coverage1, "c2" -> coverage2)
+    CoverageCollection.mean(coverageCollection1)
+  }
+
   /**
    * binaryAnd
    * if both have only 1 band, the 2 band will match.
@@ -336,7 +344,7 @@ object Coverage {
    * @return
    */
   def bitwiseAnd(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-          coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                 coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => And(tile1, tile2))
   }
 
@@ -362,7 +370,7 @@ object Coverage {
    * @return
    */
   def bitwiseXor(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-          coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                 coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Xor(tile1, tile2))
   }
 
@@ -376,10 +384,9 @@ object Coverage {
    * @return
    */
   def bitwiseOr(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-         coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Or(tile1, tile2))
   }
-
 
 
   /**
@@ -391,10 +398,9 @@ object Coverage {
    * @return
    */
   def or(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-               coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+         coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => CoverageOverloadUtil.Or(tile1, tile2))
   }
-
 
 
   /**
@@ -1810,7 +1816,7 @@ object Coverage {
     val coverageConverted = (coverage._1.map(t => {
       (t._1, t._2.convert(FloatConstantNoDataCellType))
     }), TileLayerMetadata(FloatConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+    coverageConverted
   }
 
   /**
@@ -1824,19 +1830,19 @@ object Coverage {
     val coverageConverted = (coverage._1.map(t => {
       (t._1, t._2.convert(DoubleConstantNoDataCellType))
     }), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    and(coverageConverted, coverage)
+    coverageConverted
   }
 
   //去除图像黑边，黑边为值为0的单元 TODO:添加到图像读取函数中，用户在读取图象时要指定读取图像的格式
-  def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+  def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage, (tile) => removeZeroFromTile(tile))
   }
 
-  def removeZeroFromTile(tile: Tile):Tile={
-    if(tile.cellType.isFloatingPoint)
-      tile.mapDouble(i => if(i == 0.0) Double.NaN else i)
+  def removeZeroFromTile(tile: Tile): Tile = {
+    if (tile.cellType.isFloatingPoint)
+      tile.mapDouble(i => if (i.equals(0.0)) Double.NaN else i)
     else
-      tile.map(i=> if(i==0) NODATA else i)
+      tile.map(i => if (i == 0) NODATA else i)
   }
 
   /**
