@@ -1782,6 +1782,18 @@ object Coverage {
     and(coverageConverted, coverage)
   }
 
+  //去除图像黑边，黑边为值为0的单元 TODO:添加到图像读取函数中，用户在读取图象时要指定读取图像的格式
+  def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    coverageTemplate(coverage, (tile) => removeZeroFromTile(tile))
+  }
+
+  def removeZeroFromTile(tile: Tile):Tile={
+    if(tile.cellType.isFloatingPoint)
+      tile.mapDouble(i => if(i == 0.0) Double.NaN else i)
+    else
+      tile.map(i=> if(i==0) NODATA else i)
+  }
+
   /**
    * Generate a coverage with the values from the first coverage, but only include cells in which the corresponding
    * cell in the second coverage *are not* set to the "readMask" value. Otherwise, the value of the cell will be set

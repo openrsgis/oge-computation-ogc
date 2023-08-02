@@ -54,9 +54,7 @@ object CoverageCollectionUtil {
       })
 
       // 定义最广泛的数据类型
-      val cellType: CellType = coverageCollection.map(t => t._2._1.first()._2.cellType).reduce((a, b) => {
-        CellType.fromName(OGEDataType.compareAndGetType(OGEDataType.withName(a.toString()), OGEDataType.withName(b.toString())).toString)
-      })
+      val cellType: CellType = coverageCollection.map(t => t._2._1.first()._2.cellType).reduce(_.union(_))
 
       val bandList: List[mutable.ListBuffer[String]] = coverageCollection.map(t => t._2._1.first()._1.measurementName).toList
       val allSame: Boolean = bandList.forall(_.equals(bandList.head))

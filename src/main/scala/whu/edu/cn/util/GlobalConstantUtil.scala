@@ -2,8 +2,7 @@ package whu.edu.cn.util;
 
 object GlobalConstantUtil {
   // dag-boot 服务根路径
-  final val DAG_ROOT_URL: String = // "http://125.220.153.22:8085/oge-dag-22"
-  "http://127.0.0.1:8085/oge-dag-22"
+  final val DAG_ROOT_URL: String = "http://125.220.153.22:8085/oge-dag-22"
   // Redis 基础配置
   final val JEDIS_HOST: String = "125.220.153.26"
   final val JEDIS_PORT: Int = 6379
