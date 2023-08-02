@@ -62,11 +62,10 @@ object FeatureDebug {
     CoverageDubug.makePNG(idw, "idw")
 
 
-
-    //简单克里金插值
-//    val skg = Feature.simpleKriging(sc, points, "PM2.5","模型未知")
-//    CoverageDubug.makeTIFF(skg, "skg")
-//    CoverageDubug.makePNG(skg, "skg")
+    //TODO 简单克里金插值(奇异矩阵报错)
+    val skg = Feature.simpleKriging(sc, points, "PM2.5","模型未知")
+    CoverageDubug.makeTIFF(skg, "skg")
+    CoverageDubug.makePNG(skg, "skg")
 
 
     //    val t1 = System.currentTimeMillis()

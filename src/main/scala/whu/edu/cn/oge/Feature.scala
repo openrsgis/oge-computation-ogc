@@ -14,7 +14,7 @@ import java.util.{Date, UUID}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
-import geotrellis.raster.{DoubleCellType, DoubleConstantNoDataCellType, MultibandTile, Raster, RasterExtent, Tile, TileLayout, mask}
+import geotrellis.raster.{DoubleCellType, DoubleConstantNoDataCellType, MultibandTile, PixelIsPoint, Raster, RasterExtent, Tile, TileLayout, mask}
 import geotrellis.vector
 import geotrellis.vector.interpolation.{NonLinearSemivariogram, Semivariogram, Spherical}
 import geotrellis.vector.{Extent, PointFeature, interpolation}
@@ -22,6 +22,8 @@ import org.geotools.referencing.CRS
 import geotrellis.spark._
 import geotrellis.raster.interpolation._
 import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.raster.rasterize.Rasterizer
+import geotrellis.raster.rasterize.Rasterizer.Options
 import geotrellis.raster.render.{ColorRamp, ColorRamps}
 import whu.edu.cn.geocube.core.entity
 import org.apache.commons.lang3.StringUtils
@@ -805,7 +807,7 @@ object Feature {
 
   /**
    * TODO: fix bug
-   *
+   * TODO: 简单克里金插值(奇异矩阵报错), modelType参数未使用，是否需要输入掩膜
    * @param featureRDD
    * @param propertyName
    * @param modelType
@@ -827,6 +829,7 @@ object Feature {
     val points: Array[PointFeature[Double]] = featureRDD.map(t => {
       val p = vector.Point(t._2._1.getCoordinate)
       //TODO 直接转换为Double类型会报错
+//      var data = t._2._2(propertyName).asInstanceOf[Double]
       var data = t._2._2(propertyName).asInstanceOf[String].toDouble
       if (data < 0) {
         data = 100
@@ -836,6 +839,7 @@ object Feature {
     println()
     val sv: Semivariogram = NonLinearSemivariogram(points, 30000, 0, Spherical)
     val method = new SimpleKrigingMethods {
+      //TODO fix bug 简单克里金插值(奇异矩阵报错)
       override def self: Traversable[PointFeature[Double]] = points
     }
     val originCoverage = method.simpleKriging(rasterExtent, sv)
@@ -848,7 +852,7 @@ object Feature {
     val time = System.currentTimeMillis()
     val bounds = Bounds(SpaceTimeKey(0, 0, time), SpaceTimeKey(0, 0, time))
     //TODO cellType的定义
-    val cellType = DoubleCellType
+    val cellType = originCoverage.cellType
     val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
     originCoverage.toArrayTile()
@@ -923,8 +927,8 @@ object Feature {
       val bounds = Bounds(SpaceTimeKey(0, 0, time), SpaceTimeKey(0, 0, time))
       //TODO cellType的定义
       val cellType = maskRaster.tile.cellType
+//      val cellType = DoubleCellType
       val tileLayerMetadata = TileLayerMetadata(cellType, ld, extent, crs, bounds)
-
       var list: List[Tile] = List.empty
       list = list :+ maskRaster.tile
       val tileRDD = sc.parallelize(list)
@@ -963,7 +967,7 @@ object Feature {
 
 
     //TODO:tileLayOut的定义
-    val tl = TileLayout(10, 10, 256, 256)
+    val tl = TileLayout(1, 1, 256, 256)
     val ld = LayoutDefinition(extent, tl)
     val crs = geotrellis.proj4.CRS.fromEpsgCode(featureRDD.first()._2._1.getSRID)
     val time = System.currentTimeMillis()
@@ -982,6 +986,20 @@ object Feature {
       feature
     })
     val originCoverage = featureRDDforRaster.rasterize(cellType, ld)
+
+
+//    //TODO 栅格化（测试）
+//    val rasterRDD = featureRDD.map { case (featureId, (geometry, properties)) =>
+//      val rasterizedData = Rasterizer.rasterize(geometry, RasterExtent(extent,256,256)){
+//        (x: Int, y: Int) => properties.get(propertyName) match{
+//          case Some(value: String) => properties.asInstanceOf[String].toInt// Use the property value as the raster value
+//          case _ => 5000 // Set Nodata value for pixels without the property value
+//        }
+//      }
+//      (featureId, rasterizedData)
+//    }
+
+
     val imageRDD = originCoverage.map(t => {
       val k = cn.entity.SpaceTimeBandKey(SpaceTimeKey(0, 0, time), ListBuffer("interpolation"))
       val v = MultibandTile(t._2)
