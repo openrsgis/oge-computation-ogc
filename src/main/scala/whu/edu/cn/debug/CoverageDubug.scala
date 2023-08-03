@@ -4,6 +4,7 @@ import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.raster.render.ColorRamps
 import geotrellis.raster.resample.Bilinear
 import geotrellis.raster.{MultibandTile, Raster}
 import geotrellis.spark._
@@ -43,62 +44,18 @@ object CoverageDubug {
 
   }
 
-  def testCoverage(): Unit = {
-    val NoData: Int = -2147483648
-    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("Test")
-    val sc = new SparkContext(conf)
-    val array = Array[Double](Double.NaN, -1, Double.NaN, 0.45, 5, 6, 7, 8, 10)
-
-    var coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc, array, mutable.ListBuffer[String]("111", "222", "333"), 3, 3)
-
-
-    val array2 = Array[Int](123, 231, 99, 123, 255, 255, 128, 234, 132)
-    var coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage
-      .makeFakeCoverage(sc, array2, mutable.ListBuffer[String]("111", "222", "333"), 3, 3)
-    coverage2 = Coverage.entropy(coverage2, "square", 5)
-    //    coverage1 = Coverage.focalMax(coverage1,"square",5)
-
-    val coverage = Coverage.rgbToHsv(coverage1)
-    //    println(coverage)
-    for (band <- coverage2.first()._2.bands) {
-      val arr: Array[Double] = band.toArrayDouble()
-      println(arr.mkString(","))
-    }
-  }
-
-
   def ndviLandsat7(): Unit = {
 
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
 
-    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toUint8(loadCoverage
-    (sc,
-      "LE07_L1TP_125039_20130110_20161126_01_T1", 6))
-    val band=coverage.first()._2.bands(0)
-    val arr: Array[Double] = band.toArrayDouble()
-    println(arr.length)
-//    getPiece(arr,251,256,251,256)
-//    println('_')
-//    val coverage2=Coverage.multiply(Coverage.divide(coverage,coverage),coverage)
-//    val coverage1=Coverage.focalMean(coverage2,"square",1)
-//    val band1 = coverage1.first()._2.bands(0)
-//    val arr1: Array[Double] = band1.toArrayDouble()
-//    getPiece(arr1,251,256,251,256)
-//    makeTIFF(coverage, "111")
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", 6)
+    val coverageDouble: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(coverage)
+    val ndwi: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.normalizedDifference(coverageDouble, List("B4", "B3"))
 
-  }
-
-  def getPiece(arr:Array[Double], rowFrom:Int,
-               rowTo:Int, colFrom:Int,colTo:Int):Unit={
-    for(i <- rowFrom until(rowTo)){
-      for(j <- colFrom until(colTo)){
-        print(arr(i*256+j))
-        print(',')
-      }
-      print("\n")
-    }
+    makeTIFF(coverage, "ls")
+    makeTIFF(coverageDouble, "lsD")
+    makeTIFF(ndwi, "lsNDWI")
   }
 
   def loadModis(): Unit = {
@@ -218,6 +175,17 @@ object CoverageDubug {
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage.metadata.extent)
     val writePath: String = "D:/cog/out/" + name + ".png"
     stitchedTile.tile.renderPng().write(writePath)
+  }
+
+  def makePNG(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),name:String): Unit = {
+    val tileLayerArray = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    }).collect()
+    val layout = coverage._2.layout
+    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
+    val stitchedTile = Raster(tile.band(0), layout.extent)
+    val writePath: String = "D:/cog/out/" + name + ".png"
+    stitchedTile.tile.renderPng(ColorRamps.BlueToOrange).write(writePath)
   }
 
   def makeTMS(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), layerName: String): Unit = {
