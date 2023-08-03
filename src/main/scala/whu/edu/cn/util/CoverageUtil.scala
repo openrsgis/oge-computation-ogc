@@ -37,8 +37,8 @@ object CoverageUtil {
 
 
     val firstTile: RawTile = coverageRawTiles.first()
-    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1) / firstTile.getResolutionCol / 256.0).toInt, 1)
-    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2) / firstTile.getResolutionRow / 256.0).toInt, 1)
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1-firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2-firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0).toInt, 1)
 
     val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
 
