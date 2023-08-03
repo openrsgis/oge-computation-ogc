@@ -17,8 +17,9 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.debug.FeatureDebug.saveFeatureRDDToShp
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey}
-import whu.edu.cn.oge.Coverage
+import whu.edu.cn.oge.{Coverage, Feature}
 import whu.edu.cn.oge.CoverageCollection.mosaic
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.makeCoverageRDD
@@ -35,12 +36,31 @@ object CoverageDubug {
     // LC08_L1TP_124038_20181211_20181226_01_T1
     // LE07_L1TP_125039_20130110_20161126_01_T1
 
-    loadLandsat8()
+    clip()
     val time2: Long = System.currentTimeMillis()
     println("Total Time is " + (time2 - time1))
 
 
     println("_")
+
+  }
+
+  def clip(): Unit = {
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+    val sc = new SparkContext(conf)
+
+    // 栅格数据
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days", 7)
+    makeTIFF(coverage, "coverage")
+
+    // 矢量数据
+    val maskGeom = Feature.load(sc, "China_ADM_Country_Vector")
+    val maskPolygon = maskGeom.map(t => t._2._1).first()
+    saveFeatureRDDToShp(maskGeom, "D:/cog/out/China_ADM_Country_Vector.shp")
+
+    // 裁剪
+    val coverageClip: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.clip(coverage, maskPolygon)
+    makeTIFF(coverageClip, "coverageClip")
 
   }
 
@@ -168,7 +188,7 @@ object CoverageDubug {
     stitchedTile.tile.renderPng().write(writePath)
   }
 
-  def makePNG(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),name:String): Unit = {
+  def makePNG(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), name: String): Unit = {
     val tileLayerArray = coverage._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()

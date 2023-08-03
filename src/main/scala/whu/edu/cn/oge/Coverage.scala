@@ -1420,7 +1420,6 @@ object Coverage {
    * @param geom     The geometry used to clip.
    * @return
    */
-
   def clip(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), geom: Geometry
           ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val RDDExtent: Extent = coverage._2.extent
