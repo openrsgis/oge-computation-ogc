@@ -746,8 +746,8 @@ object Coverage {
    * @param coverage rdd for getting bands
    * @return
    */
-  def bandNames(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): List[String] = {
-    coverage._1.first()._1.measurementName.toList
+  def bandNames(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    coverage._1.first()._1.measurementName.toList.toString()
   }
 
   def bandNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Int = {
@@ -798,13 +798,13 @@ object Coverage {
    * @return Map[String, String]  key: band name, value: band type
    */
   def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
-    var bandTypesMap: Map[String, String] = Map()
+    var bandTypesMap: mutable.Map[String, String] = mutable.Map.empty[String,String]
     var bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
     coverage._1.first()._2.bands.foreach(tile => {
-      bandTypesMap = bandTypesMap + (bandNames.head -> tile.cellType.toString())
+      bandTypesMap +=  (bandNames.head -> tile.cellType.toString())
       bandNames = bandNames.tail
     })
-    bandTypesMap
+    bandTypesMap.toMap
   }
 
 

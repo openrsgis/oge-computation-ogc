@@ -26,6 +26,9 @@ object Trigger {
   var coverageCollectionRddList: mutable.Map[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]] = mutable.Map.empty[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]]
   var coverageRddList: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
 
+  var doubleList: mutable.Map[String, Double] = mutable.Map.empty[String, Double]
+  var stringList: mutable.Map[String, String] = mutable.Map.empty[String, String]
+  var intList: mutable.Map[String, Int] = mutable.Map.empty[String, Int]
 
   // TODO lrx: 以下为未检验
 
@@ -89,9 +92,26 @@ object Trigger {
       val tempNoticeJson = new JSONObject
 
 
-      tempNoticeJson.put("test", "1234")
+//      tempNoticeJson.put("test", "1234")
       funcName match {
 
+        //Others
+        case "print" =>
+          if (stringList.contains(args("arg"))) {
+            Others.printNotice(args("arg"), stringList(args("arg")))
+          }
+          else if (doubleList.contains(args("arg"))) {
+            Others.printNotice(args("arg"), doubleList(args("arg")).toString)
+          }
+          else if (intList.contains(args("arg"))) {
+            Others.printNotice(args("arg"), intList(args("arg")).toString)
+          }
+          else if (coverageRddList.contains(args("arg"))) {
+            Others.printNotice(args("arg"), coverageRddList(args("arg"))._2.toString)
+          }
+          else{
+            throw new IllegalArgumentException("The specified content could not be found!")
+          }
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
@@ -171,27 +191,27 @@ object Trigger {
         case "Coverage.subtract" =>
           coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.subtract" =>
-          coverageRddList += (UUID -> Coverage.subtract(coverage = coverageRddList(args("coverage")), i = args("i")))
+          coverageRddList += (UUID -> Coverage.subtract(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.cat" =>
           coverageRddList += (UUID -> Coverage.cat(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.add" =>
           coverageRddList += (UUID -> Coverage.add(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.add" =>
-          coverageRddList += (UUID -> Coverage.add(coverage = coverageRddList(args("coverage")), i = args("i")))
+          coverageRddList += (UUID -> Coverage.add(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.mod" =>
           coverageRddList += (UUID -> Coverage.mod(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.mod" =>
-          coverageRddList += (UUID -> Coverage.mod(coverage = coverageRddList(args("coverage")), i = args("i")))
+          coverageRddList += (UUID -> Coverage.mod(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.divide" =>
           coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.divide" =>
-          coverageRddList += (UUID -> Coverage.divide(coverage = coverageRddList(args("coverage")), i = args("i")))
+          coverageRddList += (UUID -> Coverage.divide(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.round" =>
           coverageRddList += (UUID -> Coverage.round(coverage = coverageRddList(args("coverage"))))
         case "Coverage.multiply" =>
           coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.multiply" =>
-          coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+          coverageRddList += (UUID -> Coverage.multiply(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.normalizedDifference" =>
           coverageRddList += (UUID -> Coverage.normalizedDifference(coverageRddList(args("coverage")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
         case "Coverage.binarization" =>
@@ -255,13 +275,10 @@ object Trigger {
           val names: List[String] = args("names").split(",").toList
           coverageRddList += (UUID -> Coverage.addBands(dstCoverage = coverageRddList(args("coverage1")), srcCoverage =
             coverageRddList(args("coverage2")), names = names))
-        case "Coverage.bandNames" => {
-          val bandNames: List[String] = Coverage.bandNames(coverage = coverageRddList(args("coverage")))
-          tempNoticeJson.put("bandNames", bandNames)
-        }
+        case "Coverage.bandNames" =>
+          stringList += (UUID -> Coverage.bandNames(coverage = coverageRddList(args("coverage"))))
         case "Coverage.bandNum" =>
-          val bandNum: Int = Coverage.bandNum(coverage = coverageRddList(args("coverage")))
-          tempNoticeJson.put("bandNum", bandNum)
+          intList += (UUID -> Coverage.bandNum(coverage = coverageRddList(args("coverage"))))
         case "Coverage.abs" =>
           coverageRddList += (UUID -> Coverage.abs(coverage = coverageRddList(args("coverage"))))
         case "Coverage.neq" =>
@@ -269,13 +286,13 @@ object Trigger {
         case "Coverage.signum" =>
           coverageRddList += (UUID -> Coverage.signum(coverage = coverageRddList(args("coverage"))))
         case "Coverage.bandTypes" =>
-          val bandTypes: immutable.Map[String, String] = Coverage.bandTypes(coverage = coverageRddList(args("coverage")))
+          stringList += (UUID -> Coverage.bandTypes(coverage = coverageRddList(args("coverage"))).toString())
         case "Coverage.rename" =>
           coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name").split(",").toList))
         case "Coverage.pow" =>
           coverageRddList += (UUID -> Coverage.pow(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.pow" =>
-          coverageRddList += (UUID -> Coverage.pow(coverage = coverageRddList(args("coverage")), i = args("i")))
+          coverageRddList += (UUID -> Coverage.pow(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.mini" =>
           coverageRddList += (UUID -> Coverage.mini(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.maxi" =>
@@ -293,8 +310,7 @@ object Trigger {
         case "Coverage.convolve" =>
           coverageRddList += (UUID -> Coverage.convolve(coverage = coverageRddList(args("coverage")), kernel = kernelRddList(args("kernel"))))
         case "Coverage.projection" =>
-          val projection: String = Coverage.projection(coverage = coverageRddList(args("coverage")))
-          println(projection)
+          stringList += (UUID -> Coverage.projection(coverage = coverageRddList(args("coverage"))))
         case "Coverage.remap" =>
           coverageRddList += (UUID -> Coverage.remap(coverage = coverageRddList(args("coverage")), args("from").slice(1, args("from").length - 1).split(',').toList.map(_.toInt),
             args("to").slice(1, args("to").length - 1).split(',').toList.map(_.toDouble), Option(isOptionalArg(args, "defaultValue").toDouble)))
@@ -302,9 +318,8 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.polynomial(coverage = coverageRddList(args("coverage")), args("l").slice(1, args("l").length - 1).split(',').toList.map(_.toDouble)))
         case "Coverage.slice" =>
           coverageRddList += (UUID -> Coverage.slice(coverage = coverageRddList(args("coverage")), start = args("start").toInt, end = args("end").toInt))
-        //      case "Coverage.histogram" =>
-        //        val hist = Coverage.histogram(coverage = coverageRddList(args("coverage")))
-        //        println(hist)
+        case "Coverage.histogram" =>
+          stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")),scale = args("scale").toDouble).toString())
         case "Coverage.reproject" =>
           coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = args("crsCode").toInt, scale = args("resolution").toDouble))
         case "Coverage.resample" =>
@@ -328,8 +343,7 @@ object Trigger {
         case "Coverage.sqrt" =>
           coverageRddList += (UUID -> Coverage.sqrt(coverage = coverageRddList(args("coverage"))))
         case "Coverage.metadata" =>
-          val metadataString = Coverage.metadata(coverage = coverageRddList(args("coverage")))
-          println(metadataString)
+          stringList += (UUID -> Coverage.metadata(coverage = coverageRddList(args("coverage"))))
         case "Coverage.mask" =>
           coverageRddList += (UUID -> Coverage.mask(coverageRddList(args("coverage1")), coverageRddList(args("coverage2")), args("readMask").toInt, args("writeMask").toInt))
         case "Coverage.toInt8" =>
