@@ -134,6 +134,10 @@ object CoverageCollection {
     coverageCollectionMosaicTemplate(coverageCollection, "mode")
   }
 
+  def cat(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageCollectionMosaicTemplate(coverageCollection, "cat")
+  }
+
   // TODO lrx: 这里要添加并行，并行之前的并行，需要写个调度
   def map(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], baseAlgorithm: String): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
 

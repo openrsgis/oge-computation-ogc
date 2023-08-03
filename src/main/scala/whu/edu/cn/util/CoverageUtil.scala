@@ -37,8 +37,8 @@ object CoverageUtil {
 
 
     val firstTile: RawTile = coverageRawTiles.first()
-    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1-firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)
-    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2-firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0).toInt, 1)
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0  ).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0  ).toInt, 1)
 
     val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
 
@@ -336,13 +336,13 @@ object CoverageUtil {
       val rows = t._2.rows
 
       var arrayBuffer :mutable.ArrayBuffer[Tile] = new mutable.ArrayBuffer[Tile] {}
-      for(index <- t._2.bands.indices){
+      for (index <- t._2.bands.indices) {
         val arrBuffer: Array[Double] = Array.ofDim[Double]((cols + 2 * radius) * (rows + 2 * radius))
         //arr转换为Tile，并拷贝原tile数据
         val tilePadded: Tile = ArrayTile(arrBuffer, cols + 2 * radius, rows + 2 * radius).convert(t._2.cellType)
         for (i <- 0 until (cols)) {
           for (j <- 0 until (rows)) {
-            tilePadded.mutable.set(i + radius, j + radius, t._2.bands(index).get(i, j))
+            tilePadded.mutable.setDouble(i + radius, j + radius, t._2.bands(index).getDouble(i, j))
           }
         }
         //填充八邻域数据及自身数据，使用mutable进行性能优化
@@ -352,14 +352,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(0 + x, 0 + y, tiles.toList.head.bands(index).get(cols - radius + x, rows - radius + y))
+              tilePadded.mutable.setDouble(0 + x, 0 + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, rows - radius + y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(0 + x, 0 + y, 0)
+              tilePadded.mutable.setDouble(0 + x, 0 + y, 0)
             }
           }
         }
@@ -370,14 +370,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+              tilePadded.mutable.setDouble(radius + x, 0 + y, tiles.toList.head.bands(index).getDouble(x, rows - radius + y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, 0 + y, 0)
+              tilePadded.mutable.setDouble(radius + x, 0 + y, 0)
             }
           }
         }
@@ -389,14 +389,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, 0 + y, tiles.toList.head.bands(index).get(x, rows - radius + y))
+              tilePadded.mutable.setDouble(cols + radius + x, 0 + y, tiles.toList.head.bands(index).getDouble(x, rows - radius + y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, 0 + y, 0)
+              tilePadded.mutable.setDouble(cols + radius + x, 0 + y, 0)
             }
           }
         }
@@ -407,14 +407,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(0 + x, radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+              tilePadded.mutable.setDouble(0 + x, radius + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(0 + x, radius + y, 0)
+              tilePadded.mutable.setDouble(0 + x, radius + y, 0)
             }
           }
         }
@@ -426,14 +426,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(cols + radius + x, radius + y, tiles.toList.head.bands(index).get(x, y))
+              tilePadded.mutable.setDouble(cols + radius + x, radius + y, tiles.toList.head.bands(index).getDouble(x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (rows)) {
-              tilePadded.mutable.set(cols + radius + x, radius + y, 0)
+              tilePadded.mutable.setDouble(cols + radius + x, radius + y, 0)
             }
           }
         }
@@ -445,14 +445,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(x, rows + radius + y, tiles.toList.head.bands(index).get(cols - radius + x, y))
+              tilePadded.mutable.setDouble(x, rows + radius + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(x, rows + radius + y, 0)
+              tilePadded.mutable.setDouble(x, rows + radius + y, 0)
             }
           }
         }
@@ -464,14 +464,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+              tilePadded.mutable.setDouble(radius + x, rows + radius + y, tiles.toList.head.bands(index).getDouble(x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (cols)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(radius + x, rows + radius + y, 0)
+              tilePadded.mutable.setDouble(radius + x, rows + radius + y, 0)
             }
           }
         }
@@ -482,14 +482,14 @@ object CoverageUtil {
           //拷贝
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).get(x, y))
+              tilePadded.mutable.setDouble(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).getDouble(x, y))
             }
           }
         } else {
           //赋0
           for (x <- 0 until (radius)) {
             for (y <- 0 until (radius)) {
-              tilePadded.mutable.set(cols + radius + x, rows + radius + y, 0)
+              tilePadded.mutable.setDouble(cols + radius + x, rows + radius + y, 0)
             }
           }
         }
@@ -501,8 +501,10 @@ object CoverageUtil {
         //将tilePaddedRes 中的值转移进tile
         for (i <- 0 until (cols)) {
           for (j <- 0 until (rows)) {
-            t._2.bands(index).mutable.set(i, j, tilePaddedRes.get(i + radius, j + radius))
-//            t._2.bands(index).mutable.set(i, j, 1)
+            if (!isNoData(t._2.bands(index).getDouble(i, j)))
+              t._2.bands(index).mutable.setDouble(i, j, tilePaddedRes.getDouble(i + radius, j + radius))
+            else
+              t._2.bands(index).mutable.setDouble(i, j, Double.NaN)
           }
         }
       }
