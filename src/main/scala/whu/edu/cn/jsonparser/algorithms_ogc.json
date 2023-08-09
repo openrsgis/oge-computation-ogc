@@ -813,8 +813,131 @@
       }
     ]
   },
+  "Coverage.date": {
+    "description": "Return the acquisition date of the given coverage.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The Coverage as the input data."
+      }
+    ]
+  },
   "Coverage.add": {
     "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.addNum": {
+    "description": "Add the value to the coverage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value to add."
+      }
+    ]
+  },
+  "Coverage.subtractNum": {
+    "description": "Subtract the corresponding value from the coverage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for subtract."
+      }
+    ]
+  },
+  "Coverage.divideNum": {
+    "description": "Divide the corresponding value from the coverage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for divide."
+      }
+    ]
+  },
+  "Coverage.multiplyNum": {
+    "description": "Multiply the corresponding value to the coverage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for multiply."
+      }
+    ]
+  },
+  "Coverage.powNum": {
+    "description": "Raises the first coverage to the power of the value.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for pow."
+      }
+    ]
+  },
+  "Coverage.cat": {
+    "description": "Combines the given coverages into a single coverage which contains all bands from all of the images.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The first coverage for cat."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The second coverage for cat."
+      }
+    ]
+  },
+  "Coverage.mod": {
+    "description": "Mods the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
     "returns": "Coverage",
     "args": [
       {
@@ -858,6 +981,113 @@
         "name": "coverage2",
         "type": "Coverage",
         "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.and": {
+    "description": "Returns 1 iff both values are non-zero for each matched pair of bands in coverage1 and coverage2. If both have only 1 band, the 2 band will match.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage rdd to operate."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "First coverage rdd to operate."
+      }
+    ]
+  },
+  "Coverage.bitwiseAnd": {
+    "description": "Calculates the bitwise AND of the input values for each matched pair of bands in image1 and image2. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage rdd to operate."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "Second coverage rdd to operate."
+      }
+    ]
+  },
+  "Coverage.or": {
+    "description": "Returns 1 iff either values are non-zero for each matched pair of bands in coverage1 and coverage2. If both have only 1 band, the 2 band will match",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage rdd to operate."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "First coverage rdd to operate."
+      }
+    ]
+  },
+  "Coverage.bitwiseOr": {
+    "description": "Calculates the bitwise Or of the input values for each matched pair of bands in image1 and image2. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage rdd to operate."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "Second coverage rdd to operate."
+      }
+    ]
+  },
+  "Coverage.bitwiseXor": {
+    "description": "Calculates the bitwise XOR of the input values for each matched pair of bands in coverage1 and coverage2. If both have only 1 band, the 2 band will match",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage to operate."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "First coverage to operate."
+      }
+    ]
+  },
+  "Coverage.not": {
+    "description": "Returns 0 if the input is non-zero, and 1 otherwise.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage to operate."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "First coverage to operate."
+      }
+    ]
+  },
+  "Coverage.bitwiseNot": {
+    "description": "Calculates the bitwise Not of the input values for a coverage. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Coverage to operate."
       }
     ]
   },
@@ -1026,18 +1256,18 @@
     ]
   },
   "Coverage.bandTypes": {
-    "description": "Returns a dictionary of the image's band types.",
+    "description": " Returns a map of the coverage's band types.",
     "returns": "Map",
     "args": [
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The image from which the left operand bands are taken."
+        "description": "The coverage from which the left operand bands are taken."
       }
     ]
   },
   "Coverage.rename": {
-    "description": "Rename the bands of an image.Returns the renamed image.",
+    "description": "Rename the bands of a coverage.Returns the renamed coverage.",
     "returns": "Coverage",
     "args": [
       {
@@ -1063,6 +1293,121 @@
       }
     ]
   },
+  "Coverage.acos": {
+    "description": "Computes the arc cosine in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.cos": {
+    "description": "Computes the cosine in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.cosh": {
+    "description": "Computes the hyperbolic cosine of the input in radians.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.asin": {
+    "description": "Computes the arc sine in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.sin": {
+    "description": "Computes the sine in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.sinh": {
+    "description": "Computes the hyperbolic sine of the input in radians.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.atan": {
+    "description": "Computes the arc tangent in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.tan": {
+    "description": "Computes the tangent in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.tanh": {
+    "description": "Computes the hyperbolic tangent in radians of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation"
+      }
+    ]
+  },
+  "Coverage.atan2": {
+    "description": "Calculates the angle formed by the 2D vector [x, y] for each matched pair of bands in image1 and image2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "First coverage for operation."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "Second coverage for operation."
+      }
+    ]
+  },
   "Coverage.neq": {
     "description": "Returns 1 iff the first value is not equal to the second for each matched pair of bands in image1 and image2.",
     "returns": "Coverage",
@@ -1076,6 +1421,32 @@
         "name": "coverage2",
         "type": "Coverage",
         "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.addBands": {
+    "description": "Returns an coverage containing all bands copied from the first input and selected bands from the second input,optionally overwriting bands in the first coverage with the same name.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "dstCoverage",
+        "type": "Coverage",
+        "description": "first coverage."
+      },
+      {
+        "name": "srcCoverage",
+        "type": "Coverage",
+        "description": "second coverage."
+      },
+      {
+        "name": "names",
+        "type": "List<String>",
+        "description": "the name of selected bands in srcCoverage"
+      },
+      {
+        "name": "overwrite",
+        "type": "Boolean",
+        "description": "if true, overwrite bands in the first coverage with the same name. Otherwise the bands in the first coverage will be kept."
       }
     ]
   },
@@ -1145,17 +1516,39 @@
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The input image."
+        "description": "The input coverage."
       },
       {
-        "name": "coefficients",
-        "type": "List<float>",
+        "name": "l",
+        "type": "List<Double>",
         "description": "The polynomial coefficients in increasing order of degree starting with the constant term."
       }
     ]
   },
+  "Coverage.log": {
+    "description": "Computes the natural logarithm of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      }
+    ]
+  },
+  "Coverage.log10": {
+    "description": "Computes the base-10 logarithm of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      }
+    ]
+  },
   "Coverage.mask": {
-    "description": "Sets an image's mask.",
+    "description": "Generate a coverage with the values from the first coverage, but only include cells in which the corresponding cell in the second coverage *are not* set to the \"readMask\" value. Otherwise, the value of the cell will be set to the \"writeMask\".\n Both coverages are required to have the same number of bands, or the coverage2 must have 1 bands. If the coverage2 has a band count of 1, the mask is applied to each band of coverage1.",
     "returns": "Coverage",
     "args": [
       {
@@ -1167,17 +1560,27 @@
         "name": "coverage2",
         "type": "Coverage",
         "description": "The mask image."
+      },
+      {
+        "name": "readMask",
+        "type": "Int",
+        "description": "The number to be masked in the Mask."
+      },
+      {
+        "name": "writeMask",
+        "type": "Int",
+        "description": "The number will be set if the values from coverage2 is equal to readMask."
       }
     ]
   },
   "Coverage.convolve": {
-    "description": "Convolves each band of an image with the given kernel.",
+    "description": "Convolve each band of a image with the given kernel.",
     "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The image to convolve."
+        "description": "The coverage to convolve."
       },
       {
         "name": "kernel",
@@ -1291,9 +1694,30 @@
       }
     ]
   },
+  "Coverage.slice": {
+    "description": "Selects a contiguous group of bands from a coverage by position.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage from which to select bands."
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "Where to start the selection."
+      },
+      {
+        "name": "end",
+        "type": "Int",
+        "description": "Where to end the selection."
+      }
+    ]
+  },
   "Coverage.histogram": {
     "description": "Return the histogram of the image, a map of bin label value and its associated count.",
-    "returns": "Map",
+    "returns": "Map[Int,Long]",
     "args": [
       {
         "name": "coverage",
@@ -1314,7 +1738,7 @@
     ]
   },
   "Coverage.reproject": {
-    "description": "Force an image to be computed in a given projection",
+    "description": "Force a coverage to be computed in a given projection",
     "returns": "Coverage",
     "args": [
       {
@@ -1344,14 +1768,35 @@
         "description": "The coverage to resample."
       },
       {
-        "name": "level",
-        "type": "Int",
-        "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
-      },
-      {
         "name": "mode",
         "type": "String",
         "description": "The interpolation mode to use"
+      }
+    ]
+  },
+  "Coverage.remap": {
+    "description": "Maps from input values to output values, represented by two parallel lists. Any input values not included in the input list are either set to defaultValue if it is given, or masked if it isn't. Note that inputs containing floating point values might sometimes fail to match due to floating point precision errors.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to remap."
+      },
+      {
+        "name": "from",
+        "type": "List[Int]",
+        "description": "The key list of the map."
+      },
+      {
+        "name": "to",
+        "type": "List[Double]",
+        "description": "The value list of the map."
+      },
+      {
+        "name": "defaultValue",
+        "type": "Option[Int]",
+        "description": "Any input values not included in the input list are either set to defaultValue if it is given, or masked if it isn't."
       }
     ]
   },
@@ -1366,8 +1811,72 @@
       }
     ]
   },
+  "Coverage.gt": {
+    "description": "Returns 1 iff the first value is greater than the second for each matched pair of bands in coverage1 and coverage2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The first coverage for operation."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The second coverage for operation."
+      }
+    ]
+  },
+  "Coverage.gte": {
+    "description": "Returns 1 iff the first value is equal or greater to the second for each matched pair of bands in coverage1 and coverage2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The first coverage for operation."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The second coverage for operation."
+      }
+    ]
+  },
+  "Coverage.lt": {
+    "description": "Returns 1 iff the first value is less than the second for each matched pair of bands in coverage1 and coverage2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The first coverage for operation."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The second coverage for operation."
+      }
+    ]
+  },
+  "Coverage.lte": {
+    "description": "Returns 1 iff the first value is equal or less to the second for each matched pair of bands in coverage1 and coverage2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The first coverage for operation."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The second coverage for operation."
+      }
+    ]
+  },
   "Coverage.clip": {
-    "description": "Clip the raster with the geometry",
+    "description": "Clip the raster with the geometry.",
     "returns": "Coverage",
     "args": [
       {
@@ -1383,7 +1892,7 @@
     ]
   },
   "Coverage.clamp": {
-    "description": "Clamp the raster between low and high",
+    "description": "Clamp the raster between low and high.",
     "returns": "Coverage",
     "args": [
       {
@@ -1404,44 +1913,24 @@
     ]
   },
   "Coverage.rgbToHsv": {
-    "description": "Transforms the image from the RGB color space to the HSV color space. Expects a 3 band image in the range [0, 1], and produces three bands: hue, saturation and value with values in the range [0, 1].",
+    "description": "Transforms the coverage from the RGB color space to the HSV color space.Expects a 3 band coverage in the range [0, 255], and produces three bands: hue, saturation and value with values in the range [0, 1].",
     "returns": "Coverage",
     "args": [
       {
-        "name": "coverageRed",
+        "name": "coverage",
         "type": "Coverage",
-        "description": "The Red coverage."
-      },
-      {
-        "name": "coverageGreen",
-        "type": "Coverage",
-        "description": "The Green coverage."
-      },
-      {
-        "name": "coverageBlue",
-        "type": "Coverage",
-        "description": "The Blue coverage."
+        "description": "he coverage with three bands: R, G, B."
       }
     ]
   },
   "Coverage.hsvToRgb": {
-    "description": "Transforms the image from the HSV color space to the RGB color space. Expects a 3 band image in the range [0, 1], and produces three bands: red, green and blue with values in the range [0, 255].",
+    "description": "Transforms the coverage from the HSV color space to the RGB color space.Expects a 3 band coverage with hue, saturation and value in the ranges [0, 1], and produces three bands: R, G, B with values in the range [0, 255].",
     "returns": "Coverage",
     "args": [
       {
-        "name": "coverageHue",
+        "name": "coverage",
         "type": "Coverage",
-        "description": "The Hue coverage."
-      },
-      {
-        "name": "coverageSaturation",
-        "type": "Coverage",
-        "description": "The Saturation coverage."
-      },
-      {
-        "name": "coverageValue",
-        "type": "Coverage",
-        "description": "The Value coverage."
+        "description": "The coverage with three bands: H, S, V."
       }
     ]
   },
@@ -1458,6 +1947,33 @@
         "name": "radius",
         "type": "Int",
         "description": "The radius of the square neighborhood to compute the entropy, 1 for a 3×3 square."
+      }
+    ]
+  },
+  "Coverage.eq": {
+    "description": "Returns 1 iff the first value is equal to the second for each matched pair of bands in coverage1 and coverage2.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The first coverage for operation."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The second coverage for operation."
+      }
+    ]
+  },
+  "Coverage.floor": {
+    "description": "Computes the largest integer less than or equal to the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage1",
+        "description": "Computes the largest integer less than or equal to the input."
       }
     ]
   },
@@ -1488,8 +2004,41 @@
       }
     ]
   },
+  "Coverage.sqrt": {
+    "description": "Computes the square root of the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to which the operation is applied."
+      }
+    ]
+  },
+  "Coverage.ceil": {
+    "description": "Computes the smallest integer greater than or equal to the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      }
+    ]
+  },
+  "Coverage.round": {
+    "description": "Computes the integer nearest to the input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      }
+    ]
+  },
   "Coverage.metadata": {
-    "description": "Return the metadata of the input.",
+    "description": "Return the metadata of the input coverage.",
     "returns": "String",
     "args": [
       {

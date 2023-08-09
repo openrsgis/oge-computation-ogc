@@ -2,8 +2,12 @@ package whu.edu.cn.util
 
 import geotrellis.layer._
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellType, MultibandTile, Tile, TileLayout}
+import geotrellis.raster.mapalgebra.focal
+import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
+import geotrellis.raster.mapalgebra.local.{LocalTileBinaryOp, LocalTileComparatorOp}
+import geotrellis.raster.{ArrayTile, CellType, GridBounds, MultibandTile, NODATA, Tile, TileLayout, isNoData}
 import geotrellis.spark._
+import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{RawTile, SpaceTimeBandKey}
@@ -33,14 +37,14 @@ object CoverageUtil {
 
 
     val firstTile: RawTile = coverageRawTiles.first()
-    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1) / firstTile.getResolutionCol / 256.0).toInt, 1)
-    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2) / firstTile.getResolutionRow / 256.0).toInt, 1)
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0  ).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0  ).toInt, 1)
 
     val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
 
     val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
     val ld: LayoutDefinition = LayoutDefinition(extent, tl)
-    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString + "raw")
+    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
     val crs: CRS = firstTile.getCrs
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
@@ -160,7 +164,6 @@ object CoverageUtil {
         }
 
 
-
         val (_, reprojectedRdd1): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
           coverage1tileLayerRdd.reproject(crs, ld)
 
@@ -235,6 +238,7 @@ object CoverageUtil {
     }
   }
 
+
   // TODO lrx: ！！！这里要注意一下数据类型！！！
   // Geotrellis的MultibandTile必须要求数据类型一致
   // TODO lrx: 检查TileLayerMetadata的CellType会不会影像原来的TileLayerRDD重投影后的数据类型
@@ -299,6 +303,375 @@ object CoverageUtil {
     val cellType: CellType = coverage._1.first()._2.cellType
 
     (coverage._1.map(t => (t._1, funcMulti(t._2))), TileLayerMetadata(cellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+  }
+
+  //获取指定位置的tile
+   def getTileFromCoverage(coverage: Map[SpaceTimeBandKey, MultibandTile]
+                                  ,spaceTimeBandKey: SpaceTimeBandKey) :Option[MultibandTile]={
+   coverage.get(spaceTimeBandKey)
+  }
+  def focalMethods(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
+                   focalFunc: (Tile, Neighborhood, Option[GridBounds[Int]], TargetCell) => Tile, radius: Int): (RDD[
+    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    var neighborhood: Neighborhood = null
+    kernelType match {
+      case "square" => {
+        neighborhood = focal.Square(radius)
+      }
+      case "circle" => {
+        neighborhood = focal.Circle(radius)
+      }
+    }
+
+    //根据当前tile的col和row，查询相邻瓦块，查询对应的位置的值进行填充，没有的视为0
+    val coverage1= coverage.collect().toMap
+
+    val coverageRdd :RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+      val col = t._1.spaceTimeKey.col
+      val row = t._1.spaceTimeKey.row
+      val time0 = t._1.spaceTimeKey.time
+
+      val cols = t._2.cols
+      val rows = t._2.rows
+
+      var arrayBuffer :mutable.ArrayBuffer[Tile] = new mutable.ArrayBuffer[Tile] {}
+      for (index <- t._2.bands.indices) {
+        val arrBuffer: Array[Double] = Array.ofDim[Double]((cols + 2 * radius) * (rows + 2 * radius))
+        //arr转换为Tile，并拷贝原tile数据
+        val tilePadded: Tile = ArrayTile(arrBuffer, cols + 2 * radius, rows + 2 * radius).convert(t._2.cellType)
+        for (i <- 0 until (cols)) {
+          for (j <- 0 until (rows)) {
+            tilePadded.mutable.setDouble(i + radius, j + radius, t._2.bands(index).getDouble(i, j))
+          }
+        }
+        //填充八邻域数据及自身数据，使用mutable进行性能优化
+        //左上
+        var tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row - 1, time0), t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(0 + x, 0 + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(0 + x, 0 + y, 0)
+            }
+          }
+        }
+        //上
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col, row - 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(radius + x, 0 + y, tiles.toList.head.bands(index).getDouble(x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(radius + x, 0 + y, 0)
+            }
+          }
+        }
+
+        //右上
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row - 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(cols + radius + x, 0 + y, tiles.toList.head.bands(index).getDouble(x, rows - radius + y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(cols + radius + x, 0 + y, 0)
+            }
+          }
+        }
+        //左
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.setDouble(0 + x, radius + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.setDouble(0 + x, radius + y, 0)
+            }
+          }
+        }
+
+        //右
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.setDouble(cols + radius + x, radius + y, tiles.toList.head.bands(index).getDouble(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (rows)) {
+              tilePadded.mutable.setDouble(cols + radius + x, radius + y, 0)
+            }
+          }
+        }
+
+        //左下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col - 1, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(x, rows + radius + y, tiles.toList.head.bands(index).getDouble(cols - radius + x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(x, rows + radius + y, 0)
+            }
+          }
+        }
+
+        //下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(radius + x, rows + radius + y, tiles.toList.head.bands(index).getDouble(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (cols)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(radius + x, rows + radius + y, 0)
+            }
+          }
+        }
+        //右下
+        tiles = getTileFromCoverage(coverage1, SpaceTimeBandKey(SpaceTimeKey(col + 1, row + 1, time0),
+          t._1.measurementName))
+        if (tiles.nonEmpty) {
+          //拷贝
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(cols + radius + x, rows + radius + y, tiles.toList.head.bands(index).getDouble(x, y))
+            }
+          }
+        } else {
+          //赋0
+          for (x <- 0 until (radius)) {
+            for (y <- 0 until (radius)) {
+              tilePadded.mutable.setDouble(cols + radius + x, rows + radius + y, 0)
+            }
+          }
+        }
+
+        //运算
+        val tilePaddedRes: Tile = focalFunc(tilePadded, neighborhood, None, focal.TargetCell.All)
+
+
+        //将tilePaddedRes 中的值转移进tile
+        for (i <- 0 until (cols)) {
+          for (j <- 0 until (rows)) {
+            if (!isNoData(t._2.bands(index).getDouble(i, j)))
+              t._2.bands(index).mutable.setDouble(i, j, tilePaddedRes.getDouble(i + radius, j + radius))
+            else
+              t._2.bands(index).mutable.setDouble(i, j, Double.NaN)
+          }
+        }
+      }
+      (t._1,t._2)
+    })
+    (coverageRdd, coverage._2)
+  }
+}
+
+//取余运算
+object Mod extends LocalTileBinaryOp {
+  def combine(z1: Int, z2: Int): Int = {
+    if (isNoData(z1) || isNoData(z2)) NODATA
+    else z1 % z2
+  }
+
+  override def combine(z1: Double, z2: Double): Double = {
+    if (isNoData(z1) || isNoData(z2)) NODATA
+    else z1 % z2
+  }
+}
+
+trait ModMethods extends MethodExtensions[Tile] {
+  /** Mod a constant Int value to each cell. */
+  def localMod(i: Int): Tile = Mod(self, i)
+
+  /** Mod a constant Int value to each cell. */
+  def %(i: Int): Tile = localMod(i)
+
+  /** Mod a constant Int value to each cell. */
+  def %:(i: Int): Tile = localMod(i)
+
+  /** Mod a constant Double value to each cell. */
+  def localMod(d: Double): Tile = Mod(self, d)
+
+  /** Mod a constant Double value to each cell. */
+  def %(d: Double): Tile = localMod(d)
+
+  /** Mod a constant Double value to each cell. */
+  def %:(d: Double): Tile = localMod(d)
+
+  /** Mod the values of each cell in each raster. */
+  def localMod(r: Tile): Tile = Mod(self, r)
+
+  /** Mod the values of each cell in each raster. */
+  def %(r: Tile): Tile = localMod(r)
+
+}
+
+object Cbrt extends Serializable {
+  def apply(r: Tile): Tile =
+    r.dualMap { z: Int => if (isNoData(z)) NODATA else math.cbrt(z).toInt } { z: Double => if (z == Double.NaN) Double.NaN else math.cbrt(z) }
+}
+
+object RemapWithoutDefaultValue extends Serializable {
+  def apply(r: Tile, m: Map[Int, Double]): Tile = {
+
+    r.dualMap {
+      z: Int => if (m.contains(z.toInt)) m(z).toInt else z
+    } {
+      z: Double => if (m.contains(z.toInt)) m(z.toInt) else z
+    }
+  }
+
+}
+
+object RemapWithDefaultValue extends Serializable {
+  def apply(r: Tile, m: Map[Int, Double], num: Double): Tile = {
+    r.dualMap {
+      z: Int => if (m.contains(z)) m(z).toInt else num.toInt
+    } {
+      z: Double => if (m.contains(z.toInt)) m(z.toInt) else num
+    }
+  }
+}
+
+
+// 交叉熵处理类
+object Entropy {
+  def calculation(tile: Tile,
+                  n: Neighborhood,
+                  bounds: Option[GridBounds[Int]],
+                  target: TargetCell = TargetCell.All)
+  : FocalCalculation[Tile] = {
+    n match {
+      case Square(ext) =>
+        new CellEntropyCalcDouble(tile, n, bounds, ext, target)
+      case _ =>
+        throw new RuntimeException("这个非正方形的还没写！")
+    }
+  }
+
+  def apply(tile: Tile,
+            n: Neighborhood,
+            bounds: Option[GridBounds[Int]],
+            target: TargetCell = TargetCell.All)
+  : Tile =
+    calculation(tile, n, bounds, target).execute()
+
+}
+
+
+class CellEntropyCalcDouble(r: Tile,
+                            n: Neighborhood,
+                            bounds: Option[GridBounds[Int]],
+                            extent: Int,
+                            target: TargetCell)
+  extends CellwiseCalculation[Tile](r, n, bounds, target)
+    with DoubleArrayTileResult {
+
+  //  println(s"Calc extent = ${extent}")
+
+  // map[灰度值, 出现次数]
+  val grayMap = new mutable.HashMap[Int, Int]()
+  var currRangeMax = 0
+
+
+  private final def isIllegalData(v: Int): Boolean = {
+    isNoData(v) && (v < 0 || v > 255)
+  }
+
+
+  def add(r: Tile, x: Int, y: Int): Unit = {
+    val v: Int = r.get(x, y)
+    // assert v isData
+    if (isIllegalData(v)) {
+      //      assert(false)
+    } else if (!grayMap.contains(v)) {
+      grayMap.put(v, 1)
+      currRangeMax += 1
+    } else {
+      grayMap(v) += 1
+      currRangeMax += 1
+    }
+  }
+
+  def remove(r: Tile, x: Int, y: Int): Unit = {
+    val v: Int = r.get(x, y)
+    if (isIllegalData(v)) {
+      //      assert(false)
+    } else if (grayMap.contains(v) &&
+      grayMap(v) > 0 &&
+      currRangeMax > 0) {
+      grayMap(v) -= 1
+      currRangeMax -= 1
+      if (grayMap(v).equals(0)) {
+        grayMap.remove(v)
+      }
+    }
+  }
+
+  def setValue(x: Int, y: Int): Unit = {
+    resultTile.setDouble(x, y,
+      if (currRangeMax == 0) NODATA else {
+
+        var sum = 0.0
+        for (kv <- grayMap) if (kv._2 > 0) {
+          val p: Double = kv._2.toDouble / currRangeMax.toDouble
+          sum -= kv._2 * p * math.log10(p) / math.log10(2)
+        }
+        sum
+      })
+  }
+
+  def reset(): Unit = {
+    grayMap.clear()
+    currRangeMax = 0
   }
 
 }
