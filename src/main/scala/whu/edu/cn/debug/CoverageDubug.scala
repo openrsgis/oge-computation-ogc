@@ -92,7 +92,7 @@ object CoverageDubug {
     val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LC08_L1TP_124039_20180109_20180119_01_T1", 5)
     var coverage2Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage2, List("B1", "B2", "B3"))
 
-    coverage2Select = Coverage.multiply(coverage2Select,1000)
+    coverage2Select = Coverage.multiplyNum(coverage2Select,1000)
     coverage2Select=Coverage.toInt32(coverage2Select)
     coverage2Select = Coverage.removeZeroFromCoverage(coverage2Select)
     makeTIFF(coverage2Select, "c2")
