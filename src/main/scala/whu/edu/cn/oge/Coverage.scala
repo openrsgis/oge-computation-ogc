@@ -151,7 +151,7 @@ object Coverage {
   }
 
   /**
-   * return the acquisition date of the given coverage
+   * Return the acquisition date of the given coverage.
    *
    * @param coverage the coverage rdd for operation
    * @return
@@ -173,8 +173,15 @@ object Coverage {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Add(tile1, tile2))
   }
 
-  def add(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-          i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  /**
+   * Add the value to the coverage.
+   *
+   * @param coverage The coverage for operation.
+   * @param i The value to add.
+   * @return Coverage
+   */
+  def addNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+             i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Add(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Add(tile, x))
@@ -195,8 +202,15 @@ object Coverage {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Subtract(tile1, tile2))
   }
 
-  def subtract(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-               i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  /**
+   * Subtract the corresponding value from the coverage.
+   *
+   * @param coverage
+   * @param i
+   * @return
+   */
+  def subtractNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Subtract(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Subtract(tile, x))
@@ -218,8 +232,8 @@ object Coverage {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Divide(tile1, tile2))
   }
 
-  def divide(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-             i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def divideNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Divide(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Divide(tile, x))
@@ -240,8 +254,8 @@ object Coverage {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Multiply(tile1, tile2))
   }
 
-  def multiply(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-               i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def multiplyNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Multiply(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Multiply(tile, x))
@@ -281,9 +295,9 @@ object Coverage {
    */
   def polynomial(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), l: List[Double]):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    var resCoverage = multiply(coverage, 0)
+    var resCoverage = multiplyNum(coverage, 0)
     for (i <- 0 until (l.length)) {
-      resCoverage = add(resCoverage, multiply(pow(coverage, i), l(i)))
+      resCoverage = add(resCoverage, multiplyNum(powNum(coverage, i), l(i)))
     }
     resCoverage
   }
@@ -327,8 +341,12 @@ object Coverage {
     }), TileLayerMetadata(cellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
   }
 
-  /*
-  Combines the given images into a single image which contains all bands from all of the images.
+  /**
+   * Combines the given coverages into a single coverage which contains all bands from all of the images.
+   *
+   * @param coverage1 The first coverage for cat.
+   * @param coverage2 The second coverage for cat.
+   * @return
    */
   def cat(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     var coverageCollection1: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map("c1" -> coverage1, "c2" -> coverage2)
@@ -336,7 +354,6 @@ object Coverage {
   }
 
   /**
-   * binaryAnd
    * if both have only 1 band, the 2 band will match.
    *
    * @param coverage1 First coverage rdd to operate.
@@ -376,7 +393,7 @@ object Coverage {
 
 
   /**
-   * binaryOr
+   * bitwiseOr
    * if both have only 1 band, the 2 band will match
    *
    * @param coverage1 First coverage rdd to operate.
@@ -522,8 +539,8 @@ object Coverage {
    * The arctan is calculated from y/x.
    * if both have only 1 band, the 2 band will match
    *
-   * @param coverage1 first coverage rdd to operate
-   * @param coverage2 second coverage rdd to oprate
+   * @param coverage1 First coverage rdd to operate.
+   * @param coverage2 Second coverage rdd to operate.
    * @return
    */
   def atan2(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
@@ -534,7 +551,7 @@ object Coverage {
   /**
    * Computes the smallest integer greater than or equal to the input.
    *
-   * @param coverage rdd for operation
+   * @param coverage The coverage for operation.
    * @return
    */
   def ceil(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -851,8 +868,8 @@ object Coverage {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Pow(tile1, tile2))
   }
 
-  def pow(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-          i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def powNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+             i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Pow(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Pow(tile, x))
@@ -999,7 +1016,7 @@ object Coverage {
 
 
   /**
-   * Convolves each band of an coverage with the given kernel. Coverages will be padded with Zeroes.
+   * Convolve each band of a coverage with the given kernel. Coverages will be padded with Zeroes.
    *
    * @param coverage The coverage to convolve.
    * @param kernel   The kernel to convolve with.
@@ -1236,6 +1253,7 @@ object Coverage {
 
 
   /**
+   * Force a coverage to be computed in a given projection and resolution.
    *
    * @param coverage The image to reproject.
    * @param crs      The CRS to project the image to.
@@ -1418,7 +1436,7 @@ object Coverage {
     val sobely = geotrellis.raster.mapalgebra.focal.Kernel(IntArrayTile(Array[Int](1, 2, 1, 0, 0, 0, -1, -2, -1), 3, 3))
     val tilex = convolve(coverage, sobelx)
     val tiley = convolve(coverage, sobely)
-    sqrt(add(pow(tilex, 2), pow(tiley, 2)))
+    sqrt(add(powNum(tilex, 2), powNum(tiley, 2)))
   }
 
 
@@ -1686,7 +1704,6 @@ object Coverage {
               kernelType: String,
               radius: Int)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-
     focalMethods(coverage, "square", Entropy.apply, radius)
   }
 

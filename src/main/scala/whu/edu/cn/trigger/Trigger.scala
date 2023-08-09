@@ -190,28 +190,28 @@ object Trigger {
           tempNoticeJson.put("date", date)
         case "Coverage.subtract" =>
           coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.subtract" =>
-          coverageRddList += (UUID -> Coverage.subtract(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
+        case "Coverage.subtractNum" =>
+          coverageRddList += (UUID -> Coverage.subtractNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.cat" =>
           coverageRddList += (UUID -> Coverage.cat(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.add" =>
           coverageRddList += (UUID -> Coverage.add(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.add" =>
-          coverageRddList += (UUID -> Coverage.add(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
+        case "Coverage.addNum" =>
+          coverageRddList += (UUID -> Coverage.addNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.mod" =>
           coverageRddList += (UUID -> Coverage.mod(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.mod" =>
           coverageRddList += (UUID -> Coverage.mod(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.divide" =>
           coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.divide" =>
-          coverageRddList += (UUID -> Coverage.divide(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
+        case "Coverage.divideNum" =>
+          coverageRddList += (UUID -> Coverage.divideNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.round" =>
           coverageRddList += (UUID -> Coverage.round(coverage = coverageRddList(args("coverage"))))
         case "Coverage.multiply" =>
           coverageRddList += (UUID -> Coverage.multiply(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.multiply" =>
-          coverageRddList += (UUID -> Coverage.multiply(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
+        case "Coverage.multiplyNum" =>
+          coverageRddList += (UUID -> Coverage.multiplyNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.normalizedDifference" =>
           coverageRddList += (UUID -> Coverage.normalizedDifference(coverageRddList(args("coverage")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
         case "Coverage.binarization" =>
@@ -291,8 +291,8 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name").split(",").toList))
         case "Coverage.pow" =>
           coverageRddList += (UUID -> Coverage.pow(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.pow" =>
-          coverageRddList += (UUID -> Coverage.pow(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
+        case "Coverage.powNum" =>
+          coverageRddList += (UUID -> Coverage.powNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.mini" =>
           coverageRddList += (UUID -> Coverage.mini(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.maxi" =>
@@ -362,14 +362,39 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
 
         // Kernel
+        case "Kernel.chebyshev" =>
+          kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.circle" =>
+          kernelRddList += (UUID -> Kernel.circle(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.compass" =>
+          kernelRddList +=(UUID -> Kernel.compass(args("magnitude").toFloat,args("normalize").toBoolean))
+        case "Kernel.diamond" =>
+          kernelRddList += (UUID -> Kernel.diamond(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.euclidean"=>
+          kernelRddList += (UUID -> Kernel.euclidean(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
         case "Kernel.fixed" =>
           val kernel = Kernel.fixed(weights = args("weights"))
           kernelRddList += (UUID -> kernel)
-          print(kernel.tile.asciiDraw())
+        case "Kernel.gaussian" =>
+          kernelRddList += (UUID -> Kernel.gaussian(args("radius").toInt,args("sigma").toFloat,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.inverse" =>
+          kernelRddList += (UUID -> Kernel.inverse(kernelRddList(args("kernel"))))
+        case "Kernel.manhattan" =>
+          kernelRddList += (UUID -> Kernel.manhattan(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.octagon" =>
+          kernelRddList += (UUID -> Kernel.octagon(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.plus" =>
+          kernelRddList +=(UUID -> Kernel.plus(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
         case "Kernel.square" =>
           val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
           kernelRddList += (UUID -> kernel)
           print(kernel.tile.asciiDraw())
+        case "Kernel.rectangle" =>
+          kernelRddList += (UUID -> Kernel.rectangle(args("xRadius").toInt,args("yRadius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+        case "Kernel.roberts" =>
+          kernelRddList += (UUID -> Kernel.roberts(args("magnitude").toFloat,args("normalize").toBoolean))
+        case "Kernel.roberts" =>
+          kernelRddList += (UUID -> Kernel.rotate(kernelRddList(args("kernel")),args("rotations").toInt))
         case "Kernel.prewitt" =>
           val kernel = Kernel.prewitt(axis = args("axis"))
           kernelRddList += (UUID -> kernel)
@@ -377,20 +402,15 @@ object Trigger {
         case "Kernel.kirsch" =>
           val kernel = Kernel.kirsch(axis = args("axis"))
           kernelRddList += (UUID -> kernel)
-          print(kernel.tile.asciiDraw())
         case "Kernel.sobel" =>
           val kernel = Kernel.sobel(axis = args("axis"))
           kernelRddList += (UUID -> kernel)
-          print(kernel.tile.asciiDraw())
-
         case "Kernel.laplacian4" =>
           val kernel = Kernel.laplacian4()
           kernelRddList += (UUID -> kernel)
-          print(kernel.tile.asciiDraw())
         case "Kernel.laplacian8" =>
           val kernel = Kernel.laplacian8()
           kernelRddList += (UUID -> kernel)
-          print(kernel.tile.asciiDraw())
         case "Kernel.laplacian8" =>
           val kernel = Kernel.laplacian8()
           kernelRddList += (UUID -> kernel)
@@ -398,7 +418,6 @@ object Trigger {
         case "Kernel.add" =>
           val kernel = Kernel.add(kernel1 = kernelRddList(args("kernel1")), kernel2 = kernelRddList(args("kernel2")))
           kernelRddList += (UUID -> kernel)
-          print(kernel.tile.asciiDraw())
 
         // Terrain
         //      case "Terrain.slope" =>
@@ -640,7 +659,7 @@ object Trigger {
 
 
       // 发送给 boot
-      sendNotice(tempNoticeJson)
+//      sendNotice(tempNoticeJson)
 
 
     } catch {
@@ -861,7 +880,7 @@ object Trigger {
     runMain(sc, workTaskJson, dagId)
 
     //    Thread.sleep(1000000)
-
+    println("Finish")
     sc.stop()
   }
 }
