@@ -5,7 +5,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
 import geotrellis.raster.mapalgebra.local.{LocalTileBinaryOp, LocalTileComparatorOp}
-import geotrellis.raster.{ArrayTile, CellType, GridBounds, MultibandTile, NODATA, Tile, TileLayout, isNoData}
+import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleConstantNoDataCellType, FloatConstantNoDataCellType, GridBounds, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, isNoData}
 import geotrellis.spark._
 import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
@@ -68,7 +68,121 @@ object CoverageUtil {
       val tileArray: Array[Tile] = tileSorted.map(x => x._3)
       (SpaceTimeBandKey(t._1, listBuffer), MultibandTile(tileArray))
     })
-    (multibandTileRdd, tileLayerMetadata)
+    var coverage = (multibandTileRdd, tileLayerMetadata)
+
+    if(coverage._2.cellType.equalDataType(UByteConstantNoDataCellType) || coverage._2.cellType.equalDataType(UByteCellType))
+      coverage = toInt8(coverage)
+    else if(coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
+      coverage = toInt16(coverage)
+
+    coverage = removeZeroFromCoverage(coverage)
+
+    coverage
+  }
+
+  def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage, (tile) => removeZeroFromTile(tile))
+  }
+  def removeZeroFromTile(tile: Tile): Tile = {
+    if (tile.cellType.isFloatingPoint)
+      tile.mapDouble(i => if (i.equals(0.0)) Double.NaN else i)
+    else
+      tile.map(i => if (i == 0) NODATA else i)
+  }
+
+  def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
+    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted =
+      (coverage._1.map(t => {
+        (t._1, t._2.convert(ByteConstantNoDataCellType))
+      }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
+  }
+
+  /**
+   * Casts the input value to a unsigned 8-bit integer.
+   *
+   * @param coverage The coverage to which the operation is applied.
+   * @return
+   */
+  def toUint8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
+    (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted = (coverage._1.map(t => {
+      (t._1, t._2.convert(UByteConstantNoDataCellType))
+    }), TileLayerMetadata(UByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
+
+  }
+
+
+  /**
+   * Casts the input value to a signed 16-bit integer.
+   *
+   * @param coverage The coverage to which the operation is applied.
+   * @return
+   */
+  def toInt16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted = (coverage._1.map(t => {
+      (t._1, t._2.convert(ShortConstantNoDataCellType))
+    }), TileLayerMetadata(ShortConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
+  }
+
+  /**
+   * Casts the input value to a unsigned 16-bit integer.
+   *
+   * @param coverage The coverage to which the operation is applied.
+   * @return
+   */
+  def toUint16(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted = (coverage._1.map(t => {
+      (t._1, t._2.convert(UShortConstantNoDataCellType))
+    }), TileLayerMetadata(UShortConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs,
+      coverage._2.bounds))
+    coverageConverted
+  }
+
+
+  /**
+   * Casts the input value to a signed 32-bit integer.
+   *
+   * @param coverage The coverage to which the operation is applied.
+   * @return
+   */
+  def toInt32(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
+             ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted = (coverage._1.map(t => {
+      (t._1, t._2.convert(IntConstantNoDataCellType))
+    }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
+  }
+
+  /**
+   * Casts the input value to a 32-bit float.
+   *
+   * @param coverage The coverage to which the operation is applied.
+   * @return
+   */
+  def toFloat(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
+             ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted = (coverage._1.map(t => {
+      (t._1, t._2.convert(FloatConstantNoDataCellType))
+    }), TileLayerMetadata(FloatConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
+  }
+
+  /**
+   * Casts the input value to a 64-bit float.
+   *
+   * @param coverage The coverage to which the operation is applied.
+   * @return
+   */
+  def toDouble(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
+              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverageConverted = (coverage._1.map(t => {
+      (t._1, t._2.convert(DoubleConstantNoDataCellType))
+    }), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    coverageConverted
   }
 
 

@@ -91,8 +91,6 @@ object Trigger {
 
       val tempNoticeJson = new JSONObject
 
-
-//      tempNoticeJson.put("test", "1234")
       funcName match {
 
         //Others
@@ -109,7 +107,7 @@ object Trigger {
           else if (coverageRddList.contains(args("arg"))) {
             Others.printNotice(args("arg"), coverageRddList(args("arg"))._2.toString)
           }
-          else{
+          else {
             throw new IllegalArgumentException("The specified content could not be found!")
           }
         // Service
@@ -127,6 +125,10 @@ object Trigger {
         case "Filter.equals" =>
           lazyFunc += (UUID -> (funcName, args))
         case "Filter.and" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.date" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.bounds" =>
           lazyFunc += (UUID -> (funcName, args))
 
         // Collection
@@ -200,8 +202,8 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.addNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.mod" =>
           coverageRddList += (UUID -> Coverage.mod(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.mod" =>
-          coverageRddList += (UUID -> Coverage.mod(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
+        case "Coverage.modNum" =>
+          coverageRddList += (UUID -> Coverage.modNum(coverage = coverageRddList(args("coverage")), i = args("i").toDouble))
         case "Coverage.divide" =>
           coverageRddList += (UUID -> Coverage.divide(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.divideNum" =>
@@ -319,7 +321,7 @@ object Trigger {
         case "Coverage.slice" =>
           coverageRddList += (UUID -> Coverage.slice(coverage = coverageRddList(args("coverage")), start = args("start").toInt, end = args("end").toInt))
         case "Coverage.histogram" =>
-          stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")),scale = args("scale").toDouble).toString())
+          stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")), scale = args("scale").toDouble).toString())
         case "Coverage.reproject" =>
           coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = args("crsCode").toInt, scale = args("resolution").toDouble))
         case "Coverage.resample" =>
@@ -363,44 +365,44 @@ object Trigger {
 
         // Kernel
         case "Kernel.chebyshev" =>
-          kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.circle" =>
-          kernelRddList += (UUID -> Kernel.circle(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.circle(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.compass" =>
-          kernelRddList +=(UUID -> Kernel.compass(args("magnitude").toFloat,args("normalize").toBoolean))
+          kernelRddList += (UUID -> Kernel.compass(args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.diamond" =>
-          kernelRddList += (UUID -> Kernel.diamond(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
-        case "Kernel.euclidean"=>
-          kernelRddList += (UUID -> Kernel.euclidean(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.diamond(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
+        case "Kernel.euclidean" =>
+          kernelRddList += (UUID -> Kernel.euclidean(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.fixed" =>
           val kernel = Kernel.fixed(weights = args("weights"))
           kernelRddList += (UUID -> kernel)
         case "Kernel.gaussian" =>
-          kernelRddList += (UUID -> Kernel.gaussian(args("radius").toInt,args("sigma").toFloat,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.gaussian(args("radius").toInt, args("sigma").toFloat, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.inverse" =>
           kernelRddList += (UUID -> Kernel.inverse(kernelRddList(args("kernel"))))
         case "Kernel.manhattan" =>
-          kernelRddList += (UUID -> Kernel.manhattan(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.manhattan(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.octagon" =>
-          kernelRddList += (UUID -> Kernel.octagon(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.octagon(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.plus" =>
-          kernelRddList +=(UUID -> Kernel.plus(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.plus(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.square" =>
           val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
           kernelRddList += (UUID -> kernel)
           print(kernel.tile.asciiDraw())
         case "Kernel.rectangle" =>
-          kernelRddList += (UUID -> Kernel.rectangle(args("xRadius").toInt,args("yRadius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.rectangle(args("xRadius").toInt, args("yRadius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.roberts" =>
-          kernelRddList += (UUID -> Kernel.roberts(args("magnitude").toFloat,args("normalize").toBoolean))
-        case "Kernel.roberts" =>
-          kernelRddList += (UUID -> Kernel.rotate(kernelRddList(args("kernel")),args("rotations").toInt))
+          kernelRddList += (UUID -> Kernel.roberts(args("normalize").toBoolean, args("magnitude").toFloat))
+        case "Kernel.rotate" =>
+          kernelRddList += (UUID -> Kernel.rotate(kernelRddList(args("kernel")), args("rotations").toInt))
         case "Kernel.prewitt" =>
-          val kernel = Kernel.prewitt(axis = args("axis"))
+          val kernel = Kernel.prewitt(args("normalize").toBoolean, args("magnitude").toFloat)
           kernelRddList += (UUID -> kernel)
           print(kernel.tile.asciiDraw())
         case "Kernel.kirsch" =>
-          val kernel = Kernel.kirsch(axis = args("axis"))
+          val kernel = Kernel.kirsch(args("normalize").toBoolean, args("magnitude").toFloat)
           kernelRddList += (UUID -> kernel)
         case "Kernel.sobel" =>
           val kernel = Kernel.sobel(axis = args("axis"))
@@ -657,9 +659,6 @@ object Trigger {
           Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
       }
 
-
-      // 发送给 boot
-//      sendNotice(tempNoticeJson)
 
 
     } catch {
