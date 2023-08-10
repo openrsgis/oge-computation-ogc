@@ -952,6 +952,22 @@
       }
     ]
   },
+  "Coverage.modNum": {
+    "description": "Mods the coverage to the value.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for pow."
+      }
+    ]
+  },
   "Coverage.subtract": {
     "description": "Subtracts the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
     "returns": "Coverage",
@@ -1189,9 +1205,14 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "axis",
-        "type": "String",
-        "description": "Specify the direction of the convolution kernel,x/y."
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
       }
     ]
   },
@@ -1206,14 +1227,251 @@
       }
     ]
   },
-  "Kernel.robert": {
+  "Kernel.roberts": {
     "description": "Generates a 2x2 robert edge-detection kernel.",
     "returns": "Kernel",
     "args": [
       {
-        "name": "axis",
-        "type": "String",
-        "description": "Specify the direction of the convolution kernel,x/y."
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.rotate": {
+    "description": "Rotate the kernel according to the rotations.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "kernel",
+        "type": "Kernel",
+        "description": "The kernel to be rotated."
+      },
+      {
+        "name": "rotations",
+        "type": "Int",
+        "description": "Rotations to make (negative numbers rotate counterclockwise)."
+      }
+    ]
+
+  },
+  "Kernel.chebyshev": {
+    "description": "Generates a distance kernel based on Chebyshev distance (greatest distance along any dimension).",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.circle": {
+    "description": "Generates a circle-shaped boolean kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.compass": {
+    "description": "Generates a 3x3 Prewitt's Compass edge-detection kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.diamond": {
+    "description": "Generates a diamond-shaped boolean kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.euclidean": {
+    "description": "Generates a distance kernel based on Euclidean (straight-line) distance.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.gaussian": {
+    "description": "Generates a Gaussian kernel from a sampled continuous Gaussian.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "sigma",
+        "type": "Float",
+        "description": "Standard deviation of the Gaussian function (same units as radius)."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.manhattan": {
+    "description": "Generates a distance kernel based on rectilinear (city-block) distance.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.octagon": {
+    "description": "Generates an octagon-shaped boolean kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.plus": {
+    "description": "Generates a rectangular-shaped kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
+      }
+    ]
+  },
+  "Kernel.rectangle": {
+    "description": "Generates a plus-shaped boolean kernel.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "xradius",
+        "type": "Int",
+        "description": "The horizontal radius of the kernel to generate."
+      },
+      {
+        "name": "yradius",
+        "type": "Int",
+        "description": "The vertical radius of the kernel to generate."
+      },
+      {
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
       }
     ]
   },
@@ -1252,6 +1510,17 @@
         "name": "kernel2",
         "type": "Kernel",
         "description": "The second kernel."
+      }
+    ]
+  },
+  "Kernel.inverse": {
+    "description": "Returns a kernel which has each of its weights multiplicatively inverted. Weights with a value of zero are not inverted and remain zero.",
+    "returns": "Kernel",
+    "args": [
+      {
+        "name": "kernel1",
+        "type": "Kernel",
+        "description": "The first kernel."
       }
     ]
   },

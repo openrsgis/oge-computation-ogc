@@ -277,7 +277,7 @@ object Coverage {
     coverageTemplate(coverage1, coverage2, (tile1, tile2) => Mod(tile1, tile2))
   }
 
-  def mod(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+  def modNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
           i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Mod(tile, x))
