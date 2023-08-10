@@ -35,7 +35,7 @@ object Trigger {
   var tableRddList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var kernelRddList: mutable.Map[String, geotrellis.raster.mapalgebra.focal.Kernel] = mutable.Map.empty[String, geotrellis.raster.mapalgebra.focal.Kernel]
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-
+  var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]    //GRASS部分返回String类的算子
   var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
 
@@ -362,7 +362,37 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.toFloat(coverage = coverageRddList(args("coverage"))))
         case "Coverage.toDouble" =>
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
-
+        //    GRASS
+        case "Coverage.neighborsByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_neighbors(sc,input = coverageRddList(args("input")),size=args("size"),method=args("method")))
+        case "Coverage.bufferByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_buffer(sc,input = coverageRddList(args("input")),distances=args("distances"),unit = args("units")))
+        case "Coverage.crossByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_cross(sc,input = coverageCollectionRddList(args("input"))))
+        case "Coverage.patchByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_patch(sc,input = coverageCollectionRddList(args("input"))))
+        case "Coverage.latlongByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_latlong(sc,input = coverageRddList(args("input"))))
+        case "Coverage.blendByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_blend(sc,first = coverageRddList(args("first")),second = coverageRddList(args("second")),percent=args("percent")))
+        case "Coverage.compositeByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_composite(sc,red = coverageRddList(args("red")),green = coverageRddList(args("green")),blue = coverageRddList(args("blue")),levels=args("levels")))
+        case "Coverage.sunmaskeByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_sunmask(sc,elevation = coverageRddList(args("red")),year=args("year"),month=args("month"),day=args("day"),hour=args("hour"),minute=args("minute"),second=args("second"),timezone=args("timezone")))
+        case "Coverage.surfIdwByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_surf_idw(sc,input = coverageRddList(args("input")),npoints=args("npoints")))
+        case "Coverage.rescaleByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_rescale(sc,input = coverageRddList(args("input")),to=args("to")))
+        case "Coverage.surfAreaByGrass" =>
+          grassResultList += (UUID -> GrassUtil.r_surf_area(sc,map = coverageRddList(args("map")),vscale=args("vscale")))
+        case "Coverage.statsByGrass" =>
+          grassResultList += (UUID -> GrassUtil.r_stats(sc,input = coverageRddList(args("input")),flags=args("flags"),separator = args("separator"),null_value = args("null_value"),nsteps = args("nsteps")))
+        case "Coverage.coinByGrass" =>
+          grassResultList += (UUID -> GrassUtil.r_coin(sc,first = coverageRddList(args("first")),second = coverageRddList(args("second")),units=args("units")))
+        case "Coverage.volumeByGrass" =>
+          grassResultList += (UUID -> GrassUtil.r_volume(sc,input = coverageRddList(args("input")),clump = coverageRddList(args("clump"))))
+        case "Coverage.outPNGByGrass" =>
+          grassResultList += (UUID -> GrassUtil.r_out_png(sc,input = coverageRddList(args("input")),compression =args("compression")))
         // Kernel
         case "Kernel.chebyshev" =>
           kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))

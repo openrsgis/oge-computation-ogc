@@ -1157,6 +1157,307 @@
       }
     ]
   },
+  "Coverage.neighborsByGrass": {
+    "description": "Makes each cell category value a function of the category values assigned to the cells around it,and stores new cell values in an output raster map layers.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "String",
+        "description": "Neighborhood size   Default: 3"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Neighborhood operation    Options: average, median, mode, minimum , maximum, range, stddev, sum, count variance,diversity, nterspersion,quart1,quart3,perc90,quantile    Default: average"
+      }
+    ]
+  },
+
+  "Coverage.bufferByGrass": {
+    "description": "Creates a raster map showing buffer zones surrounding cells that contain non-NULL category values.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map."
+      },
+      {
+        "name": "distances",
+        "type": "String",
+        "description": "Distance zone(s)"
+      },
+      {
+        "name": "unit",
+        "type": "String",
+        "description": "Units of distance    Options: meters, kilometers, feet,miles, nautmiles    Default: meters"
+      }
+    ]
+  },
+  "Coverage.crossByGrass": {
+    "description": "Creates a cross product of the category values from multiple raster map layers.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "Names of 2-30 input raster maps"
+      }
+    ]
+  },
+  "Coverage.patchByGrass": {
+    "description": "Creates a composite raster map layer by using known category values from one(or more) map layer(s) to fill in areas of 'no data' in another map layer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "CoverageCollection",
+        "description": "Name of raster maps to be patched together"
+      }
+    ]
+  },
+  "Coverage.latlongByGrass": {
+    "description": "Creates a latitude/longitude raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description":"Name of input raster map"
+      }
+    ]
+  },
+  "Coverage.blendByGrass": {
+    "description": "Blends color components of two raster maps by a given ratio.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "first",
+        "type": "Coverage",
+        "description":"Name of first raster map for blending"
+      },
+      {
+        "name": "second",
+        "type": "Coverage",
+        "description":"Name of second raster map for blending"
+      },
+      {
+        "name": "percent",
+        "type": "String",
+        "description": "Percentage weight of first map for color blending   Options: 0-100   Default: 50"
+      }
+    ]
+  },
+  "Coverage.compositeByGrass": {
+    "description": "Combines red, green and blue raster maps into a single composite raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "red",
+        "type": "Coverage",
+        "description":"Name of raster map to be used for <red>"
+      },
+      {
+        "name": "green",
+        "type": "Coverage",
+        "description":"Name of raster map to be used for <green>"
+      },
+      {
+        "name": "blue",
+        "type": "Coverage",
+        "description":"Name of raster map to be used for <blue>"
+      },
+      {
+        "name": "levels",
+        "type": "String",
+        "description": "Number of levels to be used for each component        Options: 1-256   Default: 32"
+      }
+    ]
+  },
+  "Coverage.sunmaskByGrass": {
+    "description": "Calculates cast shadow areas from sun position and elevation raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "elevation",
+        "type": "Coverage",
+        "description": "Name of input elevation raster map"
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "description": "Year (B)    Options: 1950-2050"
+      },
+      {
+        "name": "month",
+        "type": "String",
+        "description": "Month (B)    Options:0-12"
+      },
+      {
+        "name": "day",
+        "type": "String",
+        "description": "Day (B)    Options:0-31"
+      },
+      {
+        "name": "hour",
+        "type": "String",
+        "description": "Hour (B)    Options:0-24"
+      },
+      {
+        "name": "minute",
+        "type": "String",
+        "description": "Minute (B)    Options:0-60"
+      },
+      {
+        "name": "second",
+        "type": "String",
+        "description": "Second (B)    Options:0-60    Default:0"
+      },
+      {
+        "name": "timezone",
+        "type": "String",
+        "description": "East positive, offset from GMT, also use to adjust daylight savings"
+      }
+    ]
+  },
+  "Coverage.surfIdwByGrass": {
+    "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description":"Name of input raster map"
+      },
+      {
+        "name": "npoints",
+        "type": "String",
+        "description": "Number of interpolation points   Default:12"
+      }
+    ]
+  },
+  "Coverage.rescaleByGrass": {
+    "description": "Rescales the range of category values in a raster map layer.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description":"The name of the raster map to be rescaled"
+      },
+      {
+        "name": "to",
+        "type": "String",
+        "description": "The output data range"
+      }
+    ]
+  },
+  "Coverage.surfAreaByGrass": {
+    "description": "Prints estimation of surface area for raster map.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description":"Name of input raster map"
+      },
+      {
+        "name": "vscale",
+        "type": "String",
+        "description": "Vertical scale   Default: 1.0"
+      }
+    ]
+  },
+  "Coverage.statsByGrass": {
+    "description": "Generates area statistics for raster map.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description":"Name of raster map to report on"
+      },
+      {
+        "name": "flags",
+        "type": "String",
+        "description": "select statistics data [-acpl1gxArnNCi]"
+      },
+      {
+        "name": "separator",
+        "type": "String",
+        "description": "Field separator Special characters: pipe, comma, space, tab, newline  Default: space"
+      },
+      {
+        "name": "null_value",
+        "type": "String",
+        "description": "String representing NULL value    Default:*"
+      },
+      {
+        "name": "nsteps",
+        "type": "String",
+        "description": "Number of floating-point subranges to collect stats from    Default:255"
+      }
+    ]
+  },
+  "Coverage.coinByGrass": {
+    "description": "Tabulates the mutual occurrence (coincidence) of categories for two raster map layers.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "first",
+        "type": "Coverage",
+        "description":"Name of first raster map"
+      },
+      {
+        "name": "second",
+        "type": "Coverage",
+        "description":"Name of second raster map"
+      },
+      {
+        "name": "units",
+        "type": "String",
+        "description": "Unit of measure c(ells), p(ercent), x(percent of category [column]), y(percent of category [row]), a(cres) h(ectares), k(square kilometers), m(square miles)Options: c,p,x,y,a,h,k,m"
+      }
+    ]
+  },
+  "Coverage.volumeByGrass": {
+    "description": "Calculates the volume of data 'clumps'.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description":"Name of input raster map representing data that will be summed within clumps\n"
+      },
+      {
+        "name": "clump",
+        "type": "Coverage",
+        "description":"Name of input clump raster map"
+      }
+    ]
+  },
+  "Coverage.outPNGByGrass": {
+    "description": "Export a GRASS raster map as a non-georeferenced PNG image.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description":"Name of input raster map"
+      },
+      {
+        "name": "compression",
+        "type": "String",
+        "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9 Default: 6"
+      }
+    ]
+  },
   "Kernel.fixed": {
     "description": "Creates a Kernel.",
     "returns": "Kernel",
