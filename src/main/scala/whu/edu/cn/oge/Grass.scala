@@ -443,17 +443,17 @@ object GrassUtil {
     //    选取一个RDD波段
 
     //        val img=Coverage.load(sc,"LC08_L1TP_124039_20180109_20180119_01_T1",level = 1)
-    //    val img=Coverage.load(sc,"LE07_L1TP_125039_20130110_20161126_01_T1",level = 1)
-    ////    val img=Coverage.load(sc,"LE71250382013218EDC00",level = 11)
-    //    val BandList=List("B2")
-    //    val img1=Coverage.selectBands(img,BandList)
+    //        val img=Coverage.load(sc,"LE07_L1TP_125039_20130110_20161126_01_T1",level = 1)
+//    //    val img=Coverage.load(sc,"LE71250382013218EDC00",level = 11)
+//        val BandList=List("B2")
+//        val img1=Coverage.selectBands(img,BandList)
 
 
     //    测试返回单个影像算子
     //    val img2=r_latlong(sc,img1)
-    //    val img2=r_rescale(sc,img1,"0,128")
+//        val img2=r_rescale(sc,img1,"0,128")
     //    val img2=r_sunmask(sc,img1,"2000","1","1","0","0","0","-5")
-    //    saveRDDToTif(img2,tifFilePath+"grass_result"+".tif")
+//        saveRDDToTif(img2,tifFilePath+"grass_result"+".tif")
 
 
     //    测试返回string类算子
