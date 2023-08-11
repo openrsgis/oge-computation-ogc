@@ -1169,12 +1169,16 @@
       {
         "name": "size",
         "type": "String",
-        "description": "Neighborhood size   Default: 3"
+        "description": "Neighborhood size",
+        "optional": "True",
+        "default": "3"
       },
       {
         "name": "method",
         "type": "String",
-        "description": "Neighborhood operation    Options: average, median, mode, minimum , maximum, range, stddev, sum, count variance,diversity, nterspersion,quart1,quart3,perc90,quantile    Default: average"
+        "description": "Neighborhood operation    Options: average, median, mode, minimum , maximum, range, stddev, sum, count variance,diversity, nterspersion,quart1,quart3,perc90,quantile",
+        "optional": "True",
+        "default": "average"
       }
     ]
   },
@@ -1196,7 +1200,9 @@
       {
         "name": "unit",
         "type": "String",
-        "description": "Units of distance    Options: meters, kilometers, feet,miles, nautmiles    Default: meters"
+        "description": "Units of distance    Options: meters, kilometers, feet,miles, nautmiles",
+        "optional": "True",
+        "default": "meters"
       }
     ]
   },
@@ -1250,7 +1256,9 @@
       {
         "name": "percent",
         "type": "String",
-        "description": "Percentage weight of first map for color blending   Options: 0-100   Default: 50"
+        "description": "Percentage weight of first map for color blending   Options: 0-100",
+        "optional": "True",
+        "default": "50"
       }
     ]
   },
@@ -1276,7 +1284,9 @@
       {
         "name": "levels",
         "type": "String",
-        "description": "Number of levels to be used for each component        Options: 1-256   Default: 32"
+        "description": "Number of levels to be used for each component        Options: 1-256",
+        "optional": "True",
+        "default": "32"
       }
     ]
   },
@@ -1317,7 +1327,9 @@
       {
         "name": "second",
         "type": "String",
-        "description": "Second (B)    Options:0-60    Default:0"
+        "description": "Second (B)    Options:0-60",
+        "optional": "True",
+        "default": "0"
       },
       {
         "name": "timezone",
@@ -1338,7 +1350,9 @@
       {
         "name": "npoints",
         "type": "String",
-        "description": "Number of interpolation points   Default:12"
+        "description": "Number of interpolation points",
+        "optional": "True",
+        "default": "12"
       }
     ]
   },
@@ -1370,7 +1384,9 @@
       {
         "name": "vscale",
         "type": "String",
-        "description": "Vertical scale   Default: 1.0"
+        "description": "Vertical scale",
+        "optional": "True",
+        "default": "1.0"
       }
     ]
   },
@@ -1391,17 +1407,23 @@
       {
         "name": "separator",
         "type": "String",
-        "description": "Field separator Special characters: pipe, comma, space, tab, newline  Default: space"
+        "description": "Field separator Special characters: pipe, comma, space, tab, newline",
+        "optional": "True",
+        "default": "space"
       },
       {
         "name": "null_value",
         "type": "String",
-        "description": "String representing NULL value    Default:*"
+        "description": "String representing NULL value",
+        "optional": "True",
+        "default": "*"
       },
       {
         "name": "nsteps",
         "type": "String",
-        "description": "Number of floating-point subranges to collect stats from    Default:255"
+        "description": "Number of floating-point subranges to collect stats from ",
+        "optional": "True",
+        "default": "255"
       }
     ]
   },
@@ -1433,7 +1455,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map representing data that will be summed within clumps\n"
+        "description":"Name of input raster map representing data that will be summed within clumps"
       },
       {
         "name": "clump",
@@ -1454,7 +1476,9 @@
       {
         "name": "compression",
         "type": "String",
-        "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9 Default: 6"
+        "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
+        "optional": "True",
+        "default": "6"
       }
     ]
   },
