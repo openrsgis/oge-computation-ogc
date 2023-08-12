@@ -83,7 +83,6 @@ object RDDTransformerUtil {
                            sourceTiffpath: String) = {
     val hadoopPath = "file://" + sourceTiffpath
     val layout = input._2.layout
-    //    val inputRdd = HadoopGeoTiffRDD.spatial(new Path(hadoopPath))(sc)
     val inputRdd = sc.hadoopMultibandGeoTiffRDD(new Path(hadoopPath))
     val tiled = inputRdd.tileToLayout(input._2.cellType, layout, Bilinear)
     val srcLayout = input._2.layout
@@ -97,8 +96,6 @@ object RDDTransformerUtil {
     val newBounds = Bounds(SpaceTimeKey(srcBounds.get.minKey.spatialKey._1, srcBounds.get.minKey.spatialKey._2, date), SpaceTimeKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2, date))
     val metaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
     val tiledOut = tiled.map(t => {
-      //      val bandsFunc = mutable.ArrayBuffer.empty[Tile]
-      //      bandsFunc.append(t._2)
       (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), ListBuffer("Grass")), t._2)
     })
     println("成功读取tif")

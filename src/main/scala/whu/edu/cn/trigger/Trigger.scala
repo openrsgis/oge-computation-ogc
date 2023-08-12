@@ -362,6 +362,23 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.toFloat(coverage = coverageRddList(args("coverage"))))
         case "Coverage.toDouble" =>
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
+        //   QGIS
+        case "Coverage.aspectByQGIS" =>
+          coverageRddList += (UUID -> QGIS.nativeAspect(sc,input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
+        case "Coverage.slopeByQGIS" =>
+          coverageRddList += (UUID -> QGIS.nativeSlope(sc,input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
+        case "Coverage.rescaleRasterByQGIS" =>
+          coverageRddList += (UUID -> QGIS.nativeRescaleRaster(sc,input = coverageRddList(args("input")), minimum = args("minimum").toDouble,maximum = args("maximum").toDouble,band = args("band").toInt))
+        case "Coverage.ruggednessIndexByQGIS" =>
+          coverageRddList += (UUID -> QGIS.nativeRuggednessIndex(sc,input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
+        case "Feature.projectPointsByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeProjectPoints(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],distance = args("distance").toDouble,bearing = args("bearing").toDouble))
+        case "Feature.addFieldByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeAddField(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],fieldType = args("fieldType"),fieldPrecision = args("fieldPrecision").toDouble,fieldName = args("fieldName"),fieldLength = args("fieldLength").toDouble))
+        case "Feature.addXYFieldByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeAddXYField(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],crs = args("crs"),prefix = args("prefix")))
+        case "Feature.affineTransformByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeAffineTransform(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],scaleX = args("scaleX").toDouble,scaleZ = args("scaleZ").toDouble,rotationZ = args("rotationZ").toDouble,scaleY = args("scaleY").toDouble,scaleM = args("scaleM").toDouble,deltaM = args("deltaM").toDouble,deltaX = args("deltaX").toDouble,deltaY = args("deltaY").toDouble,deltaZ = args("deltaZ").toDouble))
         //    GRASS
         case "Coverage.neighborsByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_neighbors(sc,input = coverageRddList(args("input")),size=args("size"),method=args("method")))
