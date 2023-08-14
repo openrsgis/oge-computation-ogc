@@ -879,7 +879,7 @@ object Trigger {
     batchParam.setFormat(format)
 
     val resolutionTMS: Double = 156543.033928
-    level = Math.floor(Math.log(resolutionTMS / scale) / Math.log(2)).toInt + 1
+    level = Math.floor(Math.log(resolutionTMS / scale.toDouble) / Math.log(2)).toInt + 1
 
 
     if (sc.master.contains("local")) {
