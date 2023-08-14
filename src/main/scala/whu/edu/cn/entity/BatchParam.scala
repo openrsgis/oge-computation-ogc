@@ -3,12 +3,21 @@ package whu.edu.cn.entity
 import geotrellis.proj4.CRS
 
 class BatchParam {
+  var userId: String = _
   var dagId: String = _
   var crs: CRS = _
   var scale: Double = _
   var folder: String = _
   var fileName: String = _
   var format: String = _
+
+  def getUserId: String = {
+    this.userId
+  }
+
+  def setUserId(userId: String): Unit = {
+    this.userId = userId
+  }
 
   def getDagId: String = {
     this.dagId
