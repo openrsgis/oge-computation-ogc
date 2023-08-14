@@ -9,7 +9,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.OGEClassType.OGEClassType
-import whu.edu.cn.entity.{CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
+import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -49,6 +49,9 @@ object Trigger {
   // DAG-ID
   var dagId: String = _
   val zIndexStrArray = new mutable.ArrayBuffer[String]
+
+  // 批计算参数
+  val batchParam: BatchParam = new BatchParam
 
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
@@ -92,7 +95,7 @@ object Trigger {
       val tempNoticeJson = new JSONObject
 
 
-//      tempNoticeJson.put("test", "1234")
+      //      tempNoticeJson.put("test", "1234")
       funcName match {
 
         //Others
@@ -109,7 +112,7 @@ object Trigger {
           else if (coverageRddList.contains(args("arg"))) {
             Others.printNotice(args("arg"), coverageRddList(args("arg"))._2.toString)
           }
-          else{
+          else {
             throw new IllegalArgumentException("The specified content could not be found!")
           }
         // Service
@@ -185,6 +188,8 @@ object Trigger {
           Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
 
         // Coverage
+        case "Coverage.export" =>
+          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam)
         case "Coverage.date" =>
           val date: String = Coverage.date(coverage = coverageRddList(args("coverage")))
           tempNoticeJson.put("date", date)
@@ -319,7 +324,7 @@ object Trigger {
         case "Coverage.slice" =>
           coverageRddList += (UUID -> Coverage.slice(coverage = coverageRddList(args("coverage")), start = args("start").toInt, end = args("end").toInt))
         case "Coverage.histogram" =>
-          stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")),scale = args("scale").toDouble).toString())
+          stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")), scale = args("scale").toDouble).toString())
         case "Coverage.reproject" =>
           coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = args("crsCode").toInt, scale = args("resolution").toDouble))
         case "Coverage.resample" =>
@@ -363,38 +368,38 @@ object Trigger {
 
         // Kernel
         case "Kernel.chebyshev" =>
-          kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.circle" =>
-          kernelRddList += (UUID -> Kernel.circle(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.circle(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.compass" =>
-          kernelRddList +=(UUID -> Kernel.compass(args("magnitude").toFloat,args("normalize").toBoolean))
+          kernelRddList += (UUID -> Kernel.compass(args("magnitude").toFloat, args("normalize").toBoolean))
         case "Kernel.diamond" =>
-          kernelRddList += (UUID -> Kernel.diamond(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
-        case "Kernel.euclidean"=>
-          kernelRddList += (UUID -> Kernel.euclidean(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.diamond(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
+        case "Kernel.euclidean" =>
+          kernelRddList += (UUID -> Kernel.euclidean(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.fixed" =>
           val kernel = Kernel.fixed(weights = args("weights"))
           kernelRddList += (UUID -> kernel)
         case "Kernel.gaussian" =>
-          kernelRddList += (UUID -> Kernel.gaussian(args("radius").toInt,args("sigma").toFloat,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.gaussian(args("radius").toInt, args("sigma").toFloat, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.inverse" =>
           kernelRddList += (UUID -> Kernel.inverse(kernelRddList(args("kernel"))))
         case "Kernel.manhattan" =>
-          kernelRddList += (UUID -> Kernel.manhattan(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.manhattan(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.octagon" =>
-          kernelRddList += (UUID -> Kernel.octagon(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.octagon(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.plus" =>
-          kernelRddList +=(UUID -> Kernel.plus(args("radius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.plus(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.square" =>
           val kernel = Kernel.square(radius = args("radius").toInt, normalize = args("normalize").toBoolean, value = args("value").toDouble)
           kernelRddList += (UUID -> kernel)
           print(kernel.tile.asciiDraw())
         case "Kernel.rectangle" =>
-          kernelRddList += (UUID -> Kernel.rectangle(args("xRadius").toInt,args("yRadius").toInt,args("normalize").toBoolean,args("magnitude").toFloat))
+          kernelRddList += (UUID -> Kernel.rectangle(args("xRadius").toInt, args("yRadius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
         case "Kernel.roberts" =>
-          kernelRddList += (UUID -> Kernel.roberts(args("magnitude").toFloat,args("normalize").toBoolean))
+          kernelRddList += (UUID -> Kernel.roberts(args("magnitude").toFloat, args("normalize").toBoolean))
         case "Kernel.roberts" =>
-          kernelRddList += (UUID -> Kernel.rotate(kernelRddList(args("kernel")),args("rotations").toInt))
+          kernelRddList += (UUID -> Kernel.rotate(kernelRddList(args("kernel")), args("rotations").toInt))
         case "Kernel.prewitt" =>
           val kernel = Kernel.prewitt(axis = args("axis"))
           kernelRddList += (UUID -> kernel)
@@ -426,16 +431,9 @@ object Trigger {
         //        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
         case "Coverage.addStyles" =>
-          if (isBatch == 0) {
-            val visParam: VisualizationParam = new VisualizationParam
-            visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-
-
-            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
-          }
-          else {
-            Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")))
-          }
+          val visParam: VisualizationParam = new VisualizationParam
+          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
 
 
         //Feature
@@ -659,7 +657,7 @@ object Trigger {
 
 
       // 发送给 boot
-//      sendNotice(tempNoticeJson)
+      //      sendNotice(tempNoticeJson)
 
 
     } catch {
@@ -769,42 +767,43 @@ object Trigger {
     println(jsonObject)
 
     isBatch = jsonObject.getString("isBatch").toInt
-    if (isBatch == 0) {
-      layerName = jsonObject.getString("layerName")
-      val map: JSONObject = jsonObject.getJSONObject("map")
-      level = map.getString("level").toInt
-      val spatialRange: Array[Double] = map.getString("spatialRange")
-        .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
-      println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
 
-      windowExtent = new Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
 
-      val jedis: Jedis = new JedisUtil().getJedis
-      val key: String = dagId + ":solvedTile:" + level
-      jedis.select(1)
+    layerName = jsonObject.getString("layerName")
+    val map: JSONObject = jsonObject.getJSONObject("map")
+    level = map.getString("level").toInt
+    val spatialRange: Array[Double] = map.getString("spatialRange")
+      .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
+    println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
 
-      val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)
-      val xMaxOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmax, level)
-      val yMinOfTile: Int = ZCurveUtil.lat2Tile(windowExtent.ymax, level)
-      val yMaxOfTile: Int = ZCurveUtil.lat2Tile(windowExtent.ymin, level)
+    windowExtent = new Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
 
-      System.out.println("xMinOfTile - xMaxOfTile: " + xMinOfTile + " - " + xMaxOfTile)
-      System.out.println("yMinOfTile - yMaxOfTile: " + yMinOfTile + " - " + yMaxOfTile)
+    val jedis: Jedis = new JedisUtil().getJedis
+    val key: String = dagId + ":solvedTile:" + level
+    jedis.select(1)
 
-      // z曲线编码后的索引字符串
-      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
-      // 等价于两层循环
-      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
-           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
-        // 排除 redis 已经存在的前端瓦片编码
-           ) { // redis里存在当前的索引
-        // Redis 里没有的前端瓦片编码
-        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-        zIndexStrArray.append(zIndexStr)
-        // 将这些新的瓦片编号存到 Redis
-        //        jedis.sadd(key, zIndexStr)
-      }
+    val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)
+    val xMaxOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmax, level)
+    val yMinOfTile: Int = ZCurveUtil.lat2Tile(windowExtent.ymax, level)
+    val yMaxOfTile: Int = ZCurveUtil.lat2Tile(windowExtent.ymin, level)
+
+    System.out.println("xMinOfTile - xMaxOfTile: " + xMinOfTile + " - " + xMaxOfTile)
+    System.out.println("yMinOfTile - yMaxOfTile: " + yMinOfTile + " - " + yMaxOfTile)
+
+    // z曲线编码后的索引字符串
+    //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
+    // 等价于两层循环
+    for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
+         if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+      // 排除 redis 已经存在的前端瓦片编码
+         ) { // redis里存在当前的索引
+      // Redis 里没有的前端瓦片编码
+      val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+      zIndexStrArray.append(zIndexStr)
+      // 将这些新的瓦片编号存到 Redis
+      //        jedis.sadd(key, zIndexStr)
     }
+
     if (zIndexStrArray.isEmpty) {
       //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
       println("窗口范围无明显变化，没有新的瓦片待计算")
@@ -857,6 +856,73 @@ object Trigger {
     }
 
 
+  }
+
+  def runBatch(implicit sc: SparkContext,
+               curWorkTaskJson: String,
+               curDagId: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
+    workTaskJson = curWorkTaskJson
+    dagId = curDagId
+
+    val time1: Long = System.currentTimeMillis()
+
+    val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
+    println(jsonObject)
+
+    isBatch = jsonObject.getString("isBatch").toInt
+
+    batchParam.setDagId(curDagId)
+    batchParam.setCrs(crs)
+    batchParam.setScale(scale)
+    batchParam.setFolder(folder)
+    batchParam.setFileName(fileName)
+    batchParam.setFormat(format)
+
+    val resolutionTMS: Double = 156543.033928
+    level = Math.floor(Math.log(resolutionTMS / scale) / Math.log(2)).toInt + 1
+
+
+    if (sc.master.contains("local")) {
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.trans(jsonObject, "0")
+    }
+    else {
+      JsonToArg.trans(jsonObject, "0")
+    }
+    println("JsonToArg.dagMap.size = " + JsonToArg.dagMap)
+    JsonToArg.dagMap.foreach(DAGList => {
+      println("************优化前的DAG*************")
+      println(DAGList._1)
+      DAGList._2.foreach(println(_))
+      println("************优化后的DAG*************")
+      val optimizedDAGList: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = optimizedDAG(DAGList._2)
+      optimizedDagMap += (DAGList._1 -> optimizedDAGList)
+      optimizedDAGList.foreach(println(_))
+    })
+
+
+    try {
+      lambda(sc, optimizedDagMap("0"))
+    } catch {
+      case e: Throwable =>
+        val errorJson = new JSONObject
+        errorJson.put("error", e.toString)
+
+        //        // 回调服务，通过 boot 告知前端：
+        //        val outJsonObject: JSONObject = new JSONObject
+        //        outJsonObject.put("workID", Trigger.dagId)
+        //        outJsonObject.put("json", errorJson)
+        //
+        //        println("Error json = " + outJsonObject)
+        //        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+        //          outJsonObject.toJSONString)
+
+        // 打印至后端控制台
+        e.printStackTrace()
+    } finally {
+      val time2: Long = System.currentTimeMillis()
+      println(time2 - time1)
+    }
   }
 
 
