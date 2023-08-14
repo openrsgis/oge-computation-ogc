@@ -860,7 +860,7 @@ object Trigger {
 
   def runBatch(implicit sc: SparkContext,
                curWorkTaskJson: String,
-               curDagId: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
+               curDagId: String, userId: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
     workTaskJson = curWorkTaskJson
     dagId = curDagId
 
@@ -871,6 +871,7 @@ object Trigger {
 
     isBatch = jsonObject.getString("isBatch").toInt
 
+    batchParam.setUserId(userId)
     batchParam.setDagId(curDagId)
     batchParam.setCrs(crs)
     batchParam.setScale(scale)

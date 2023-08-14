@@ -2912,9 +2912,7 @@ object Coverage {
     val minIOUtil = new MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
 
-    val userId: String = batchParam.getDagId.split("_")(0)
-
-    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user-test/" + userId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).build)
+    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user-test/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).build)
 
     minIOUtil.releaseMinioClient(client)
 
