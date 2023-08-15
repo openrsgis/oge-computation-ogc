@@ -35,7 +35,7 @@ object Trigger {
   var tableRddList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var kernelRddList: mutable.Map[String, geotrellis.raster.mapalgebra.focal.Kernel] = mutable.Map.empty[String, geotrellis.raster.mapalgebra.focal.Kernel]
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-
+  var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]    //GRASS部分返回String类的算子
   var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
 
@@ -480,16 +480,9 @@ object Trigger {
         //        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
         case "Coverage.addStyles" =>
-          if (isBatch == 0) {
-            val visParam: VisualizationParam = new VisualizationParam
-            visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-
-
-            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
-          }
-          else {
-            Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")))
-          }
+          val visParam: VisualizationParam = new VisualizationParam
+          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
 
 
         //Feature
@@ -710,7 +703,6 @@ object Trigger {
         case "Cube.addStyles" =>
           Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
       }
-
 
 
     } catch {
