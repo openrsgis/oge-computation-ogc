@@ -4,11 +4,12 @@ import com.alibaba.fastjson.JSONObject
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
+import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import io.minio.MinioClient
+import io.minio.{MinioClient, PutObjectArgs}
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -19,28 +20,29 @@ import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
 import javafx.scene.paint.Color
 import org.apache.spark._
-import org.apache.spark.api.java.JavaRDD.fromRDD
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import redis.clients.jedis.Jedis
-import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
+import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
-import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, coverageTemplate, focalMethods, getTileFromCoverage, makeCoverageRDD}
+import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
+import java.io.ByteArrayInputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
 import scala.collection.mutable
+import scala.language.postfixOps
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
 
-  def load(implicit sc: SparkContext, coverageId: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def load(implicit sc: SparkContext, coverageId: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId)
@@ -177,7 +179,7 @@ object Coverage {
    * Add the value to the coverage.
    *
    * @param coverage The coverage for operation.
-   * @param i The value to add.
+   * @param i        The value to add.
    * @return Coverage
    */
   def addNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
@@ -815,10 +817,10 @@ object Coverage {
    * @return Map[String, String]  key: band name, value: band type
    */
   def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
-    var bandTypesMap: mutable.Map[String, String] = mutable.Map.empty[String,String]
+    var bandTypesMap: mutable.Map[String, String] = mutable.Map.empty[String, String]
     var bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
     coverage._1.first()._2.bands.foreach(tile => {
-      bandTypesMap +=  (bandNames.head -> tile.cellType.toString())
+      bandTypesMap += (bandNames.head -> tile.cellType.toString())
       bandNames = bandNames.tail
     })
     bandTypesMap.toMap
@@ -2894,8 +2896,26 @@ object Coverage {
 
   }
 
-  def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Unit = {
-  }
+  def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam): Unit = {
+    val coverageArray: Array[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    }).collect()
 
+    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
+    val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
+    val reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, batchParam.getCrs)
+    val resample: Raster[MultibandTile] = reprojectTile.resample((coverage._2.cellSize.width * coverage._2.layoutCols * 256 / batchParam.getScale).toInt, (coverage._2.cellSize.height * coverage._2.layoutRows * 256 / batchParam.getScale).toInt)
+
+
+    // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
+
+    val minIOUtil = new MinIOUtil
+    val client: MinioClient = minIOUtil.getMinioClient
+
+    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user-test/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).contentType("image/tiff").build)
+
+    minIOUtil.releaseMinioClient(client)
+
+  }
 
 }
