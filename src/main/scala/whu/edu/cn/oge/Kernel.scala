@@ -60,13 +60,9 @@ object Kernel {
    * @param axis Specify the direction of the convolution kernel,x/y
    * @return
    */
-  def prewitt(axis: String): focal.Kernel = {
-    if (axis == "y") {
-      focal.Kernel(IntArrayTile(Array[Int](1, 1, 1, 0, 0, 0, -1, -1, -1), 3, 3))
-    }
-    else {
-      focal.Kernel(IntArrayTile(Array[Int](1, 0, -1, 1, 0, -1, 1, 0, -1), 3, 3))
-    }
+  def prewitt(normalize: Boolean = false,
+              magnitude: Float = 1): focal.Kernel = {
+    genKernel(Array[Int](1, 0, -1, 1, 0, -1, 1, 0, -1).map(_.toDouble),3,3,normalize,magnitude)
   }
 
   /**
@@ -75,14 +71,14 @@ object Kernel {
    * @param axis Specify the direction of the convolution kernel,x/y
    * @return
    */
-  def kirsch(axis: String): focal.Kernel = {
-    if (axis == "y") {
-      focal.Kernel(IntArrayTile(Array[Int](5, 5, 5, -3, 0, -3, -3, -3, -3), 3, 3))
-    }
-    else {
-      focal.Kernel(IntArrayTile(Array[Int](5, -3, -3, 5, 0, -3, 5, -3, -3), 3, 3))
-    }
+  def kirsch(normalize: Boolean = false,
+             magnitude: Float = 1): focal.Kernel = {
+    val n: Int = 3
 
+    val matrix = Array[Int](5, 5, 5, -3, 0, -3, -3, -3, -3)
+
+
+    genKernel(matrix.map(_.toDouble), n, n, normalize, magnitude)
   }
 
   /**
@@ -151,8 +147,7 @@ object Kernel {
 
 
   //noinspection DuplicatedCode
-  def compass(magnitude: Float = 1,
-              normalize: Boolean = false)
+  def compass(normalize: Boolean = false,magnitude: Float = 1)
   : focal.Kernel = {
     val matrix: Array[Int] = Array[Int](1, 1, -1, 1, -2, -1, 1, 1, -1)
 
@@ -313,7 +308,6 @@ object Kernel {
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
-    // 加号
     for (i <- 0 until n; j <- 0 until n) {
       if (i == radius || j == radius) {
         matrix.update(i * n + j, 1.0)
@@ -339,8 +333,7 @@ object Kernel {
   }
 
 
-  def roberts(magnitude: Float = 1,
-              normalize: Boolean = false)
+  def roberts(normalize: Boolean = false, magnitude: Float = 1)
   : focal.Kernel = {
 
     genKernel(Array[Double](1, 0, 0, -1), 2, 2, normalize, magnitude)
@@ -348,6 +341,7 @@ object Kernel {
   }
 
   /**
+   * Rotate the kernel according to the rotations.
    *
    * @param kernel    The kernel to be rotated.
    * @param rotations Number of 90 deg.
@@ -383,6 +377,20 @@ object Kernel {
 
     focal.Kernel(DoubleArrayTile(matrix, n, n))
 
+  }
+
+  def main(args: Array[String]):Unit={
+    val radius = 2
+    val n: Int = radius * 2 + 1
+    val matrix = new Array[Double](n * n)
+    for (i <- 0 until n; j <- 0 until n) {
+      if (i == radius || j == radius) {
+        matrix.update(i * n + j, 1.0)
+      }
+    }
+    matrix.foreach(d => {
+      print(d,"")
+    })
   }
 
 
