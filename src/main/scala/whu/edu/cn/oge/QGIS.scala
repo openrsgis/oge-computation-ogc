@@ -469,7 +469,8 @@ object QGIS {
   }
 
   /**
-   * It creates a new layer with the exact same features and geometries as the input one, but assigned to a new CRS.
+   * It creates a new layer with the exact same features and geometries a
+   * s the input one, but assigned to a new CRS.
    * The geometries are not reprojected, they are just assigned to a different CRS.
    *
    * @param sc    Alias object for SparkContext
@@ -903,17 +904,17 @@ object QGIS {
    * @return Output line layer
    */
   def nativeTransect(implicit sc: SparkContext,
-                     input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                     input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                      side: String = "",
                      length: Double = 5.0,
                      angle: Double = 90.0):
-  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
     val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTransect_" + time + ".shp"
     val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTransect_" + time + "_out.shp"
-    saveRasterRDDToTif(input, outputTiffPath)
+    saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
@@ -929,7 +930,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeFeatureRDDFromShp(sc, writePath)
 
   }
 
@@ -1478,14 +1479,14 @@ object QGIS {
    * @param input       Input line vector layer.
    * @param segments    Controls the number of line segments to use to approximate a quarter circle when creating rounded offsets.
    * @param startWidth  Represents the radius of the buffer applied at the start point of the line feature.
-   * @param ednWidth    Represents the radius of the buffer applied at the end point of the line feature.
+   * @param endWidth    Represents the radius of the buffer applied at the end point of the line feature.
    * @return            Output (buffer) polygon layer.
    */
   def nativeTaperedBuffer(implicit sc: SparkContext,
                           input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                           segments: Int = 16,
                           startWidth: Double = 0.0,
-                          ednWidth: Double = 0.0):
+                          endWidth: Double = 0.0):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
@@ -1498,7 +1499,7 @@ object QGIS {
     try {
       versouSshUtil("125.220.153.26", "geocube", "ypfamily608", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --startWidth $startWidth --endWidth $ednWidth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --startWidth $startWidth --endWidth $endWidth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1685,13 +1686,16 @@ object QGIS {
                  computeEdges: String = "False",
                  zevenbergen: String = "False",
                  options: String = "")
-  : Unit = {
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
 
     val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAspect_" + time + ".tif"
     val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAspectlzy_" + time + "_out.tif"
+
     saveRasterRDDToTif(input, outputTiffPath)
+
+
     val outputTiffPath2 = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/ASTGTM_N00E006_dem.tif"
 
     try {

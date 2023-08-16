@@ -48,25 +48,25 @@ object Coverage {
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId)
     val queryGeometry: Geometry = metaList.head.getGeom
 
-    //    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    //    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
-    //      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
-    //      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
-    //      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
-    //      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
-    //      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
-    //
-    //      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
-    //      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
-    //      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
-    //      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
-    //      geometry
-    //    }).reduce((a, b) => {
-    //      a.union(b)
-    //    })
-    //
-    //    val union: Geometry = unionTileExtent.intersection(queryGeometry)
-    val union: Geometry = metaList.head.getGeom
+    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
+    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
+      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+
+      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
+      geometry
+    }).reduce((a, b) => {
+      a.union(b)
+    })
+
+    val union: Geometry = unionTileExtent.intersection(queryGeometry)
+
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
