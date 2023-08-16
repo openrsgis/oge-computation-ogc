@@ -2250,7 +2250,7 @@
         "default": 0.0
       },
       {
-        "name": "ednWidth",
+        "name": "endWidth",
         "type": "Double",
         "description": "Represents the radius of the buffer applied at the end point of the line feature.",
         "optional": "True",
