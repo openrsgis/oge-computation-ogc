@@ -6997,6 +6997,11 @@
         "description": "Vertical exaggeration",
         "default": "1.0",
         "optional": "True"
+      },
+      {
+        "name": "radius",
+        "type": "Double",
+        "description": "The radius."
       }
     ]
   },

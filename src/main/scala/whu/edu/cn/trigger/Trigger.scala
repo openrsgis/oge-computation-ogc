@@ -474,10 +474,10 @@ object Trigger {
           kernelRddList += (UUID -> kernel)
 
         // Terrain
-        //      case "Terrain.slope" =>
-        //        coverageRddList += (UUID -> Terrain.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
-        //      case "Terrain.aspect" =>
-        //        coverageRddList += (UUID -> Terrain.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
+        case "Coverage.slope" =>
+          coverageRddList += (UUID -> Coverage.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+        case "Coverage.aspect" =>
+          coverageRddList += (UUID -> Coverage.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
         case "Coverage.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
