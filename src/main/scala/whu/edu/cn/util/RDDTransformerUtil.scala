@@ -105,7 +105,7 @@ object RDDTransformerUtil {
 
 
   def makeChangedRasterRDDFromTif(sc: SparkContext, sourceTiffpath: String) = {
-    val hadoopPath = "file:///" + sourceTiffpath
+    val hadoopPath = "file://" + sourceTiffpath
     val inputRdd = sc.hadoopMultibandGeoTiffRDD(new Path(hadoopPath))
     val localLayoutScheme = FloatingLayoutScheme(256)
     val (_: Int, metadata: TileLayerMetadata[SpatialKey]) =

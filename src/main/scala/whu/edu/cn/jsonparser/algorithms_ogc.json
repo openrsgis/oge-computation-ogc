@@ -1551,7 +1551,7 @@
         "default": 10
       },
       {
-        "joinStyle": "joinStyle",
+        "name": "joinStyle",
         "type": "String",
         "description": "Specifies whether round, miter or beveled joins should be used when offsetting corners in a line",
         "optional": "True",
