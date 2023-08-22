@@ -5396,6 +5396,11 @@
         "description": "The coverage to resample."
       },
       {
+        "name": "level",
+        "type": "Int",
+        "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
+      },
+      {
         "name": "mode",
         "type": "String",
         "description": "The interpolation mode to use"
@@ -5886,6 +5891,17 @@
         "name": "coverageCollection",
         "type": "CoverageCollection",
         "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "Feature.addStyles": {
+    "description": "Add the feature to the coverage",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to add styles"
       }
     ]
   },

@@ -27,4 +27,8 @@ object Service {
     Coverage.load(sc, coverageId, level)
   }
 
+  def getFeature(implicit sc: SparkContext, featureId: String,dateTime:String,crs:String)={
+    Feature.load(sc,featureId)
+  }
+
 }

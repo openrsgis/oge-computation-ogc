@@ -123,6 +123,8 @@ object Trigger {
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeature" =>
+          featureRddList += (UUID -> Service.getFeature(sc,args("featureID"),isOptionalArg(args,"dateTime"),isOptionalArg(args,"crs")))
 
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -817,6 +819,8 @@ object Trigger {
         case "Feature.setGeometry" =>
           featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.addStyles" =>
+          Feature.visualize(feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]])
         //      case "Feature.inverseDistanceWeighted" =>
         //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
@@ -870,12 +874,21 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-          throw new Exception("Error occur in lambda: " +
-            "UUID = " + list(i)._1 + "\t" +
-            "funcName = " + list(i)._2 + "\n" +
-            "innerErrorType = " + e.getClass + "\n" +
-            "innerErrorInfo = " + e.getMessage + "\n" +
-            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+          val jsonObject = new JSONObject
+          val errorJson = new JSONObject
+          errorJson.put("error", list(i)._2)
+
+          // 回调服务，通过 boot 告知前端：
+          jsonObject.put("error",errorJson)
+          val outJsonObject: JSONObject = new JSONObject
+          outJsonObject.put("workID", Trigger.dagId)
+          outJsonObject.put("json", errorJson)
+
+          println("Error json = " + e.toString)
+          sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+            outJsonObject.toJSONString)
+          println("Send to boot!")
+          e.printStackTrace()
       }
     }
   }
@@ -1023,12 +1036,12 @@ object Trigger {
         val outJsonObject: JSONObject = new JSONObject
         outJsonObject.put("workID", Trigger.dagId)
         outJsonObject.put("json", errorJson)
-
+//
         println("Error json = " + outJsonObject)
-        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
-          outJsonObject.toJSONString)
-
-        // 打印至后端控制台
+//        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+//          outJsonObject.toJSONString)
+//        println("Send to boot!")
+//         打印至后端控制台
         e.printStackTrace()
     } finally {
       val time2: Long = System.currentTimeMillis()

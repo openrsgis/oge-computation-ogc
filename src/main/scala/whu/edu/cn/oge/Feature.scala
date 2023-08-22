@@ -1,7 +1,7 @@
 package whu.edu.cn.oge
 
 import java.io.FileWriter
-import com.alibaba.fastjson.JSON
+import com.alibaba.fastjson.{JSON, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
@@ -32,7 +32,9 @@ import whu.edu.cn
 import whu.edu.cn.debug.CoverageDubug.makeTIFF
 import whu.edu.cn.debug.FeatureDebug.saveFeatureRDDToShp
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.{GlobalConstantUtil, PostgresqlUtil}
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
@@ -1007,6 +1009,19 @@ object Feature {
     })
 
     (imageRDD, tileLayerMetadata)
+  }
+
+  def visualize(feature: RDD[(String, (Geometry, Map[String, Any]))]):Unit={
+    val geoJson = new JSONObject
+    val geoJSONString = toGeoJSONString(feature)
+    geoJson.put(Trigger.layerName,geoJSONString)
+
+    val jsonObject = new JSONObject
+    jsonObject.put("vector",geoJson)
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("workID", Trigger.dagId)
+    outJsonObject.put("json", jsonObject)
+    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
   }
 
 

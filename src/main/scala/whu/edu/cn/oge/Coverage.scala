@@ -2335,6 +2335,29 @@ object Coverage {
 
   }
 
+  def intoOne(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),bands: List[String]):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    val coverageSelected = selectBands(coverage,bands)
+    val coverage1 = (coverageSelected._1.map(t => {
+      var bandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      bandNames :+= t._1.measurementName(0)
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      newTileBands :+= Mean(t._2.bands)
+      (SpaceTimeBandKey(t._1.spaceTimeKey,bandNames),MultibandTile(newTileBands))
+    }),coverageSelected._2)
+    coverage1
+  }
+
+  def intoOne(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverage1 = (coverage._1.map(t => {
+      var bandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      bandNames :+= t._1.measurementName(0)
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      newTileBands :+= Mean(t._2.bands)
+      (SpaceTimeBandKey(t._1.spaceTimeKey, bandNames), MultibandTile(newTileBands))
+    }), coverage._2)
+    coverage1
+  }
+
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
     var coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
@@ -3257,7 +3280,7 @@ object Coverage {
     outJsonObject.put("json", jsonObject)
 
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-
+    println("outputJSON: ",outJsonObject.toJSONString)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
     val jedis: Jedis = new JedisUtil().getJedis
     jedis.select(1)
@@ -3269,20 +3292,20 @@ object Coverage {
     jedis.close()
 
 
-    // 清空list
-    Trigger.optimizedDagMap.clear()
-    Trigger.coverageCollectionMetadata.clear()
-    Trigger.lazyFunc.clear()
-    Trigger.coverageCollectionRddList.clear()
-    Trigger.coverageRddList.clear()
-    Trigger.zIndexStrArray.clear()
-    JsonToArg.dagMap.clear()
-    // TODO lrx: 以下为未检验
-    Trigger.tableRddList.clear()
-    Trigger.kernelRddList.clear()
-    Trigger.featureRddList.clear()
-    Trigger.cubeRDDList.clear()
-    Trigger.cubeLoad.clear()
+//    // 清空list
+//    Trigger.optimizedDagMap.clear()
+//    Trigger.coverageCollectionMetadata.clear()
+//    Trigger.lazyFunc.clear()
+//    Trigger.coverageCollectionRddList.clear()
+//    Trigger.coverageRddList.clear()
+//    Trigger.zIndexStrArray.clear()
+//    JsonToArg.dagMap.clear()
+//    // TODO lrx: 以下为未检验
+//    Trigger.tableRddList.clear()
+//    Trigger.kernelRddList.clear()
+//    Trigger.featureRddList.clear()
+//    Trigger.cubeRDDList.clear()
+//    Trigger.cubeLoad.clear()
 
     if (sc.master.contains("local")) {
       whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")

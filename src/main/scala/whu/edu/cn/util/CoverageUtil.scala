@@ -75,9 +75,9 @@ object CoverageUtil {
     else if(coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
       coverage = toInt16(coverage)
 
-    coverage = removeZeroFromCoverage(coverage)
+    val coverage1 = removeZeroFromCoverage(coverage)
 
-    coverage
+    coverage1
   }
 
   def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
