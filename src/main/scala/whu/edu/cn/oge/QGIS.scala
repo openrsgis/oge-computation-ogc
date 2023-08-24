@@ -78,8 +78,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSlope_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSlope_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeSlope_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/nativeSlope_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
