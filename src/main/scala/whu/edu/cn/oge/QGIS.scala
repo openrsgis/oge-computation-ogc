@@ -39,8 +39,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAspect_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAspect_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeAspect_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/nativeAspect_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -118,8 +118,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRescaleRaster_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRescaleRaster_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeRescaleRaster_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/nativeRescaleRaster_" + time + "_out.tif"
 
 
     saveRasterRDDToTif(input, outputTiffPath)
@@ -156,8 +156,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRuggednessIndex_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRuggednessIndex_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeRuggednessIndex_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/nativeRuggednessIndex_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -194,8 +194,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeProjectPoints_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeProjectPoints_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeProjectPoints_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeProjectPoints_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -235,8 +235,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAddField_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAddField_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeAddField_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeAddField_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -273,8 +273,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAddXYField_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAddXYField_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeAddXYField_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeAddXYField_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -325,8 +325,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAffineTransform_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAffineTransform_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeAffineTransform_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeAffineTransform_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -359,8 +359,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAntimeridianSplit_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAntimeridianSplit_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeAntimeridianSplit_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeAntimeridianSplit_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -402,8 +402,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeArrayOffsetLines_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeArrayOffsetLines_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeArrayOffsetLines_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeArrayOffsetLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -446,8 +446,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTranslatedFeatures_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTranslatedFeatures_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeTranslatedFeatures_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeTranslatedFeatures_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -483,8 +483,8 @@ object QGIS {
                              crs: String = "EPSG:4326 - WGS84")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAssignProjection_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeAssignProjection_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeAssignProjection_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -524,8 +524,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeOffsetLine_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeOffsetLine_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeOffsetLine_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeOffsetLine_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -564,8 +564,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePointsAlongLines_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePointsAlongLines_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativePointsAlongLines_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativePointsAlongLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -600,8 +600,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePolygonize_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePolygonize_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativePolygonize_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativePolygonize_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -634,8 +634,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePolygonsToLines_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePolygonsToLines_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativePolygonsToLines_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativePolygonsToLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -678,8 +678,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRandomPointsInPolygons_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRandomPointsInPolygons_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeRandomPointsInPolygons_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeRandomPointsInPolygons_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -722,8 +722,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRandomPointsOnLines_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRandomPointsOnLines_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeRandomPointsOnLines_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeRandomPointsOnLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -760,8 +760,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRotateFeatures_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRotateFeatures_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeRotateFeatures_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeRotateFeatures_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -798,8 +798,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSimplify_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSimplify_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeSimplify_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeSimplify_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -838,8 +838,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSmooth_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSmooth_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeSmooth_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeSmooth_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -872,8 +872,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSwapXY_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSwapXY_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeSwapXY_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeSwapXY_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -912,8 +912,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTransect_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTransect_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/nativeTransect_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeTransect_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
@@ -953,8 +953,8 @@ object QGIS {
                               delta_m:Double=0.0):
   RDD[(String, (Geometry, Map[String, Any]))]={
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTranslateGeometry_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTranslateGeometry_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeTranslateGeometry_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeTranslateGeometry_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -985,8 +985,8 @@ object QGIS {
                                 geometryType :String="0"):
   RDD[(String, (Geometry, Map[String, Any]))]={
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeConvertGeometryType_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeConvertGeometryType_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeConvertGeometryType_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeConvertGeometryType_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1015,8 +1015,8 @@ object QGIS {
                             input:RDD[(String,(Geometry,Map[String,Any]))])
   :RDD[(String,(Geometry,Map[String,Any]))]={
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeLinesToPolygons_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeLinesToPolygons_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeLinesToPolygons_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeLinesToPolygons_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1051,8 +1051,8 @@ object QGIS {
                                horizontal:String="False")
   :RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePointsDisplacement_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePointsDisplacement_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativePointsDisplacement_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativePointsDisplacement_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1085,8 +1085,8 @@ object QGIS {
                                   minDistance: Double=0.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativaRandomPointsAlongLine_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativaRandomPointsAlongLine_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativaRandomPointsAlongLine_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativaRandomPointsAlongLine_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1119,8 +1119,8 @@ object QGIS {
                                       minDistance: Double=0.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRandomPointsInLayerBounds_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRandomPointsInLayerBounds_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeRandomPointsInLayerBounds_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeRandomPointsInLayerBounds_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1158,8 +1158,8 @@ object QGIS {
                            applySymbology: String="True")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAngleToNearest_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeAngleToNearest_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1188,8 +1188,8 @@ object QGIS {
                      input: RDD[(String, (Geometry, Map[String, Any]))])
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeBoundary_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeBoundary_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeBoundary_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeBoundary_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1220,8 +1220,8 @@ object QGIS {
                                 segments: Int=72)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeMiniEnclosingCircle_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeMiniEnclosingCircle_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeMiniEnclosingCircle_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeMiniEnclosingCircle_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1254,8 +1254,8 @@ object QGIS {
                                     distance: Double=1.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeMultiRingConstantBuffer_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeMultiRingConstantBuffer_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeMultiRingConstantBuffer_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeMultiRingConstantBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1284,8 +1284,8 @@ object QGIS {
                                        input: RDD[(String, (Geometry, Map[String, Any]))])
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeOrientedMinimumBoundingBox_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeOrientedMinimumBoundingBox_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeOrientedMinimumBoundingBox_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeOrientedMinimumBoundingBox_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1317,8 +1317,8 @@ object QGIS {
                            allParts: String)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePointOnSurface_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePointOnSurface_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativePointOnSurface_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativePointOnSurface_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1349,8 +1349,8 @@ object QGIS {
                                   tolerance: Double=1.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePoleOfInaccessibility_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativePoleOfInaccessibility_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativePoleOfInaccessibility_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativePoleOfInaccessibility_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -1392,8 +1392,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRectangelsOvalsDiamonds_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeRectangelsOvalsDiamonds_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeRectangelsOvalsDiamonds_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeRectangelsOvalsDiamonds_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val shapeInput: String = Map(
@@ -1441,8 +1441,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSingleSidedBuffer_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeSingleSidedBuffer_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeSingleSidedBuffer_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeSingleSidedBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val sideInput: String = Map(
@@ -1491,8 +1491,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTaperedBuffer_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeTaperedBuffer_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeTaperedBuffer_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeTaperedBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1533,8 +1533,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeWedgeBuffers_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/nativeWedgeBuffers_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/nativeWedgeBuffers_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/nativeWedgeBuffers_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1573,8 +1573,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/qgisConcaveHull_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/qgisConcaveHull_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/qgisConcaveHull_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/qgisConcaveHull_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1607,8 +1607,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/qgisDelaunayTriangulation_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/qgisDelaunayTriangulation_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/qgisDelaunayTriangulation_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/qgisDelaunayTriangulation_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1643,8 +1643,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/qgisVoronoiPolygons_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/qgisVoronoiPolygons_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/qgisVoronoiPolygons_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/qgisVoronoiPolygons_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1690,18 +1690,16 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAspect_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAspectlzy_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalAspect_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalAspectlzy_" + time + "_out.tif"
 
     saveRasterRDDToTif(input, outputTiffPath)
 
 
-    val outputTiffPath2 = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/ASTGTM_N00E006_dem.tif"
-
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_aspect.py --input "$outputTiffPath2" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_aspect.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1746,8 +1744,8 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalContour_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalContour_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalContour_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalContour_" + time + "_out.shp"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
@@ -1800,8 +1798,8 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalContourPolygon_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalContourPolygon_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalContourPolygon_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalContourPolygon_" + time + "_out.shp"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
@@ -1852,8 +1850,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalFillNodata_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalFillNodata_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalFillNodata_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalFillNodata_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -1904,8 +1902,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridAverage_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridAverage_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalGridAverage_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalGridAverage_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1975,8 +1973,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridDataMetrics_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridDataMetrics_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalGridDataMetrics_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalGridDataMetrics_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -2058,8 +2056,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridInverseDistance_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridInverseDistance_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalGridInverseDistance_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalGridInverseDistance_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -2128,8 +2126,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridInverseDistanceNearestNeighbor_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridInverseDistanceNearestNeighbor_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalGridInverseDistanceNearestNeighbor_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalGridInverseDistanceNearestNeighbor_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -2193,8 +2191,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridLinear_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridLinear_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalGridLinear_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalGridLinear_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val dataTypeInput: String = Map(
@@ -2259,8 +2257,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridNearestNeighbor_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalGridNearestNeighbor_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalGridNearestNeighbor_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalGridNearestNeighbor_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val dataTypeInput: String = Map(
@@ -2330,8 +2328,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalHillShade_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalHillShade_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalHillShade_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalHillShade_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2372,8 +2370,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalNearBlack_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalNearBlack_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalNearBlack_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalNearBlack_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2425,8 +2423,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalProximity_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalProximity_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalProximity_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalProximity_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2488,8 +2486,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRoughness_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRoughness_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalRoughness_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalRoughness_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2539,8 +2537,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalSlope_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalSlope_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalSlope_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalSlope_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2582,8 +2580,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalTpiTopographicPositionIndex_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalTpiTopographicPositionIndex_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalTpiTopographicPositionIndex_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalTpiTopographicPositionIndex_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2624,8 +2622,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalTriTerrainRuggednessIndex_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalTriTerrainRuggednessIndex_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalTriTerrainRuggednessIndex_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalTriTerrainRuggednessIndex_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2669,8 +2667,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipRasterByExtent_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipRasterByExtent_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalClipRasterByExtent_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalClipRasterByExtent_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2748,8 +2746,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipRasterByMaskLayer_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipRasterByMaskLayer_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2794,8 +2792,8 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalPolygonize_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalPolygonize_" + time + "_out.shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalPolygonize_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalPolygonize_" + time + "_out.shp"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
@@ -2834,9 +2832,9 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRasterizeOver_" + time + ".shp"
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRasterizeOver_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRasterizeOver_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalRasterizeOver_" + time + ".shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalRasterizeOver_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalRasterizeOver_" + time + "_out.tif"
 
     saveFeatureRDDToShp(input, outputShpPath)
     saveRasterRDDToTif(inputRaster, outputTiffPath)
@@ -2879,9 +2877,9 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRasterizeOverFixedValue_" + time + ".shp"
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRasterizeOverFixedValue_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRasterizeOverFixedValue_" + time + "_out.tif"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalRasterizeOverFixedValue_" + time + ".shp"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalRasterizeOverFixedValue_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalRasterizeOverFixedValue_" + time + "_out.tif"
 
     saveFeatureRDDToShp(input, outputShpPath)
     saveRasterRDDToTif(inputRaster, outputTiffPath)
@@ -2920,8 +2918,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRgbToPct_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalRgbToPct_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalRgbToPct_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalRgbToPct_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
@@ -2966,8 +2964,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalTranslate_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalTranslate_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalTranslate_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalTranslate_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -3038,8 +3036,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalWarp_" + time + ".tif"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalWarp_" + time + "_out.tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalWarp_" + time + ".tif"
+    val writePath = "/mnt/storage/algorithmData/gdalWarp_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
@@ -3089,8 +3087,8 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalDissolve_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalDissolve_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalDissolve_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalDissolve_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -3125,8 +3123,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipVectorByExtent_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -3162,8 +3160,8 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalClipVectorByPolygon_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -3198,8 +3196,8 @@ object QGIS {
                       options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalOffsetCurve_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalOffsetCurve_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalOffsetCurve_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalOffsetCurve_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -3236,8 +3234,8 @@ object QGIS {
                            options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalPointsAlongLines_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalPointsAlongLines_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalPointsAlongLines_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalPointsAlongLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -3283,8 +3281,8 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalBufferVectors_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalBufferVectors_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalBufferVectors_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalBufferVectors_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
@@ -3328,8 +3326,8 @@ object QGIS {
                         options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalOneSideBuffer_" + time + ".shp"
-    val writePath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalOneSideBuffer_" + time + "_out.shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalOneSideBuffer_" + time + ".shp"
+    val writePath = "/mnt/storage/algorithmData/gdalOneSideBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -3369,7 +3367,7 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/home/geocube/oge/oge-server/dag-boot/qgis/algorithmData/gdalAssignProjection_" + time + ".tif"
+    val outputTiffPath = "/mnt/storage/algorithmData/gdalAssignProjection_" + time + ".tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
