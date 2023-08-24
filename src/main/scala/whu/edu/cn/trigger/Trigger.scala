@@ -93,7 +93,7 @@ object Trigger {
     try {
 
       val tempNoticeJson = new JSONObject
-
+      println("args:",args)
       funcName match {
 
         //Others
@@ -124,7 +124,7 @@ object Trigger {
         case "Service.getFeatureCollection" =>
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeature" =>
-          featureRddList += (UUID -> Service.getFeature(sc,args("featureID"),isOptionalArg(args,"dateTime"),isOptionalArg(args,"crs")))
+          featureRddList += (UUID -> Service.getFeature(sc,args("featureId"),isOptionalArg(args,"dateTime"),isOptionalArg(args,"crs")))
 
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -874,21 +874,12 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-          val jsonObject = new JSONObject
-          val errorJson = new JSONObject
-          errorJson.put("error", list(i)._2)
-
-          // 回调服务，通过 boot 告知前端：
-          jsonObject.put("error",errorJson)
-          val outJsonObject: JSONObject = new JSONObject
-          outJsonObject.put("workID", Trigger.dagId)
-          outJsonObject.put("json", errorJson)
-
-          println("Error json = " + e.toString)
-          sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
-            outJsonObject.toJSONString)
-          println("Send to boot!")
-          e.printStackTrace()
+          throw new Exception("Error occur in lambda: " +
+            "UUID = " + list(i)._1 + "\t" +
+            "funcName = " + list(i)._2 + "\n" +
+            "innerErrorType = " + e.getClass + "\n" +
+            "innerErrorInfo = " + e.getMessage + "\n" +
+            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
       }
     }
   }
@@ -1038,11 +1029,12 @@ object Trigger {
         outJsonObject.put("json", errorJson)
 //
         println("Error json = " + outJsonObject)
-//        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
-//          outJsonObject.toJSONString)
-//        println("Send to boot!")
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
+        println("Send to boot!")
 //         打印至后端控制台
         e.printStackTrace()
+        println("lambda Error!")
     } finally {
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
@@ -1103,14 +1095,14 @@ object Trigger {
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
 
-        //        // 回调服务，通过 boot 告知前端：
-        //        val outJsonObject: JSONObject = new JSONObject
-        //        outJsonObject.put("workID", Trigger.dagId)
-        //        outJsonObject.put("json", errorJson)
-        //
-        //        println("Error json = " + outJsonObject)
-        //        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
-        //          outJsonObject.toJSONString)
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("workID", Trigger.dagId)
+        outJsonObject.put("json", errorJson)
+
+        println("Error json = " + outJsonObject)
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
 
         // 打印至后端控制台
         e.printStackTrace()

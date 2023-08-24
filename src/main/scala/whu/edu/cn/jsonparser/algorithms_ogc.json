@@ -250,7 +250,7 @@
         "description": "The base url of service."
       },
       {
-        "name": "productID",
+        "name": "productId",
         "type": "String",
         "description": "The id of target collection."
       },
@@ -7003,7 +7003,7 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "input",
+        "name": "coverage",
         "type": "Coverage",
         "description": "the input DEM"
       },
@@ -7097,16 +7097,14 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "input",
+        "name": "coverage",
         "type": "Coverage",
         "description": "the input coverage"
       },
       {
-        "name": "Z_factor",
-        "type": "Float",
-        "description": "Vertical exaggeration",
-        "optional": "True",
-        "default": "1"
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius"
       }
     ]
   },

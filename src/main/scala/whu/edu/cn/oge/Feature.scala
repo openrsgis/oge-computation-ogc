@@ -45,7 +45,7 @@ object Feature {
     val t1 = System.currentTimeMillis()
     val queryRes = query(productName)
     val t2 = System.currentTimeMillis()
-    println("从pgsql查询元数据的时间：" + (t2 - t1) / 1000)
+    println("从pgsql查询元数据的时间：" + (t2 - t1))
     val metaData = queryRes._3
     val hbaseTableName = queryRes._2
     val productKey = queryRes._1
