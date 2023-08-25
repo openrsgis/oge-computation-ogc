@@ -25,22 +25,24 @@ object HbaseUtil {
   configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
 
   //set RPC timeout
-  configuration.set("hbase.rpc.timeout", "200000")
+  configuration.set("hbase.rpc.timeout", "1000")
 
   //set scanner cache
   configuration.set("hbase.client.scanner.caching", "200000")
 
   //set scanner timeout
-  configuration.set("hbase.client.scanner.timeout.period", "200000")
+  configuration.set("hbase.client.scanner.timeout.period", "1000")
 
   //set mapreduce task timeout
-  configuration.setInt("mapreduce.task.timeout", 60000)
+  configuration.setInt("mapreduce.task.timeout", 1000)
 
   //set maximum allowed size of a KeyValue instance, default 10485760
   configuration.set("hbase.client.keyvalue.maxsize", "104857600")
 
   //set maximum allowed size of an individual cell, inclusive of value and all key components, default 10485760
   configuration.set("hbase.server.keyvalue.maxsize", "104857600")
+
+  configuration.set("hbase.client.retries.number", "3")
 
   //establish connection and adimin
   val connection = ConnectionFactory.createConnection(configuration)

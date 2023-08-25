@@ -74,7 +74,7 @@ object Feature {
       t
     })
     val t4 = System.currentTimeMillis()
-    println("从hbase加载数据的时间：" + (t4 - t3) / 1000)
+    println("从hbase加载数据的时间：" + (t4 - t3))
     geometryRdd
   }
 
@@ -1014,7 +1014,8 @@ object Feature {
   def visualize(feature: RDD[(String, (Geometry, Map[String, Any]))]):Unit={
     val geoJson = new JSONObject
     val geoJSONString = toGeoJSONString(feature)
-    geoJson.put(Trigger.layerName,geoJSONString)
+//    println(geoJSONString)
+    geoJson.put(Trigger.layerName,geoJSONString.toString())
 
     val jsonObject = new JSONObject
     jsonObject.put("vector",geoJson)
@@ -1022,6 +1023,7 @@ object Feature {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+//    println( outJsonObject.toJSONString)
   }
 
 
