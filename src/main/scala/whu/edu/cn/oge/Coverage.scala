@@ -42,30 +42,32 @@ import scala.language.postfixOps
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
 
-  def load(implicit sc: SparkContext, coverageId: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def load(implicit sc: SparkContext, coverageId: String,productKey:Int, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val time1 = System.currentTimeMillis()
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
-    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId)
+    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId,productKey)
     val queryGeometry: Geometry = metaList.head.getGeom
 
     // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
-      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
-      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
-      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
-      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
-      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+//    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
+//      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+//      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+//      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+//      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+//      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+//
+//      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+//      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+//      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+//      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
+//      geometry
+//    }).reduce((a, b) => {
+//      a.union(b)
+//    })
+    val union: Geometry = metaList.head.getGeom
 
-      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
-      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
-      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
-      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
-      geometry
-    }).reduce((a, b) => {
-      a.union(b)
-    })
-
-    val union: Geometry = unionTileExtent.intersection(queryGeometry)
+//    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
@@ -103,7 +105,11 @@ object Coverage {
       println("Get Tile Time is " + (time2 - time1))
       tile
     })
-    makeCoverageRDD(rawTileRdd)
+    println("Loading data Time: "+(System.currentTimeMillis() - time1))
+    val time2 = System.currentTimeMillis()
+    val coverage = makeCoverageRDD(rawTileRdd)
+    println("Make RDD Time: "+(System.currentTimeMillis() - time2))
+    coverage
   }
 
   /**

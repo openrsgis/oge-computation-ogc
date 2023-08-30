@@ -23,12 +23,18 @@ object Service {
   }
 
   // TODO lrx: 这里也搞一个惰性函数
-  def getCoverage(implicit sc: SparkContext, coverageId: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    Coverage.load(sc, coverageId, level)
+  def getCoverage(implicit sc: SparkContext, coverageId: String,productKey: String="3", level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var pKey = 3
+    if(productKey != null)
+      pKey = productKey.toInt
+    val time1: Long = System.currentTimeMillis()
+    val coverage = Coverage.load(sc, coverageId, pKey,level)
+    println("Loading data Time: "+ (System.currentTimeMillis()-time1))
+    coverage
   }
 
-  def getFeature(implicit sc: SparkContext, featureId: String,dateTime:String,crs:String)={
-    Feature.load(sc,featureId)
+  def getFeature(implicit sc: SparkContext, featureId: String,dataTime:String= null,crs:String="EPSG:4326")={
+    Feature.load(sc,featureId,dataTime = dataTime,crs)
   }
 
 }

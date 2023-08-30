@@ -12,7 +12,7 @@ class MinIOUtil {
       .endpoint(MINIO_ENDPOINT)
       .credentials(MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
       .build()
-    minioClient.setTimeout(10000, 10000, 10000)
+    minioClient.setTimeout(10*60*1000, 10*60*1000,10*60*1000)
     minioClient
   }
 

@@ -118,13 +118,13 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
+          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), isOptionalArg(args,"productID"), level = level))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeature" =>
-          featureRddList += (UUID -> Service.getFeature(sc,args("featureId"),isOptionalArg(args,"dateTime"),isOptionalArg(args,"crs")))
+          featureRddList += (UUID -> Service.getFeature(sc,args("featureId"),isOptionalArg(args,"dataTime"),isOptionalArg(args,"crs")))
 
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -1022,6 +1022,7 @@ object Trigger {
       case e: Throwable =>
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
+        errorJson.put("InputJSON",workTaskJson)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
@@ -1116,7 +1117,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/vector.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/vector1.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

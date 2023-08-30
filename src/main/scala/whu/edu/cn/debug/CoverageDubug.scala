@@ -82,36 +82,36 @@ object CoverageDubug {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
 
-    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", 6)
-    var coverage1Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage1, List("B1", "B2", "B3"))
-    coverage1Select=Coverage.toDouble(coverage1Select)
-
-    coverage1Select= Coverage.removeZeroFromCoverage(coverage1Select)
-
-    makeTIFF(coverage1Select, "c1")
-    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LC08_L1TP_124039_20180109_20180119_01_T1", 5)
+//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", 1)
+//    var coverage1Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage1, List("B1", "B2", "B3"))
+//    coverage1Select=Coverage.toDouble(coverage1Select)
+//
+//    coverage1Select= Coverage.removeZeroFromCoverage(coverage1Select)
+//
+//    makeTIFF(coverage1Select, "c1")
+    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LC08_L1TP_124039_20180109_20180119_01_T1", 3)
     var coverage2Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage2, List("B1", "B2", "B3"))
 
     coverage2Select = Coverage.multiplyNum(coverage2Select,1000)
-    coverage2Select=Coverage.toInt32(coverage2Select)
+//    coverage2Select=Coverage.toInt32(coverage2Select)
     coverage2Select = Coverage.removeZeroFromCoverage(coverage2Select)
     makeTIFF(coverage2Select, "c2")
-
-
-    val coverage3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.add(coverage1Select, coverage2Select)
-    makeTIFF(coverage3, "c3")
-
-//    val coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map()
-//    val a: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = coverageCollection + ("LE07_L1TP_125039_20130110_20161126_01_T1" -> coverage1Select)
-//    val b: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = a + ("LC08_L1TP_124039_20180109_20180119_01_T1" -> coverage2Select)
-    val coverageMosaic: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.cat(coverage1Select,coverage2Select)
-//    coverageMosaic = Coverage.removeZeroFromCoverage(coverageMosaic)
-    makeTIFF(coverageMosaic, "cMosaic")
+//
+//
+//    val coverage3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.add(coverage1Select, coverage2Select)
+//    makeTIFF(coverage3, "c3")
+//
+////    val coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map()
+////    val a: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = coverageCollection + ("LE07_L1TP_125039_20130110_20161126_01_T1" -> coverage1Select)
+////    val b: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = a + ("LC08_L1TP_124039_20180109_20180119_01_T1" -> coverage2Select)
+//    val coverageMosaic: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.cat(coverage1Select,coverage2Select)
+////    coverageMosaic = Coverage.removeZeroFromCoverage(coverageMosaic)
+//    makeTIFF(coverageMosaic, "cMosaic")
   }
 
-  def loadCoverage(implicit sc: SparkContext, coverageId: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-
-    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId)
+  def loadCoverage(implicit sc: SparkContext, coverageId: String,productKey:Int, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val time1 = System.currentTimeMillis()
+    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId,productKey)
     val queryGeometry: Geometry = metaList.head.getGeom
 
     //    val queryGeometry: Geometry = geotrellis.vector.io.readWktOrWkb("POLYGON((110.45709 30.26141,110.59998 30.26678,110.58066 29.94492,110.4869 29.93994,110.45709 30.26141))")
@@ -147,7 +147,11 @@ object CoverageDubug {
       println("Get Tile Time is " + (time2 - time1))
       tile
     })
-    makeCoverageRDD(rawTileRdd)
+    println("Loading time: "+(System.currentTimeMillis()-time1))
+    val time2 = System.currentTimeMillis()
+    val coverage = makeCoverageRDD(rawTileRdd)
+    println("Making RDD time: "+(System.currentTimeMillis()-time2))
+    coverage
   }
 
   def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), name: String): Unit = {

@@ -258,6 +258,31 @@
         "name": "featureId",
         "type": "String",
         "description": "The id of target feature."
+      },
+      {
+        "name": "dataTime",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of feature.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Coverage.export":{
+    "description": "",
+    "returns": "",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": ""
       }
     ]
   },
@@ -986,6 +1011,22 @@
   },
   "Coverage.divide": {
     "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.multiply": {
+    "description": "Multiplies the first value by the second. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
     "returns": "Coverage",
     "args": [
       {

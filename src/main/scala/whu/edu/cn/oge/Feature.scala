@@ -42,6 +42,9 @@ import scala.math.{max, min}
 
 object Feature {
   def load(implicit sc: SparkContext, productName: String = null, dataTime: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    var crs1 = crs
+    if(crs == null)
+      crs1 = "EPSG:4326"
     val t1 = System.currentTimeMillis()
     val queryRes = query(productName)
     val t2 = System.currentTimeMillis()
@@ -70,7 +73,7 @@ object Feature {
     }
     val t3 = System.currentTimeMillis()
     val geometryRdd = getVectorWithPrefixFilter(sc, hbaseTableName, prefix).map(t => {
-      t._2._1.setSRID(crs.split(":")(1).toInt)
+      t._2._1.setSRID(crs1.split(":")(1).toInt)
       t
     })
     val t4 = System.currentTimeMillis()
@@ -142,9 +145,10 @@ object Feature {
   def getVectorWithPrefixFilter(implicit sc: SparkContext, hbaseTableName: String, prefix: String): RDD[(String, (Geometry, Map[String, Any]))] = {
     val t1 = System.currentTimeMillis()
     val queryData = getVectorWithPrefix(hbaseTableName, prefix)
+    println(queryData.length)
     val t2 = System.currentTimeMillis()
     println("取数据执行了！")
-    println("getVectorWithPrefix时间：" + (t2 - t1) / 1000)
+    println("getVectorWithPrefix时间：" + (t2 - t1) )
     val rawRDD = sc.parallelize(queryData)
     rawRDD.map(t => {
       val rowkey = t._1
@@ -174,8 +178,14 @@ object Feature {
     list = list :+ geom
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+      (UUID.randomUUID().toString, (t, getMapFromStr(properties)))
     })
+  }
+
+  private def getMapFromStr(str:String) : Map[String, Any] ={
+    val map = Map.empty[String , Any]
+    map += (str.split(':')(0) -> str.split(':')(1))
+    map
   }
 
   /**
@@ -193,7 +203,7 @@ object Feature {
     list = list :+ geom
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+      (UUID.randomUUID().toString, (t, getMapFromStr(properties)))
     })
   }
 
@@ -231,7 +241,7 @@ object Feature {
     list = list :+ geom
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+      (UUID.randomUUID().toString, (t, getMapFromStr(properties)))
     })
   }
 
@@ -1023,6 +1033,7 @@ object Feature {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    println(outJsonObject.toJSONString)
 //    println( outJsonObject.toJSONString)
   }
 
