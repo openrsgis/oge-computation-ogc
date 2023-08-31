@@ -71,9 +71,10 @@ object Coverage {
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
+
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val minIOUtil = new MinIOUtil()
+        val minIOUtil = MinIOUtil
         val client: MinioClient = minIOUtil.getMinioClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
@@ -95,16 +96,20 @@ object Coverage {
 
     val tileNum: Int = tileRDDFlat.count().toInt
     println("tileNum = " + tileNum)
-    tileRDDFlat.unpersist()
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
+    tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.map(t => {
+      val minIOUtil = MinIOUtil
       val time1: Long = System.currentTimeMillis()
-      val client: MinioClient = new MinIOUtil().getMinioClient
+      val client: MinioClient = minIOUtil.getMinioClient
+      if(client == null) println("client is null")
       val tile: RawTile = getTileBuf(client, t)
+      minIOUtil.releaseMinioClient(client)
       val time2: Long = System.currentTimeMillis()
-      println("Get Tile Time is " + (time2 - time1))
+      println("Get Tile Time3 is " + (time2 - time1))
       tile
     })
+    println(rawTileRdd.count())
     println("Loading data Time: "+(System.currentTimeMillis() - time1))
     val time2 = System.currentTimeMillis()
     val coverage = makeCoverageRDD(rawTileRdd)
@@ -3332,7 +3337,7 @@ object Coverage {
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
 
-    val minIOUtil = new MinIOUtil
+    val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
 
     client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).contentType("image/tiff").build)

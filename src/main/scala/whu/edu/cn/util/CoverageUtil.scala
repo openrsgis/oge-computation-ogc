@@ -20,13 +20,12 @@ import scala.math.{max, min}
 object CoverageUtil {
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
   def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val coverageRawTiles: RDD[RawTile] = tileRDDReP
-    val extents: (Double, Double, Double, Double) = coverageRawTiles.map(t => {
+    val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
       (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
-    val colRowInstant: (Int, Int, Long, Int, Int, Long) = coverageRawTiles.map(t => {
+    val colRowInstant: (Int, Int, Long, Int, Int, Long) = tileRDDReP.map(t => {
       (t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)), t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
@@ -36,7 +35,7 @@ object CoverageUtil {
     //    }
 
 
-    val firstTile: RawTile = coverageRawTiles.first()
+    val firstTile: RawTile = tileRDDReP.first()
     val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0  ).toInt, 1)
     val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0  ).toInt, 1)
 
@@ -49,7 +48,7 @@ object CoverageUtil {
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
-    val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = coverageRawTiles.map(tile => {
+    val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = tileRDDReP.map(tile => {
       val phenomenonTime: Long = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
       val rowNum: Int = tile.getSpatialKey.row
       val colNum: Int = tile.getSpatialKey.col

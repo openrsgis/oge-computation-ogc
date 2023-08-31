@@ -1117,7 +1117,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/vector1.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/vector.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

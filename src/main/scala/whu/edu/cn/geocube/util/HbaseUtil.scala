@@ -355,17 +355,17 @@ object HbaseUtil {
       var meta=""
       var userData=""
       for(cell <- cells){
-        val family = CellUtil.cloneFamily(cell)
-        val qualifier = CellUtil.cloneQualifier(cell)
-        val value = CellUtil.cloneValue(cell)
-        if("geom".equals(Bytes.toString(qualifier))){
-          geom=Bytes.toString(value)
+        val family = Bytes.toString(CellUtil.cloneFamily(cell))
+        val qualifier = Bytes.toString(CellUtil.cloneQualifier(cell))
+        val value = Bytes.toString(CellUtil.cloneValue(cell))
+        if("geom".equals(qualifier)){
+          geom=(value)
         }
-        else if("metaData".equals(Bytes.toString(qualifier))){
-          meta=Bytes.toString(value)
+        else if("metaData".equals(qualifier)){
+          meta=(value)
         }
-        else if("customExtension".equals(Bytes.toString(family))){
-          userData=Bytes.toString(value)
+        else if("customExtension".equals(family)){
+          userData=(value)
         }
       }
       val kv=(Bytes.toString(rowkey),(geom,meta,userData))
