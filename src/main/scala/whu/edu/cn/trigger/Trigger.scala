@@ -93,7 +93,7 @@ object Trigger {
     try {
 
       val tempNoticeJson = new JSONObject
-
+      println("args:",args)
       funcName match {
 
         //Others
@@ -118,11 +118,13 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
+          coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeature" =>
+          featureRddList += (UUID -> Service.getFeature(sc,args("featureId"),isOptionalArg(args,"dataTime"),isOptionalArg(args,"crs")))
 
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -817,6 +819,8 @@ object Trigger {
         case "Feature.setGeometry" =>
           featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.addStyles" =>
+          Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]])
         //      case "Feature.inverseDistanceWeighted" =>
         //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
@@ -1018,19 +1022,34 @@ object Trigger {
       case e: Throwable =>
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
+        errorJson.put("InputJSON",workTaskJson)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
         outJsonObject.put("workID", Trigger.dagId)
         outJsonObject.put("json", errorJson)
-
+//
         println("Error json = " + outJsonObject)
         sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
-
-        // 打印至后端控制台
+        println("Send to boot!")
+//         打印至后端控制台
         e.printStackTrace()
+        println("lambda Error!")
     } finally {
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      //    // TODO lrx: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
@@ -1090,14 +1109,14 @@ object Trigger {
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
 
-        //        // 回调服务，通过 boot 告知前端：
-        //        val outJsonObject: JSONObject = new JSONObject
-        //        outJsonObject.put("workID", Trigger.dagId)
-        //        outJsonObject.put("json", errorJson)
-        //
-        //        println("Error json = " + outJsonObject)
-        //        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
-        //          outJsonObject.toJSONString)
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("workID", Trigger.dagId)
+        outJsonObject.put("json", errorJson)
+
+        println("Error json = " + outJsonObject)
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
 
         // 打印至后端控制台
         e.printStackTrace()
@@ -1111,7 +1130,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/NDVI.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

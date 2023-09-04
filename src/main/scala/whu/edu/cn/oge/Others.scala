@@ -12,7 +12,7 @@ package object Others {
     noticeJson.put("workID", Trigger.dagId)
     noticeJson.put("notice", notice.toJSONString)
 
-    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverNotice", noticeJson.toJSONString)
+    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", noticeJson.toJSONString)
   }
   def printNotice(name:String, res: String):Unit={
     val noticeJson = new JSONObject

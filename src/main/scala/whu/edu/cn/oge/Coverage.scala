@@ -32,7 +32,7 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, File, PrintWriter}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
 import scala.collection.mutable
@@ -42,36 +42,39 @@ import scala.language.postfixOps
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
 
-  def load(implicit sc: SparkContext, coverageId: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def load(implicit sc: SparkContext, coverageId: String,productKey:String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val time1 = System.currentTimeMillis()
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
-    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId)
+    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId,productKey)
     val queryGeometry: Geometry = metaList.head.getGeom
 
     // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
-      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
-      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
-      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
-      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
-      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+//    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
+//      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+//      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+//      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+//      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+//      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+//
+//      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+//      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+//      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+//      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
+//      geometry
+//    }).reduce((a, b) => {
+//      a.union(b)
+//    })
+    val union: Geometry = metaList.head.getGeom
 
-      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
-      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
-      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
-      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
-      geometry
-    }).reduce((a, b) => {
-      a.union(b)
-    })
-
-    val union: Geometry = unionTileExtent.intersection(queryGeometry)
+//    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
 
+
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val minIOUtil = new MinIOUtil()
+        val minIOUtil = MinIOUtil
         val client: MinioClient = minIOUtil.getMinioClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
@@ -93,17 +96,25 @@ object Coverage {
 
     val tileNum: Int = tileRDDFlat.count().toInt
     println("tileNum = " + tileNum)
-    tileRDDFlat.unpersist()
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
+    tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.map(t => {
+      val minIOUtil = MinIOUtil
       val time1: Long = System.currentTimeMillis()
-      val client: MinioClient = new MinIOUtil().getMinioClient
+      val client: MinioClient = minIOUtil.getMinioClient
+      val name = t.spatialKey.col.toString+t.spatialKey.row.toString+".txt"
+
       val tile: RawTile = getTileBuf(client, t)
+//      minIOUtil.releaseMinioClient(client)
       val time2: Long = System.currentTimeMillis()
-      println("Get Tile Time is " + (time2 - time1))
+
       tile
     })
-    makeCoverageRDD(rawTileRdd)
+    println("Loading data Time: "+(System.currentTimeMillis() - time1))
+    val time2 = System.currentTimeMillis()
+    val coverage = makeCoverageRDD(rawTileRdd)
+    println("Make RDD Time: "+(System.currentTimeMillis() - time2))
+    coverage
   }
 
   /**
@@ -725,25 +736,15 @@ object Coverage {
   //这里与GEE逻辑存在出入，GEE会在overwrite==false时将重名的band加上后缀，而不是直接忽略
   def addBands(dstCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                srcCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-               names: List[String] = List(""), overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)],
+               names: List[String] = List.empty, overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val selectedBands = selectBands(srcCoverage, names)
-    if (selectedBands.isEmpty()) {
-      return dstCoverage
+    var selectedBands = dstCoverage
+    if(names.nonEmpty) {
+      selectedBands = selectBands(dstCoverage,names)
     }
 
     if (!overwrite) {
-      var tiles: Vector[Tile] = dstCoverage._1.first()._2.bands
-      var newBandNames = dstCoverage._1.first()._1.measurementName
-      for (i <- selectedBands._1.first()._1.measurementName.indices) {
-        if (!newBandNames.contains(selectedBands._1.first()._1.measurementName(i))) {
-          tiles = tiles :+ selectedBands._1.first()._2.bands(i)
-          newBandNames = newBandNames :+ selectedBands._1.first()._1.measurementName(i)
-        }
-      }
-      (dstCoverage._1.map(t => {
-        (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(tiles))
-      }), dstCoverage._2)
+      (dstCoverage._1.union(srcCoverage._1),dstCoverage._2)
     } else {
       var tiles: Vector[Tile] = selectedBands._1.first()._2.bands
       var newBandNames = selectedBands._1.first()._1.measurementName
@@ -2335,6 +2336,29 @@ object Coverage {
 
   }
 
+  def intoOne(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),bands: List[String]):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    val coverageSelected = selectBands(coverage,bands)
+    val coverage1 = (coverageSelected._1.map(t => {
+      var bandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      bandNames :+= t._1.measurementName(0)
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      newTileBands :+= Mean(t._2.bands)
+      (SpaceTimeBandKey(t._1.spaceTimeKey,bandNames),MultibandTile(newTileBands))
+    }),coverageSelected._2)
+    coverage1
+  }
+
+  def intoOne(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coverage1 = (coverage._1.map(t => {
+      var bandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      bandNames :+= t._1.measurementName(0)
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      newTileBands :+= Mean(t._2.bands)
+      (SpaceTimeBandKey(t._1.spaceTimeKey, bandNames), MultibandTile(newTileBands))
+    }), coverage._2)
+    coverage1
+  }
+
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
     var coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
@@ -3257,7 +3281,7 @@ object Coverage {
     outJsonObject.put("json", jsonObject)
 
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-
+    println("outputJSON: ",outJsonObject.toJSONString)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
     val jedis: Jedis = new JedisUtil().getJedis
     jedis.select(1)
@@ -3277,7 +3301,7 @@ object Coverage {
     Trigger.coverageRddList.clear()
     Trigger.zIndexStrArray.clear()
     JsonToArg.dagMap.clear()
-    // TODO lrx: 以下为未检验
+//    // TODO lrx: 以下为未检验
     Trigger.tableRddList.clear()
     Trigger.kernelRddList.clear()
     Trigger.featureRddList.clear()
@@ -3303,10 +3327,10 @@ object Coverage {
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
 
-    val minIOUtil = new MinIOUtil
+    val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
 
-    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user-test/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).contentType("image/tiff").build)
+    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).contentType("image/tiff").build)
 
     minIOUtil.releaseMinioClient(client)
 

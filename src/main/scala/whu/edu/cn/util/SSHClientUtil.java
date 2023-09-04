@@ -57,5 +57,6 @@ public class SSHClientUtil {
         }
         reader.close();
         channelExec.disconnect();
+        session.disconnect();
     }
 }

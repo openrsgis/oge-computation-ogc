@@ -25,22 +25,28 @@ object HbaseUtil {
   configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
 
   //set RPC timeout
-  configuration.set("hbase.rpc.timeout", "200000")
+  configuration.set("hbase.rpc.timeout", "100000")
 
   //set scanner cache
-  configuration.set("hbase.client.scanner.caching", "200000")
+  configuration.set("hbase.client.scanner.caching", "2000000")
 
   //set scanner timeout
-  configuration.set("hbase.client.scanner.timeout.period", "200000")
+  configuration.set("hbase.client.scanner.timeout.period", "100000")
 
   //set mapreduce task timeout
-  configuration.setInt("mapreduce.task.timeout", 60000)
+  configuration.setInt("mapreduce.task.timeout", 10000)
+
+//  configuration.setInt("hbase.client.retries.number",3)
 
   //set maximum allowed size of a KeyValue instance, default 10485760
   configuration.set("hbase.client.keyvalue.maxsize", "104857600")
 
   //set maximum allowed size of an individual cell, inclusive of value and all key components, default 10485760
   configuration.set("hbase.server.keyvalue.maxsize", "104857600")
+
+  configuration.set("hbase.client.retries.number", "3")
+
+  configuration.setInt("hbase.client.operation.timeout",200000)
 
   //establish connection and adimin
   val connection = ConnectionFactory.createConnection(configuration)
@@ -349,17 +355,17 @@ object HbaseUtil {
       var meta=""
       var userData=""
       for(cell <- cells){
-        val family = CellUtil.cloneFamily(cell)
-        val qualifier = CellUtil.cloneQualifier(cell)
-        val value = CellUtil.cloneValue(cell)
-        if("geom".equals(Bytes.toString(qualifier))){
-          geom=Bytes.toString(value)
+        val family = Bytes.toString(CellUtil.cloneFamily(cell))
+        val qualifier = Bytes.toString(CellUtil.cloneQualifier(cell))
+        val value = Bytes.toString(CellUtil.cloneValue(cell))
+        if("geom".equals(qualifier)){
+          geom=(value)
         }
-        else if("metaData".equals(Bytes.toString(qualifier))){
-          meta=Bytes.toString(value)
+        else if("metaData".equals(qualifier)){
+          meta=(value)
         }
-        else if("customExtension".equals(Bytes.toString(family))){
-          userData=Bytes.toString(value)
+        else if("customExtension".equals(family)){
+          userData=(value)
         }
       }
       val kv=(Bytes.toString(rowkey),(geom,meta,userData))
