@@ -13,7 +13,10 @@ object PostgresqlServiceUtil {
   def main(args: Array[String]): Unit = {
 
     val res: ListBuffer[CoverageMetadata] = queryCoverage("ASTGTM_N28E056", "ASTER_GDEM_DEM30")
-    //    res.foreach(println)
+
+    res.foreach(println)
+
+
     //    val md = new CoverageCollectionMetadata
     //    md.setProductName("LC08_L1TP_C01_T1")
     //    md.setSensorName("")
@@ -136,57 +139,55 @@ object PostgresqlServiceUtil {
   def queryCoverage(coverageId: String, productKey: String): ListBuffer[CoverageMetadata] = {
     val metaData = new ListBuffer[CoverageMetadata]
 
-    val resultNames: Array[String] = Array(
-      "oge_image.product_key", "oge_image.image_identification",
-      "oge_image.crs", "oge_image.path", "st_astext(oge_image.geom)"
-    )
-    val aliases: Array[String] = Array(
-      "geom",
-      "oge_image.phenomenon_time",
-      "oge_data_resource_product.name",
-      "oge_data_resource_product.dtype",
-      "oge_product_measurement.band_num",
-      "oge_product_measurement.band_rank",
-      "oge_product_measurement.band_train",
-      " oge_product_measurement.resolution_m"
-    )
-    val tableName: String = "oge_image"
-    val jointLimit: Array[(String, String)] = Array(
-      ("oge_data_resource_product",
-        "oge_image.product_key= oge_data_resource_product.id"),
-      ("oge_product_measurement",
-        "oge_product_measurement.product_key=oge_data_resource_product.id"),
-      ("oge_measurement",
-        "oge_product_measurement.measurement_key=oge_measurement.measurement_key")
-    )
-    val rangeLimit: Array[(String, String, String)] = Array(
-      ("image_identification", "=", coverageId),
-      ("name", "=", productKey)
-    )
-
-
-    val extentResults: ResultSet = PostgresqlUtilDev.simpleSelect(
-      resultNames, tableName, rangeLimit,
-      aliases = aliases,
-      jointLimit = jointLimit
-    )
-
-    // 排除BQA波段
-    while (extentResults.next()) {
-      if (extentResults.getInt("band_train") != 0) {
-        val coverageMetadata = new CoverageMetadata
-        coverageMetadata.setCoverageID(extentResults.getString("image_identification"))
-        coverageMetadata.setMeasurement(extentResults.getString("band_num"))
-        coverageMetadata.setMeasurementRank(extentResults.getInt("band_rank"))
-        coverageMetadata.setPath(extentResults.getString("path") + "/" + coverageMetadata.getCoverageID + "_" + coverageMetadata.getMeasurement + ".tif")
-        coverageMetadata.setGeom(extentResults.getString("geom"))
-        coverageMetadata.setTime(extentResults.getString("phenomenon_time"))
-        coverageMetadata.setCrs(extentResults.getString("crs"))
-        coverageMetadata.setDataType(extentResults.getString("dtype"))
-        coverageMetadata.setResolution(extentResults.getDouble("resolution_m"))
-        metaData.append(coverageMetadata)
+    // 查询数据并处理
+    PostgresqlUtilDev.simpleSelect(
+      resultNames = Array(
+        "oge_image.product_key", "oge_image.image_identification",
+        "oge_image.crs", "oge_image.path", "st_astext(oge_image.geom)"
+      ),
+      tableName = "oge_image",
+      rangeLimit = Array(
+        ("image_identification", "=", coverageId),
+        ("name", "=", productKey)
+      ),
+      aliases = Array(
+        "geom",
+        "oge_image.phenomenon_time",
+        "oge_data_resource_product.name",
+        "oge_data_resource_product.dtype",
+        "oge_product_measurement.band_num",
+        "oge_product_measurement.band_rank",
+        "oge_product_measurement.band_train",
+        " oge_product_measurement.resolution_m"
+      ),
+      jointLimit = Array(
+        ("oge_data_resource_product",
+          "oge_image.product_key= oge_data_resource_product.id"),
+        ("oge_product_measurement",
+          "oge_product_measurement.product_key=oge_data_resource_product.id"),
+        ("oge_measurement",
+          "oge_product_measurement.measurement_key=oge_measurement.measurement_key")
+      ),
+      func = extentResults => {
+        // 排除BQA波段
+        while (extentResults.next()) {
+          if (extentResults.getInt("band_train") != 0) {
+            val coverageMetadata = new CoverageMetadata
+            coverageMetadata.setCoverageID(extentResults.getString("image_identification"))
+            coverageMetadata.setMeasurement(extentResults.getString("band_num"))
+            coverageMetadata.setMeasurementRank(extentResults.getInt("band_rank"))
+            coverageMetadata.setPath(extentResults.getString("path") + "/" + coverageMetadata.getCoverageID + "_" + coverageMetadata.getMeasurement + ".tif")
+            coverageMetadata.setGeom(extentResults.getString("geom"))
+            coverageMetadata.setTime(extentResults.getString("phenomenon_time"))
+            coverageMetadata.setCrs(extentResults.getString("crs"))
+            coverageMetadata.setDataType(extentResults.getString("dtype"))
+            coverageMetadata.setResolution(extentResults.getDouble("resolution_m"))
+            metaData.append(coverageMetadata)
+          }
+        }
       }
-    }
+    )
+
     metaData
   }
 }

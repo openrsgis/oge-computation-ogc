@@ -35,15 +35,19 @@ object Preprocessing {
     var metaData: (String, String) = (null, null)
 
     // forDece: done
-    val extentResults: ResultSet = PostgresqlUtilDev.simpleSelect(
+    PostgresqlUtilDev.simpleSelect(
       resultNames = Array("path", "crs"),
       tableName = "oge_image",
-      rangeLimit = Array(("image_id", "=", imageID)))
-    while (extentResults.next()) {
-      val path: String = extentResults.getString("path")
-      val srcID: String = extentResults.getString("crs")
-      metaData = (path, srcID)
-    }
+      rangeLimit = Array(("image_id", "=", imageID)),
+      func = extentResults => {
+        while (extentResults.next()) {
+          val path: String = extentResults.getString("path")
+          val srcID: String = extentResults.getString("crs")
+          metaData = (path, srcID)
+        }
+      }
+    )
+
     metaData
   }
 

@@ -145,13 +145,18 @@ object GcExtent {
     // 暂时保留原本的逻辑，如需优化请联系本人
     var maxExtentKey = 0
     try {
-      val resultSet: ResultSet = PostgresqlUtilDev.simpleSelect(
+      PostgresqlUtilDev.simpleSelect(
         resultNames = Array("*"),
         tableName = "gc_extent",
         rangeLimit = Array(("grid_code", "=", gridCode), ("resolution_key", "=", resolutionKey)),
-        connection = statement.getConnection
+        connection = statement.getConnection,
+        func = resultSet => {
+          while (resultSet.next) maxExtentKey = resultSet.getInt("extent_key")
+
+          resultSet.close()
+        }
       )
-      while (resultSet.next) maxExtentKey = resultSet.getInt("extent_key")
+
     } catch {
       case e: SQLException =>
         e.printStackTrace()
@@ -185,32 +190,35 @@ object GcExtent {
     val gcExtent = new GcExtent
     try {
       // forDece: done
-      val resultSet: ResultSet = PostgresqlUtilDev.simpleSelect(
+      PostgresqlUtilDev.simpleSelect(
         resultNames = Array("*"), tableName = "gc_extent",
         rangeLimit = Array(("resolution_key", "=", resolutionKey),
           ("grid_code", "=", gridCode)),
-        connection = statement.getConnection
+        connection = statement.getConnection,
+        func = resultSet => {
+          while (resultSet.next) {
+            val extentKey: Int = resultSet.getInt("extent_key")
+            val id: Int = resultSet.getInt("id")
+            val gridCode: String = resultSet.getString("grid_code")
+            val cityCode: String = resultSet.getString("city_code")
+            val cityName: String = resultSet.getString("city_name")
+            val provinceName: String = resultSet.getString("province_name")
+            val districtName: String = resultSet.getString("district_name")
+            val extent: AnyRef = resultSet.getObject("extent")
+            val resolutionKey: Int = resultSet.getInt("resolution_key")
+            gcExtent.setId(id)
+            gcExtent.setExtentKey(extentKey)
+            gcExtent.setGridCode(gridCode)
+            gcExtent.setCityCode(cityCode)
+            gcExtent.setCityName(cityName)
+            gcExtent.setProvinceName(provinceName)
+            gcExtent.setDistrictName(districtName)
+            gcExtent.setExtent(extent)
+            gcExtent.setResolutionKey(resolutionKey)
+          }
+        }
       )
-      while (resultSet.next) {
-        val extentKey: Int = resultSet.getInt("extent_key")
-        val id: Int = resultSet.getInt("id")
-        val gridCode: String = resultSet.getString("grid_code")
-        val cityCode: String = resultSet.getString("city_code")
-        val cityName: String = resultSet.getString("city_name")
-        val provinceName: String = resultSet.getString("province_name")
-        val districtName: String = resultSet.getString("district_name")
-        val extent: AnyRef = resultSet.getObject("extent")
-        val resolutionKey: Int = resultSet.getInt("resolution_key")
-        gcExtent.setId(id)
-        gcExtent.setExtentKey(extentKey)
-        gcExtent.setGridCode(gridCode)
-        gcExtent.setCityCode(cityCode)
-        gcExtent.setCityName(cityName)
-        gcExtent.setProvinceName(provinceName)
-        gcExtent.setDistrictName(districtName)
-        gcExtent.setExtent(extent)
-        gcExtent.setResolutionKey(resolutionKey)
-      }
+
     } catch {
       case e: SQLException =>
         e.printStackTrace()
@@ -318,32 +326,35 @@ object GcExtent {
     val gcExtentHashMap = new util.HashMap[String, String]
     try {
       //forDece: done
-      val resultSet: ResultSet = PostgresqlUtilDev.simpleSelect(resultNames = Array("*"),
+      PostgresqlUtilDev.simpleSelect(resultNames = Array("*"),
         tableName = "gc_extent",
-        rangeLimit = Array(("resolution_key", "=", resolutionKey)))
-      while (resultSet.next) {
-        val gcExtent = new GcExtent
-        val extent_key: Int = resultSet.getInt("extent_key")
-        val id: Int = resultSet.getInt("id")
-        val grid_code: String = resultSet.getString("grid_code")
-        val city_code: String = resultSet.getString("city_code")
-        val city_name: String = resultSet.getString("city_name")
-        val province_name: String = resultSet.getString("province_name")
-        val district_name: String = resultSet.getString("district_name")
-        val extent: AnyRef = resultSet.getObject("extent")
-        val resolution_key: Int = resultSet.getInt("resolution_key")
-        gcExtent.setId(id)
-        gcExtent.setExtentKey(extent_key)
-        gcExtent.setGridCode(grid_code)
-        gcExtent.setCityCode(city_code)
-        gcExtent.setCityName(city_name)
-        gcExtent.setProvinceName(province_name)
-        gcExtent.setDistrictName(district_name)
-        gcExtent.setExtent(extent)
-        gcExtent.setResolutionKey(resolution_key)
-        val gcExtentStr: String = gcExtent.transToString
-        gcExtentHashMap.put(grid_code, gcExtentStr)
-      }
+        rangeLimit = Array(("resolution_key", "=", resolutionKey)),
+        func = resultSet => {
+          while (resultSet.next) {
+            val gcExtent = new GcExtent
+            val extent_key: Int = resultSet.getInt("extent_key")
+            val id: Int = resultSet.getInt("id")
+            val grid_code: String = resultSet.getString("grid_code")
+            val city_code: String = resultSet.getString("city_code")
+            val city_name: String = resultSet.getString("city_name")
+            val province_name: String = resultSet.getString("province_name")
+            val district_name: String = resultSet.getString("district_name")
+            val extent: AnyRef = resultSet.getObject("extent")
+            val resolution_key: Int = resultSet.getInt("resolution_key")
+            gcExtent.setId(id)
+            gcExtent.setExtentKey(extent_key)
+            gcExtent.setGridCode(grid_code)
+            gcExtent.setCityCode(city_code)
+            gcExtent.setCityName(city_name)
+            gcExtent.setProvinceName(province_name)
+            gcExtent.setDistrictName(district_name)
+            gcExtent.setExtent(extent)
+            gcExtent.setResolutionKey(resolution_key)
+            val gcExtentStr: String = gcExtent.transToString
+            gcExtentHashMap.put(grid_code, gcExtentStr)
+          }
+        })
+
     } catch {
       case e: SQLException =>
         e.printStackTrace()

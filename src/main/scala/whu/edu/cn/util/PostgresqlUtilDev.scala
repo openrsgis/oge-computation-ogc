@@ -13,8 +13,9 @@ object PostgresqlUtilDev {
 
 
   /**
-   * 简单的数据库查询语句
+   * 简单的数据库查询语句，自动释放所有连接资源，无需手动 close
    *
+   * @param func        处理结果集的函数，保证连接资源及时释放
    * @param resultNames 结果集字段名
    * @param tableName   表名
    * @param rangeLimit  为空则不做范围过滤
@@ -24,13 +25,15 @@ object PostgresqlUtilDev {
    * @return java.sql.ResultSet
    * @author forDecember
    */
-  def simpleSelect(resultNames: Array[String],
+  def simpleSelect(func: ResultSet => Unit,
+                   resultNames: Array[String],
                    tableName: String,
                    rangeLimit: Array[(String, String, String)] = null,
                    connection: Connection = null,
                    aliases: Array[String] = null,
                    jointLimit: Array[(String, String)] = null)
-  : ResultSet = {
+  : Unit = {
+    if (func.toString().isEmpty) return
     assert(resultNames.length > 0)
     assert(resultNames(0).nonEmpty)
     assert(tableName.nonEmpty)
@@ -53,7 +56,11 @@ object PostgresqlUtilDev {
     if (aliases != null) {
       assert(aliases.nonEmpty)
       sql ++= " AS"
-      aliases.foreach(alias => sql ++= " " + alias)
+      aliases.zipWithIndex.foreach {
+        case (alias, i) =>
+          if (i == 0) sql ++= " " + alias
+          else sql ++= ", " + alias
+      }
     }
 
     sql ++= " FROM " + tableName
@@ -67,7 +74,7 @@ object PostgresqlUtilDev {
       }
     }
 
-    sql ++= " WHERE"
+    sql ++= " WHERE "
 
     val limitList = new ArrayBuffer[String]()
     range.zipWithIndex.foreach {
@@ -86,11 +93,15 @@ object PostgresqlUtilDev {
       sql.toString(),
       ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY
     )
+    limitList.foreach(println)
     limitList.zipWithIndex.foreach {
-      case (value, i) => statement.setString(i, value)
+      case (value, i) => statement.setString(i + 1, value)
     }
     try {
-      statement.executeQuery()
+      // 在这里处理结果集，处理结束后关闭资源
+      val resultSet: ResultSet = statement.executeQuery()
+      func(resultSet)
+      resultSet.close()
     } finally {
       statement.close()
       conn.close()
