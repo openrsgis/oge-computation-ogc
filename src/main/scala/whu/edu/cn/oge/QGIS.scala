@@ -95,22 +95,7 @@ object QGIS {
       case e: Exception =>
         e.printStackTrace()
     }
-    var ps:Process=null
-    try{
-      println("开始执行Runtime.getRuntime.exec(cmd)")
-      //      ps = Runtime.getRuntime.exec(startShFile)
-      ps = Runtime.getRuntime.exec(raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_slope.py --input "$outputTiffPath" --z-factor "$zFactor" --output "$writePath"""".stripMargin)
 
-      new DealProcessSream(ps.getInputStream).start()
-      new DealProcessSream(ps.getErrorStream).start()
-      ps.waitFor()
-      println("执行完成Runtime.getRuntime.exec(cmd)")
-    }catch {
-      case ex:Exception => ex.printStackTrace()
-      case ex:InterruptedException=>ex.printStackTrace()
-    }finally {
-      ps.destroy()
-    }
 
     makeRasterRDDFromTif(sc, input, writePath)
 
