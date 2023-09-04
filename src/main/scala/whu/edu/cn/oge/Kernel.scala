@@ -6,6 +6,7 @@ import geotrellis.raster.{DoubleArrayTile, IntArrayTile, isData, isNoData}
 
 object Kernel {
 
+  /** 矩阵数组 行 列 是否归一化 缩放参数 */
   val genKernel: (Array[Double], Int, Int, Boolean, Float) => focal.Kernel =
     (matrix: Array[Double], rows: Int, cols: Int, normalize: Boolean, magnitude: Float) => {
       val sum: Double = matrix.filter(t => t > 0).sum
@@ -62,7 +63,7 @@ object Kernel {
    */
   def prewitt(normalize: Boolean = false,
               magnitude: Float = 1): focal.Kernel = {
-    genKernel(Array[Int](1, 0, -1, 1, 0, -1, 1, 0, -1).map(_.toDouble),3,3,normalize,magnitude)
+    genKernel(Array[Int](1, 0, -1, 1, 0, -1, 1, 0, -1).map(_.toDouble), 3, 3, normalize, magnitude)
   }
 
   /**
@@ -147,7 +148,7 @@ object Kernel {
 
 
   //noinspection DuplicatedCode
-  def compass(normalize: Boolean = false,magnitude: Float = 1)
+  def compass(normalize: Boolean = false, magnitude: Float = 1)
   : focal.Kernel = {
     val matrix: Array[Int] = Array[Int](1, 1, -1, 1, -2, -1, 1, 1, -1)
 
@@ -379,7 +380,7 @@ object Kernel {
 
   }
 
-  def main(args: Array[String]):Unit={
+  def main(args: Array[String]): Unit = {
     val radius = 2
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -389,7 +390,7 @@ object Kernel {
       }
     }
     matrix.foreach(d => {
-      print(d,"")
+      print(d, "")
     })
   }
 
