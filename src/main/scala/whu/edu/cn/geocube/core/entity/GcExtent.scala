@@ -43,10 +43,10 @@ case class GcExtent() {
   var level: String = ""
 
   def this(_id: Int, _extentKey: Int, _gridCode: String,
-           _cityCode: String , _cityName: String,
-           _provinceName: String , _provinceCode: String,
-           _districtName: String, _districtCode: String ,
-           _extent: java.lang.Object, _resolutionKey: Int){
+           _cityCode: String, _cityName: String,
+           _provinceName: String, _provinceCode: String,
+           _districtName: String, _districtCode: String,
+           _extent: java.lang.Object, _resolutionKey: Int) {
     this()
     id = _id
     extentKey = _extentKey
@@ -62,11 +62,11 @@ case class GcExtent() {
   }
 
   def this(_id: Int, _extentKey: Int, _gridCode: String,
-           _cityCode: String , _cityName: String,
-           _provinceName: String , _provinceCode: String,
-           _districtName: String, _districtCode: String ,
+           _cityCode: String, _cityName: String,
+           _provinceName: String, _provinceCode: String,
+           _districtName: String, _districtCode: String,
            _extent: java.lang.Object, _resolutionKey: Int,
-           _tilesize: String, _cellres: String, _level: String){
+           _tilesize: String, _cellres: String, _level: String) {
     this()
     id = _id
     extentKey = _extentKey
@@ -85,9 +85,9 @@ case class GcExtent() {
   }
 
   def this(_extentKey: Int, _gridCode: String,
-           _cityCode: String , _cityName: String,
-           _provinceName: String , _districtName: String,
-           _extent: java.lang.Object){
+           _cityCode: String, _cityName: String,
+           _provinceName: String, _districtName: String,
+           _extent: java.lang.Object) {
     this()
     extentKey = _extentKey
     gridCode = _gridCode
@@ -98,14 +98,14 @@ case class GcExtent() {
     extent = _extent
   }
 
-  def this(_id: Int, _extentKey: Int, _gridCode: String ,
-           _cityCode: String , _cityName: String,
-           _provinceName: String,_districtName: String ,
-           _extent: java.lang.Object, _resolutionKey: Int){
+  def this(_id: Int, _extentKey: Int, _gridCode: String,
+           _cityCode: String, _cityName: String,
+           _provinceName: String, _districtName: String,
+           _extent: java.lang.Object, _resolutionKey: Int) {
     this()
     id = _id
     extentKey = _extentKey
-    gridCode= _gridCode
+    gridCode = _gridCode
     cityCode = _cityCode
     cityName = _cityName
     provinceName = _provinceName
@@ -117,14 +117,13 @@ case class GcExtent() {
   def transToString: String = "{" + "\"id\":" + this.id + "," + "\"extentKey\":" + this.extentKey + "," + "\"gridCode\":\"" + this.gridCode + "\"," + "\"cityCode\":\"" + this.cityCode + "\"," + "\"cityName\":\"" + this.cityName + "\"," + "\"provinceName\":\"" + this.provinceName + "\"," + "\"extent\":" + this.extent + "," + "\"resolutionKey\":" + this.resolutionKey + "}"
 }
 
-object GcExtent{
+object GcExtent {
 
   /**
    * Get extent key in extent dimension table using grid zorder code and key in level table.
    *
-   * @param gridCode grid zorder code
+   * @param gridCode      grid zorder code
    * @param resolutionKey key in level table
-   *
    * @return unique extent key
    */
   def getExtentKey(gridCode: String, resolutionKey: String): Integer = {
@@ -145,10 +144,9 @@ object GcExtent{
   /**
    * Get extent key in extent dimension table using grid zorder code and key in level table.
    *
-   * @param statement postgreSQL statement
-   * @param gridCode grid zorder code
+   * @param statement     postgreSQL statement
+   * @param gridCode      grid zorder code
    * @param resolutionKey key in level table
-   *
    * @return unique extent key
    */
   def getExtentKey(statement: Statement, gridCode: String, resolutionKey: String): Integer = {
@@ -167,9 +165,8 @@ object GcExtent{
   /**
    * Get extent info using grid zorder code and key in level table, and return a GcExtent object.
    *
-   * @param gridCode grid zorder code
+   * @param gridCode      grid zorder code
    * @param resolutionKey key in level table
-   *
    * @return a GcExtent object
    */
   def getExtent(gridCode: String, resolutionKey: String): GcExtent = {
@@ -209,10 +206,9 @@ object GcExtent{
   /**
    * Get extent info using grid zorder code and key in level table, and return a GcExtent object.
    *
-   * @param statement postgresql statement
-   * @param gridCode grid zorder code
+   * @param statement     postgresql statement
+   * @param gridCode      grid zorder code
    * @param resolutionKey key in level table
-   *
    * @return a GcExtent object
    */
   def getExtent(statement: Statement, gridCode: String, resolutionKey: String): GcExtent = {
@@ -284,10 +280,9 @@ object GcExtent{
   /**
    * Get extent info using grid zorder codes and key in level table, and return multiple GcExtent object strings.
    *
-   * @param statement postgresql statement
-   * @param gridCodes grid zorder code
+   * @param statement     postgresql statement
+   * @param gridCodes     grid zorder code
    * @param resolutionKey key in level table
-   *
    * @return multiple GcExtent object strings
    */
   def getExtents(statement: Statement, gridCodes: Array[String], resolutionKey: String): Array[String] = {
@@ -339,7 +334,6 @@ object GcExtent{
    * value is a GcExtent represented by string.
    *
    * @param resolutionKey key in level table
-   *
    * @return a extent-dimensional Map[GridZorderCode, GcExtent String]
    */
   def getAllExtent(resolutionKey: String): util.HashMap[String, String] = {

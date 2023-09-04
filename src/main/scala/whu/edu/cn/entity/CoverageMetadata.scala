@@ -4,12 +4,12 @@ import geotrellis.proj4.CRS
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.entity.OGEDataType.OGEDataType
 
-import java.time.{LocalDate, LocalDateTime}
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
+import java.time.{LocalDate, LocalDateTime}
 import scala.collection.mutable
 import scala.util.control.Breaks
 
-class CoverageMetadata extends Serializable{
+class CoverageMetadata extends Serializable {
   var coverageId: String = _
   var product: String = _
   var path: String = _
@@ -144,4 +144,6 @@ class CoverageMetadata extends Serializable{
   def setResolution(resolution: Double): Unit = {
     this.resolution = resolution
   }
+
+  override def toString = s"CoverageMetadata(coverageId=$coverageId, product=$product, path=$path, geom=$geom, measurement=$measurement, measurementRank=$measurementRank, time=$time, crs=$crs, dataType=$dataType, resolution=$resolution)"
 }

@@ -29,120 +29,76 @@ import scala.collection.mutable.ListBuffer
 
 object Preprocessing {
 
-  def queryOPT(): (String, String) = {
+  /**
+   * 将查询元数据的所有方法封装
+   *
+   * @param imageID 图像id
+   * @return void
+   * @author forDecember
+   */
+  def queryMetaData(imageID: String): (String, String) = {
     var metaData: (String, String) = (null, null)
-    val postgresqlUtil = new PostgresqlUtil("")
-    val conn = postgresqlUtil.getConnection
-    if (conn != null) {
-      try {
-        // Configure to be Read Only
-        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-        // Extent dimension
-        val sql = new StringBuilder
-        sql ++= "select path, crs from oge_image where image_id = 505118"
-        println(sql)
-        val extentResults = statement.executeQuery(sql.toString())
-        while (extentResults.next()) {
-          val path = extentResults.getString("path")
-          val srcID = extentResults.getString("crs")
-          metaData = (path, srcID)
-        }
-      }
-      finally {
-        conn.close
-      }
-    } else throw new RuntimeException("connection failed")
+
+    // forDece: done
+    val extentResults: ResultSet = PostgresqlUtil.simpleSelect(
+      resultNames = Array("path", "crs"),
+      tableName = "oge_image",
+      rangeLimit = Array(("image_id", "=", imageID)))
+    while (extentResults.next()) {
+      val path: String = extentResults.getString("path")
+      val srcID: String = extentResults.getString("crs")
+      metaData = (path, srcID)
+    }
     metaData
   }
+
+  def queryOPT(): (String, String) = {
+    // forDece: done
+    queryMetaData("505118")
+  }
+
 
   def querySAR(): (String, String) = {
-    var metaData: (String, String) = (null, null)
-    val postgresqlUtil = new PostgresqlUtil("")
-    val conn = postgresqlUtil.getConnection
-    if (conn != null) {
-      try {
-        // Configure to be Read Only
-        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-        // Extent dimension
-        val sql = new StringBuilder
-        sql ++= "select path, crs from oge_image where image_id = 505117"
-        println(sql)
-        val extentResults = statement.executeQuery(sql.toString())
-        while (extentResults.next()) {
-          val path = extentResults.getString("path")
-          val srcID = extentResults.getString("crs")
-          metaData = (path, srcID)
-        }
-      }
-      finally {
-        conn.close
-      }
-    } else throw new RuntimeException("connection failed")
-    metaData
+    // forDece: done
+    queryMetaData("505117")
   }
-
 
 
   def queryGF2(): (String, String) = {
-    var metaData: (String, String) = (null, null)
-    val postgresqlUtil = new PostgresqlUtil("")
-    val conn = postgresqlUtil.getConnection
-    if (conn != null) {
-      try {
-        // Configure to be Read Only
-        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-
-        // Extent dimension
-        val sql = new StringBuilder
-        sql ++= "select path, crs from oge_image where image_id = 1"
-
-        println(sql)
-        val extentResults = statement.executeQuery(sql.toString())
-
-
-        while (extentResults.next()) {
-          val path = extentResults.getString("path")
-          val srcID = extentResults.getString("crs")
-          metaData = (path, srcID)
-        }
-      }
-      finally {
-        conn.close
-      }
-    } else throw new RuntimeException("connection failed")
-    metaData
+    // forDece: done
+    queryMetaData("1")
   }
 
-//  def load(implicit sc: SparkContext, path: String, crs: String, geom: String): Long = {
-//    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
-//      t.toDouble
-//    }).to[ListBuffer]
-//    val query_extent = new Array[Double](4)
-//    query_extent(0) = geomReplace(0)
-//    query_extent(1) = geomReplace(1)
-//    query_extent(2) = geomReplace(2)
-//    query_extent(3) = geomReplace(3)
-//    println("crs = " + crs)
-//    val tilesMetaData = Tiffheader_parse_DL.tileQuery(-1, path, null, crs, null, query_extent)
-//    println(tilesMetaData.size())
-//    val tile_srch: ListBuffer[(Array[Float], Int, Int)] = new ListBuffer[(Array[Float], Int, Int)]
-//    val tile_srch_origin: ListBuffer[(Array[Byte], Int, Int)] = new ListBuffer[(Array[Byte], Int, Int)]
-//    for (i <- Range(0, tilesMetaData.size(), 3)) {
-//      val tile1 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i))
-//      val tile2 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 1))
-//      val tile3 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 2))
-//      println("tile1.getTilebuf.length=" + tile1.getTilebuf.length)
-//      println("tile1.getTilebuf.size=" + tile1.getTilebuf.size)
-//      val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
-//      tile_srch += Tuple3(tileResult, tile1.getRow, tile1.getCol)
-//      println("tileResult.size=" + tileResult.size)
-//      tile_srch_origin += Tuple3(tile1.getTilebuf, tile1.getRow, tile1.getCol)
-//      tile_srch_origin += Tuple3(tile2.getTilebuf, tile2.getRow, tile2.getCol)
-//      tile_srch_origin += Tuple3(tile3.getTilebuf, tile3.getRow, tile3.getCol)
-//    }
-//    writePNG(tile_srch)
-//    //    writePNGOrigin(tile_srch_origin)
-//  }
+  //  def load(implicit sc: SparkContext, path: String, crs: String, geom: String): Long = {
+  //    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
+  //      t.toDouble
+  //    }).to[ListBuffer]
+  //    val query_extent = new Array[Double](4)
+  //    query_extent(0) = geomReplace(0)
+  //    query_extent(1) = geomReplace(1)
+  //    query_extent(2) = geomReplace(2)
+  //    query_extent(3) = geomReplace(3)
+  //    println("crs = " + crs)
+  //    val tilesMetaData = Tiffheader_parse_DL.tileQuery(-1, path, null, crs, null, query_extent)
+  //    println(tilesMetaData.size())
+  //    val tile_srch: ListBuffer[(Array[Float], Int, Int)] = new ListBuffer[(Array[Float], Int, Int)]
+  //    val tile_srch_origin: ListBuffer[(Array[Byte], Int, Int)] = new ListBuffer[(Array[Byte], Int, Int)]
+  //    for (i <- Range(0, tilesMetaData.size(), 3)) {
+  //      val tile1 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i))
+  //      val tile2 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 1))
+  //      val tile3 = Tiffheader_parse_DL.getTileBuf(tilesMetaData.get(i + 2))
+  //      println("tile1.getTilebuf.length=" + tile1.getTilebuf.length)
+  //      println("tile1.getTilebuf.size=" + tile1.getTilebuf.size)
+  //      val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
+  //      tile_srch += Tuple3(tileResult, tile1.getRow, tile1.getCol)
+  //      println("tileResult.size=" + tileResult.size)
+  //      tile_srch_origin += Tuple3(tile1.getTilebuf, tile1.getRow, tile1.getCol)
+  //      tile_srch_origin += Tuple3(tile2.getTilebuf, tile2.getRow, tile2.getCol)
+  //      tile_srch_origin += Tuple3(tile3.getTilebuf, tile3.getRow, tile3.getCol)
+  //    }
+  //    writePNG(tile_srch)
+  //    //    writePNGOrigin(tile_srch_origin)
+  //  }
 
   def writePNGOrigin(tile_srch: ListBuffer[(Array[Byte], Int, Int)]): Unit = {
     val cols = (tile_srch.last._3 - tile_srch.head._3 + 1) * 512
@@ -200,35 +156,35 @@ object Preprocessing {
   }
 
 
-//  def loadOnTheFly(implicit sc: SparkContext, level: Int, path: String, crs: String, geom: String, fileName: String): Unit = {
-//    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
-//      t.toDouble
-//    }).to[ListBuffer]
-//    val query_extent = new Array[Double](4)
-//    query_extent(0) = geomReplace(0)
-//    query_extent(1) = geomReplace(1)
-//    query_extent(2) = geomReplace(2)
-//    query_extent(3) = geomReplace(3)
-//    println("crs = " + crs)
-//    val tilesMetaData = Tiffheader_parse_DL.tileQuery(level, path, null, crs, null, query_extent)
-//    println(tilesMetaData.size())
-//    val tilesRdd = sc.makeRDD(asScalaBuffer(tilesMetaData))
-//      .groupBy(t => (t.getRow, t.getCol))
-//    val tile_srch = tilesRdd.map(t => {
-//      val tileArray = t._2.toArray
-//      if (tileArray.length == 3) {
-//        val tile1 = Tiffheader_parse_DL.getTileBuf(tileArray(0))
-//        val tile2 = Tiffheader_parse_DL.getTileBuf(tileArray(1))
-//        val tile3 = Tiffheader_parse_DL.getTileBuf(tileArray(2))
-//        val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
-//        (tileResult, tile1.getRow, tile1.getCol, tile1.getP_bottom_left, tile1.getP_upper_right)
-//      }
-//      else {
-//        null
-//      }
-//    })
-//    writePNGOnTheFly(sc, tile_srch, fileName)
-//  }
+  //  def loadOnTheFly(implicit sc: SparkContext, level: Int, path: String, crs: String, geom: String, fileName: String): Unit = {
+  //    val geomReplace = geom.replace("[", "").replace("]", "").split(",").map(t => {
+  //      t.toDouble
+  //    }).to[ListBuffer]
+  //    val query_extent = new Array[Double](4)
+  //    query_extent(0) = geomReplace(0)
+  //    query_extent(1) = geomReplace(1)
+  //    query_extent(2) = geomReplace(2)
+  //    query_extent(3) = geomReplace(3)
+  //    println("crs = " + crs)
+  //    val tilesMetaData = Tiffheader_parse_DL.tileQuery(level, path, null, crs, null, query_extent)
+  //    println(tilesMetaData.size())
+  //    val tilesRdd = sc.makeRDD(asScalaBuffer(tilesMetaData))
+  //      .groupBy(t => (t.getRow, t.getCol))
+  //    val tile_srch = tilesRdd.map(t => {
+  //      val tileArray = t._2.toArray
+  //      if (tileArray.length == 3) {
+  //        val tile1 = Tiffheader_parse_DL.getTileBuf(tileArray(0))
+  //        val tile2 = Tiffheader_parse_DL.getTileBuf(tileArray(1))
+  //        val tile3 = Tiffheader_parse_DL.getTileBuf(tileArray(2))
+  //        val tileResult = GF2Example.processOneTile(GF2Example.byteToFloat(tile1.getTilebuf, tile2.getTilebuf, tile3.getTilebuf))
+  //        (tileResult, tile1.getRow, tile1.getCol, tile1.getP_bottom_left, tile1.getP_upper_right)
+  //      }
+  //      else {
+  //        null
+  //      }
+  //    })
+  //    writePNGOnTheFly(sc, tile_srch, fileName)
+  //  }
 
   def writePNGOnTheFly(implicit sc: SparkContext, tile_srch: RDD[(Array[Float], Int, Int, Array[Double], Array[Double])], fileName: String): Unit = {
     val time = System.currentTimeMillis()
@@ -274,15 +230,16 @@ object Preprocessing {
     val writer = FileLayerWriter(attributeStore)
     val layerIDAll = appID + "-layer-" + time + "_" + "origin" + "-" + "0" + "-" + "255"
     // Pyramiding up the zoom levels, write our tiles out to the local file system.
-    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      if (z == zoom) {
-        val layerId = LayerId(layerIDAll, z)
-        // If the layer exists already, delete it out before writing
-        if (attributeStore.layerExists(layerId)) {
-          new FileLayerManager(attributeStore).delete(layerId)
+    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) {
+      (rdd, z) =>
+        if (z == zoom) {
+          val layerId = LayerId(layerIDAll, z)
+          // If the layer exists already, delete it out before writing
+          if (attributeStore.layerExists(layerId)) {
+            new FileLayerManager(attributeStore).delete(layerId)
+          }
+          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
         }
-        writer.write(layerId, rdd, ZCurveKeyIndexMethod)
-      }
     }
     val writeFile = new File(fileName)
     val writerOutput = new BufferedWriter(new FileWriter(writeFile))
