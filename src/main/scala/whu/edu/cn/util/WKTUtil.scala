@@ -1,15 +1,13 @@
 package whu.edu.cn.util
 
 import com.alibaba.fastjson.JSON.parseObject
-import com.alibaba.fastjson.JSONObject
-import geotrellis.vector.GeometryCollection
+import com.alibaba.fastjson.{JSONArray, JSONObject}
 import org.geotools.geojson.GeoJSONUtil
 import org.geotools.geojson.geom.GeometryJSON
-import org.locationtech.jts.geom._
+import org.locationtech.jts.geom.{Geometry, GeometryCollection, GeometryFactory}
 import org.locationtech.jts.io.{ParseException, WKTReader, WKTWriter}
 
-import java.io._
-
+import java.io.{IOException, Reader, StringWriter}
 
 /**
  * wktutil
@@ -38,9 +36,9 @@ object WKTUtil {
   def main(args: Array[String]): Unit = {
     val wkt = "GEOMETRYCOLLECTION(POINT(4 6),LINESTRING(4 6,7 10))"
     val wkt0 = "POLYGON((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2))"
-    val jsonObject = wktToJson(wkt)
+    val jsonObject: JSONObject = wktToJson(wkt)
     println(jsonObject)
-    val s = jsonToWkt(jsonObject)
+    val s: String = jsonToWkt(jsonObject)
     println("s = " + s)
   }
 
@@ -51,10 +49,10 @@ object WKTUtil {
    * @return
    */
   def wktToJson(wkt: String): JSONObject = {
-    var json:String = null
+    var json: String = null
     var jsonObject = new JSONObject
     try {
-      val geometry = reader.read(wkt)
+      val geometry: Geometry = reader.read(wkt)
       val writer = new StringWriter
       val geometryJSON = new GeometryJSON
       geometryJSON.write(geometry, writer)
@@ -75,28 +73,28 @@ object WKTUtil {
    * @return
    */
   def jsonToWkt(jsonObject: JSONObject): String = {
-    var wkt:String = null
-    val `type` = jsonObject.getString("type")
+    var wkt: String = null
+    val `type`: String = jsonObject.getString("type")
     val gJson = new GeometryJSON
     try // {"geometries":[{"coordinates":[4,6],"type":"Point"},{"coordinates":[[4,6],[7,10]],"type":"LineString"}],"type":"GeometryCollection"}
       if (GEO_JSON_TYPE == `type`) { // 由于解析上面的json语句会出现这个geometries属性没有采用以下办法
-        val geometriesArray = jsonObject.getJSONArray("geometries")
+        val geometriesArray: JSONArray = jsonObject.getJSONArray("geometries")
         // 定义一个数组装图形对象
-        val size = geometriesArray.size
+        val size: Int = geometriesArray.size
         val geometries = new Array[Geometry](size)
         for (i <- 0 until size) {
-          val str = geometriesArray.get(i).toString
+          val str: String = geometriesArray.get(i).toString
           // 使用GeoUtil去读取str
-          val reader = GeoJSONUtil.toReader(str)
-          val geometry = gJson.read(reader)
+          val reader: Reader = GeoJSONUtil.toReader(str)
+          val geometry: Geometry = gJson.read(reader)
           geometries(i) = geometry
         }
         val geometryCollection = new GeometryCollection(geometries, new GeometryFactory())
         wkt = geometryCollection.toText
       }
       else {
-        val reader = GeoJSONUtil.toReader(jsonObject.toString)
-        val read = gJson.read(reader)
+        val reader: Reader = GeoJSONUtil.toReader(jsonObject.toString)
+        val read: Geometry = gJson.read(reader)
         wkt = read.toText
       }
     catch {
@@ -108,4 +106,3 @@ object WKTUtil {
   }
 
 }
-

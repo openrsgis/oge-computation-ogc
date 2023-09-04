@@ -1,0 +1,98 @@
+{
+  "layerName": "ndwi",
+  "isBatch": "0",
+  "map": {
+    "level": 7,
+    "spatialRange": [
+      111.51476648622568,
+      30.424498262780092,
+      111.6256782367174,
+      30.53493723104236
+    ]
+  },
+  "1": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.normalizedDifference",
+      "arguments": {
+        "bandNames": {
+          "constantValue": [
+            "B4",
+            "B5"
+          ]
+        },
+        "coverage": {
+          "argumentReference": "_MAPPING_VAR_0_0"
+        }
+      }
+    }
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.addStyles",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "CoverageCollection.sum",
+            "arguments": {
+              "coverageCollection": {
+                "functionInvocationValue": {
+                  "functionName": "Collection.map",
+                  "arguments": {
+                    "baseAlgorithm": {
+                      "functionDefinitionValue": {
+                        "argumentNames": [
+                          "_MAPPING_VAR_0_0"
+                        ],
+                        "body": "1"
+                      }
+                    },
+                    "collection": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCoverageCollection",
+                        "arguments": {
+                          "baseUrl": {
+                            "constantValue": "http://localhost"
+                          },
+                          "bbox": {
+                            "constantValue": [
+                              111.23,
+                              29.31,
+                              116.8,
+                              31.98
+                            ]
+                          },
+                          "datetime": {
+                            "constantValue": [
+                              "2013-01-01 00:00:00",
+                              "2013-12-31 00:00:00"
+                            ]
+                          },
+                          "productID": {
+                            "constantValue": "LE07_L1TP_C01_T1"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 1
+        },
+        "min": {
+          "constantValue": 0
+        },
+        "palette": {
+          "constantValue": [
+            "red",
+            "blue",
+            "yellow"
+          ]
+        }
+      }
+    }
+  }
+}

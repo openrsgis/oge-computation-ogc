@@ -1,0 +1,106 @@
+{
+  "oorB": "0",
+  "map": {
+    "level": 11,
+    "spatialRange": [
+      117.51476648622568,
+      22.684498262780092,
+      124.7106782367174,
+      24.43893723104236
+    ]
+  },
+  "2": {
+    "constantValue": "http://localhost"
+  },
+  "3": {
+    "constantValue": "LE07_L1TP_ARD_EO"
+  },
+  "1": {
+    "functionInvocationValue": {
+      "functionName": "Service.getCoverage",
+      "arguments": {
+        "baseUrl": {
+          "valueReference": "2"
+        },
+        "coverageID": {
+          "valueReference": "3"
+        },
+        "productID": {
+          "constantValue": "Near-Infrared"
+        }
+      }
+    }
+  },
+  "4": {
+    "functionInvocationValue": {
+      "functionName": "Service.getCoverage",
+      "arguments": {
+        "baseUrl": {
+          "valueReference": "2"
+        },
+        "coverageID": {
+          "valueReference": "3"
+        },
+        "productID": {
+          "constantValue": "Red"
+        }
+      }
+    }
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.addStyles",
+      "arguments": {
+        "input": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.binarization",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "Coverage.divide",
+                  "arguments": {
+                    "coverage1": {
+                      "functionInvocationValue": {
+                        "functionName": "Coverage.add",
+                        "arguments": {
+                          "coverage1": {
+                            "valueReference": "1"
+                          },
+                          "coverage2": {
+                            "valueReference": "4"
+                          }
+                        }
+                      }
+                    },
+                    "coverage2": {
+                      "functionInvocationValue": {
+                        "functionName": "Coverage.subtract",
+                        "arguments": {
+                          "coverage1": {
+                            "valueReference": "1"
+                          },
+                          "coverage2": {
+                            "valueReference": "4"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "threshold": {
+                "constantValue": 0
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 255
+        },
+        "min": {
+          "constantValue": 0
+        }
+      }
+    }
+  }
+}

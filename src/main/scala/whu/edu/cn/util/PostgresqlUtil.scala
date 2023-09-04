@@ -1,18 +1,39 @@
 package whu.edu.cn.util
 
+import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
+
 import java.sql.{Connection, DriverManager, PreparedStatement}
 
 /**
  * A config class for postresql connection.
  * */
-class PostgresqlUtil (sql: String){
-  Class.forName(PostgresqlUtil.driver)
-  private lazy val connection: Connection = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password);
+class PostgresqlUtil(sql: String) {
+  private val connection: Connection = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
   private val statement: PreparedStatement = connection.prepareStatement(sql)
 
-  def getConnection():Connection = connection
+  def getConnection: Connection = {
+    var retries = 0
+    var connection: Connection = null
 
-  def getStatement(): PreparedStatement = statement
+    while (retries < POSTGRESQL_MAX_RETRIES && connection == null) {
+      try {
+        connection = this.connection
+      } catch {
+        case _: Exception =>
+          retries += 1
+          println(s"连接失败，重试第 $retries 次...")
+          Thread.sleep(POSTGRESQL_RETRY_DELAY)
+      }
+    }
+
+    if (connection == null) {
+      throw new RuntimeException("无法建立数据库连接")
+    }
+
+    connection
+  }
+
+  def getStatement: PreparedStatement = statement
 
   def close(): Unit = {
     try {
@@ -23,11 +44,4 @@ class PostgresqlUtil (sql: String){
         e.printStackTrace()
     }
   }
-}
-
-object PostgresqlUtil{
-  val url = "jdbc:postgresql://125.220.153.28:31340/oge" // TODO postgresqlUtil
-  val driver = "org.postgresql.Driver"
-  val user = "oge"
-  val password = "ypfamily608"
 }
