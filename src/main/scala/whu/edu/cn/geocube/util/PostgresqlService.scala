@@ -1,9 +1,5 @@
 package whu.edu.cn.geocube.util
 
-import java.io.File
-import java.nio.charset.Charset
-import java.sql.{DriverManager, ResultSet, SQLException, Statement}
-import java.util
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import geotrellis.layer.LayoutDefinition
@@ -16,6 +12,10 @@ import whu.edu.cn.geocube.core.vector.grid.GridTransformer
 import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
 import whu.edu.cn.util.PostgresqlUtil
 
+import java.io.File
+import java.nio.charset.Charset
+import java.sql.{DriverManager, ResultSet, SQLException, Statement}
+import java.util
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 

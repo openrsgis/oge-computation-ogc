@@ -1,32 +1,32 @@
 package whu.edu.cn.geocube.core.raster.query
 
-import java.sql.ResultSet
-import java.text.SimpleDateFormat
-import java.util.Date
 import com.google.gson.{JsonObject, JsonParser}
 import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.render.{ColorRamp, RGB}
-import geotrellis.raster.{CellType, ColorMap, Raster, Tile, TileLayout}
+import geotrellis.raster.{CellType, Raster, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 import org.locationtech.jts.io.WKTReader
-
-import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
 import whu.edu.cn.geocube.core.entity
-import whu.edu.cn.geocube.core.entity._
-import whu.edu.cn.geocube.core.entity.GcProduct._
 import whu.edu.cn.geocube.core.entity.GcMeasurement._
+import whu.edu.cn.geocube.core.entity.GcProduct._
+import whu.edu.cn.geocube.core.entity._
 import whu.edu.cn.geocube.core.vector.grid.GridTransformer.getGeomGridInfo
 import whu.edu.cn.geocube.util.HbaseUtil.{getTileCell, getTileMeta}
-import whu.edu.cn.geocube.util.{PostgresqlService, TileUtil}
+import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.geocube.util.TileSerializerCube.deserializeTileData
 import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
 import whu.edu.cn.util.PostgresqlUtil
+
+import java.sql.ResultSet
+import java.text.SimpleDateFormat
+import java.util.Date
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Query raster tiles in a distributed way.

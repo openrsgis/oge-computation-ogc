@@ -2,11 +2,10 @@ package whu.edu.cn.util
 
 import geotrellis.proj4.CRS
 import org.locationtech.jts.geom.Geometry
-import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata}
+import whu.edu.cn.entity.CoverageMetadata
 
-import java.sql.{Connection, ResultSet, Statement}
+import java.sql.ResultSet
 import java.time.LocalDateTime
-import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 
@@ -166,7 +165,7 @@ object PostgresqlServiceUtil {
     )
 
 
-    val extentResults: ResultSet = PostgresqlUtil.simpleSelect(
+    val extentResults: ResultSet = PostgresqlUtilDev.simpleSelect(
       resultNames, tableName, rangeLimit,
       aliases = aliases,
       jointLimit = jointLimit

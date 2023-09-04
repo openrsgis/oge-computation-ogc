@@ -1,16 +1,14 @@
 package whu.edu.cn.geocube.core.entity
 
-import java.sql.{DriverManager, ResultSet}
 import geotrellis.layer.LayoutDefinition
 import geotrellis.raster.TileLayout
 import org.locationtech.jts.geom.{Coordinate, GeometryFactory, Polygon}
-
-import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.geocube.core.vector.grid.GridTransformer.getGeomZcodes
 import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
-import whu.edu.cn.util.PostgresqlUtil
 
+import java.sql.{DriverManager, ResultSet}
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * A wrapper of query parameters.

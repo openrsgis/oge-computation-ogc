@@ -1,23 +1,22 @@
 package whu.edu.cn.geocube.core.tabular.query
 
-import java.sql.{DriverManager, ResultSet, SQLException}
-import java.text.SimpleDateFormat
-import java.util.Date
 import com.google.gson.JsonParser
 import geotrellis.layer.{Bounds, SpaceTimeKey}
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.geocube.core.cube.tabular.{TabularRDD, TabularRecord, TabularRecordRDD}
+import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.geocube.core.cube.tabular.{TabularRDD, TabularRecord}
 import whu.edu.cn.geocube.core.entity.BiDimensionKey.LocationTimeGenderKey
 import whu.edu.cn.geocube.core.entity.{BiQueryParams, QueryParams, TabularGridLayerMetadata}
+import whu.edu.cn.geocube.core.tabular.grid.GridTransformer.getGeomGridInfo
 import whu.edu.cn.geocube.core.vector.grid.GridConf
 import whu.edu.cn.geocube.util.{GISUtil, HbaseUtil, PostgresqlService}
-import whu.edu.cn.geocube.core.tabular.grid.GridTransformer.getGeomGridInfo
 import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
-import whu.edu.cn.util.PostgresqlUtil
 
+import java.sql.{DriverManager, ResultSet, SQLException}
+import java.text.SimpleDateFormat
+import java.util.Date
 import scala.collection.mutable.ArrayBuffer
 
 object DistributedQueryTabularRecords {

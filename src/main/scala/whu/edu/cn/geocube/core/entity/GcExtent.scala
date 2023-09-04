@@ -1,11 +1,11 @@
 package whu.edu.cn.geocube.core.entity
 
-import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.util.PostgresqlUtilDev
 
 import java.sql.{DriverManager, ResultSet, SQLException, Statement}
 import java.util
-import scala.collection.mutable.ArrayBuffer
 import scala.beans.BeanProperty
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Dimension class - extent.
@@ -145,7 +145,7 @@ object GcExtent {
     // 暂时保留原本的逻辑，如需优化请联系本人
     var maxExtentKey = 0
     try {
-      val resultSet: ResultSet = PostgresqlUtil.simpleSelect(
+      val resultSet: ResultSet = PostgresqlUtilDev.simpleSelect(
         resultNames = Array("*"),
         tableName = "gc_extent",
         rangeLimit = Array(("grid_code", "=", gridCode), ("resolution_key", "=", resolutionKey)),
@@ -185,7 +185,7 @@ object GcExtent {
     val gcExtent = new GcExtent
     try {
       // forDece: done
-      val resultSet: ResultSet = PostgresqlUtil.simpleSelect(
+      val resultSet: ResultSet = PostgresqlUtilDev.simpleSelect(
         resultNames = Array("*"), tableName = "gc_extent",
         rangeLimit = Array(("resolution_key", "=", resolutionKey),
           ("grid_code", "=", gridCode)),
@@ -318,7 +318,7 @@ object GcExtent {
     val gcExtentHashMap = new util.HashMap[String, String]
     try {
       //forDece: done
-      val resultSet: ResultSet = PostgresqlUtil.simpleSelect(resultNames = Array("*"),
+      val resultSet: ResultSet = PostgresqlUtilDev.simpleSelect(resultNames = Array("*"),
         tableName = "gc_extent",
         rangeLimit = Array(("resolution_key", "=", resolutionKey)))
       while (resultSet.next) {

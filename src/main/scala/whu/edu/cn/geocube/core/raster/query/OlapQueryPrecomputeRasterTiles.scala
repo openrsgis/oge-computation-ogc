@@ -1,14 +1,14 @@
 package whu.edu.cn.geocube.core.raster.query
 
-import java.io.{File, FileOutputStream}
-import java.sql.ResultSet
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-
-import scala.collection.mutable.ArrayBuffer
-import sys.process._
 import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.util.PostgresqlUtil
+
+import java.io.{File, FileOutputStream}
+import java.sql.ResultSet
+import scala.collection.mutable.ArrayBuffer
+import scala.sys.process._
 
 /**
  * Query precomputed results in the database.

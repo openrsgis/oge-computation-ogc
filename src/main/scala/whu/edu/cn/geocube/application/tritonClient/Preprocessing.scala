@@ -1,29 +1,24 @@
 package whu.edu.cn.geocube.application.tritonClient
 
 import geotrellis.layer._
-import geotrellis.spark._
 import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.ResampleMethods.Bilinear
 import geotrellis.raster.{CellType, Tile, TileLayout}
-import geotrellis.spark.TileLayerRDD
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file._
+import geotrellis.spark.{TileLayerRDD, _}
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
-import geotrellis.store.file.FileAttributeStore
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.gdal.gdal.gdal
 import org.gdal.gdalconst.gdalconstConstants.GDT_Byte
-import whu.edu.cn.geocube.application.tritonClient.examples.GF2Example
-import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.util.PostgresqlUtilDev
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.sql.ResultSet
-import scala.collection.JavaConverters.asScalaBuffer
-import scala.collection.immutable.Range
 import scala.collection.mutable.ListBuffer
 
 
@@ -40,7 +35,7 @@ object Preprocessing {
     var metaData: (String, String) = (null, null)
 
     // forDece: done
-    val extentResults: ResultSet = PostgresqlUtil.simpleSelect(
+    val extentResults: ResultSet = PostgresqlUtilDev.simpleSelect(
       resultNames = Array("path", "crs"),
       tableName = "oge_image",
       rangeLimit = Array(("image_id", "=", imageID)))
