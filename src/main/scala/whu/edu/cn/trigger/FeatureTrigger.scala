@@ -2,15 +2,9 @@ package whu.edu.cn.trigger
 
 import com.alibaba.fastjson.JSON
 import org.apache.spark.rdd.RDD
-<<<<<<< HEAD:src/main/scala/whu/edu/cn/application/oge/FeatureTrigger.scala
-import org.locationtech.jts.geom.{Coordinate, Geometry}
-//import whu.edu.cn.application.oge.ImageTrigger.lamda
-import whu.edu.cn.jsonparser.JsonToArgLocal
-=======
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.oge.Feature
->>>>>>> origin/master:src/main/scala/whu/edu/cn/trigger/FeatureTrigger.scala
 
 import scala.collection.mutable.Map
 import scala.io.Source
