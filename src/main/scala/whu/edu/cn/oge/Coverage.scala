@@ -32,7 +32,7 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, File, PrintWriter}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
 import scala.collection.mutable
@@ -102,14 +102,14 @@ object Coverage {
       val minIOUtil = MinIOUtil
       val time1: Long = System.currentTimeMillis()
       val client: MinioClient = minIOUtil.getMinioClient
-      if(client == null) println("client is null")
+      val name = t.spatialKey.col.toString+t.spatialKey.row.toString+".txt"
+
       val tile: RawTile = getTileBuf(client, t)
-      minIOUtil.releaseMinioClient(client)
+//      minIOUtil.releaseMinioClient(client)
       val time2: Long = System.currentTimeMillis()
-      println("Get Tile Time3 is " + (time2 - time1))
+
       tile
     })
-    println(rawTileRdd.count())
     println("Loading data Time: "+(System.currentTimeMillis() - time1))
     val time2 = System.currentTimeMillis()
     val coverage = makeCoverageRDD(rawTileRdd)
@@ -736,25 +736,15 @@ object Coverage {
   //这里与GEE逻辑存在出入，GEE会在overwrite==false时将重名的band加上后缀，而不是直接忽略
   def addBands(dstCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                srcCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-               names: List[String] = List(""), overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)],
+               names: List[String] = List.empty, overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    val selectedBands = selectBands(srcCoverage, names)
-    if (selectedBands.isEmpty()) {
-      return dstCoverage
+    var selectedBands = dstCoverage
+    if(names.nonEmpty) {
+      selectedBands = selectBands(dstCoverage,names)
     }
 
     if (!overwrite) {
-      var tiles: Vector[Tile] = dstCoverage._1.first()._2.bands
-      var newBandNames = dstCoverage._1.first()._1.measurementName
-      for (i <- selectedBands._1.first()._1.measurementName.indices) {
-        if (!newBandNames.contains(selectedBands._1.first()._1.measurementName(i))) {
-          tiles = tiles :+ selectedBands._1.first()._2.bands(i)
-          newBandNames = newBandNames :+ selectedBands._1.first()._1.measurementName(i)
-        }
-      }
-      (dstCoverage._1.map(t => {
-        (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(tiles))
-      }), dstCoverage._2)
+      (dstCoverage._1.union(srcCoverage._1),dstCoverage._2)
     } else {
       var tiles: Vector[Tile] = selectedBands._1.first()._2.bands
       var newBandNames = selectedBands._1.first()._1.measurementName
@@ -3303,20 +3293,20 @@ object Coverage {
     jedis.close()
 
 
-//    // 清空list
-//    Trigger.optimizedDagMap.clear()
-//    Trigger.coverageCollectionMetadata.clear()
-//    Trigger.lazyFunc.clear()
-//    Trigger.coverageCollectionRddList.clear()
-//    Trigger.coverageRddList.clear()
-//    Trigger.zIndexStrArray.clear()
-//    JsonToArg.dagMap.clear()
+    // 清空list
+    Trigger.optimizedDagMap.clear()
+    Trigger.coverageCollectionMetadata.clear()
+    Trigger.lazyFunc.clear()
+    Trigger.coverageCollectionRddList.clear()
+    Trigger.coverageRddList.clear()
+    Trigger.zIndexStrArray.clear()
+    JsonToArg.dagMap.clear()
 //    // TODO lrx: 以下为未检验
-//    Trigger.tableRddList.clear()
-//    Trigger.kernelRddList.clear()
-//    Trigger.featureRddList.clear()
-//    Trigger.cubeRDDList.clear()
-//    Trigger.cubeLoad.clear()
+    Trigger.tableRddList.clear()
+    Trigger.kernelRddList.clear()
+    Trigger.featureRddList.clear()
+    Trigger.cubeRDDList.clear()
+    Trigger.cubeLoad.clear()
 
     if (sc.master.contains("local")) {
       whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")

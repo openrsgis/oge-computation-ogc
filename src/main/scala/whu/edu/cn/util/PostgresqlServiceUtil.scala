@@ -151,7 +151,7 @@ object PostgresqlServiceUtil {
         sql ++= " image_identification="
         sql ++= "\'"
         sql ++= coverageId
-        sql ++= "\' AND oge_image.product_key = \'"
+        sql ++= "\' AND name = \'"
         sql ++= productKey.toString
         sql ++= "\'"
         println(sql)

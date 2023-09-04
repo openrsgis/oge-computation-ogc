@@ -1037,6 +1037,19 @@ object Trigger {
         e.printStackTrace()
         println("lambda Error!")
     } finally {
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      //    // TODO lrx: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
@@ -1117,7 +1130,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/vector.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
