@@ -96,6 +96,7 @@ object QGIS {
         e.printStackTrace()
     }
 
+
     makeRasterRDDFromTif(sc, input, writePath)
 
   }
@@ -1699,7 +1700,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_aspect.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_aspect.py --input "$outputTiffPath" --band $band --trig-angle "$trigAngle" --zero-flat "$zeroFlat" --compute-edges "$computeEdges" --zevenbergen "$zevenbergen" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1751,7 +1752,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra $extra --create3D $create3D --nodata $nodata --offset $offset --band $band --field-name $fieldName --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour.py --input "$outputTiffPath" --interval $interval --ignore-nodata "$ignoreNodata" --extra "$extra" --create-3d "$create3D" --nodata "$nodata" --offset $offset --band $band --field-name "$fieldName" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1805,7 +1806,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour_polygon.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra $extra --create3D $create3D --nodata $nodata --offset $offset --band $band --field-name-max $fieldNameMax --field-name-min $fieldNameMin --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour_polygon.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra $extra --create-3d $create3D --nodata $nodata --offset $offset --band $band --field-name-max $fieldNameMax --field-name-min $fieldNameMin --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1858,7 +1859,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_fillnodata.py --input "$outputTiffPath" --distance $distance --extra $extra --mask-layer $maskLayer --no-mask $noMask --band $band --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_fillnodata.py --input "$outputTiffPath" --distance $distance --iterations $iterations --extra $extra --mask-layer $maskLayer --no-mask $noMask --band $band --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1925,7 +1926,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage_.py --input "$outputShpPath" --min-points $minPoints --extra $extra --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius2 $radius2 --radius1 $radius1 --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra $extra --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2006,7 +2007,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra $extra --metric $metricInput --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius2 $radius2 --radius1 $radius1 --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra $extra --metric $metricInput --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2079,7 +2080,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistance.py --input "$outputShpPath" --extra $extra --power $power --angle $angle --radius2 $radius2 --radius1 $radius1 --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistance.py --input "$outputShpPath" --extra $extra --power $power --angle $angle --radius-2 $radius2 --radius-1 $radius1 --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2278,7 +2279,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra $extra --nodata $nodata --angle $angle --radius1 $radius1 --radius2 $radius2 --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra $extra --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2336,7 +2337,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_hillshade.py --input "$outputTiffPath" --combined $combined --compute-edges $computeEdges --extra $extra --band $band --altitude $altitude --zevenbergen-thorne $zevenbergenThorne --z-factor $zFactor --multidirectional $multidirectional --scale $scale --azimuth $azimuth --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_hillshade.py --input "$outputTiffPath" --combined $combined --compute-edges $computeEdges --extra $extra --band $band --altitude $altitude --zevenbergen $zevenbergenThorne --z-factor $zFactor --multidirectional $multidirectional --scale $scale --azimuth $azimuth --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2450,7 +2451,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_proximity.py --input "$outputTiffPath" --extra $extra --nodata $nodata --values $values --band $band --maxdistance $maxDistance --replace $replace --units $unitsInput --datatype $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_proximity.py --input "$outputTiffPath" --extra $extra --nodata $nodata --values $values --band $band --max-distance $maxDistance --replace $replace --units $unitsInput --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2494,7 +2495,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_roughness.py --input "$outputTiffPath" --band $band --computeEdges $computeEdges --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_roughness.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2545,7 +2546,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_slope.py --input "$outputTiffPath" --band $band --computeEdges $computeEdges --asPercent $asPercent --extra $extra --scale $scale --zevenbergen $zevenbergen --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_slope.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --as-percent $asPercent --extra $extra --scale $scale --zevenbergen $zevenbergen --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2588,7 +2589,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_tpitopographicpositionindex.py --input "$outputTiffPath" --band $band --computeEdges $computeEdges --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_tpitopographicpositionindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2630,7 +2631,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_triterrainruggednessindex.py --input "$outputTiffPath" --band $band --computeEdges $computeEdges --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_triterrainruggednessindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
