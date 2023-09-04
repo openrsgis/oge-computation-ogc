@@ -129,7 +129,7 @@ object PostgresqlServiceUtil {
     metaData
   }
 
-  def queryCoverage(coverageId: String,productKey :Int = 3): ListBuffer[CoverageMetadata] = {
+  def queryCoverage(coverageId: String,productKey :String): ListBuffer[CoverageMetadata] = {
     val metaData = new ListBuffer[CoverageMetadata]
     val postgresqlUtil = new PostgresqlUtil("")
     val conn: Connection = postgresqlUtil.getConnection

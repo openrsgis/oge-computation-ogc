@@ -42,7 +42,7 @@ import scala.language.postfixOps
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
 
-  def load(implicit sc: SparkContext, coverageId: String,productKey:Int, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def load(implicit sc: SparkContext, coverageId: String,productKey:String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val time1 = System.currentTimeMillis()
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 

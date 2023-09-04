@@ -118,7 +118,7 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), isOptionalArg(args,"productID"), level = level))
+          coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
