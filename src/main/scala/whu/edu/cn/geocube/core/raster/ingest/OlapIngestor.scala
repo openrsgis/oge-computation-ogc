@@ -32,6 +32,7 @@ object OlapIngestor {
    * @param preComputeDir
    */
   def cityYearHighlevelmeasurement(rasterProductName: String, cityName: String, year: Int, highlevelMeasurement: String, preComputeDir: String): Unit = {
+/*
     val postgresqlUtil = new PostgresqlUtil("")
     val conn = postgresqlUtil.getConnection
     if (conn != null) {
@@ -195,6 +196,7 @@ object OlapIngestor {
         conn.close()
     }else
       throw new RuntimeException("connection failed")
+      */
   }
 
   /**
