@@ -7,8 +7,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * A config class for postresql connection.
- * */
+ * utils for postgresql's connection and CURD
+ */
 object PostgresqlUtilDev {
 
 
