@@ -3322,7 +3322,7 @@ object Coverage {
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
     val reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, batchParam.getCrs)
-    val resample: Raster[MultibandTile] = reprojectTile.resample((coverage._2.cellSize.width * coverage._2.layoutCols * 256 / batchParam.getScale).toInt, (coverage._2.cellSize.height * coverage._2.layoutRows * 256 / batchParam.getScale).toInt)
+    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((coverage._2.cellSize.width * coverage._2.layoutCols * 256 / batchParam.getScale).toInt,1), math.max((coverage._2.cellSize.height * coverage._2.layoutRows * 256 / batchParam.getScale).toInt,1))
 
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
@@ -3330,7 +3330,10 @@ object Coverage {
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
 
-    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).contentType("image/tiff").build)
+    val b = new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray)
+    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+    println(path)
+    client.putObject(PutObjectArgs.builder.bucket("oge-user").`object`(path).stream(b, b.available(), -1).build)
 
     minIOUtil.releaseMinioClient(client)
 

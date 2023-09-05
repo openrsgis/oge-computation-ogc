@@ -152,7 +152,7 @@ object PostgresqlServiceUtil {
         sql ++= "\'"
         sql ++= coverageId
         sql ++= "\' AND name = \'"
-        sql ++= productKey.toString
+        sql ++= productKey
         sql ++= "\'"
         println(sql)
         val extentResults: ResultSet = statement.executeQuery(sql.toString())
