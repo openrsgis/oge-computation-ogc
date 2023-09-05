@@ -2359,7 +2359,7 @@ object Coverage {
     coverage1
   }
 
-  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+  def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
     var coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
     // 从波段开始
@@ -3203,6 +3203,12 @@ object Coverage {
         }
       }
     }
+    coverageVis
+  }
+
+  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(coverage,visParam)
+
 
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
     val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
@@ -3321,7 +3327,8 @@ object Coverage {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, batchParam.getCrs)
+    // 先转到EPSG:3857，将单位转为米缩放后再转回指定坐标系
+    var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, batchParam.getCrs)
     val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((coverage._2.cellSize.width * coverage._2.layoutCols * 256 / batchParam.getScale).toInt,1), math.max((coverage._2.cellSize.height * coverage._2.layoutRows * 256 / batchParam.getScale).toInt,1))
 
 

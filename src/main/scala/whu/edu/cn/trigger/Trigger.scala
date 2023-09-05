@@ -627,7 +627,7 @@ object Trigger {
             Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
           }else{
             // TODO: 增加添加样式的函数
-            coverageRddList += (UUID ->coverageRddList(args("coverage")))
+            coverageRddList += (UUID ->Coverage.addStyles(coverageRddList(args("coverage")),visParam=visParam))
           }
 
 
@@ -1152,7 +1152,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    runBatch(sc, workTaskJson, dagId, "3c3a165b-6604-47b8-bce9-1f0c5470b9f8","EPSG:4326","30","1","a","tiff")
+    runMain(sc, workTaskJson, dagId)
 
     //    Thread.sleep(1000000)
     println("Finish")
