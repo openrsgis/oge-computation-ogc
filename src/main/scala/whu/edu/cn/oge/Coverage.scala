@@ -2359,7 +2359,7 @@ object Coverage {
     coverage1
   }
 
-  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+  def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])={
     var coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
 
     // 从波段开始
@@ -3203,6 +3203,12 @@ object Coverage {
         }
       }
     }
+    coverageVis
+  }
+
+  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(coverage,visParam)
+
 
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
     val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
@@ -3321,8 +3327,9 @@ object Coverage {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, batchParam.getCrs)
-    val resample: Raster[MultibandTile] = reprojectTile.resample((coverage._2.cellSize.width * coverage._2.layoutCols * 256 / batchParam.getScale).toInt, (coverage._2.cellSize.height * coverage._2.layoutRows * 256 / batchParam.getScale).toInt)
+    // 先转到EPSG:3857，将单位转为米缩放后再转回指定坐标系
+    var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, batchParam.getCrs)
+    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((coverage._2.cellSize.width * coverage._2.layoutCols * 256 / batchParam.getScale).toInt,1), math.max((coverage._2.cellSize.height * coverage._2.layoutRows * 256 / batchParam.getScale).toInt,1))
 
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
@@ -3330,7 +3337,10 @@ object Coverage {
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
 
-    client.putObject(PutObjectArgs.builder.bucket("oge").`object`("oge-user/" + batchParam.getUserId + "/result/" + batchParam.getFolder + "/" + batchParam.getFileName + "." + batchParam.getFormat).stream(new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray), -1, -1).contentType("image/tiff").build)
+    val b = new ByteArrayInputStream(GeoTiff(resample, batchParam.getCrs).toByteArray)
+    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+    println(path)
+    client.putObject(PutObjectArgs.builder.bucket("oge-user").`object`(path).stream(b, b.available(), -1).build)
 
     minIOUtil.releaseMinioClient(client)
 

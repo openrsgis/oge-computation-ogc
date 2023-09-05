@@ -4,6 +4,7 @@ import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import geotrellis.vector.Extent
+import io.minio.{MinioClient, PutObjectArgs}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
@@ -13,8 +14,9 @@ import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, 
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, ZCurveUtil}
+import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
 
+import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
@@ -93,7 +95,7 @@ object Trigger {
     try {
 
       val tempNoticeJson = new JSONObject
-      println("args:",args)
+      println("args:",funcName+args)
       funcName match {
 
         //Others
@@ -620,7 +622,13 @@ object Trigger {
         case "Coverage.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+          println("isBatch",isBatch)
+          if(isBatch == 0){
+            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+          }else{
+            // TODO: 增加添加样式的函数
+            coverageRddList += (UUID ->Coverage.addStyles(coverageRddList(args("coverage")),visParam=visParam))
+          }
 
 
         //Feature
