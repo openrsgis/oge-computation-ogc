@@ -2437,13 +2437,6 @@
         "default": "False"
       },
       {
-        "name": "computeEdges",
-        "type": "String",
-        "description": "Generates edges from the elevation raster.",
-        "optional": "True",
-        "default": "False"
-      },
-      {
         "name": "zevenbergen",
         "type": "String",
         "description": "Activates Zevenbergen&Thorne formula for smooth landscapes.",
@@ -2457,7 +2450,6 @@
         "optional": "True",
         "default": ""
       }
-
     ]
   },
   "coverage.contourByGDAL": {
