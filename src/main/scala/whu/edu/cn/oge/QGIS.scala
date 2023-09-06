@@ -2337,7 +2337,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_hillshade.py --input "$outputTiffPath" --combined $combined --compute-edges $computeEdges --extra $extra --band $band --altitude $altitude --zevenbergen $zevenbergenThorne --z-factor $zFactor --multidirectional $multidirectional --scale $scale --azimuth $azimuth --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_hillshade.py --input "$outputTiffPath" --combined $combined --compute-edges $computeEdges --extra "$extra" --band $band --altitude $altitude --zevenbergen $zevenbergenThorne --z-factor $zFactor --multidirectional $multidirectional --scale $scale --azimuth $azimuth --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2379,7 +2379,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_nearblack.py --input "$outputTiffPath" --white $white --extra $extra --near $near --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_nearblack.py --input "$outputTiffPath" --white $white --extra "$extra" --near $near --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2451,7 +2451,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_proximity.py --input "$outputTiffPath" --extra $extra --nodata $nodata --values $values --band $band --max-distance $maxDistance --replace $replace --units $unitsInput --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_proximity.py --input "$outputTiffPath" --extra "$extra" --nodata $nodata --values "$values" --band $band --max-distance $maxDistance --replace $replace --units $unitsInput --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2495,7 +2495,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_roughness.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_roughness.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2546,7 +2546,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_slope.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --as-percent $asPercent --extra $extra --scale $scale --zevenbergen $zevenbergen --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_slope.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --as-percent $asPercent --extra "$extra" --scale $scale --zevenbergen $zevenbergen --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2589,7 +2589,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_tpitopographicpositionindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_tpitopographicpositionindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2692,7 +2692,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbyextent.py --input "$outputTiffPath" --projwin $projwin --extra $extra --nodata $nodata --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbyextent.py --input "$outputTiffPath" --projwin "$projwin" --extra "$extra" --nodata $nodata --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2770,7 +2770,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent $targetExtent --set-resolution $setResolution --extra $extra --target-crs $targetCrs --x-resolution $xResolution --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask $mask --multithreading $multithreading --nodata $nodata --y-resolution $yResolution --data-type "$dataTypeInput" --source-crs $sourceCrs --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs" --x-resolution $xResolution --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$mask" --multithreading $multithreading --nodata $nodata --y-resolution $yResolution --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2800,7 +2800,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_polygonize.py --input "$outputTiffPath" --extra $extra --field $field --band $band --eightconnectedness $eightConnectedness --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_polygonize.py --input "$outputTiffPath" --extra "$extra" --field $field --band $band --eight-connectedness $eightConnectedness --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2844,7 +2844,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra $extra --field $field --add $add --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2888,7 +2888,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over_fixed_value.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra $extra --add $add --burn $burn --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over_fixed_value.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra "$extra" --add $add --burn $burn --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2988,7 +2988,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_translate.py --input "$outputTiffPath" --extra $extra --targetCrs $targetCrs --nodata $nodata --dataType $dataTypeInput --copySubdatasets $copySubdatasets --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_translate.py --input "$outputTiffPath" --extra "$extra" --targetCrs "$targetCrs" --nodata $nodata --dataType $dataTypeInput --copySubdatasets $copySubdatasets --options $options --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
