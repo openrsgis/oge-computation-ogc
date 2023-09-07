@@ -41,7 +41,7 @@ object Trigger {
   var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
 
-
+  var userId: String = _
   var level: Int = _
   var layerName: String = _
   var windowExtent: Extent = _
@@ -120,7 +120,11 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
+          if(args("coverageID").startsWith("data")){
+            coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"),userId,dagId))
+          }else{
+            coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
+          }
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -195,7 +199,7 @@ object Trigger {
 
         // Coverage
         case "Coverage.export" =>
-          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam)
+          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam,dagId)
         case "Coverage.date" =>
           val date: String = Coverage.date(coverage = coverageRddList(args("coverage")))
           tempNoticeJson.put("date", date)
@@ -948,12 +952,12 @@ object Trigger {
 
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
-              curDagId: String): Unit = {
+              curDagId: String, userID:String): Unit = {
 
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
     dagId = curDagId
-
+    userId = userID
     val time1: Long = System.currentTimeMillis()
 
     val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
@@ -1058,6 +1062,9 @@ object Trigger {
       Trigger.featureRddList.clear()
       Trigger.cubeRDDList.clear()
       Trigger.cubeLoad.clear()
+      val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+      if(scala.reflect.io.File(filePath).exists)
+        scala.reflect.io.File(filePath).delete()
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
@@ -1129,8 +1136,9 @@ object Trigger {
         // 打印至后端控制台
         e.printStackTrace()
     } finally {
-      val time2: Long = System.currentTimeMillis()
-      println(time2 - time1)
+      val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+      if (scala.reflect.io.File(filePath).exists)
+        scala.reflect.io.File(filePath).delete()
     }
   }
 
@@ -1146,13 +1154,14 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
+    userId = "3c3a165b-6604-47b8-bce9-1f0c5470b9f8"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    runMain(sc, workTaskJson, dagId)
+    runMain(sc, workTaskJson, dagId, userId)
 
     //    Thread.sleep(1000000)
     println("Finish")

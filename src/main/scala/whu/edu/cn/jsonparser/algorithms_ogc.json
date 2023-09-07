@@ -5301,7 +5301,7 @@
     ]
   },
   "Coverage.focalMode": {
-    "description": "Applies a morphological mode filter to each band of an image using a named or custom kernel.",
+    "description": "Applies a morphological mode filter to each band of an coverage using a named or custom kernel. Mode does not currently support Double raster data. If you use a raster with a Double CellType, the raster will be rounded to integers.",
     "returns": "Coverage",
     "args": [
       {
@@ -5469,7 +5469,9 @@
       },
       {
         "name": "defaultValue",
-        "type": "Option[Int]",
+        "type": "Double",
+        "default": "None",
+        "optional": "True",
         "description": "Any input values not included in the input list are either set to defaultValue if it is given, or masked if it isn't."
       }
     ]
