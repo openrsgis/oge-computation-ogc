@@ -7985,5 +7985,110 @@
         "description": "The name of result of conjoin analysis."
       }
     ]
+  },
+  "Coverage.terrSlope": {
+    "description": "DEM坡度计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the slope."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the slope, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct slope calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrAspect": {
+    "description": "DEM坡向计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the aspect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the aspect, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct aspect calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrCurvature": {
+    "description": "DEM曲率计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the curvature."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the curvature, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct curvature calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrRuggedness": {
+    "description": "DEM粗糙度计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the ruggedness."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the ruggedness, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct ruggedness calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrSlopelength": {
+    "description": "DEM坡长计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the slopelength."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "radius for DEM indexing, default is 16"
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct slopelength calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
   }
 }
