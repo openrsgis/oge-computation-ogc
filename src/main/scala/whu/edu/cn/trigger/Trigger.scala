@@ -121,7 +121,7 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          if(args("coverageID").startsWith("data")){
+          if(args("coverageID").startsWith("data/")){
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"),userId,dagId))
           }else{
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
@@ -288,9 +288,9 @@ object Trigger {
         case "Coverage.selectBands" =>
           coverageRddList += (UUID -> Coverage.selectBands(coverage = coverageRddList(args("coverage")), bands = args("bands").substring(1, args("bands").length - 1).split(",").toList))
         case "Coverage.addBands" =>
-          val names: List[String] = args("names").split(",").toList
-          coverageRddList += (UUID -> Coverage.addBands(dstCoverage = coverageRddList(args("coverage1")), srcCoverage =
-            coverageRddList(args("coverage2")), names = names))
+          val names: List[String] = args("names").substring(1, args("names").length - 1).split(",").toList
+          coverageRddList += (UUID -> Coverage.addBands(dstCoverage = coverageRddList(args("dstCoverage")), srcCoverage =
+            coverageRddList(args("srcCoverage")), names = names))
         case "Coverage.bandNames" =>
           stringList += (UUID -> Coverage.bandNames(coverage = coverageRddList(args("coverage"))))
         case "Coverage.bandNum" =>
@@ -899,12 +899,13 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-          throw new Exception("Error occur in lambda: " +
-            "UUID = " + list(i)._1 + "\t" +
-            "funcName = " + list(i)._2 + "\n" +
-            "innerErrorType = " + e.getClass + "\n" +
-            "innerErrorInfo = " + e.getMessage + "\n" +
-            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+//          throw new Exception("Error occur in lambda: " +
+//            "UUID = " + list(i)._1 + "\t" +
+//            "funcName = " + list(i)._2 + "\n" +
+//            "innerErrorType = " + e.getClass + "\n" +
+//            "innerErrorInfo = " + e.getMessage + "\n" +
+//            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+          throw new Exception(e)
       }
     }
   }
@@ -1045,9 +1046,9 @@ object Trigger {
       lambda(sc, optimizedDagMap("0"))
     } catch {
       case e: Throwable =>
+        e.printStackTrace()
         val errorJson = new JSONObject
-        errorJson.put("error", e.toString)
-        errorJson.put("InputJSON",workTaskJson)
+        errorJson.put("error", e.getCause.getMessage)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
@@ -1059,8 +1060,8 @@ object Trigger {
           outJsonObject.toJSONString)
         println("Send to boot!")
 //         打印至后端控制台
-        e.printStackTrace()
-        println("lambda Error!")
+
+
     } finally {
       Trigger.optimizedDagMap.clear()
       Trigger.coverageCollectionMetadata.clear()
@@ -1174,9 +1175,9 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
+//    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
-    //    Thread.sleep(1000000)
     println("Finish")
     sc.stop()
   }

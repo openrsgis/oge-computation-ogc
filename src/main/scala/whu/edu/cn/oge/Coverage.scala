@@ -49,6 +49,9 @@ object Coverage {
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
+    if(metaList.isEmpty){
+      throw new Exception("No such coverage in database!")
+    }
     val queryGeometry: Geometry = metaList.head.getGeom
 
     // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
@@ -740,23 +743,23 @@ object Coverage {
                srcCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                names: List[String] = List.empty, overwrite: Boolean = false): (RDD[(SpaceTimeBandKey, MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
-    var selectedBands = dstCoverage
+    var selectedBands = srcCoverage
     if (names.nonEmpty) {
-      selectedBands = selectBands(dstCoverage, names)
+      selectedBands = selectBands(srcCoverage, names)
     }
 
     if (!overwrite) {
-      val (reprojected1, reprojected2) = checkProjResoExtent(selectedBands, srcCoverage)
+      val (reprojected1, reprojected2) = checkProjResoExtent(selectedBands, dstCoverage)
       (reprojected1._1.union(reprojected2._1), reprojected1._2)
     } else {
       //选出reprojected1中不在覆盖名单里的波段
-      val (reprojected1, reprojected2) = checkProjResoExtent(selectedBands, srcCoverage)
+      val (reprojected1, reprojected2) = checkProjResoExtent(dstCoverage, selectedBands)
 
       val bandName1 = reprojected1._1.first()._1.measurementName
       val bandName2 = reprojected2._1.first()._1.measurementName
 
       val a = bandName1.filter(s => {
-        bandName2.contains(s)
+        !bandName2.contains(s)
       })
 
       val selectedCoverage = selectBands(reprojected1, a.toList)
@@ -3343,9 +3346,9 @@ object Coverage {
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
     // 先转到EPSG:3857，将单位转为米缩放后再转回指定坐标系
-    var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, CRS.fromName("EPSG:3857"))
-    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height / batchParam.getScale).toInt, 1))
-    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
+//    var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, CRS.fromName("EPSG:3857"))
+//    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height / batchParam.getScale).toInt, 1))
+//    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
 
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
