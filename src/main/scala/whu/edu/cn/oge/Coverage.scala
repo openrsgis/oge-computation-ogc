@@ -103,15 +103,7 @@ object Coverage {
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
       val client: MinioClient = MinIOUtil.getMinioClient
       par.map(t => {
-        val time1: Long = System.currentTimeMillis()
-
-        val name = t.spatialKey.col.toString + t.spatialKey.row.toString + ".txt"
-
-        val tile: RawTile = getTileBuf(client, t)
-        //      minIOUtil.releaseMinioClient(client)
-        val time2: Long = System.currentTimeMillis()
-
-        tile
+        getTileBuf(client, t)
       })
     })
     println("Loading data Time: " + (System.currentTimeMillis() - time1))

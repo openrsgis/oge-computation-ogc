@@ -82,14 +82,12 @@ object CoverageCollection {
       println("tileNum = " + tileNum)
       tileRDDFlat.unpersist()
       val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
-      (t._1, tileRDDRePar.map(t => {
-        val time1: Long = System.currentTimeMillis()
+      (t._1, tileRDDRePar.mapPartitions(par => {
+
         val client: MinioClient = MinIOUtil.getMinioClient
-        val tile: RawTile = getTileBuf(client, t)
-        MinIOUtil.releaseMinioClient(client)
-        val time2: Long = System.currentTimeMillis()
-        println("Get Tile Time4 is " + (time2 - time1))
-        tile
+        par.map(t=>{
+          getTileBuf(client,t)
+        })
       }))
     })
 
