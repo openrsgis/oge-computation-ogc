@@ -1,6 +1,6 @@
 package whu.edu.cn.oge
 
-import java.io.FileWriter
+import java.io.{BufferedWriter, FileWriter, PrintWriter}
 
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -508,7 +508,6 @@ object Feature {
       geoArray.add(JSON.parseObject(feature))
     jsonObject.put("type","GeometryCollection")
     jsonObject.put("geometries",geoArray)
-    println(jsonObject)
     val geoJSONString:String =jsonObject.toJSONString()
     geoJSONString
   }
@@ -516,12 +515,20 @@ object Feature {
   def saveJSONToServer(geoJSONString:String):String = {
     val time = System.currentTimeMillis()
 
-    val outputVectorPath = "/home/wkx/oge/apache-tomcat-9.0.69/webapps/oge_vector/vector_" + time + ".json"
-    try {
-      versouSshUtil("125.220.153.22", "wkx", "oge.whu.com", 22)
-      val st =
-        raw"""echo '$geoJSONString' > "$outputVectorPath" """.stripMargin
+    val outputVectorPath = "/mnt/storage/algorithmData/vector_" + time + ".json"
 
+    // 创建PrintWriter对象
+    val  writer:BufferedWriter=new BufferedWriter(new FileWriter(outputVectorPath))
+
+    // 写入JSON字符串
+    writer.write(geoJSONString)
+
+    // 关闭PrintWriter
+    writer.close()
+    try {
+      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      val st =
+        raw"""scp "$outputVectorPath" wkx@125.220.153.22:/home/wkx/oge/apache-tomcat-9.0.69/webapps/oge_vector/""".stripMargin
       println(s"st = $st")
       runCmd(st, "UTF-8")
 
