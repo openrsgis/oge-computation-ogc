@@ -1,20 +1,29 @@
 package whu.edu.cn.oge
 
+import com.alibaba.fastjson.JSONObject
 import geotrellis.layer
-import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, SpatialKey, TileLayerMetadata}
+import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
+import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local.{Add, Max, Mean, Min, Multiply}
 import geotrellis.raster.{ByteConstantNoDataCellType, ColorMap, ColorRamp, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
 import geotrellis.raster.render.Png
+import geotrellis.raster.resample.Bilinear
+import geotrellis.spark.pyramid.Pyramid
+import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.spark.{TileLayerRDD, _}
+import geotrellis.store.LayerId
+import geotrellis.store.file.FileAttributeStore
+import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
-import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory, Polygon}
 import javafx.scene.paint.Color
+import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory, Polygon}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.json4s._
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
+import redis.clients.jedis.Jedis
 import whu.edu.cn.entity.VisualizationParam
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
 import whu.edu.cn.geocube.application.gdc.gdcCoverage.{getCropExtent, getMultiBandStitchRDD, getSingleStitchRDD, scaleCoverage, stitchRDDWriteFile}
@@ -25,6 +34,10 @@ import whu.edu.cn.geocube.core.io.Output.saveAsGeojson
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
 import whu.edu.cn.geocube.util.{PostgresqlService, TileUtil}
+import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil}
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.text.SimpleDateFormat
@@ -550,7 +563,7 @@ object Cube {
     }
   }
 
-  def visualizeOnTheFly(rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam): Unit = {
+  def visualizeOnTheFly(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam): Unit = {
     val styledRasterRDD: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(rasterTileLayerRdd, visualizationParam)
     val metadata = rasterTileLayerRdd._2.tileLayerMetadata
     val spatialMetadata = TileLayerMetadata(
@@ -560,141 +573,83 @@ object Cube {
       metadata.crs,
       metadata.bounds.get.toSpatial)
     val tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(styledRasterRDD._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
-    val stitched: Raster[MultibandTile] = tileLayerRdd.stitch()
-    val time = System.currentTimeMillis()
-    val sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
-    val date = new Date(time)
-    val instantRet = sdf.format(date)
-    val outputImagePath = "E:\\LaoK\\data2\\oge\\" + "Coverage_" + instantRet + ".png"
-    stitched.tile.renderPng().write(outputImagePath)
-  }
 
-  /**
-   *
-   * @param input    input cube data map
-   * @param products 要显示的产品列表
-   * @return cube data map
-   */
-  def visualize(implicit sc: SparkContext, cube: mutable.Map[String, Any], products: String, fileName: String = null) = {
-    implicit val formats = Serialization.formats(NoTypeHints)
-    val result = mutable.Map[String, Any]()
-    val vectorCubeList = new ArrayBuffer[Map[String, Any]]()
-    val rasterCubeList = new ArrayBuffer[Map[String, Any]]()
-    val rasterList = new ArrayBuffer[Map[String, Any]]()
-    val vectorList = new ArrayBuffer[Map[String, Any]]()
-    val tableList = new ArrayBuffer[Map[String, Any]]()
-    val executorOutputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/ogeoutput/"
-    val productList = products.replace("[", "").replace("]", "").split(",")
-    val time = System.currentTimeMillis();
-    for (product <- productList) {
-      cube(product) match {
-        case affectedGeoObjectRdd: GeoObjectRDD => {
-          //save vector
-          val affectedFeatures = affectedGeoObjectRdd.map(x => x.feature).collect()
-          val outputVectorPath = executorOutputDir + "oge_flooded_" + time + ".geojson"
-          saveAsGeojson(affectedFeatures, outputVectorPath)
-          vectorCubeList.append(Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "oge_flooded_" + time + ".geojson")))
+    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+      tileLayerRdd.reproject(tmsCrs, layoutScheme)
+
+    val outputPath: String = "/mnt/storage/on-the-fly"
+    // Create the attributes store that will tell us information about our catalog.
+    val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+    // Create the writer that we will use to store the tiles in the local catalog.
+    val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+
+    if (zoom < Trigger.level) {
+      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+    }
+
+    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+      if (z == Trigger.level) {
+        val layerId: LayerId = LayerId(Trigger.dagId, z)
+        println(layerId)
+        // If the layer exists already, delete it out before writing
+        if (attributeStore.layerExists(layerId)) {
+          //        new FileLayerManager(attributeStore).delete(layerId)
+          try {
+            writer.overwrite(layerId, rdd)
+          } catch {
+            case e: Exception =>
+              e.printStackTrace()
+          }
         }
-        case changedRdd: RasterRDD => {
-          if (product == "Change_Product") {
-            val cellType = changedRdd.meta.tileLayerMetadata.cellType
-            val srcLayout = changedRdd.meta.tileLayerMetadata.layout
-            val srcExtent = changedRdd.meta.tileLayerMetadata.extent
-            val srcCrs = changedRdd.meta.tileLayerMetadata.crs
-            val srcBounds = Bounds(changedRdd.meta.tileLayerMetadata.bounds.get._1.spatialKey, changedRdd.meta.tileLayerMetadata.bounds.get._2.spatialKey)
-            val changedMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, srcBounds)
-
-            val changedStitchRdd: TileLayerRDD[SpatialKey] = ContextRDD(changedRdd.rddPrev.map(t => (t._1.spaceTimeKey.spatialKey, t._2)), changedMetaData)
-            val stitched = changedStitchRdd.stitch()
-            val extentRet = stitched.extent
-            val outputRasterPath = executorOutputDir + "oge_flooded_" + time + ".png"
-            rasterCubeList.append(Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "oge_flooded_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
-            stitched.tile.renderPng().write(outputRasterPath)
-          }
-          if (product == "Binarization_Product") {
-            val ndwiRdd = changedRdd.rddPrev.groupBy(_._1.spaceTimeKey.instant)
-            val ndwiInfo = ndwiRdd.map({ x =>
-              //stitch extent-series tiles of each time instant to pngs
-              val metadata = changedRdd.meta.tileLayerMetadata
-              val layout = metadata.layout
-              val crs = metadata.crs
-              val instant = x._1
-              val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spaceTimeKey.spatialKey, ele._2))
-              val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
-
-              val colorRamp = ColorRamp(
-                0xD76B27FF,
-                0xE68F2DFF,
-                0xF9B737FF,
-                0xF5CF7DFF,
-                0xF0E7BBFF,
-                0xEDECEAFF,
-                0xC8E1E7FF,
-                0xADD8EAFF,
-                0x7FB8D4FF,
-                0x4EA3C8FF,
-                0x2586ABFF
-              )
-              var accum = 0.0
-              tileLayerArray.foreach { x =>
-                val tile = x._2
-                tile.foreachDouble { x =>
-                  if (x == 255.0) accum += x
-                }
-              }
-              val sdf = new SimpleDateFormat("yyyy-MM-dd");
-              val str = sdf.format(instant);
-              System.out.println(str);
-              //val outputRasterPath = executorOutputDir + "ndwi_" + str + ".png"
-              val extentRet = stitched.extent
-              //rasterList.append(mutable.Map("url" -> ("http://125.220.153.26:8093/ogedemooutput/" + "ndwi_" + str + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
-              val stitchedPng: Png = stitched.tile.renderPng(colorRamp)
-              //stitched.tile.renderPng(colorRamp).write(outputRasterPath)
-              //generate ndwi thematic product
-              val outputTiffPath = executorOutputDir + "_ndwi_" + instant + ".TIF"
-              GeoTiff(stitched, crs).write(outputTiffPath)
-              (stitchedPng, str, extentRet)
-            })
-            ndwiInfo.collect().foreach(t => {
-              val str = t._2
-              val extentRet = t._3
-              val outputRasterPath = executorOutputDir + "ndwi_" + str + "_" + time + ".png"
-              t._1.write(outputRasterPath)
-              rasterCubeList.append(mutable.Map("url" -> ("http://oge.whu.edu.cn/api/oge-python/ogeoutput/" + "ndwi_" + str + "_" + time + ".png"), "extent" -> Array(extentRet.ymin, extentRet.xmin, extentRet.ymax, extentRet.xmax)))
-            })
-          }
-          if (product == "LC08_L1TP_ARD_EO") {
-            val ndwiRdd = changedRdd.rddPrev.groupBy(_._1.spaceTimeKey.instant)
-            val ndwiInfo = ndwiRdd.map({ x =>
-              //stitch extent-series tiles of each time instant to pngs
-              val metadata = changedRdd.meta.tileLayerMetadata
-              val layout = metadata.layout
-              val crs = metadata.crs
-              val instant = x._1
-              val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spaceTimeKey.spatialKey, ele._2))
-              val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
-
-              val sdf = new SimpleDateFormat("yyyy-MM-dd");
-              val str = sdf.format(instant);
-              System.out.println(str);
-              val outputTiffPath = executorOutputDir + str + "_ndwi_" + instant + ".TIF"
-              GeoTiff(stitched, crs).write(outputTiffPath)
-              str
-            })
-            ndwiInfo.count()
-          }
+        else {
+          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
         }
       }
     }
-    result += ("vectorCube" -> vectorCubeList)
-    result += ("rasterCube" -> rasterCubeList)
-    result += ("raster" -> rasterCubeList)
-    result += ("vector" -> rasterCubeList)
-    result += ("table" -> rasterCubeList)
-    val jsonStr: String = write(result)
-    val writeFile = new File(fileName)
-    val writer = new BufferedWriter(new FileWriter(writeFile))
-    writer.write(jsonStr)
-    writer.close()
+
+    // 回调服务
+    val jsonObject: JSONObject = new JSONObject
+    val rasterJsonObject: JSONObject = new JSONObject
+    rasterJsonObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
+    jsonObject.put("raster", rasterJsonObject)
+
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("workID", Trigger.dagId)
+    outJsonObject.put("json", jsonObject)
+
+    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+
+    println("outputJSON: ", outJsonObject.toJSONString)
+    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+    val jedis: Jedis = new JedisUtil().getJedis
+    jedis.select(1)
+    zIndexStrArray.foreach(zIndexStr => {
+      val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+      jedis.sadd(key, "cached")
+      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
+    })
+    jedis.close()
+
+
+    // 清空list
+    Trigger.optimizedDagMap.clear()
+    Trigger.coverageCollectionMetadata.clear()
+    Trigger.lazyFunc.clear()
+    Trigger.coverageCollectionRddList.clear()
+    Trigger.coverageRddList.clear()
+    Trigger.zIndexStrArray.clear()
+    JsonToArg.dagMap.clear()
+    //    // TODO lrx: 以下为未检验
+    Trigger.tableRddList.clear()
+    Trigger.kernelRddList.clear()
+    Trigger.featureRddList.clear()
+    Trigger.cubeRDDList.clear()
+    Trigger.cubeLoad.clear()
+
+    if (sc.master.contains("local")) {
+      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube")
+    }
   }
 }

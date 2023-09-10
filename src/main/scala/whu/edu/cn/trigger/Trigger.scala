@@ -884,7 +884,7 @@ object Trigger {
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          Cube.visualizeOnTheFly(cubeRDDList(args("cube")), visParam)
+          Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
       }
 
