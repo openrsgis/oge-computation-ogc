@@ -28,6 +28,7 @@ object GcTileQuality{
   /**
    * Get tileQuality info using tileQualityKey, and return a GcTileQuality object.
    *
+
    * @param tileQualityKey
    * @param connAddr
    * @param user

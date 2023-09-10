@@ -2,7 +2,7 @@ package whu.edu.cn.trigger
 
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.MultibandTile
+import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
 import io.minio.{MinioClient, PutObjectArgs}
 import org.apache.spark.rdd.RDD
@@ -38,8 +38,10 @@ object Trigger {
   var tableRddList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var kernelRddList: mutable.Map[String, geotrellis.raster.mapalgebra.focal.Kernel] = mutable.Map.empty[String, geotrellis.raster.mapalgebra.focal.Kernel]
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-  var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]    //GRASS部分返回String类的算子
-  var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
+  var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any] //GRASS部分返回String类的算子
+  //  var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
+  var cubeRDDList: mutable.Map[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])]
+
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
 
   var userId: String = _
@@ -96,7 +98,7 @@ object Trigger {
     try {
 
       val tempNoticeJson = new JSONObject
-      println("args:",funcName+args)
+      println("args:", funcName + args)
       funcName match {
 
         //Others
@@ -121,9 +123,9 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          if(args("coverageID").startsWith("data")){
-            coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"),userId,dagId))
-          }else{
+          if (args("coverageID").startsWith("data")) {
+            coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
+          } else {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getTable" =>
@@ -131,7 +133,7 @@ object Trigger {
         case "Service.getFeatureCollection" =>
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeature" =>
-          featureRddList += (UUID -> Service.getFeature(sc,args("featureId"),isOptionalArg(args,"dataTime"),isOptionalArg(args,"crs")))
+          featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
 
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -200,7 +202,7 @@ object Trigger {
 
         // Coverage
         case "Coverage.export" =>
-          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam,dagId)
+          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
         case "Coverage.date" =>
           val date: String = Coverage.date(coverage = coverageRddList(args("coverage")))
           tempNoticeJson.put("date", date)
@@ -378,51 +380,51 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
         //   QGIS
         case "Coverage.aspectByQGIS" =>
-          coverageRddList += (UUID -> QGIS.nativeAspect(sc,input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
+          coverageRddList += (UUID -> QGIS.nativeAspect(sc, input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
         case "Coverage.slopeByQGIS" =>
-          coverageRddList += (UUID -> QGIS.nativeSlope(sc,input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
+          coverageRddList += (UUID -> QGIS.nativeSlope(sc, input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
         case "Coverage.rescaleRasterByQGIS" =>
-          coverageRddList += (UUID -> QGIS.nativeRescaleRaster(sc,input = coverageRddList(args("input")), minimum = args("minimum").toDouble,maximum = args("maximum").toDouble,band = args("band").toInt))
+          coverageRddList += (UUID -> QGIS.nativeRescaleRaster(sc, input = coverageRddList(args("input")), minimum = args("minimum").toDouble, maximum = args("maximum").toDouble, band = args("band").toInt))
         case "Coverage.ruggednessIndexByQGIS" =>
-          coverageRddList += (UUID -> QGIS.nativeRuggednessIndex(sc,input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
+          coverageRddList += (UUID -> QGIS.nativeRuggednessIndex(sc, input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
         case "Feature.projectPointsByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeProjectPoints(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],distance = args("distance").toDouble,bearing = args("bearing").toDouble))
+          featureRddList += (UUID -> QGIS.nativeProjectPoints(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, bearing = args("bearing").toDouble))
         case "Feature.addFieldByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAddField(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],fieldType = args("fieldType"),fieldPrecision = args("fieldPrecision").toDouble,fieldName = args("fieldName"),fieldLength = args("fieldLength").toDouble))
+          featureRddList += (UUID -> QGIS.nativeAddField(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], fieldType = args("fieldType"), fieldPrecision = args("fieldPrecision").toDouble, fieldName = args("fieldName"), fieldLength = args("fieldLength").toDouble))
         case "Feature.addXYFieldByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAddXYField(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],crs = args("crs"),prefix = args("prefix")))
+          featureRddList += (UUID -> QGIS.nativeAddXYField(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], crs = args("crs"), prefix = args("prefix")))
         case "Feature.affineTransformByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAffineTransform(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],scaleX = args("scaleX").toDouble,scaleZ = args("scaleZ").toDouble,rotationZ = args("rotationZ").toDouble,scaleY = args("scaleY").toDouble,scaleM = args("scaleM").toDouble,deltaM = args("deltaM").toDouble,deltaX = args("deltaX").toDouble,deltaY = args("deltaY").toDouble,deltaZ = args("deltaZ").toDouble))
+          featureRddList += (UUID -> QGIS.nativeAffineTransform(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], scaleX = args("scaleX").toDouble, scaleZ = args("scaleZ").toDouble, rotationZ = args("rotationZ").toDouble, scaleY = args("scaleY").toDouble, scaleM = args("scaleM").toDouble, deltaM = args("deltaM").toDouble, deltaX = args("deltaX").toDouble, deltaY = args("deltaY").toDouble, deltaZ = args("deltaZ").toDouble))
         case "Feature.antimeridianSplitByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAntimeridianSplit(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+          featureRddList += (UUID -> QGIS.nativeAntimeridianSplit(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.arrayOffsetLinesByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeArrayOffsetLines(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],segments = args("segments").toDouble,joinStyle = args("joinStyle"),offset = args("offset").toDouble,count = args("count").toDouble,miterLimit = args("miterLimit  ").toDouble))
+          featureRddList += (UUID -> QGIS.nativeArrayOffsetLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], segments = args("segments").toDouble, joinStyle = args("joinStyle"), offset = args("offset").toDouble, count = args("count").toDouble, miterLimit = args("miterLimit  ").toDouble))
         case "Feature.translatedFeaturesByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeTranslatedFeatures(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],count = args("count").toDouble,deltaM = args("deltaM").toDouble,deltaX = args("deltaX").toDouble,deltaY = args("deltaY").toDouble,deltaZ = args("deltaZ").toDouble))
+          featureRddList += (UUID -> QGIS.nativeTranslatedFeatures(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], count = args("count").toDouble, deltaM = args("deltaM").toDouble, deltaX = args("deltaX").toDouble, deltaY = args("deltaY").toDouble, deltaZ = args("deltaZ").toDouble))
         case "Feature.assignProjectionByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAssignProjection(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],crs = args("crs")))
+          featureRddList += (UUID -> QGIS.nativeAssignProjection(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], crs = args("crs")))
         case "Feature.offsetLineByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeOffsetLine(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],segments = args("segments").toInt,distance = args("distance").toDouble,joinStyle = args("joinStyle"),miterLimit = args("miterLimit").toDouble))
+          featureRddList += (UUID -> QGIS.nativeOffsetLine(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], segments = args("segments").toInt, distance = args("distance").toDouble, joinStyle = args("joinStyle"), miterLimit = args("miterLimit").toDouble))
         case "Feature.pointsAlongLinesByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativePointsAlongLines(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],startOffset = args("startOffset").toDouble,distance = args("distance").toDouble,endOffset = args("endOffset").toDouble))
+          featureRddList += (UUID -> QGIS.nativePointsAlongLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], startOffset = args("startOffset").toDouble, distance = args("distance").toDouble, endOffset = args("endOffset").toDouble))
         case "Feature.polygonizeByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativePolygonize(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],keepFields = args("keepFields")))
+          featureRddList += (UUID -> QGIS.nativePolygonize(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], keepFields = args("keepFields")))
         case "Feature.polygonsToLinesByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativePolygonsToLines(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+          featureRddList += (UUID -> QGIS.nativePolygonsToLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.randomPointsInPolygonsByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeRandomPointsInPolygons(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],minDistance = args("minDistance").toDouble,includePolygonAttributes = args("includePolygonAttributes"),maxTriesPerPoint = args("maxTriesPerPoint").toInt,pointsNumber = args("pointsNumber").toInt,minDistanceGlobal = args("minDistanceGlobal").toDouble))
+          featureRddList += (UUID -> QGIS.nativeRandomPointsInPolygons(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includePolygonAttributes = args("includePolygonAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
         case "Feature.randomPointsOnLinesByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeRandomPointsOnLines(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],minDistance = args("minDistance").toDouble,includeLineAttributes = args("includeLineAttributes"),maxTriesPerPoint = args("maxTriesPerPoint").toInt,pointsNumber = args("pointsNumber").toInt,minDistanceGlobal = args("minDistanceGlobal").toDouble))
+          featureRddList += (UUID -> QGIS.nativeRandomPointsOnLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includeLineAttributes = args("includeLineAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
         case "Feature.rotateFeaturesByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeRotateFeatures(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],anchor = args("anchor"),angle = args("angle").toDouble))
+          featureRddList += (UUID -> QGIS.nativeRotateFeatures(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], anchor = args("anchor"), angle = args("angle").toDouble))
         case "Feature.simplifyByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeSimplify(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],method = args("method"),tolerance = args("tolerance").toDouble))
+          featureRddList += (UUID -> QGIS.nativeSimplify(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], method = args("method"), tolerance = args("tolerance").toDouble))
         case "Feature.smoothByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeSmooth(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],maxAngle = args("maxAngle").toDouble,iterations= args("iterations").toInt,offset = args("offset").toDouble))
+          featureRddList += (UUID -> QGIS.nativeSmooth(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], maxAngle = args("maxAngle").toDouble, iterations = args("iterations").toInt, offset = args("offset").toDouble))
         case "Feature.swapXYByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeSwapXY(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+          featureRddList += (UUID -> QGIS.nativeSwapXY(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.transectQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeTransect(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],side = args("side"),length= args("length").toDouble,angle = args("angle").toDouble))
+          featureRddList += (UUID -> QGIS.nativeTransect(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], side = args("side"), length = args("length").toDouble, angle = args("angle").toDouble))
         case "Feature.translateGeometryByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeTranslateGeometry(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], delta_x = args("delta_x").toDouble, delta_y = args("delta_y").toDouble, delta_z = args("delta_z").toDouble, delta_m = args("delta_m").toDouble))
         case "Feature.convertGeometryTypeByQGIS" =>
@@ -430,19 +432,19 @@ object Trigger {
         case "Feature.linesToPolygonsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeLinesToPolygons(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.pointsDisplacementByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativePointsDisplacement(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], proximity = args("proximity").toDouble,distance = args("distance").toDouble,horizontal = args("horizontal")))
+          featureRddList += (UUID -> QGIS.nativePointsDisplacement(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], proximity = args("proximity").toDouble, distance = args("distance").toDouble, horizontal = args("horizontal")))
         case "Feature.randomPointsAlongLineByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativaRandomPointsAlongLine(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], pointsNumber = args("pointsNumber").toInt,minDistance = args("minDistance").toDouble))
+          featureRddList += (UUID -> QGIS.nativaRandomPointsAlongLine(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], pointsNumber = args("pointsNumber").toInt, minDistance = args("minDistance").toDouble))
         case "Feature.randomPointsInLayerBoundsByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeRandomPointsInLayerBounds(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], pointsNumber = args("pointsNumber").toInt,minDistance = args("minDistance").toDouble))
+          featureRddList += (UUID -> QGIS.nativeRandomPointsInLayerBounds(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], pointsNumber = args("pointsNumber").toInt, minDistance = args("minDistance").toDouble))
         case "Feature.angleToNearestByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAngleToNearest(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], referenceLayer = args("referenceLayer"),maxDistance = args("maxDistance").toDouble,fieldName = args("fieldName"),applySymbology = args("applySymbology")))
+          featureRddList += (UUID -> QGIS.nativeAngleToNearest(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], referenceLayer = args("referenceLayer"), maxDistance = args("maxDistance").toDouble, fieldName = args("fieldName"), applySymbology = args("applySymbology")))
         case "Feature.boundaryByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeBoundary(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.miniEnclosingCircleByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeMiniEnclosingCircle(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], segments = args("segments").toInt))
         case "Feature.multiRingConstantBufferByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeMultiRingConstantBuffer(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rings = args("rings").toInt,distance = args("distance").toDouble))
+          featureRddList += (UUID -> QGIS.nativeMultiRingConstantBuffer(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rings = args("rings").toInt, distance = args("distance").toDouble))
         case "Feature.orientedMinimumBoundingBoxByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeOrientedMinimumBoundingBox(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.pointOnSurfaceByQGIS" =>
@@ -450,7 +452,7 @@ object Trigger {
         case "Feature.poleOfInaccessibilityByQGIS" =>
           featureRddList += (UUID -> QGIS.nativePoleOfInaccessibility(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], tolerance = args("tolerance").toDouble))
         case "Feature.rectanglesOvalsDiamondsByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeRectanglesOvalsDiamonds(sc,featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rotation =  args("rotation").toDouble, shape = args("shape"), segments = args("segments").toInt, width = args("width").toDouble, height = args("height").toDouble))
+          featureRddList += (UUID -> QGIS.nativeRectanglesOvalsDiamonds(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rotation = args("rotation").toDouble, shape = args("shape"), segments = args("segments").toInt, width = args("width").toDouble, height = args("height").toDouble))
         case "Feature.singleSidedBufferByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeSingleSidedBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], side = args("side"), distance = args("distance").toDouble, segments = args("segments").toInt, joinStyle = args("joinStyle"), miterLimit = args("miterLimit").toDouble))
         case "Feature.taperedBufferByQGIS" =>
@@ -472,7 +474,7 @@ object Trigger {
         case "Coverage.fillNodataByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalFillNodata(sc, coverageRddList(args("input")), distance = args("distance").toDouble, iterations = args("iterations").toDouble, extra = args("extra"), maskLayer = args("maskLayer"), noMask = args("noMask"), band = args("band").toInt, options = args("options")))
         case "Coverage.gridAverageByGDAL" =>
-          coverageRddList += (UUID -> QGIS.gdalGridAverage(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minPoints = args("minPoints").toDouble, extra = args("extra"), nodata = args("nodata").toDouble,  angle = args("angle").toDouble, zField = args("zField"), dataType = args("dataType"), radius2 = args("radius2").toDouble, radius1 = args("radius1").toDouble, options = args("options")))
+          coverageRddList += (UUID -> QGIS.gdalGridAverage(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minPoints = args("minPoints").toDouble, extra = args("extra"), nodata = args("nodata").toDouble, angle = args("angle").toDouble, zField = args("zField"), dataType = args("dataType"), radius2 = args("radius2").toDouble, radius1 = args("radius1").toDouble, options = args("options")))
         case "Coverage.gridDataMetricsByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalGridDataMetrics(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minPoints = args("minPoints").toDouble, extra = args("extra"), metric = args("metric"), nodata = args("nodata").toDouble, angle = args("angle").toDouble, zField = args("zField"), options = args("options"), dataType = args("dataType"), radius2 = args("radius2").toDouble, radius1 = args("radius1").toDouble))
         case "Coverage.gridInverseDistanceByGDAL" =>
@@ -502,11 +504,11 @@ object Trigger {
         case "Coverage.clipRasterByMaskLayerByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalClipRasterByMaskLayer(sc, coverageRddList(args("input")), cropToCutLine = args("cropToCutLine"), targetExtent = args("targetExtent"), setResolution = args("setResolution"), extra = args("extra"), targetCrs = args("targetCrs"), xResolution = args("xResolution").toDouble, keepResolution = args("keepResolution"), alphaBand = args("alphaBand"), options = args("options"), mask = args("mask"), multithreading = args("multithreading"), nodata = args("nodata").toDouble, yResolution = args("yResolution").toDouble, dataType = args("dataType"), sourceCrs = args("sourceCrs")))
         case "Coverage.polygonizeByGDAL" =>
-          featureRddList += (UUID -> QGIS.gdalPolygonize(sc, coverageRddList(args("input")), extra = args("extra"), field = args("field"),band = args("band").toInt, eightConnectedness = args("eightConnectedness")))
+          featureRddList += (UUID -> QGIS.gdalPolygonize(sc, coverageRddList(args("input")), extra = args("extra"), field = args("field"), band = args("band").toInt, eightConnectedness = args("eightConnectedness")))
         case "Coverage.rasterizeOverByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalRasterizeOver(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], coverageRddList(args("inputRaster")), extra = args("extra"), field = args("field"), add = args("add")))
         case "Coverage.rasterizeOverFixedValueByGDAL" =>
-          coverageRddList += (UUID -> QGIS.gdalRasterizeOverFixedValue(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], coverageRddList(args("inputRaster")), burn = args("burn").toDouble, extra = args("extra"),  add = args("add")))
+          coverageRddList += (UUID -> QGIS.gdalRasterizeOverFixedValue(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], coverageRddList(args("inputRaster")), burn = args("burn").toDouble, extra = args("extra"), add = args("add")))
         case "Coverage.rgbToPctByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalRgbToPct(sc, coverageRddList(args("input")), ncolors = args("ncolors").toDouble))
         case "Coverage.translateByGDAL" =>
@@ -528,38 +530,38 @@ object Trigger {
         case "Feature.bufferVectorsByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalBufferVectors(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
         case "Feature.oneSideBufferByGDAL" =>
-          featureRddList += (UUID -> QGIS.gdalOneSideBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), bufferSide = args("bufferSide"),field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
+          featureRddList += (UUID -> QGIS.gdalOneSideBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), bufferSide = args("bufferSide"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
         //    GRASS
         case "Coverage.neighborsByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_neighbors(sc,input = coverageRddList(args("input")),size=args("size"),method=args("method")))
+          coverageRddList += (UUID -> GrassUtil.r_neighbors(sc, input = coverageRddList(args("input")), size = args("size"), method = args("method")))
         case "Coverage.bufferByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_buffer(sc,input = coverageRddList(args("input")),distances=args("distances"),unit = args("units")))
+          coverageRddList += (UUID -> GrassUtil.r_buffer(sc, input = coverageRddList(args("input")), distances = args("distances"), unit = args("units")))
         case "Coverage.crossByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_cross(sc,input = coverageCollectionRddList(args("input"))))
+          coverageRddList += (UUID -> GrassUtil.r_cross(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.patchByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_patch(sc,input = coverageCollectionRddList(args("input"))))
+          coverageRddList += (UUID -> GrassUtil.r_patch(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.latlongByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_latlong(sc,input = coverageRddList(args("input"))))
+          coverageRddList += (UUID -> GrassUtil.r_latlong(sc, input = coverageRddList(args("input"))))
         case "Coverage.blendByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_blend(sc,first = coverageRddList(args("first")),second = coverageRddList(args("second")),percent=args("percent")))
+          coverageRddList += (UUID -> GrassUtil.r_blend(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), percent = args("percent")))
         case "Coverage.compositeByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_composite(sc,red = coverageRddList(args("red")),green = coverageRddList(args("green")),blue = coverageRddList(args("blue")),levels=args("levels")))
+          coverageRddList += (UUID -> GrassUtil.r_composite(sc, red = coverageRddList(args("red")), green = coverageRddList(args("green")), blue = coverageRddList(args("blue")), levels = args("levels")))
         case "Coverage.sunmaskeByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_sunmask(sc,elevation = coverageRddList(args("red")),year=args("year"),month=args("month"),day=args("day"),hour=args("hour"),minute=args("minute"),second=args("second"),timezone=args("timezone")))
+          coverageRddList += (UUID -> GrassUtil.r_sunmask(sc, elevation = coverageRddList(args("red")), year = args("year"), month = args("month"), day = args("day"), hour = args("hour"), minute = args("minute"), second = args("second"), timezone = args("timezone")))
         case "Coverage.surfIdwByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_surf_idw(sc,input = coverageRddList(args("input")),npoints=args("npoints")))
+          coverageRddList += (UUID -> GrassUtil.r_surf_idw(sc, input = coverageRddList(args("input")), npoints = args("npoints")))
         case "Coverage.rescaleByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_rescale(sc,input = coverageRddList(args("input")),to=args("to")))
+          coverageRddList += (UUID -> GrassUtil.r_rescale(sc, input = coverageRddList(args("input")), to = args("to")))
         case "Coverage.surfAreaByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_surf_area(sc,map = coverageRddList(args("map")),vscale=args("vscale")))
+          grassResultList += (UUID -> GrassUtil.r_surf_area(sc, map = coverageRddList(args("map")), vscale = args("vscale")))
         case "Coverage.statsByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_stats(sc,input = coverageRddList(args("input")),flags=args("flags"),separator = args("separator"),null_value = args("null_value"),nsteps = args("nsteps")))
+          grassResultList += (UUID -> GrassUtil.r_stats(sc, input = coverageRddList(args("input")), flags = args("flags"), separator = args("separator"), null_value = args("null_value"), nsteps = args("nsteps")))
         case "Coverage.coinByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_coin(sc,first = coverageRddList(args("first")),second = coverageRddList(args("second")),units=args("units")))
+          grassResultList += (UUID -> GrassUtil.r_coin(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), units = args("units")))
         case "Coverage.volumeByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_volume(sc,input = coverageRddList(args("input")),clump = coverageRddList(args("clump"))))
+          grassResultList += (UUID -> GrassUtil.r_volume(sc, input = coverageRddList(args("input")), clump = coverageRddList(args("clump"))))
         case "Coverage.outPNGByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_out_png(sc,input = coverageRddList(args("input")),compression =args("compression")))
+          grassResultList += (UUID -> GrassUtil.r_out_png(sc, input = coverageRddList(args("input")), compression = args("compression")))
         // Kernel
         case "Kernel.chebyshev" =>
           kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
@@ -639,12 +641,12 @@ object Trigger {
         case "Coverage.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          println("isBatch",isBatch)
-          if(isBatch == 0){
+          println("isBatch", isBatch)
+          if (isBatch == 0) {
             Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
-          }else{
+          } else {
             // TODO: 增加添加样式的函数
-            coverageRddList += (UUID ->Coverage.addStyles(coverageRddList(args("coverage")),visParam=visParam))
+            coverageRddList += (UUID -> Coverage.addStyles(coverageRddList(args("coverage")), visParam = visParam))
           }
 
 
@@ -851,22 +853,39 @@ object Trigger {
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
 
         //Cube
-        case "Service.getCollections" =>
-          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
-        case "Collections.toCube" =>
-          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
-        case "Cube.NDWI" =>
-          cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
-        case "Cube.binarization" =>
-          cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
-            threshold = isOptionalArg(args, "threshold").toDouble))
-        case "Cube.subtract" =>
-          cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
-            certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
-        case "Cube.overlayAnalysis" =>
-          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
-        case "Cube.addStyles" =>
-          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
+        //        case "Service.getCollections" =>
+        //          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
+        //        case "Collections.toCube" =>
+        //          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
+        //        case "Cube.NDWI" =>
+        //          cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
+        //        case "Cube.binarization" =>
+        //          cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
+        //            threshold = isOptionalArg(args, "threshold").toDouble))
+        //        case "Cube.subtract" =>
+        //          cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
+        //            certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
+        //        case "Cube.overlayAnalysis" =>
+        //          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
+        //        case "Cube.addStyles" =>
+        //          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
+        case "Cube.load" => {
+          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
+            dateTime = isOptionalArg(args, "dateTime")))
+        }
+        case "Cube.normalize" => {
+          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
+        }
+        case "Cube.aggregate" => {
+          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+            method = isOptionalArg(args, "method")))
+        }
+        case "Cube.addStyles" => {
+          val visParam: VisualizationParam = new VisualizationParam
+          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+          Cube.visualizeOnTheFly(cubeRDDList(args("cube")), visParam)
+        }
       }
 
 
@@ -965,7 +984,7 @@ object Trigger {
 
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
-              curDagId: String, userID:String): Unit = {
+              curDagId: String, userID: String): Unit = {
 
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
@@ -1047,18 +1066,18 @@ object Trigger {
       case e: Throwable =>
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
-        errorJson.put("InputJSON",workTaskJson)
+        errorJson.put("InputJSON", workTaskJson)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
         outJsonObject.put("workID", Trigger.dagId)
         outJsonObject.put("json", errorJson)
-//
+        //
         println("Error json = " + outJsonObject)
         sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
-//         打印至后端控制台
+        //         打印至后端控制台
         e.printStackTrace()
         println("lambda Error!")
     } finally {
@@ -1076,7 +1095,7 @@ object Trigger {
       Trigger.cubeRDDList.clear()
       Trigger.cubeLoad.clear()
       val filePath = s"/mnt/storage/temp/${dagId}.tiff"
-      if(scala.reflect.io.File(filePath).exists)
+      if (scala.reflect.io.File(filePath).exists)
         scala.reflect.io.File(filePath).delete()
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
@@ -1159,7 +1178,8 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeNDVI.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

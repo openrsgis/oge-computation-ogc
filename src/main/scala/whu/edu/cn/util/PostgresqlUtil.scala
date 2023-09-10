@@ -1,8 +1,9 @@
 package whu.edu.cn.util
 
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
+import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_DRIVER, POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
 
 import java.sql.{Connection, DriverManager, PreparedStatement}
+import java.util.Properties
 
 /**
  * A config class for postresql connection.
@@ -45,3 +46,36 @@ class PostgresqlUtil(sql: String) {
     }
   }
 }
+
+object PostgresqlUtil {
+  //val url = "jdbc:postgresql://125.220.153.26:5432/geocube"
+  //val url = "jdbc:postgresql://125.220.153.26:5432/whugeocube"
+  //  val url = "jdbc:postgresql://125.220.153.26:5432/multigeocube"
+  //  val url = "jdbc:postgresql://172.20.20.9:25432/multigeocube"
+  //  val driver = "org.postgresql.Driver"
+  //  val user = "geocube"
+  ////  val password = "ypfamily608"
+  //  val password = "ypfamilysouthgis"
+  var url = ""
+  var driver = ""
+  var user = ""
+  //  val password = "ypfamily608"
+  var password = ""
+
+  def get(): Unit = {
+    //    val prop = new Properties()
+    //    val inputStream = PostgresqlUtil.getClass.getClassLoader.getResourceAsStream("app.properties")
+    //    prop.load(inputStream);
+
+    //    this.url=prop.get("url").toString
+    //    this.driver=prop.get("driver").toString
+    //    this.user=prop.get("user").toString
+    //    this.password=prop.get("password").toString
+
+    this.url = POSTGRESQL_URL
+    this.driver = POSTGRESQL_DRIVER
+    this.user = POSTGRESQL_USER
+    this.password = POSTGRESQL_PWD
+  }
+}
+

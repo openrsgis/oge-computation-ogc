@@ -35,7 +35,5 @@ case class RasterTile(_id: String = ""){
   var measurementMeta: GcMeasurement = GcMeasurement()
   @BeanProperty
   var data:Tile = null
-  @BeanProperty
-  var dataType: String = ""
 
 }

@@ -2,8 +2,9 @@ package whu.edu.cn.geocube.core.raster.ingest
 
 import java.io.File
 import java.sql.{ResultSet, SQLException}
-import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.geocube.util.PostgresqlService
+
 
 /**
  * Save the results of on-the-fly computation to database for precomputation.

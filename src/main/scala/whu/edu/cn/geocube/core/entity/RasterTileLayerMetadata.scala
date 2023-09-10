@@ -22,9 +22,9 @@ case class RasterTileLayerMetadata[K](_tileLayerMetadata: TileLayerMetadata[K],
 
   def getProductName: String = this.productName
 
-  def getProductNames: ArrayBuffer[String] = this.productNames
+  def getProductNames: ArrayBuffer[String] = this.measurementNames
 
-  def getMeasurementNames: ArrayBuffer[String] = this.measurementNames
+  def getMeasurementNames: ArrayBuffer[String] = this.productNames
 
   def setTileLayerMetadata(tileLayerMetadata: TileLayerMetadata[K]) =
     this.tileLayerMetadata = tileLayerMetadata
@@ -43,7 +43,5 @@ case class RasterTileLayerMetadata[K](_tileLayerMetadata: TileLayerMetadata[K],
 
   def setMeasurementNames(measurementNames: Array[String]) =
     this.measurementNames = measurementNames.toBuffer.asInstanceOf[ArrayBuffer[String]]
-
-  def printString(): Unit = println(this.getTileLayerMetadata.toString + "; Bands: " + this.measurementNames.toList.toString() + "; Products: " + this.productNames.toList.toString() )
 
 }

@@ -3,6 +3,7 @@ package whu.edu.cn.geocube.core.vector.query
 import java.sql.{DriverManager, ResultSet}
 import java.text.SimpleDateFormat
 import java.util.Date
+
 import com.google.gson.{JsonObject, JsonParser}
 import geotrellis.layer.SpaceTimeKey
 import org.geotools.geojson.feature.FeatureJSON
@@ -263,7 +264,7 @@ object QueryVectorObjects {
           val geoObjects: ArrayBuffer[GeoObject] = new ArrayBuffer[GeoObject]()
           if(duplicated){
             geoObjectKeys.foreach { geoObjectkey =>
-              val featureStr = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "metaData")
+              val featureStr = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
               val feature: SimpleFeature = fjson.readFeature(featureStr)
               val geoObject = new GeoObject(geoObjectkey, feature) //一个geoObject和多个网格相交，则该geoObject在多个网格中的geoObjectkey相等,但具有不同的(SpaceTimeKey(col, row, time)
               geoObjects.append(geoObject)
@@ -272,7 +273,7 @@ object QueryVectorObjects {
             geoObjectKeys.foreach { geoObjectkey =>
               if(!mutableSet.contains(geoObjectkey)){
                 mutableSet.add(geoObjectkey)
-                val featureStr = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "metaData")
+                val featureStr = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
                 val feature: SimpleFeature = fjson.readFeature(featureStr)
                 val geoObject = new GeoObject(geoObjectkey, feature) //一个geoObject和多个网格相交，则该geoObject在多个网格中的geoObjectkey相等,但具有不同的(SpaceTimeKey(col, row, time)
                 geoObjects.append(geoObject)
@@ -281,11 +282,11 @@ object QueryVectorObjects {
           }else if(!duplicated && principle.equals("area")){
             geoObjectKeys.foreach { geoObjectkey =>
               if(!mutableSet.contains(geoObjectkey)){
-                val featureStr = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "metaData")
+                val featureStr = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
                 val feature: SimpleFeature = fjson.readFeature(featureStr)
                 val geometry: Geometry = feature.getDefaultGeometry.asInstanceOf[Geometry]
                 if(geometry.isValid){
-                  val tilesMetaData = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "tilesMetaData")
+                  val tilesMetaData = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "tilesMetaData")
                   val json = new JsonParser()
                   val objArray = json.parse(tilesMetaData).getAsJsonArray
                   var (currentCol, currentRow) = (-1, -1)
@@ -513,14 +514,14 @@ object QueryVectorObjects {
           } else {
             println("No vector time acquired!")
           }
-          val col_row =getVectorMeta("hbase_vector", geoObjectKeys(0), "vectorData", "tilesMetaData").dropRight(1).substring(1)
+          val col_row =getVectorMeta("hbase_vector_"+cubeId, geoObjectKeys(0), "vectorData", "tilesMetaData").dropRight(1).substring(1)
           val json = new JsonParser()
           val obj = json.parse(col_row).asInstanceOf[JsonObject]
           val extent = json.parse(obj.get("extent").toString).asInstanceOf[JsonObject]
           val (col, row) = (extent.get("column").toString.toInt, extent.get("row").toString.toInt)
           geoObjectKeys.foreach{geoObjectkey =>
             println(geoObjectkey)
-            val metaJson = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "metaData")
+            val metaJson = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
             val Json = json.parse(metaJson).asInstanceOf[JsonObject]
             VectorGeoJsonArray.append(metaJson)
           }
@@ -635,7 +636,7 @@ object QueryVectorObjects {
         val geoObjectKeys = listString.substring(listString.indexOf("(") + 1, listString.indexOf(")")).split(", ")
 
 
-        val meta = getVectorMeta("hbase_vector", geoObjectKeys(0), "vectorData", "metaData")
+        val meta = getVectorMeta("hbase_vector_"+cubeId, geoObjectKeys(0), "vectorData", "metaData")
         val json = new JsonParser()
         val obj = json.parse(meta).asInstanceOf[JsonObject]
 
