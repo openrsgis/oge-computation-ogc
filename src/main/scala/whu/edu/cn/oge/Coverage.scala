@@ -3338,16 +3338,16 @@ object Coverage {
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
     // 先转到EPSG:3857，将单位转为米缩放后再转回指定坐标系
-//    var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, CRS.fromName("EPSG:3857"))
-//    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height / batchParam.getScale).toInt, 1))
-//    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
+    var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, CRS.fromName("EPSG:3857"))
+    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width*reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height*reprojectTile.rows / batchParam.getScale).toInt, 1))
+    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
 
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
     val saveFilePath = s"/mnt/storage/temp/${dagId}.tiff"
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
-    GeoTiff(stitchedTile, batchParam.getCrs).write(saveFilePath)
+    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
 
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
