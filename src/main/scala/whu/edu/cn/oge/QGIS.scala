@@ -1,15 +1,17 @@
 package whu.edu.cn.oge
 
+import com.alibaba.fastjson.{JSON, JSONArray}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.mapalgebra.focal.ZFactor
 import geotrellis.raster.{MultibandTile, Tile}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom._
+import org.locationtech.jts.geom.{Geometry, _}
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger.{dagId, runMain, workTaskJson}
 import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
+import whu.edu.cn.oge.Feature._
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
@@ -1859,7 +1861,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_fillnodata.py --input "$outputTiffPath" --distance $distance --iterations $iterations --extra $extra --mask-layer $maskLayer --no-mask $noMask --band $band --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_fillnodata.py --input "$outputTiffPath" --distance $distance --iterations $iterations --extra "$extra" --mask-layer "$maskLayer" --no-mask $noMask --band $band --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
