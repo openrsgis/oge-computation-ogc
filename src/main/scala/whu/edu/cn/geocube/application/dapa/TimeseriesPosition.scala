@@ -3,11 +3,12 @@ package whu.edu.cn.geocube.application.dapa
 import java.io.{BufferedWriter, File, FileWriter}
 import java.text.SimpleDateFormat
 import java.util.Date
+
 import geotrellis.layer.{SpaceTimeKey, SpatialKey}
 import geotrellis.raster.{MultibandTile, Raster, Tile}
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTileLayerMetadata}
+import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.util.TileUtil
 
@@ -16,7 +17,7 @@ import scala.collection.mutable.ArrayBuffer
 object TimeseriesPosition {
   /**
    * Return links to single text/csv file with 1d timeseries (each with values from one or multiple bands)
-   * Used bu OGC DAPA timeseries position endpoint.
+   * Used by OGC DAPA timeseries position endpoint.
    *
    * @param sc
    * @param productName
@@ -27,7 +28,7 @@ object TimeseriesPosition {
    * @param outputDir
    * @return
    */
-  def getDapaTimeseriesPosition(sc: SparkContext, productName: String, point: String, startTime: String, endTime: String, measurementsStr: String, outputDir: String): String = {
+  def getDapaTimeseriesPosition(sc: SparkContext, cubeId: String, productName: String, point: String, startTime: String, endTime: String, measurementsStr: String, outputDir: String): String = {
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
     for(i <- 0 until outputDirArray.length - 1)
@@ -37,6 +38,7 @@ object TimeseriesPosition {
     val extent = Array(position(0), position(1), position(0) + 0.1, position(1) + 0.1)
     val measurements = measurementsStr.split(",")
     val queryParams: QueryParams = new QueryParams()
+    queryParams.setCubeId(cubeId)
     queryParams.setRasterProductName(productName)
     queryParams.setExtent(extent(0), extent(1), extent(2), extent(3))
     queryParams.setTime(startTime, endTime)
@@ -103,13 +105,15 @@ object TimeseriesPosition {
 
   def main(args: Array[String]): Unit = {
     //parse the web request params
-    val rasterProductName = args(0)
-    val point = args(1)
-    val startTime = args(2)
-    val endTime = args(3)
-    val measurements = args(4)
-    val outputDir = args(5)
+    val cubeId = args(0)
+    val rasterProductName = args(1)
+    val point = args(2)
+    val startTime = args(3)
+    val endTime = args(4)
+    val measurements = args(5)
+    val outputDir = args(6)
 
+    println("cubeId: " + cubeId)
     println("rasterProductName: " + rasterProductName)
     println("point: " + point)
     println("time: " + (startTime, endTime))
@@ -117,7 +121,7 @@ object TimeseriesPosition {
 
 
     val conf = new SparkConf()
-      .setAppName("DAPA timeseries area")
+      .setAppName("DAPA timeseries position")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
 
@@ -125,7 +129,7 @@ object TimeseriesPosition {
 
     //query and access
     val timeBegin = System.currentTimeMillis()
-    getDapaTimeseriesPosition(sc, rasterProductName, point, startTime, endTime, measurements, outputDir)
+    getDapaTimeseriesPosition(sc, cubeId, rasterProductName, point, startTime, endTime, measurements, outputDir)
     val timeEnd = System.currentTimeMillis()
     println("time cost: " + (timeEnd - timeBegin))
   }

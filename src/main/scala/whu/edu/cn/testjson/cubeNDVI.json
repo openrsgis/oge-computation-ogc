@@ -1,0 +1,12 @@
+{  "layerName": "ndwi",
+  "isBatch": "0",
+  "map": {
+    "level": 7,
+    "spatialRange": [
+      111.51476648622568,
+      30.424498262780092,
+      111.6256782367174,
+      30.53493723104236
+    ]
+  },
+  "1": {"constantValue": ["B8", "B3"]}, "0": {"functionInvocationValue": {"functionName": "Cube.addStyles", "arguments": {"cube": {"functionInvocationValue": {"functionName": "Cube.aggregate", "arguments": {"dimensionName": {"constantValue": "time"}, "input": {"functionInvocationValue": {"functionName": "Cube.normalize", "arguments": {"dimensionMembers": {"valueReference": "1"}, "dimensionName": {"constantValue": "bands"}, "input": {"functionInvocationValue": {"functionName": "Cube.load", "arguments": {"bbox": {"constantValue": [4.7, 51.7, 4.85, 51.8]}, "cubeID": {"constantValue": "SENTINEL-2 Level-2A MSI"}, "dateTime": {"constantValue": ["2019-01-17 08:59:59", "2019-01-19 21:00:01"]}, "measurements": {"valueReference": "1"}}}}}}}, "method": {"constantValue": "mean"}}}}, "max": {"constantValue": 1}, "min": {"constantValue": -1}, "palette": {"constantValue": ["GoldenRod", "Gold", "LightGreen", "LimeGreen", "Green"]}}}}}

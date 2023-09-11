@@ -1,11 +1,10 @@
 package whu.edu.cn.geocube.core.entity
 
-import whu.edu.cn.util.PostgresqlUtil
-
 import java.sql.{DriverManager, ResultSet, SQLException, Statement}
 import java.util
 import scala.collection.mutable.ArrayBuffer
 import scala.beans.BeanProperty
+import whu.edu.cn.util.PostgresqlUtil
 
 /**
  * Dimension class - extent.

@@ -5,18 +5,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import geotrellis.layer.{LayoutDefinition, SpaceTimeKey, SpatialKey}
 import geotrellis.raster.TileLayout
 import geotrellis.store.index.{KeyIndex, ZCurveKeyIndexMethod}
-
 import java.io.{File, PrintWriter}
 import java.sql.{DriverManager, ResultSet}
-import java.text.SimpleDateFormat
-import java.util.Date
 import org.apache.spark.{RangePartitioner, SparkConf, SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.geotools.geojson.feature.FeatureJSON
 import org.locationtech.jts.geom.{Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import org.opengis.feature.simple.SimpleFeature
-
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import whu.edu.cn.geocube.core.cube.vector.CompuIntensityPartitioner
@@ -25,8 +21,8 @@ import whu.edu.cn.geocube.core.vector.grid.GridConf
 import whu.edu.cn.geocube.core.cube.vector.GeoObject
 import whu.edu.cn.geocube.core.vector.query.DistributedQueryVectorObjects._
 import whu.edu.cn.geocube.util.HbaseUtil.getVectorMeta
+import whu.edu.cn.util.PostgresqlUtil
 import whu.edu.cn.geocube.util.PostgresqlService
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
 
 /**
  * Geospatial data especially vector are always irregular and heterogeneous,
@@ -41,7 +37,6 @@ import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTG
  */
 object Intersection {
   def main(args: Array[String]):Unit = {
-    val begin = System.currentTimeMillis()
     /****Distributed query gridLayerGeoObjectRdd, has accessed GeoObject before sampleGeneration() function****/
     /*val conf = new SparkConf()
       .setAppName("query")
@@ -62,7 +57,7 @@ object Intersection {
 
     /****Distributed query gridLayerGeoObjectKeysRdd, will access GeoObject in sampleGeneration() function****/
     /*---------下面两步用于样本生成和模型训练, 可提前做好---------*/
-    /*val conf = new SparkConf()
+    val conf = new SparkConf()
       .setAppName("query")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     val sc = new SparkContext(conf)
@@ -75,9 +70,9 @@ object Intersection {
     val gridLayerGeoObjectKeysRdd2: RDD[(SpatialKey, Array[String])] = getGeoObjectKeysRDD(sc, queryParams, duplicated = true)
 
     val joinKeysRdd: RDD[(SpatialKey, (Array[String], Array[String]))] =
-      gridLayerGeoObjectKeysRdd1.join(gridLayerGeoObjectKeysRdd2)*/
+      gridLayerGeoObjectKeysRdd1.join(gridLayerGeoObjectKeysRdd2)
     /*** 1.样本生成 ***/
-    //sampleGenerator(joinKeysRdd, "/home/geocube/environment_test/AI/osm_china_india_buildings_landuse_sample1.txt")
+    sampleGenerator(joinKeysRdd, "/home/geocube/environment_test/AI/osm_china_india_buildings_landuse_sample1.txt")
 
     /*** 2.模型生成: Python-sklearn生成 ***/
 
@@ -122,45 +117,32 @@ object Intersection {
 
     /*---------下面为根据预测的计算强度进行重分区分析测试---------*/
     /***测试不重分区 VS 读取存储于文件系统上预测的计算强度重分区***/
-    val conf = new SparkConf()
+    /*val conf = new SparkConf()
       .setAppName("query")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     val sc = new SparkContext(conf)
     val queryParams = new QueryParams()
-//    queryParams.setVectorProductName("OSM_Buildings7") //queryParams.setVectorProductName("OSM_Buildings")
-    queryParams.setVectorProductName("Guangdong_DLTB_3_Counties") //queryParams.setVectorProductName("OSM_Buildings")
+    queryParams.setVectorProductName("OSM_Buildings7") //queryParams.setVectorProductName("OSM_Buildings")
     queryParams.setExtent(66.000, 1.000, 136.000, 54.000) //queryParams.setExtent(70.000, 15.000, 136.000, 54.000)
-//    queryParams.setTime("2020-10-01 02:30:59.415", "2020-11-01 02:30:59.41") //queryParams.setTime("2020-08-01 02:30:59.415", "2020-09-01 02:30:59.41")
-    queryParams.setTime("2022-05-10 02:30:59.415", "2022-05-13 02:30:59.41") //queryParams.setTime("2020-08-01 02:30:59.415", "2020-09-01 02:30:59.41")
+    queryParams.setTime("2020-10-01 02:30:59.415", "2020-11-01 02:30:59.41") //queryParams.setTime("2020-08-01 02:30:59.415", "2020-09-01 02:30:59.41")
     val gridLayerGeoObjectKeysRdd1: RDD[(SpatialKey, Array[String])] = getGeoObjectKeysRDD(sc, queryParams, duplicated = true)
-//    queryParams.setVectorProductName("OSM_Landuse")
-    queryParams.setVectorProductName("Guangdong_PDT_3_Counties")
+    queryParams.setVectorProductName("OSM_Landuse")
     val gridLayerGeoObjectKeysRdd2: RDD[(SpatialKey, Array[String])] = getGeoObjectKeysRDD(sc, queryParams, duplicated = true)
+
     val joinKeysRdd: RDD[(SpatialKey, (Array[String], Array[String]))] =
       gridLayerGeoObjectKeysRdd1.join(gridLayerGeoObjectKeysRdd2)
 
-    val CIwithSpatialKey = joinKeysRdd.map(x => (x._1, x._2._1.size*x._2._2.size))
-    val gridZOrderCodeWithCI: Array[(BigInt, Long)] = CIwithSpatialKey.map{x =>
-      val keyIndex: KeyIndex[SpatialKey] = ZCurveKeyIndexMethod.createIndex(null)
-      (keyIndex.toIndex(x._1), x._2.toLong)
-    }.collect()
-
-
-
-   /* val file = Source.fromFile("/home/geocube/environment_test/AI/osm_china_india_buildings_landuse_more_zorderWithCompuIntensity.txt")
+    val file = Source.fromFile("/home/geocube/environment_test/AI/osm_china_india_buildings_landuse_more_zorderWithCompuIntensity.txt")
     val gridZOrderCodeWithCI: Array[(BigInt, Long)] = file.getLines().map{ line =>
       val arr = line/*.substring(line.indexOf("(") + 1, line.indexOf(")"))*/.split(",")
       val zorderCode = BigInt(arr(0).toInt)
       val compuIntesity = arr(1).toDouble.toLong
       (zorderCode, compuIntesity)
     }.toArray
-    file.close*/
-    val temp=System.currentTimeMillis()
+    file.close
+
     val intersectionRdd: RDD[Geometry] = intersection(joinKeysRdd, gridZOrderCodeWithCI)
-    println("intersection results sum: " + intersectionRdd.count())
-    val end = System.currentTimeMillis()
-    println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Time cost of intersection: " + (temp - begin) + " ms")
-    println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Time cost of intersection: " + (end - begin) + " ms")
+    println("intersection results sum: " + intersectionRdd.count())*/
 
     /***测试不重分区 VS 读取存储于数据库上预测的计算强度重分区效果***/
     /*val conf = new SparkConf()
@@ -178,12 +160,9 @@ object Intersection {
     queryParams2.setExtent(68.000, 13.000, 136.000, 54.000) //queryParams1.setExtent(70.000, 15.000, 136.000, 54.000)
     queryParams2.setTime("2020-10-01 02:30:59.415", "2020-11-01 02:30:59.41") //queryParams1.setTime("2020-08-01 02:30:59.415", "2020-09-01 02:30:59.41")
 
-    //查询第一数据的矢量ID和网格计算强度
     val gridLayerGeoObjectKeysAndCompuIntensityRdd1: RDD[(SpatialKey, (Array[String], Long))] = getGeoObjectKeysAndCompuIntensityRDD(sc, queryParams1, duplicated = true, processName = "intersection", queryParams2)
-    //查询第二组数据的矢量ID
     val gridLayerGeoObjectKeysRdd2: RDD[(SpatialKey, Array[String])] = getGeoObjectKeysRDD(sc, queryParams2, duplicated = true)
 
-    //返回(zorder编码，计算强度)
     val gridZOrderCodeWithCI: Array[(BigInt, Long)] = gridLayerGeoObjectKeysAndCompuIntensityRdd1.map{x =>
       val keyIndex: KeyIndex[SpatialKey] = ZCurveKeyIndexMethod.createIndex(null)
       (keyIndex.toIndex(x._1), x._2._2)
@@ -421,7 +400,7 @@ object Intersection {
     val joinZCodeWithProductFactKey:RDD[(BigInt, (((String, String), (String, String)), Long))] = gridZOrderCodeWithProductFactKeyRdd1.join(gridZOrderCodeWithProductFactKeyRdd2).join(gridZOrderCodeWithCIRdd)
 
     joinZCodeWithProductFactKey.foreachPartition{ partition =>
-      val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+      val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
       val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
       val postgresqlService = new PostgresqlService
       partition.foreach{ ele =>
@@ -470,24 +449,21 @@ object Intersection {
     }*/
 
     /***repartition using getBoundary1() or *getBoundary2()***/
-    val newNumPartitions = if (gridZOrderCodeWithCI.size < joinKeysRdd.getNumPartitions) gridZOrderCodeWithCI.size else joinKeysRdd.getNumPartitions
-    val partitionContainers: Array[ArrayBuffer[BigInt]] = CompuIntensityPartitioner.sortPut(gridZOrderCodeWithCI, newNumPartitions)
+    val partitionContainers: Array[ArrayBuffer[BigInt]] = CompuIntensityPartitioner.getBoundary2(gridZOrderCodeWithCI, 8)
     val balancedJoinKeysRdd: RDD[(SpatialKey, (Array[String], Array[String]))] =
-      joinKeysRdd.partitionBy(new CompuIntensityPartitioner(newNumPartitions, partitionContainers))
+      joinKeysRdd.partitionBy(new CompuIntensityPartitioner(8, partitionContainers))
 
     /***read Geometry***/
     val joinRdd: RDD[(SpatialKey, (Array[Geometry], Array[Geometry]))] = balancedJoinKeysRdd.map{ ele =>
        val spatialKey = ele._1
        val fjson = new FeatureJSON()
        val geometries1: Array[Geometry] = ele._2._1.map{ geoObjectkey =>
-//         val featureStr = getVectorMeta("hbase_vector_aigis", geoObjectkey, "vectorData", "metaData")
-         val featureStr = getVectorMeta("hbase_vector_test", geoObjectkey, "vectorData", "metaData")
+         val featureStr = getVectorMeta("hbase_vector_aigis", geoObjectkey, "vectorData", "metaData")
          val feature: SimpleFeature = fjson.readFeature(featureStr)
          feature.getDefaultGeometry.asInstanceOf[Geometry]
        }.filter(_.isValid)
        val geometries2: Array[Geometry] = ele._2._2.map{ geoObjectkey =>
-//         val featureStr = getVectorMeta("hbase_vector_aigis", geoObjectkey, "vectorData", "metaData")
-         val featureStr = getVectorMeta("hbase_vector_test", geoObjectkey, "vectorData", "metaData")
+         val featureStr = getVectorMeta("hbase_vector_aigis", geoObjectkey, "vectorData", "metaData")
          val feature: SimpleFeature = fjson.readFeature(featureStr)
          feature.getDefaultGeometry.asInstanceOf[Geometry]
        }.filter(_.isValid)

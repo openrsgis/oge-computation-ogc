@@ -424,7 +424,7 @@ object GridTransformer {
   /**
    * Calculate the (minCol, minRow, maxCol, maxRow)
    * and covered grid extent of the input geometry
-   * under the grid layout ($extent, $gridDimX, $gridDimy)
+   * under the grid layout ($extent, $gridDimX, $gridDimY)
    *
    * @param geom
    * @param gridDimX
@@ -436,6 +436,7 @@ object GridTransformer {
   def getGeomGridInfo(geom: Geometry, gridDimX: Long, gridDimY: Long, extent: Extent,
                       colRow: Array[Int], longLat: Array[Double],cellSize:Double): Unit = {
     val spatialKeyResults: ArrayBuffer[SpatialKey] = new ArrayBuffer[SpatialKey]()
+    print("geom" + geom.toString)
     val mbr = (geom.getEnvelopeInternal.getMinX,geom.getEnvelopeInternal.getMaxX,
       geom.getEnvelopeInternal.getMinY, geom.getEnvelopeInternal.getMaxY)
 
@@ -446,17 +447,8 @@ object GridTransformer {
     val _ymin: Int = (math.floor((mbr._3 - extent.ymin) / gridSizeY) max 0).toInt
     val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
 
-    println(geom.toString)
-    println(mbr)
-    println(gridSizeX)
-    println(gridSizeY)
-    println(_xmin)
-    println(_xmax)
-    println(_ymin)
-    println(_ymax)
-
     //tile: 1° × 1°
-    //    val tl = TileLayout(360, 180, gridDimX.toInt, gridDimY.toInt)
+//    val tl = TileLayout(360, 180, gridDimX.toInt, gridDimY.toInt)
     val tl = TileLayout(((extent.xmax - extent.xmin) / cellSize).toInt, ((extent.ymax - extent.ymin) / cellSize).toInt, gridDimX.toInt, gridDimY.toInt)
     val ld = LayoutDefinition(extent, tl)
 

@@ -1,6 +1,6 @@
 package whu.edu.cn.geocube.core.cube.vector
 
-import geotrellis.layer.{SpaceTimeKey, SpatialKey}
+import geotrellis.layer.SpatialKey
 import geotrellis.store.index.{KeyIndex, ZCurveKeyIndexMethod}
 import org.apache.spark.Partitioner
 
@@ -18,31 +18,14 @@ class CompuIntensityPartitioner (partitions: Int, partitionContainers: Array[Arr
   override def numPartitions: Int = partitions
 
   override def getPartition(key: Any): Int = {
-    key match {
-      case spatialKeyObj: SpatialKey => {
-        val spatialKey: SpatialKey = key.asInstanceOf[SpatialKey]
-        val keyIndex: KeyIndex[SpatialKey] = ZCurveKeyIndexMethod.createIndex(null)
-        val zorderCode = keyIndex.toIndex(spatialKey)
-        (0 until partitions).foreach{ partitionID =>
-          if(partitionContainers(partitionID).contains(zorderCode))
-            return partitionID
-        }
-        throw new RuntimeException("Repartition error:" + zorderCode)
-      }
-      case spaceTimeKeyObj: SpaceTimeKey => {
-        val spaceTimeKey: SpaceTimeKey = key.asInstanceOf[SpaceTimeKey]
-        val keyIndex: KeyIndex[SpaceTimeKey] = ZCurveKeyIndexMethod.bySecond().createIndex(null)
-        val zorderCode = keyIndex.toIndex(spaceTimeKey)
-        (0 until partitions).foreach{ partitionID =>
-          if(partitionContainers(partitionID).contains(zorderCode))
-            return partitionID
-        }
-        throw new RuntimeException("Repartition error:" + zorderCode)
-      }
-      case _ => throw new RuntimeException("Repartition error, the type of key must be SpatialKey or SpaceTimeKey!")
+    val spatialKey = key.asInstanceOf[SpatialKey]
+    val keyIndex: KeyIndex[SpatialKey] = ZCurveKeyIndexMethod.createIndex(null)
+    val zorderCode = keyIndex.toIndex(spatialKey)
+    (0 until partitions).foreach{ partitionID =>
+      if(partitionContainers(partitionID).contains(zorderCode))
+        return partitionID
     }
-
-
+    throw new RuntimeException("Repartition error:" + zorderCode)
   }
 }
 
@@ -58,7 +41,7 @@ object CompuIntensityPartitioner{
    *
    * @return Partition containers where each partition contains assigned grid zorder code
    */
-  def sortPut(gridZOrderCodeWithCI: Array[(BigInt, Long)], partitions: Int): Array[ArrayBuffer[BigInt]] = {
+  def getBoundary2(gridZOrderCodeWithCI: Array[(BigInt, Long)], partitions: Int): Array[ArrayBuffer[BigInt]] = {
     def getArrayIndex(value: Long, arr: Array[Long]): Int = {
       val length = arr.length
       (0 until length).foreach{index =>
@@ -103,7 +86,7 @@ object CompuIntensityPartitioner{
    *
    * @return Partition containers where each partition contains assigned grid zorder code
    */
-  def headTailExtract(gridZOrderCodeWithCI: Array[(BigInt, Long)], partitions: Int): Array[ArrayBuffer[BigInt]] = {
+  def getBoundary1(gridZOrderCodeWithCI: Array[(BigInt, Long)], partitions: Int): Array[ArrayBuffer[BigInt]] = {
     val sortGridZOrderCodeWithCI = gridZOrderCodeWithCI.sortBy(_._2)
     val partitionContainers = new Array[ArrayBuffer[BigInt]](partitions)
     (0 until partitions).foreach(i => partitionContainers(i) = new ArrayBuffer[BigInt]())
@@ -152,7 +135,7 @@ object CompuIntensityPartitioner{
    *
    * @return A grid zorder code partition boundary
    */
-  def sequentialBucket(gridZOrderCodeWithCI: Array[(BigInt, Long)], partitions: Int): Array[BigInt] = {
+  def getBoundary(gridZOrderCodeWithCI: Array[(BigInt, Long)], partitions: Int): Array[BigInt] = {
     val sortGridZOrderCodeWithCI = gridZOrderCodeWithCI.sortBy(_._1)
     val compuIntensitySum = sortGridZOrderCodeWithCI.map(_._2).sum
     var str:Float = Float.MaxValue

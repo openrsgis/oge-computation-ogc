@@ -1,0 +1,124 @@
+{
+  "oorB": "0",
+  "map": {
+    "level": 4,
+    "spatialRange": [
+      119,
+      20,
+      123,
+      25
+    ]
+  },
+
+  "1": {
+    "constantValue": "2022-03-06 00:00:00"
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "CoverageCollection.addStyles",
+      "arguments": {
+        "input": {
+          "functionInvocationValue": {
+            "functionName": "CoverageCollection.binarization",
+            "arguments": {
+              "coverageCollection": {
+                "functionInvocationValue": {
+                  "functionName": "CoverageCollection.subCollection",
+                  "arguments": {
+                    "filter": {
+                      "functionInvocationValue": {
+                        "functionName": "Filter.and",
+                        "arguments": {
+                          "filters": {
+                            "arrayValue": {
+                              "values": [
+                                {
+                                  "functionInvocationValue": {
+                                    "functionName": "Filter.equals",
+                                    "arguments": {
+                                      "leftField": {
+                                        "constantValue": "crs"
+                                      },
+                                      "rightValue": {
+                                        "constantValue": "EPSG:4326"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "functionInvocationValue": {
+                                    "functionName": "Filter.equals",
+                                    "arguments": {
+                                      "leftField": {
+                                        "constantValue": "measurementName"
+                                      },
+                                      "rightValue": {
+                                        "constantValue": "NDVI"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "input": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCoverageCollection",
+                        "arguments": {
+                          "baseUrl": {
+                            "constantValue": "http://localhost"
+                          },
+                          "bbox": {
+                            "constantValue": [
+                              73.62,
+                              18.19,
+                              134.7601467382,
+                              53.54
+                            ]
+                          },
+                          "datetime": {
+                            "arrayValue": {
+                              "values": [
+                                {
+                                  "valueReference": "1"
+                                },
+                                {
+                                  "valueReference": "1"
+                                }
+                              ]
+                            }
+                          },
+                          "productID": {
+                            "constantValue": "MOD13Q1_061"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "threshold": {
+                "constantValue": 220
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 255
+        },
+        "method": {
+          "constantValue": "timeseries"
+        },
+        "min": {
+          "constantValue": 0
+        },
+        "palette": {
+          "constantValue": "green"
+        }
+      }
+    }
+  }
+}

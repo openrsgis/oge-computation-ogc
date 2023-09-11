@@ -2,9 +2,6 @@ package whu.edu.cn.geocube.util
 
 import java.math.BigDecimal
 
-import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import org.locationtech.jts.geom.Envelope
 import org.opengis.geometry.BoundingBox
 
@@ -60,10 +57,6 @@ class GISUtil{
 
 }
 object GISUtil{
-  val mapper = new ObjectMapper() with ScalaObjectMapper
-  mapper.registerModule(DefaultScalaModule)
-  mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-
   /**
    * Calculate extent of the input BoundingBox array.
    *
@@ -126,25 +119,5 @@ object GISUtil{
       }
     }
     (maxx, minx, maxy, miny)
-  }
-
-  // 将map转成json字符串
-  def toJson(value: Map[Symbol, Any]): String = {
-    toJson(value map { case (k,v) => k.name -> v})
-  }
-
-  // 将对象转成json字符串
-  def toJson(value: Any): String = {
-    mapper.writeValueAsString(value)
-  }
-
-
-  // 将字json符串转成map
-  def toMap[V](json:String)(implicit m: Manifest[V]) = fromJson[Map[String,V]](json)
-
-
-  // 将json字符串转成对象
-  def fromJson[T](json: String)(implicit m : Manifest[T]): T = {
-    mapper.readValue[T](json)
   }
 }

@@ -5,7 +5,6 @@ import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, FloatArrayT
 import geotrellis.raster.mapalgebra.local.{Add, Divide}
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.geocube.application.tritonClient.examples.ModelInference
 
 import java.text.SimpleDateFormat
 
