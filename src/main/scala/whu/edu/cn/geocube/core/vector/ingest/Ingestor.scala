@@ -1,27 +1,26 @@
 package whu.edu.cn.geocube.core.vector.ingest
 
 import geotrellis.vector.Extent
-
 import java.io.File
 import java.nio.charset.Charset
 import java.sql.{DriverManager, ResultSet}
 import java.util
-import java.util.{List, UUID}
+import java.util.List
+
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom._
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
-import org.geotools.data.simple.SimpleFeatureIterator
 import org.geotools.geojson.feature.FeatureJSON
 import org.json4s.NoTypeHints
 import org.json4s.jackson.Serialization
-import whu.edu.cn.geocube.core.cube.vector.{GeoObject, GeoObjectRDD, SpatialRDD}
+import whu.edu.cn.geocube.core.cube.vector.{GeoObjectRDD, SpatialRDD}
 import whu.edu.cn.geocube.core.entity.{GcExtent, VectorGridFact}
 import whu.edu.cn.geocube.core.vector.grid.{GridConf, GridTransformer}
 import whu.edu.cn.geocube.util.{GISUtil, HbaseUtil, PostgresqlService}
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
+import whu.edu.cn.util.PostgresqlUtil
 
 /**
  * In the GeoCube, vector data is segmented into tiles logically based on a global grid tessellation,
@@ -72,13 +71,19 @@ object Ingestor {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "1024m")
       .set("spark.rpc.message.maxSize", "512")
-//      .setMaster("local[*]")
     val sc = new SparkContext(conf)
 
     try {
       val file: File = new File(inputPath)
       val fileName = file.getName
       val pureFileName = fileName.substring(0, fileName.indexOf("."))
+
+      //read as GeoObjectRDD
+      val geoObjectRdd: GeoObjectRDD = GeoObjectRDD.createGeoObjectRDDFromShp(sc, inputPath, 16).cache()
+
+      //initialize grid layout and get RDD[(gridZCode, GeomIds)]
+      val gridConf: GridConf = new GridConf(360, 180, Extent(-180, -90, 180, 90))
+      val gridWithGeomIdsRdd: RDD[(Long, Iterable[String])] = geoObjectRdd.flatMap(x => GridTransformer.groupGeomId2ZCgrid(x, gridConf)).groupByKey()
 
       //calculate layer extent and transform to wkt format
       val dataStoreFactory = new ShapefileDataStoreFactory()
@@ -96,16 +101,6 @@ object Ingestor {
       val geom = "ST_GeomFromText('" + wkt + "', 4326)"
       println(minx, maxx, miny, maxy)
       sds.dispose()
-      val partitions = (Math.ceil(maxx).toInt - Math.floor(minx).toInt) * (Math.ceil(maxy).toInt - Math.floor(miny).toInt)
-
-      //read as GeoObjectRDD
-      val geoObjectRdd: GeoObjectRDD = GeoObjectRDD.createGeoObjectRDDFromShp(sc, inputPath, partitions).cache()
-
-      //initialize grid layout and get RDD[(gridZCode, GeomIds)]
-//      val gridConf: GridConf = new GridConf(360, 180, Extent(-180, -90, 180, 90))
-      val gridConf: GridConf = new GridConf(3600, 1800, Extent(-180, -90, 180, 90))//针对geocube数据库中level表中resolutionKey为1000的
-      val gridWithGeomIdsRdd: RDD[(Long, Iterable[String])] = geoObjectRdd.flatMap(x => GridTransformer.groupGeomId2ZCgrid(x, gridConf)).groupByKey()
-      println(gridWithGeomIdsRdd.count())
 
       //ingest to dimensional table in postgresql
       val postgresqlService = new PostgresqlService
@@ -131,7 +126,7 @@ object Ingestor {
 
       //insert to fact table
       gridWithGeomIdsRdd.zipWithIndex().foreachPartition{partition =>
-        val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+        val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
         val postgresqlService = new PostgresqlService
         val gcVectorTileFacts = new ArrayBuffer[VectorGridFact]()
@@ -140,26 +135,23 @@ object Ingestor {
         partition.foreach{record =>
           val gridZorderCode = record._1._1.toString
           val rowkeys = record._1._2.map(x => _productName + "_" + x)
-//          val _extentKey = GcExtent.getExtentKey(statement, gridZorderCode, "999")
-          val _extentKey = GcExtent.getExtentKey(statement, gridZorderCode, "1000")
+          val _extentKey = GcExtent.getExtentKey(statement, gridZorderCode, "999")
           val _factId: Int = (factId + 1 + record._2).toInt
           val _factKey: Int = (factKey + 1 + record._2).toInt
           gcVectorTileFacts.append(new VectorGridFact(_factId, _factKey, _productKey, _extentKey, rowkeys.toList.toString()))
         }
-        if(gcVectorTileFacts.size > 0){
-          val insertVectorFact = postgresqlService.insertFact(statement, gcVectorTileFacts.toList)
-          if (!insertVectorFact) {
-            throw new RuntimeException("fact insert failed!")
-          }
+        val insertVectorFact = postgresqlService.insertFact(statement, gcVectorTileFacts.toList)
+        if (!insertVectorFact) {
+          throw new RuntimeException("fact insert failed!")
         }
         conn.close()
       }
       println("Insert to fact table successfully!")
 
       //ingest to data table in hbase
-      //val _allExtent = GcExtent.getAllExtent("999")
+      val _allExtent = GcExtent.getAllExtent("999")
       geoObjectRdd.foreachPartition{partition =>
-        //val allExtent = _allExtent
+        val allExtent = _allExtent
         partition.foreach{ele =>
           val uuid = ele.id
           val rowKey = productName + "_" + uuid
@@ -171,11 +163,11 @@ object Ingestor {
           val metaData = feajson.toString(feature)
 
           val zorderCodes = GridTransformer.getGeomZcodes(ele, gridConf)
-          //val tilesMetaData = zorderCodes.map(x => allExtent.get(x.toString)).mkString("[", ", ", "]")
+          val tilesMetaData = zorderCodes.map(x => allExtent.get(x.toString)).mkString("[", ", ", "]")
 
-          HbaseUtil.insertData("hbase_vector_test", rowKey, "vectorData", "tile", wktValue.getBytes("utf-8"))
-          HbaseUtil.insertData("hbase_vector_test", rowKey, "vectorData", "metaData", metaData.getBytes("utf-8"))
-          //HbaseUtil.insertData("hbase_vector_test", rowKey, "vectorData", "tilesMetaData", tilesMetaData.getBytes("utf-8"))
+          HbaseUtil.insertData("hbase_vector_aigis", rowKey, "vectorData", "tile", wktValue.getBytes("utf-8"))
+          HbaseUtil.insertData("hbase_vector_aigis", rowKey, "vectorData", "metaData", metaData.getBytes("utf-8"))
+          HbaseUtil.insertData("hbase_vector_aigis", rowKey, "vectorData", "tilesMetaData", tilesMetaData.getBytes("utf-8"))
         }
       }
     }finally {
@@ -207,9 +199,7 @@ object Ingestor {
       val rdd: GeoObjectRDD = GeoObjectRDD.createGeoObjectRDDFromFeatureJson(sc, inputPathGeojson, 8)
 
       val gridConf: GridConf = new GridConf(360, 180, Extent(-180, -90, 180, 90))
-      val gridWithGeomIdListRDD  = rdd.flatMap(x => GridTransformer.groupGeom2ZCgrid(x, gridConf)).groupByKey()
-      /*val gridWithGeomIdListRDD2 = rdd.flatMap(x => GridTransformer.groupGeom2ZCgrid(x, gridConf)).groupByKey()
-      gridWithGeomIdListRDD1.join(gridWithGeomIdListRDD2).map(x => (x._1, x._2._1.size*x._2._2.size)) //(spatialKey, Long)*/
+      val gridWithGeomIdListRDD = rdd.flatMap(x => GridTransformer.groupGeom2ZCgrid(x, gridConf)).groupByKey()
       val mbr = rdd.map(x => {("key", x.feature.getBounds)}).groupByKey().map(x => GISUtil.getVectorExtent(x)).collect()
       val simpleMbr = mbr(0)
       val maxx = simpleMbr._1
@@ -270,7 +260,7 @@ object Ingestor {
         })
         factId = factId + 1
         factKey = factKey + 1
-        val gcVectorTileFact = new VectorGridFact(factId, factKey, product_key, extentKey, rowkeys.toList.toString()/*,computeIntensity*/)
+        val gcVectorTileFact = new VectorGridFact(factId, factKey, product_key, extentKey, rowkeys.toList.toString())
         gcVectorTileFacts.add(gcVectorTileFact)
       }
       val insertVectorFact = postgresqlService.insertFact(gcVectorTileFacts)
@@ -311,7 +301,6 @@ object Ingestor {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "1024m")
       .set("spark.rpc.message.maxSize", "512")
-
     val sc = new SparkContext(conf)
 
     try {
@@ -370,7 +359,7 @@ object Ingestor {
 
       //insert to fact table
       gridWithGeomIdsRdd.zipWithIndex().foreachPartition{partition =>
-        val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+        val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
         val postgresqlService = new PostgresqlService
         val gcVectorTileFacts = new ArrayBuffer[VectorGridFact]()
@@ -417,37 +406,7 @@ object Ingestor {
   }
 
   def main(args: Array[String]): Unit = {
-    /*ingestFeatureShp("E:\\VectorData\\Guangdong\\3_county\\DLTB_3.shp",
-      "Guangdong_DLTB_3_Counties",
-      "2019-06-01 12:00:00.000",
-      "2019-06-01 12:00:00.000")*/
-
-    /*ingestFeatureShp("/mnt/storage/geocube/homedata/vector/Guangdong/3_county/DLTB_3.shp",
-      "Guangdong_DLTB_3_Counties",
-      "2022-05-11 12:00:00.000",
-      "2022-05-11 12:00:00.000")*/
-    ingestFeatureShp("/mnt/storage/geocube/homedata/vector/Guangdong/3_county/PDT_3.shp",
-      "Guangdong_PDT_3_Counties",
-      "2022-05-11 12:00:00.000",
-      "2022-05-11 12:00:00.000")
-    /*ingestFeatureShp("/mnt/storage/geocube/homedata/vector/Guangdong/5_county/DLTB_5.shp",
-      "Guangdong_DLTB_5_Counties",
-      "2019-06-01 12:00:00.000",
-      "2019-06-01 12:00:00.000")*/
-    /*ingestFeatureShp("/mnt/storage/geocube/homedata/vector/Guangdong/5_county/PDT_5.shp",
-      "Guangdong_PDT_5_Counties",
-      "2019-06-01 12:00:00.000",
-      "2019-06-01 12:00:00.000")*/
-    /*//内存原因只导入了前600000万个polygon
-    ingestFeatureShp("/mnt/storage/geocube/homedata/vector/Guangdong/all_county/DLTB.shp",
-      "Guangdong_DLTB_All_Counties",
-      "2019-06-01 12:00:00.000",
-      "2019-06-01 12:00:00.000")*/
-    /*ingestFeatureShp("/mnt/storage/geocube/homedata/vector/Guangdong/all_county/PDT.shp",
-      "Guangdong_PDT_All_Counties",
-      "2019-06-01 12:00:00.000",
-      "2019-06-01 12:00:00.000")*/
-
+    ingestGeometryShp(args(0), args(1), args(2), args(3))
   }
 
 }

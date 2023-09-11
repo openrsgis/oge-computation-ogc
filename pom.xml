@@ -166,6 +166,19 @@
             <version>4.3.1</version>
         </dependency>
         <!--jedis-->
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-native_2.12</artifactId> <!-- 请根据您的Scala版本替换_2.12 -->
+            <version>3.6.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>netcdf</groupId>
+            <artifactId>netcdf</artifactId>
+            <version>5.5.3</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/netcdfAll-5.5.3.jar</systemPath>
+        </dependency>
 
     </dependencies>
     <build>

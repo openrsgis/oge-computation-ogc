@@ -5,18 +5,15 @@ import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{FloatArrayTile, Raster, Tile}
 import geotrellis.raster.render.{ColorRamp, RGB}
 import geotrellis.spark._
-
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-
 import scala.collection.mutable.ArrayBuffer
-import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTileLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
 import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.geocube.view.Info
-
 
 /**
  * Cloud filter for landsat-8 ARD product.

@@ -13,14 +13,13 @@ import geotrellis.raster.{CellType, Raster, Tile, TileLayout}
 import geotrellis.vector.Extent
 import org.apache.spark.{SparkConf, SparkContext}
 import whu.edu.cn.geocube.core.entity
-import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTile, RasterTileLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTile, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.entity.GcProduct._
 import whu.edu.cn.geocube.core.entity.GcMeasurement._
 import whu.edu.cn.geocube.util.HbaseUtil.{getTileCell, getTileMeta}
-import whu.edu.cn.geocube.util.TileUtil
-import whu.edu.cn.geocube.util.TileSerializerCube.deserializeTileData
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
 import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.geocube.util.TileSerializer.deserializeTileData
+import whu.edu.cn.geocube.util.TileUtil
 
 /**
  * Query raster tiles in a serial way.
@@ -396,32 +395,28 @@ object QueryRasterTiles {
     val rasterTile = RasterTile(id)
 
     //Access product and measurement dimensional info in postgresql
-    val productMeta = getProductByKey(cubeId,productKey, POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
-    val measurementMeta = getMeasurementByMeasureAndProdKey(cubeId,measurementKey, productKey, POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+    val productMeta = getProductByKey(cubeId,productKey, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
+    val measurementMeta = getMeasurementByMeasureAndProdKey(cubeId,measurementKey, productKey, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
 
     rasterTile.setProductMeta(productMeta)
     rasterTile.setMeasurementMeta(measurementMeta)
 
     //Access tile data and meta in HBase
     val tileMeta =
-      if (POSTGRESQL_URL.contains("whugeocube"))
+      if (PostgresqlUtil.url.contains("whugeocube"))
         getTileMeta("hbase_raster", id, "rasterData", "metaData")
-      else if (POSTGRESQL_URL.contains("ypgeocube"))
+      else if (PostgresqlUtil.url.contains("ypgeocube"))
         getTileMeta("hbase_raster_fivehundred", id, "rasterData", "metaData")
-      else if (POSTGRESQL_URL.contains("multigeocube"))
-        getTileMeta("hbase_raster_regions_" + cubeId, id, "rasterData", "metaData")
       else
-        getTileMeta("hbase_raster_regions", id, "rasterData", "metaData")
+        getTileMeta("hbase_raster_regions_"+cubeId, id, "rasterData", "metaData")
 
     val tileBytes =
-      if (POSTGRESQL_URL.contains("whugeocube"))
+      if (PostgresqlUtil.url.contains("whugeocube"))
         getTileCell("hbase_raster", id, "rasterData", "tile")
-      else if (POSTGRESQL_URL.contains("ypgeocube"))
+      else if (PostgresqlUtil.url.contains("ypgeocube"))
         getTileCell("hbase_raster_fivehundred", id, "rasterData", "tile")
-      else if (POSTGRESQL_URL.contains("multigeocube"))
-        getTileCell("hbase_raster_regions_" + cubeId, id, "rasterData", "tile")
       else
-        getTileCell("hbase_raster_regions", id, "rasterData", "tile")
+        getTileCell("hbase_raster_regions_"+cubeId, id, "rasterData", "tile")
 
     /*val tileMeta = getTileMeta("hbase_raster_regions", id, "rasterData", "metaData")
     val tileBytes = getTileCell("hbase_raster_regions", id, "rasterData", "tile")*/
@@ -465,7 +460,7 @@ object QueryRasterTiles {
       val colNum = Integer.parseInt(tile.getColNum)
       val rowNum = Integer.parseInt(tile.getRowNum)
       val Tile = tile.getData
-      val k = SpaceTimeBandKey(SpaceTimeKey(colNum, rowNum, phenomenonTime), measurement)
+      val k = entity.SpaceTimeBandKey(SpaceTimeKey(colNum, rowNum, phenomenonTime), measurement)
       val v = Tile
       (k, v)
     }

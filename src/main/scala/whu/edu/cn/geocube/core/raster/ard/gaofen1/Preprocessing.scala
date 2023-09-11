@@ -29,39 +29,48 @@ object Preprocessing{
 
       //absolute path of raw image, RPC correction image, and raw image xml file
       //for windows system
-      val getImageXMLPath = (dir: String) => {
-        val arrStr = dir.split("\\\\")
-        if(dir.contains("PMS1")) {
-          Array(dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-MSS1.tiff",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS1.xml",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS1.tiff",
-            dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-PAN1.tiff",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN1.xml",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN1.tiff"
-          )
-        }else if (dir.contains("PMS2")){
-          Array(dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS2.xml",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
-            dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-PAN2.tiff",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN2.xml",
-            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN2.tiff"
-          )
-        } else if (dir.contains("WFV")){
-          Array(dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + ".tiff",
-            dir + "\\" + arrStr(arrStr.length - 1) + ".xml",
-            dir + "\\" + arrStr(arrStr.length - 1) + ".tiff"
-          )
-        } else {
-          throw new RuntimeException("Wrong instruments for Gaofen-1!")
-        }
-
-      }
+//      val getImageXMLPath = (dir: String) => {
+//        val arrStr = dir.split("\\\\")
+//        if(dir.contains("PMS1")) {
+//          Array(dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-MSS1.tiff",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS1.xml",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS1.tiff",
+//            dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-PAN1.tiff",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN1.xml",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN1.tiff"
+//          )
+//        }else if (dir.contains("PMS2")){
+//          Array(dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS2.xml",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
+//            dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + "-PAN2.tiff",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN2.xml",
+//            dir + "\\" + arrStr(arrStr.length - 1) + "-PAN2.tiff"
+//          )
+//        } else if (dir.contains("WFV")){
+//          Array(dir + "\\GeoCor_" + arrStr(arrStr.length - 1) + ".tiff",
+//            dir + "\\" + arrStr(arrStr.length - 1) + ".xml",
+//            dir + "\\" + arrStr(arrStr.length - 1) + ".tiff"
+//          )
+//        } else {
+//          throw new RuntimeException("Wrong instruments for Gaofen-1!")
+//        }
+//
+//      }
 
       //for linux system
-      /*val getImageXMLPath = (dir: String) => {
+      val getImageXMLPath = (dir: String) => {
         val arrStr = dir.split("/")
-        if(dir.contains("PMS1")) {
+        if (dir.contains("PMS2")){
+          Array(dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
+            dir + "/" + arrStr(arrStr.length - 1) + "-MSS2.xml",
+            dir + "/" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
+            dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-PAN2.tiff",
+            dir + "/" + arrStr(arrStr.length - 1) + "-PAN2.xml",
+            dir + "/" + arrStr(arrStr.length - 1) + "-PAN2.tiff"
+          )
+        }
+        else if(dir.contains("PMS1")) {
           Array(dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-MSS1.tiff",
             dir + "/" + arrStr(arrStr.length - 1) + "-MSS1.xml",
             dir + "/" + arrStr(arrStr.length - 1) + "-MSS1.tiff",
@@ -69,13 +78,13 @@ object Preprocessing{
             dir + "/" + arrStr(arrStr.length - 1) + "-PAN1.xml",
             dir + "/" + arrStr(arrStr.length - 1) + "-PAN1.tiff"
           )
-        }else if (dir.contains("PMS2")){
-          Array(dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
-            dir + "/" + arrStr(arrStr.length - 1) + "-MSS2.xml",
-            dir + "/" + arrStr(arrStr.length - 1) + "-MSS2.tiff",
-            dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-PAN2.tiff",
-            dir + "/" + arrStr(arrStr.length - 1) + "-PAN2.xml",
-            dir + "/" + arrStr(arrStr.length - 1) + "-PAN2.tiff"
+        }else if(dir.contains("PMS")) {
+          Array(dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-MUX.tiff",
+            dir + "/" + arrStr(arrStr.length - 1) + "-MUX.xml",
+            dir + "/" + arrStr(arrStr.length - 1) + "-MUX.tiff",
+            dir + "/GeoCor_" + arrStr(arrStr.length - 1) + "-PAN.tiff",
+            dir + "/" + arrStr(arrStr.length - 1) + "-PAN.xml",
+            dir + "/" + arrStr(arrStr.length - 1) + "-PAN.tiff"
           )
         } else if (dir.contains("WFV")){
           Array(dir + "/GeoCor_" + arrStr(arrStr.length - 1) + ".tiff",
@@ -85,13 +94,14 @@ object Preprocessing{
         } else {
           throw new RuntimeException("Wrong instruments for Gaofen-1!")
         }
-      }*/
+      }
 
       //path of RPC correction image, xml, and raw image
       val datasetPath = getImageXMLPath(inputDir)(0)
       val xmlPath = getImageXMLPath(inputDir)(1)
       val rawDatasetPath = getImageXMLPath(inputDir)(2)
-
+      println(datasetPath)
+      println(rawDatasetPath)
       //RPC correction using gdal scripts to perform and nodata value is set as 65535
       val rpcCommand = "gdalwarp -dstnodata 65535 -overwrite -rpc " + rawDatasetPath + " " + datasetPath
       rpcCommand.!
@@ -158,8 +168,8 @@ object Preprocessing{
         val panXmlPath = getImageXMLPath(inputDir)(4)
         val panRawDatasetPath = getImageXMLPath(inputDir)(5)
 
-        //val rpcCommand = "gdalwarp -dstnodata 65535 -overwrite -rpc " + panRawDatasetPath + " " + panDatasetPath
-        //rpcCommand.!
+        val rpcCommand = "gdalwarp -dstnodata 65535 -overwrite -rpc " + panRawDatasetPath + " " + panDatasetPath
+        rpcCommand.!
 
         println(panRawDatasetPath + ": ARD product is being generated ...")
         val parser = Parser(panXmlPath)

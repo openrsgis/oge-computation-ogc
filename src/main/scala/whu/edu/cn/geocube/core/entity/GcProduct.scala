@@ -1,15 +1,17 @@
 package whu.edu.cn.geocube.core.entity
 
-import java.sql.{Connection, DriverManager, ResultSet}
+import whu.edu.cn.util.PostgresqlUtil
 
+import java.sql.{DriverManager, ResultSet}
 import scala.beans.BeanProperty
 import scala.collection.mutable.ArrayBuffer
+
 
 /**
  * Dimension class - product.
  *
  */
-case class GcProduct(){
+case class GcProduct() {
   @BeanProperty
   var productKey: String = ""
   @BeanProperty
@@ -33,7 +35,7 @@ case class GcProduct(){
   @BeanProperty
   var width: String = ""
   @BeanProperty
-  var measurements:ArrayBuffer[GcMeasurement] = new ArrayBuffer[GcMeasurement]()
+  var measurements: ArrayBuffer[GcMeasurement] = new ArrayBuffer[GcMeasurement]()
   @BeanProperty
   var upperLeftLat: String = ""
   @BeanProperty
@@ -50,16 +52,26 @@ case class GcProduct(){
   var lowerRightLat: String = ""
   @BeanProperty
   var lowerRightLong: String = ""
+  @BeanProperty
+  var otherDimensions: ArrayBuffer[GcDimension] = new ArrayBuffer[GcDimension]()
+
+//  def setOtherDimensions(otherDimensions: ArrayBuffer[GcDimension]): Unit = {
+//    this.otherDimensions = otherDimensions
+//  }
+//
+//  def getOtherDimensions: ArrayBuffer[GcDimension] = {
+//    this.otherDimensions
+//  }
 
   def this(_productKey: String = "", _productName: String = "", _platform: String = "",
            _instrument: String = "", _CRS: String = "", _tileSize: String = "",
            _cellRes: String = "", _level: String = "", _phenomenonTime: String = "",
-           _height: String = "", _width: String = ""){
+           _height: String = "", _width: String = "") {
     this()
     productKey = _productKey
     productName = _productName
-    platform= _platform
-    instrument= _instrument
+    platform = _platform
+    instrument = _instrument
     CRS = _CRS
     tileSize = _tileSize
     cellRes = _cellRes
@@ -69,10 +81,93 @@ case class GcProduct(){
     width = _width
   }
 
-  def getMeasurementsArray = measurements.toArray
+  def getMeasurementsArray: Array[GcMeasurement] = measurements.toArray
 }
 
-object GcProduct{
+object GcProduct {
+
+  /**
+   *
+   * @param gcDimension GcDimension instance
+   * @param cubeId      the cube id
+   * @param connAddr    the connect address
+   * @param user        the user id
+   * @param password    the password
+   * @return the all coordinates of the dimension
+   */
+  def getDimensionCoordinates(gcDimension: GcDimension, cubeId: String, connAddr: String, user: String, password: String, productKeys: String = null): ArrayBuffer[String] = {
+    PostgresqlUtil.get()
+    Class.forName(PostgresqlUtil.driver)
+    val conn = DriverManager.getConnection(connAddr, user, password)
+    val rsArray = new ArrayBuffer[String]()
+    if (conn != null) {
+      try {
+        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+        val sql = "select distinct " + gcDimension.getDimensionName +
+          " from \"SensorLevelAndProduct_" + cubeId + "\" where product_key IN " + productKeys + "ORDER BY " + gcDimension.getDimensionName
+        val rs = statement.executeQuery(sql)
+        val columnCount = rs.getMetaData().getColumnCount();
+        while (rs.next) {
+          for (i <- 1 to columnCount) {
+            rsArray.append(rs.getString(i))
+          }
+        }
+      } finally {
+        conn.close
+      }
+    }
+    rsArray
+  }
+
+  /**
+   *
+   * @param cubeId   the cube id
+   * @param connAddr the connect address
+   * @param user     the user id
+   * @param password the password
+   * @return get all dimensions
+   */
+  def getOtherDimensions(cubeId: String, connAddr: String, user: String, password: String, productKeys: String = null): ArrayBuffer[GcDimension] = {
+    PostgresqlUtil.get()
+    Class.forName(PostgresqlUtil.driver)
+    val conn = DriverManager.getConnection(connAddr, user, password)
+    val gcDimensionArray: ArrayBuffer[GcDimension] = new ArrayBuffer[GcDimension]()
+    if (conn != null) {
+      try {
+        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+        val sql = "select id,dimension_name,dimension_table_name,member_type,step,description,unit,dimension_table_column_name " +
+          "from gc_dimension_" + cubeId + " where dimension_name NOT IN ('extent', 'product', 'phenomenonTime', 'measurement')"
+        val rs = statement.executeQuery(sql)
+        val rsArray = new Array[String](8);
+        val columnCount = rs.getMetaData().getColumnCount();
+        while (rs.next) {
+          for (i <- 1 to columnCount) {
+            rsArray(i - 1) = rs.getString(i)
+          }
+          val gcDimension: GcDimension = new GcDimension()
+          gcDimension.setId(rsArray(0).toInt)
+          gcDimension.setDimensionName(rsArray(1))
+          gcDimension.setDimensionTableName(rsArray(2))
+          gcDimension.setMemberType(rsArray(3))
+          if (rsArray(4) != null) {
+            gcDimension.setStep(rsArray(4).toDouble)
+          }
+          gcDimension.setDescription(rsArray(5))
+          if (rsArray(6) != null) {
+            gcDimension.setUnit(rsArray(6))
+          }
+          gcDimension.setDimensionTableColumnName(rsArray(7))
+          gcDimensionArray.append(gcDimension)
+          val coordinates: ArrayBuffer[String] = getDimensionCoordinates(gcDimension, cubeId, connAddr, user, password, productKeys)
+          gcDimension.coordinates = coordinates
+        }
+
+      } finally {
+        conn.close
+      }
+    }
+    gcDimensionArray
+  }
 
   /**
    * Get product info using productKey, and return a GcProduct object.
@@ -84,15 +179,29 @@ object GcProduct{
    * @param password
    * @return a GcProduct object
    */
-  def getProductByKey(cubeId:String, productKey: String, connAddr: String, user: String, password: String): GcProduct = {
-    val conn = DriverManager.getConnection(connAddr, user, password)
+  def getProductByKey(cubeId: String, productKey: String, connAddr: String, user: String, password: String,
+                      gcDimensionArray: ArrayBuffer[GcDimension] = null): GcProduct = {
+//    Class.forName("org.postgresql.Driver")
+//    val conn = DriverManager.getConnection(connAddr, user, password)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn = postgresqlUtil.getConnection
     if (conn != null) {
       try {
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-        val sql = "select product_key,product_name,platform_name,sensor_name,tile_size,cell_res,crs,level,phenomenon_time,imaging_length,imaging_width " +
-          "from \"SensorLevelAndProduct_"+cubeId+"\" where product_key=" + productKey + ";"
+        //        val gcDimensionArray = getOtherDimensions(cubeId, connAddr, user, password)
+        var sql = "select product_key,product_name,platform_name,sensor_name,tile_size,cell_res,crs,level,phenomenon_time,imaging_length,imaging_width"
+
+        if (gcDimensionArray.nonEmpty) {
+          for (gcDimension <- gcDimensionArray) {
+            sql = sql + "," + gcDimension.getDimensionName
+          }
+        }
+        sql = sql + " from \"SensorLevelAndProduct_" + cubeId + "\" where product_key=" + productKey + ";"
+        //        val sql = "select product_key,product_name,platform_name,sensor_name,tile_size,cell_res,crs,level,phenomenon_time,imaging_length,imaging_width " +
+        //          "from \"SensorLevelAndProduct_" + cubeId + "\" where product_key=" + productKey + ";"
+//        println(sql.toString)
         val rs = statement.executeQuery(sql)
-        val rsArray = new Array[String](11);
+        val rsArray = new Array[String](11 + gcDimensionArray.size);
         val columnCount = rs.getMetaData().getColumnCount();
         while (rs.next) {
           for (i <- 1 to columnCount)
@@ -112,9 +221,21 @@ object GcProduct{
         val productWidth = rsArray(10)
         val product = new GcProduct(productID, productName, productPlatform, productInstrument, productCRS,
           productTileSize, productRes, productLevel, productPhenomenonTime, productHeight, productWidth)
-
+        val otherDimension: ArrayBuffer[GcDimension] = new ArrayBuffer[GcDimension]()
+        if (gcDimensionArray.nonEmpty) {
+          var index = 1;
+          for (gcDimension <- gcDimensionArray) {
+            if (rsArray(10 + index) != null) {
+              gcDimension.setValue(rsArray(10 + index))
+              gcDimension.convertDataType
+              otherDimension.append(gcDimension)
+              index = index + 1
+            }
+          }
+        }
+        product.setOtherDimensions(otherDimension)
         val sql2 = "select measurement_key, measurement_name, dtype " +
-          "from \"MeasurementsAndProduct_"+cubeId+"\" where product_key=" + productKey + ";"
+          "from \"MeasurementsAndProduct_" + cubeId + "\" where product_key=" + productKey + ";"
 
         val rs2 = statement.executeQuery(sql2)
         val measurementlist = new ArrayBuffer[GcMeasurement]()
@@ -145,14 +266,17 @@ object GcProduct{
    * @param password
    * @return multiple GcProduct objects
    */
-  def getProductByName(cubeId:String, productName: String, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
+  def getProductByName(cubeId: String, productName: String, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
     val productArray = new ArrayBuffer[GcProduct]()
-    val conn = DriverManager.getConnection(connAddr, user, password)
+//    Class.forName("org.postgresql.Driver")
+//    val conn = DriverManager.getConnection(connAddr, user, password)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn = postgresqlUtil.getConnection
     if (conn != null) {
       try {
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
         val sql = "select product_key,product_name,platform_name,sensor_name,tile_size,cell_res,crs,level,phenomenon_time,imaging_length,imaging_width " +
-          "from \"SensorLevelAndProduct_"+cubeId+"\" where product_name=\'" + productName + "\';"
+          "from \"SensorLevelAndProduct_" + cubeId + "\" where product_name=\'" + productName + "\';"
         val rs = statement.executeQuery(sql)
         val rsArray = new Array[String](11);
         val columnCount = rs.getMetaData().getColumnCount();
@@ -188,7 +312,7 @@ object GcProduct{
             productTileSize, productRes, productLevel, productPhenomenonTime, productHeight, productWidth)
 
           val sql2 = "select measurement_key, measurement_name, dtype " +
-            "from \"MeasurementsAndProduct_"+cubeId+"\" where product_key=" + productID + ";"
+            "from \"MeasurementsAndProduct_" + cubeId + "\" where product_key=" + productID + ";"
           val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
           val rs2 = statement.executeQuery(sql2)
           val measurementlist = new ArrayBuffer[GcMeasurement]()
@@ -220,15 +344,17 @@ object GcProduct{
    * @param password
    * @return multiple GcProduct objects
    */
-  def getAllProducts(cubeId: String, connAddr: String, user: String, password: String):ArrayBuffer[GcProduct]={
+  def getAllProducts(cubeId: String, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
     val productArray = new ArrayBuffer[GcProduct]()
+    PostgresqlUtil.get()
+    Class.forName(PostgresqlUtil.driver)
     val conn = DriverManager.getConnection(connAddr, user, password)
     if (conn != null) {
       try {
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
         val sql = "select product_key,product_name,platform_name,sensor_name,tile_size,cell_res,crs,level,phenomenon_time,imaging_length,imaging_width," +
           "upper_left_lat,upper_left_long,upper_right_lat,upper_right_long,lower_left_lat,lower_left_long,lower_right_lat,lower_right_long " +
-          "from \"SensorLevelAndProduct_"+cubeId+"\" " + ";"
+          "from \"SensorLevelAndProduct_" + cubeId + "\" " + ";"
         val rs = statement.executeQuery(sql)
         val rsArray = new Array[String](19);
         val columnCount = rs.getMetaData().getColumnCount();
@@ -285,7 +411,7 @@ object GcProduct{
           product.setUpperRightLong(upperRightLong)
 
           val sql2 = "select measurement_key, measurement_name, dtype " +
-            "from \"MeasurementsAndProduct_"+cubeId+"\" where product_key=" + productID + ";"
+            "from \"MeasurementsAndProduct_" + cubeId + "\" where product_key=" + productID + ";"
           val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
           val rs2 = statement.executeQuery(sql2)
           val measurementlist = new ArrayBuffer[GcMeasurement]()
@@ -316,10 +442,10 @@ object GcProduct{
    * @param connAddr
    * @param user
    * @param password
-   *
    * @return multiple GcProduct objects.
    */
   def getProducts(p: QueryParams, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
+    Class.forName("org.postgresql.Driver")
     val conn = DriverManager.getConnection(connAddr, user, password)
     val cubeId = p.getCubeId
     //Temporal params
@@ -359,7 +485,7 @@ object GcProduct{
 
         // Extent dimension
         val extentsql = new StringBuilder;
-        extentsql ++= "Select extent_key from gc_extent_"+cubeId+" where 1=1 "
+        extentsql ++= "Select extent_key from gc_extent_" + cubeId + " where 1=1 "
         if (gridCodes.length != 0) {
           extentsql ++= "AND grid_code IN ("
           for (grid <- gridCodes) {
@@ -423,7 +549,7 @@ object GcProduct{
 
         //Product dimension
         val productsql = new StringBuilder;
-        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_"+cubeId+"\" where 1=1 "
+        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_" + cubeId + "\" where 1=1 "
         if (instrument.length != 0) {
           productsql ++= "AND sensor_name IN ("
           for (ins <- instrument) {
@@ -565,25 +691,25 @@ object GcProduct{
         println("Measurement Query SQL: " + measurementsql)
         println("Measurement Keys :" + measurementKeys)
 
-        val command = "Select distinct product_key from gc_raster_tile_fact_"+cubeId+" where extent_key IN" +
+        val command = "Select distinct product_key from gc_raster_tile_fact_" + cubeId + " where extent_key IN" +
           extentKeys.toString() + "AND product_key IN" + productKeys.toString() + "AND tile_quality_key IN" +
           qualityKeys.toString() + "AND measurement_key IN" + measurementKeys.toString() + ";"
 
         println("Product Query SQL:" + command)
 
         val productKeysResults = statement.executeQuery(command)
-        val productKeysArray= new ArrayBuffer[String]()
-        val productArray= new ArrayBuffer[GcProduct]()
-        if(productKeysResults.first()){
+        val productKeysArray = new ArrayBuffer[String]()
+        val productArray = new ArrayBuffer[GcProduct]()
+        if (productKeysResults.first()) {
           productKeysResults.previous()
-          while(productKeysResults.next()){
+          while (productKeysResults.next()) {
             productKeysArray.append(productKeysResults.getString(1))
           }
-        } else{
-          message++="product not found！"
+        } else {
+          message ++= "product not found！"
         }
-        for(key <- productKeysArray){
-          val product = getProductByKey(cubeId,key, connAddr, user, password)
+        for (key <- productKeysArray) {
+          val product = getProductByKey(cubeId, key, connAddr, user, password)
           productArray.append(product)
         }
         productArray
@@ -603,8 +729,8 @@ object GcProduct{
    * @param password
    * @return multiple GcProduct objects
    */
-  def getArdProducts(cubeId:String, connAddr: String, user: String, password: String):Array[GcProduct]={
-    val allProducts: ArrayBuffer[GcProduct] = getAllProducts(cubeId,connAddr, user, password)
+  def getArdProducts(cubeId: String, connAddr: String, user: String, password: String): Array[GcProduct] = {
+    val allProducts: ArrayBuffer[GcProduct] = getAllProducts(cubeId, connAddr, user, password)
     val ardProducts: ArrayBuffer[GcProduct] = allProducts.filter(_.productName.contains("ARD"))
     ardProducts.toArray
   }

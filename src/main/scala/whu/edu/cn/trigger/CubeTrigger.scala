@@ -22,31 +22,31 @@ object CubeTrigger {
   }
 
   def func(implicit sc: SparkContext, UUID: String, name: String, args: Map[String, String]): Unit = {
-    name match {
-      case "Service.getCollections" => {
-        cubeLoad += (UUID -> (argOrNot(args, "productIDs"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
-      }
-      case "Collections.toCube" => {
-        rdd_list_cube += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = argOrNot(args, "bands")))
-      }
-      case "Cube.NDWI" => {
-        rdd_list_cube += (UUID -> Cube.NDWI(input = rdd_list_cube(args("input")), product = argOrNot(args, "product"), name = argOrNot(args, "name")))
-      }
-      case "Cube.binarization" => {
-        rdd_list_cube += (UUID -> Cube.binarization(input = rdd_list_cube(args("input")), product = argOrNot(args, "product"), name = argOrNot(args, "name"),
-          threshold = argOrNot(args, "threshold").toDouble))
-      }
-      case "Cube.subtract" => {
-        rdd_list_cube += (UUID -> Cube.WaterChangeDetection(input = rdd_list_cube(args("input")), product = argOrNot(args, "product"),
-          certainTimes = argOrNot(args, "timeList"), name = argOrNot(args, "name")))
-      }
-      case "Cube.overlayAnalysis" => {
-        rdd_list_cube += (UUID -> Cube.OverlayAnalysis(input = rdd_list_cube(args("input")), rasterOrTabular = argOrNot(args, "raster"), vector = argOrNot(args, "vector"), name = argOrNot(args, "name")))
-      }
-      case "Cube.addStyles" => {
-        Cube.visualize(sc, cube = rdd_list_cube(args("cube")), products = argOrNot(args, "products"))
-      }
-    }
+//    name match {
+//      case "Service.getCollections" => {
+//        cubeLoad += (UUID -> (argOrNot(args, "productIDs"), argOrNot(args, "datetime"), argOrNot(args, "bbox")))
+//      }
+//      case "Collections.toCube" => {
+//        rdd_list_cube += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = argOrNot(args, "bands")))
+//      }
+//      case "Cube.NDWI" => {
+//        rdd_list_cube += (UUID -> Cube.NDWI(input = rdd_list_cube(args("input")), product = argOrNot(args, "product"), name = argOrNot(args, "name")))
+//      }
+//      case "Cube.binarization" => {
+//        rdd_list_cube += (UUID -> Cube.binarization(input = rdd_list_cube(args("input")), product = argOrNot(args, "product"), name = argOrNot(args, "name"),
+//          threshold = argOrNot(args, "threshold").toDouble))
+//      }
+//      case "Cube.subtract" => {
+//        rdd_list_cube += (UUID -> Cube.WaterChangeDetection(input = rdd_list_cube(args("input")), product = argOrNot(args, "product"),
+//          certainTimes = argOrNot(args, "timeList"), name = argOrNot(args, "name")))
+//      }
+//      case "Cube.overlayAnalysis" => {
+//        rdd_list_cube += (UUID -> Cube.OverlayAnalysis(input = rdd_list_cube(args("input")), rasterOrTabular = argOrNot(args, "raster"), vector = argOrNot(args, "vector"), name = argOrNot(args, "name")))
+//      }
+//      case "Cube.addStyles" => {
+//        Cube.visualize(sc, cube = rdd_list_cube(args("cube")), products = argOrNot(args, "products"))
+//      }
+//    }
   }
 
   def lamda(implicit sc: SparkContext, list: List[Tuple3[String, String, Map[String, String]]]) = {

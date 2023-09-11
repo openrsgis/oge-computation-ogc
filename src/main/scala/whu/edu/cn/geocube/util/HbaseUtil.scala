@@ -10,43 +10,41 @@ import org.apache.hadoop.hbase.{CellUtil, HBaseConfiguration, HColumnDescriptor,
 
 import scala.collection.mutable.ListBuffer
 
-
 /**
  * Some basic CRUD and extended operations in HBase.
  *
  */
 object HbaseUtil {
-  System.setProperty("hadoop.home.dir", "/home/geocube/hadoop")
+  //  System.setProperty("hadoop.home.dir", "/usr/local/hadoop-2.7.4")
+  //  System.setProperty("hadoop.home.dir", "/usr/local/hadoop-2.7.4")
 
   //configuration for hbase
   val configuration = HBaseConfiguration.create()
 
   //set zookeeper cluster
   configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
+//  configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb3:2181,gisweb4:2181")
+
+  //  configuration.set(HConstants.ZOOKEEPER_QUORUM, "master:2181,server01:2181,server02:2181")
+  //  configuration.set(HConstants.ZOOKEEPER_QUORUM, "bd2015.whrdc:2181,bd2016.whrdc:2181,bd2017.whrdc:2181,bd2018.whrdc:2181")
 
   //set RPC timeout
-  configuration.set("hbase.rpc.timeout", "100000")
+  configuration.set("hbase.rpc.timeout", "200000")
 
   //set scanner cache
-  configuration.set("hbase.client.scanner.caching", "2000000")
+  configuration.set("hbase.client.scanner.caching", "200000")
 
   //set scanner timeout
-  configuration.set("hbase.client.scanner.timeout.period", "100000")
+  configuration.set("hbase.client.scanner.timeout.period", "200000")
 
   //set mapreduce task timeout
-  configuration.setInt("mapreduce.task.timeout", 10000)
-
-//  configuration.setInt("hbase.client.retries.number",3)
+  configuration.setInt("mapreduce.task.timeout", 60000)
 
   //set maximum allowed size of a KeyValue instance, default 10485760
   configuration.set("hbase.client.keyvalue.maxsize", "104857600")
 
   //set maximum allowed size of an individual cell, inclusive of value and all key components, default 10485760
   configuration.set("hbase.server.keyvalue.maxsize", "104857600")
-
-  configuration.set("hbase.client.retries.number", "3")
-
-  configuration.setInt("hbase.client.operation.timeout",200000)
 
   //establish connection and adimin
   val connection = ConnectionFactory.createConnection(configuration)
@@ -146,7 +144,6 @@ object HbaseUtil {
    *
    * @param tableName
    * @param fuzzyRowKey
-   *
    * @return
    */
   def getFuzzyRow(tableName: String, fuzzyRowKey: String): Unit = {
@@ -315,7 +312,6 @@ object HbaseUtil {
    * @param rowKey
    * @param family
    * @param column
-   *
    * @return a string of vector data
    */
   def getVectorCell(tableName: String, rowKey: String, family: String, column: String): String = {
@@ -331,7 +327,6 @@ object HbaseUtil {
       throw new RuntimeException("No data of rowkey = " + rowKey + " in HBase!")
     }
   }
-
   /**
    *
    *
@@ -372,30 +367,5 @@ object HbaseUtil {
       resList.append(kv)
     }
     resList
-  }
-
-
-  /**
-   * Get tabular data .
-   *
-   * @param tableName
-   * @param rowKey
-   * @param family
-   * @param column
-   *
-   * @return a json string of tabular data
-   */
-  def getTabularCell(tableName: String, rowKey: String, family: String, column: String): String = {
-    val table = connection.getTable(TableName.valueOf(tableName))
-    val get: Get = new Get(Bytes.toBytes(rowKey))
-    if (!get.isCheckExistenceOnly) {
-      get.addColumn(Bytes.toBytes(family), Bytes.toBytes(column))
-      val result: Result = table.get(get)
-      val rowKv = result.rawCells().last
-      val res = new String(rowKv.getValueArray, rowKv.getValueOffset, rowKv.getValueLength, "UTF-8")
-      res
-    } else {
-      throw new RuntimeException("No data of rowkey = " + rowKey + " in HBase!")
-    }
   }
 }

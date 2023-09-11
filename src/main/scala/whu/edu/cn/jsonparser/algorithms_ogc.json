@@ -6021,16 +6021,11 @@
       {
         "name": "cube",
         "type": "Cube",
-        "description": "The cube to visualize"
-      },
-      {
-        "name": "products",
-        "type": "Object",
-        "description": "The products in cube to visualize"
+        "description": "The coverage to be added styles"
       },
       {
         "name": "bands",
-        "type": "Object",
+        "type": "List<String>",
         "description": "",
         "default": "None",
         "optional": "True"
@@ -6079,7 +6074,7 @@
       },
       {
         "name": "palette",
-        "type": "Object",
+        "type": "List<List<String>>",
         "description": "",
         "default": "None",
         "optional": "True"
@@ -6087,8 +6082,8 @@
       {
         "name": "format",
         "type": "String",
-        "description": "png",
-        "default": "False",
+        "description": "",
+        "default": "png",
         "optional": "True"
       }
     ]
@@ -7707,39 +7702,32 @@
     ]
   },
   "Cube.load": {
-    "description": "Create a cube by some params",
+    "description": "Load a cube by some params",
     "returns": "Cube",
     "args": [
       {
-        "name": "productIds",
+        "name": "cubeID",
+        "type": "String",
+        "description": "The id of the cube."
+      },
+      {
+        "name": "dateTime",
         "type": "List<String>",
-        "description": "The product id list for cube creation."
+        "description": "The Coverage as the input data ",
+        "default": "null",
+        "optional": "True"
       },
       {
-        "name": "StartTime",
-        "type": "String",
-        "description": "The start time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "EndTime",
-        "type": "String",
-        "description": "The end time of the product.",
-        "optional": "True",
-        "default": "null"
-      },
-      {
-        "name": "geom",
+        "name": "bbox",
         "type": "List<Float>",
-        "description": "The geom of the product.",
+        "description": "The bounding box of the product.",
         "optional": "True",
         "default": "null"
       },
       {
-        "name": "bands",
+        "name": "measurements",
         "type": "List<String>",
-        "description": "The bands of the product.",
+        "description": "The measurements of the product.",
         "optional": "True",
         "default": "null"
       }
@@ -8093,6 +8081,48 @@
         "name": "z-Factor",
         "type": "Double",
         "description": "a z-factor for correct slopelength calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Cube.normalize": {
+    "description": "Calculate the normalize index from the cube",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The input Cube."
+      },
+      {
+        "name": "dimensionName",
+        "type": "String",
+        "description": "The dimension name to calculate the normalize index."
+      },
+      {
+        "name": "dimensionMembers",
+        "type": "List<String>",
+        "description": "The dimension members of to calculate the normalize index"
+      }
+    ]
+  },
+  "Cube.aggregate": {
+    "description": "Aggregate along a dimension",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The input Cube."
+      },
+      {
+        "name": "dimensionName",
+        "type": "String",
+        "description": "The dimension name to calculate the normalize index."
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "The method name to perform aggregation"
       }
     ]
   }

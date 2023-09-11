@@ -1,9 +1,5 @@
 package whu.edu.cn.geocube.util
 
-import java.io.File
-import java.nio.charset.Charset
-import java.sql.{DriverManager, ResultSet, SQLException, Statement}
-import java.util
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import geotrellis.layer.LayoutDefinition
@@ -11,41 +7,40 @@ import geotrellis.raster.TileLayout
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
 import org.geotools.data.simple.SimpleFeatureIterator
 import org.locationtech.jts.geom.Geometry
-import whu.edu.cn.geocube.core.entity.VectorGridFact
+import whu.edu.cn.geocube.core.entity.{GcDimension, VectorGridFact}
 import whu.edu.cn.geocube.core.vector.grid.GridTransformer
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
 import whu.edu.cn.util.PostgresqlUtil
 
+import java.io.File
+import java.nio.charset.Charset
+import java.sql.{DriverManager, ResultSet, SQLException, Statement}
+import java.util
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-/**
- * Some dao operations on dimension and fact table in PostgreSQL.
- *
- * */
 class PostgresqlService {
   /**
    * Get cell size and resolution info from SensorLevelAndProduct view, and return a HashMap object.
+   *
    * @param cubeId
    * @param connAddr
    * @param user
    * @param password
-   *
    * @return a HashMap object.
    */
-  def getSizeResAndExtentByCubeId(cubeId:String,  connAddr: String, user: String, password: String): mutable.HashMap[(Double,Double),(Double,Double,Double,Double)] = {
+  def getSizeResAndExtentByCubeId(cubeId: String, connAddr: String, user: String, password: String): mutable.HashMap[(Double, Double), (Double, Double, Double, Double)] = {
     val conn = DriverManager.getConnection(connAddr, user, password)
     if (conn != null) {
       try {
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
         val sql = "select distinct cell_size,cell_res,slice_minx,slice_miny,slice_maxx,slice_maxy " +
-          "from gc_cube where id = " +cubeId+  ";"
+          "from gc_cube where id = " + cubeId + ";"
         println(sql)
         val rs = statement.executeQuery(sql)
-        val resHashMap = new mutable.HashMap[(Double,Double),(Double,Double,Double,Double)]
+        val resHashMap = new mutable.HashMap[(Double, Double), (Double, Double, Double, Double)]
         //add every measurementName
         while (rs.next) {
-          resHashMap.put((rs.getString(1).toDouble,rs.getDouble(2)),(rs.getDouble(3),rs.getDouble(4),rs.getDouble(5),rs.getDouble(6)))
+          resHashMap.put((rs.getString(1).toDouble, rs.getDouble(2)), (rs.getDouble(3), rs.getDouble(4), rs.getDouble(5), rs.getDouble(6)))
         }
         resHashMap
       } finally {
@@ -56,7 +51,244 @@ class PostgresqlService {
   }
 
   /**
+   * Get the hbase table name by the cube id
+   *
+   * @param cubeId :String the cube id
+   * @return the hbase table name
+   */
+  def getHbaseTableName(cubeId: String): String = {
+    val sql = "SELECT hbase_table_name from gc_cube where id = " + cubeId + ";"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var hbaseTableName: String = null
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        hbaseTableName = resultSet.getString("hbase_table_name")
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    hbaseTableName
+  }
+
+  /**
+   * get the max and min time of the selected tiles
+   *
+   * @param cubeId          the cube id
+   * @param productKeyArray productKeys
+   * @return (minTime, maxTime)
+   */
+  def getMaxMinTime(cubeId: String, productKeyArray: ArrayBuffer[String]): (String, String) = {
+    val sql = "select MIN(phenomenon_time) AS min_time, MAX(phenomenon_time) AS max_time " +
+      "from gc_product_" + cubeId + " where product_key IN ( " + productKeyArray.mkString(",") + " )"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var minTime: String = ""
+    var maxTime: String = ""
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        if (resultSet.getString("min_time") != null){
+          minTime = resultSet.getString("min_time")
+        }
+        if (resultSet.getString("max_time") != null){
+          maxTime = resultSet.getString("max_time")
+        }
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    (minTime, maxTime)
+  }
+
+  def getOtherDimensions(cubeId: String, productKeys: String = null): ArrayBuffer[GcDimension] = {
+    val sql = "select id,dimension_name,dimension_table_name,member_type,step,description,unit,dimension_table_column_name " +
+      "from gc_dimension_" + cubeId + " where dimension_name NOT IN ('extent', 'product', 'phenomenonTime', 'measurement')"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    val gcDimensionArray: ArrayBuffer[GcDimension] = new ArrayBuffer[GcDimension]()
+    val rsArray = new Array[String](8);
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      val columnCount = resultSet.getMetaData.getColumnCount;
+      while (resultSet.next()) {
+        for (i <- 1 to columnCount) {
+          rsArray(i - 1) = resultSet.getString(i)
+        }
+        val gcDimension: GcDimension = new GcDimension()
+        gcDimension.setId(rsArray(0).toInt)
+        gcDimension.setDimensionName(rsArray(1))
+        gcDimension.setDimensionTableName(rsArray(2))
+        gcDimension.setMemberType(rsArray(3))
+        if (rsArray(4) != null) {
+          gcDimension.setStep(rsArray(4).toDouble)
+        }
+        gcDimension.setDescription(rsArray(5))
+        if (rsArray(6) != null) {
+          gcDimension.setUnit(rsArray(6))
+        }
+        gcDimension.setDimensionTableColumnName(rsArray(7))
+        gcDimensionArray.append(gcDimension)
+        val coordinates: ArrayBuffer[String] = getDimensionCoordinates(gcDimension, cubeId, productKeys)
+        gcDimension.coordinates = coordinates
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    gcDimensionArray
+  }
+
+
+  def getDimensionCoordinates(gcDimension: GcDimension, cubeId: String, productKeys: String = null): ArrayBuffer[String] = {
+
+    val sql = "select distinct " + gcDimension.getDimensionName +
+      " from \"SensorLevelAndProduct_" + cubeId + "\" where product_key IN " + productKeys + "ORDER BY " + gcDimension.getDimensionName
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    val rsArray = new ArrayBuffer[String]()
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      val columnCount = resultSet.getMetaData.getColumnCount
+      while (resultSet.next()) {
+        for (i <- 1 to columnCount) {
+          rsArray.append(resultSet.getString(i))
+        }
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    rsArray
+  }
+
+  /**
+   * get the cube id by the cube name
+   *
+   * @param cubeName the cube name
+   * @return cube id
+   */
+  def getCubeIdByCubeName(cubeName: String): String = {
+    val sql = "SELECT id from gc_cube where cube_name = '" + cubeName + "';"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var cubeId: String = null
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        cubeId = resultSet.getString("id")
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    cubeId
+  }
+
+  /**
+   * get the measurements_product_view_name by the cube name
+   *
+   * @param cubeName the cube name
+   * @return measurements_product_view_name
+   */
+  def getMeasurementsProductViewName(cubeName: String): String = {
+    val sql = "SELECT measurements_product_view_name from gc_cube where cube_name = \'" + cubeName + "\';"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var measurementsProductViewName: String = null
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        measurementsProductViewName = resultSet.getString("measurements_product_view_name")
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    measurementsProductViewName
+  }
+
+  /**
+   * get the product name by the cube name
+   *
+   * @param measurementsProductViewName the measurementProductViewName
+   * @return the product name (only one product name)
+   */
+  def getProductNameByCubeName(measurementsProductViewName: String): String = {
+    val sql = "Select DISTINCT product_name from \"" + measurementsProductViewName + "\""
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var productName: String = null
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        productName = resultSet.getString("product_name")
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    productName
+  }
+
+
+  /**
+   * get the data type of the cell
+   *
+   * @param cubeId :string cubeId
+   * @return the data type
+   */
+  def getCellType(cubeId: String, productKey: String): String = {
+    val sql = "SELECT dtype from gc_product_measurement_" + cubeId + " where product_key = " + productKey + ";"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var dtype: String = null
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        dtype = resultSet.getString("dtype")
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    dtype
+  }
+
+  def getMinTime(cubeId: String, startTime: String, endTime: String): String = {
+    var sql = "SELECT MIN(phenomenon_time) as minTime from \"SensorLevelAndProduct_" + cubeId + "\"" + " where 1 = 1 "
+    if (startTime != "" && endTime != "") {
+      sql ++= " AND (phenomenon_time BETWEEN "
+      sql ++= "\'"
+      sql ++= startTime
+      sql ++= "\'"
+      sql ++= " AND"
+      sql ++= "\'"
+      sql ++= endTime
+      sql ++= "\')"
+    }
+    sql ++= ";"
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    var minTime: String = null
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery()
+      while (resultSet.next()) {
+        minTime = resultSet.getString("minTime")
+      }
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    minTime
+  }
+
+  /**
    * Get maximum value of a column in a table.
+   *
    * @param columnName
    * @param tableName
    * @return
@@ -76,6 +308,7 @@ class PostgresqlService {
     postgresqlUtil.close()
     maxValue
   }
+
 
   /**
    * Get maximum key in product dimension table.
@@ -101,6 +334,24 @@ class PostgresqlService {
    * */
   def getMaxProductId: Integer = {
     val sql = "SELECT max(id) from gc_product_aigis;"
+    var maxProductId = 0
+    val postgresqlUtil = new PostgresqlUtil(sql)
+    try {
+      val resultSet = postgresqlUtil.getStatement.executeQuery
+      while (resultSet.next) maxProductId = resultSet.getInt("max")
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    postgresqlUtil.close()
+    maxProductId
+  }
+
+  /**
+   * Get maximum id in product dimension table.
+   * */
+  def getMaxRasterProductId: Integer = {
+    val sql = "SELECT max(id) from gc_product;"
     var maxProductId = 0
     val postgresqlUtil = new PostgresqlUtil(sql)
     try {
@@ -153,18 +404,17 @@ class PostgresqlService {
   /**
    * Insert record to product dimension table.
    *
-   * @param productId Attribute[id] in product dimension table
-   * @param productKey Attribute[product_key] in product dimension table
-   * @param productName Attribute[product_name] in product dimension table
+   * @param productId             Attribute[id] in product dimension table
+   * @param productKey            Attribute[product_key] in product dimension table
+   * @param productName           Attribute[product_name] in product dimension table
    * @param productIdentification Attribute[product_identification] in product dimension table
-   * @param phenomenonTime Attribute[phenomenon_time] in product dimension table
-   * @param resultTime Attribute[result_time] in product dimension table
-   * @param geom Attribute[geom] in product dimension table
-   * @param maxx Attribute[maxx] in product dimension table
-   * @param minx Attribute[minx] in product dimension table
-   * @param maxy Attribute[maxy] in product dimension table
-   * @param miny Attribute[miny] in product dimension table
-   *
+   * @param phenomenonTime        Attribute[phenomenon_time] in product dimension table
+   * @param resultTime            Attribute[result_time] in product dimension table
+   * @param geom                  Attribute[geom] in product dimension table
+   * @param maxx                  Attribute[maxx] in product dimension table
+   * @param minx                  Attribute[minx] in product dimension table
+   * @param maxy                  Attribute[maxy] in product dimension table
+   * @param miny                  Attribute[miny] in product dimension table
    * @return True if insert successfully, false otherwise
    */
   def insertProduct(productId: Integer, productKey: Integer, productName: String, productIdentification: String, phenomenonTime: String, resultTime: String, geom: String, maxx: Double, minx: Double, maxy: Double, miny: Double): Boolean = {
@@ -193,7 +443,6 @@ class PostgresqlService {
    * Insert record to vector fact table.
    *
    * @param vectorGridFacts A list of VectorGridFact objects
-   *
    * @return True if insert successfully, false otherwise
    */
   def insertFact(vectorGridFacts: util.List[VectorGridFact]): Boolean = {
@@ -225,9 +474,8 @@ class PostgresqlService {
   /**
    * Insert record to vector fact table.
    *
-   * @param statement PostgreSQL statement
+   * @param statement       PostgreSQL statement
    * @param vectorGridFacts A list of VectorGridFact objects
-   *
    * @return True if insert successfully, false otherwise
    */
   def insertFact(statement: Statement, vectorGridFacts: util.List[VectorGridFact]): Boolean = {
@@ -257,10 +505,9 @@ class PostgresqlService {
   /**
    * Insert computational intensity info to vector fact table.
    *
-   * @param statement PostgreSQL statement
-   * @param factKey Key in fact table
+   * @param statement          PostgreSQL statement
+   * @param factKey            Key in fact table
    * @param compuIntensityJson Computational intensity info of Json format
-   *
    * @return True if insert successfully, false otherwise
    */
   def insertCompuIntensity(statement: Statement, factKey: String, compuIntensityJson: ObjectNode): Boolean = {
@@ -308,6 +555,7 @@ class PostgresqlService {
 
   /**
    * Insert city into gc_extent table
+   *
    * @param cityName
    * @param boundaryFile
    */
@@ -317,8 +565,9 @@ class PostgresqlService {
     val extent = geotrellis.vector.Extent(-180, -90, 180, 90)
     val tl = TileLayout(360, 180, 4000, 4000)
     val ld = LayoutDefinition(extent, tl)
-    val gridCodes = GridTransformer.getGeomZcodes(cityGeometry.getEnvelope, ld.layoutCols, ld.layoutRows, ld.extent,1).toArray
-    gridCodes.foreach(x => print(x + " ")); println()
+    val gridCodes = GridTransformer.getGeomZcodes(cityGeometry.getEnvelope, ld.layoutCols, ld.layoutRows, ld.extent, 1).toArray
+    gridCodes.foreach(x => print(x + " "));
+    println()
 
     //get extentKey corresponding to the grid
     val connStr = "jdbc:postgresql://125.220.153.26:5432/whugeocube"
@@ -328,7 +577,7 @@ class PostgresqlService {
     filteredExtents.foreach(x => println(x._1 + "," + x._2 + "," + x._3))
 
     //update these extentKey with cityName
-    filteredExtents.foreach{ x =>
+    filteredExtents.foreach { x =>
       val extentKey = x._1
       val sql = "UPDATE gc_extent SET city_name='" + cityName + "' WHERE extent_key=" + extentKey
       try {
@@ -344,6 +593,7 @@ class PostgresqlService {
 
   /**
    * Get city geometry
+   *
    * @param cityName
    * @param boundaryFile
    * @return
@@ -357,7 +607,7 @@ class PostgresqlService {
     val iterator: SimpleFeatureIterator = featureSource.getFeatures().features()
     while (iterator.hasNext) {
       val feature = iterator.next()
-      if (feature.getAttribute("NAME_2").equals(cityName)){
+      if (feature.getAttribute("NAME_2").equals(cityName)) {
         val geometry = feature.getDefaultGeometry.asInstanceOf[Geometry]
         sds.dispose()
         return geometry
@@ -366,144 +616,7 @@ class PostgresqlService {
     sds.dispose()
     throw new RuntimeException(cityName + " was not found in the boundary file")
   }
-  def getMaxFactKey(table: String): Integer = {
-    val sql = "SELECT max(fact_key) from " + table + ";"
-    val postgresqlUtil = new PostgresqlUtil(sql)
-    var maxFactKey = 0
-    try {
-      val resultSet = postgresqlUtil.getStatement.executeQuery
-      while (resultSet.next) maxFactKey = resultSet.getInt("max")
-    } catch {
-      case e: SQLException =>
-        e.printStackTrace()
-    }
-    postgresqlUtil.close()
-    maxFactKey
-  }
 
-  /**
-   * Get maximum id in fact table.
-   * */
-  def getMaxFactId(table: String): Integer = {
-    val sql = "SELECT max(id) from " + table + ";"
-    var maxFactId = 0
-    val postgresqlUtil = new PostgresqlUtil(sql)
-    try {
-      val resultSet = postgresqlUtil.getStatement.executeQuery
-      while (resultSet.next) maxFactId = resultSet.getInt("max")
-    } catch {
-      case e: SQLException =>
-        e.printStackTrace()
-    }
-    postgresqlUtil.close()
-    maxFactId
-  }
-  def getDimKeys(table: String, key: String, item: String, itemValues: Array[String], valueType: String = "discrete"): Array[Int] = {
-    val connStr = POSTGRESQL_URL
-    val conn = DriverManager.getConnection(connStr, POSTGRESQL_USER, POSTGRESQL_PWD)
-    val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-    val sql = new StringBuilder
-    if(valueType.equals("discrete")){
-      sql ++= "SELECT " + key + " from " + table + " WHERE 1=1 "
-      if(itemValues.length != 0){
-        sql ++= "AND " + item + " IN ("
-        for (value <- itemValues){
-          sql ++= "\'" + value + "\',"
-        }
-        sql.deleteCharAt(sql.length - 1)
-        sql ++= ")"
-      }
-    }else if(valueType.equals("continuous")){
-      sql ++= "SELECT " + key + " from " + table + " WHERE 1=1 "
-      if(itemValues.length == 2){
-        sql ++= "AND " + item + " BETWEEN \'"
-        sql ++= itemValues(0) + "\' AND \'"
-        sql ++= itemValues(1) + "\')"
-      }else throw new RuntimeException("the size of coninuous values must be 2!")
-    }else
-      throw new RuntimeException("value type must be discrete or continuous")
-
-    val resultKeys = new ArrayBuffer[Int]()
-    try {
-      println(sql)
-      val resultSet = statement.executeQuery(sql.toString())
-      if(resultSet.first()){
-        resultSet.previous()
-        while(resultSet.next()){
-          resultKeys.append(resultSet.getInt(1))
-        }
-      }else
-        throw new RuntimeException("No record matching the query condition: " + item)
-    } catch {
-      case e: SQLException =>
-        e.printStackTrace()
-    }
-    conn.close()
-    resultKeys.toArray
-  }
-
-  def getDimKey(table: String, key: String, item: String, itemValue: String): Int = {
-    val connStr = POSTGRESQL_URL
-    val conn = DriverManager.getConnection(connStr, POSTGRESQL_USER, POSTGRESQL_PWD)
-    val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-    val sql = "SELECT " + key + " from " + table + " WHERE " + item + "='" + itemValue + "';"
-    var resultKey = -1
-    try {
-      val resultSet = statement.executeQuery(sql)
-      if(resultSet.next()) {
-        resultKey = resultSet.getInt(1)
-        /*resultSet.previous()
-        while(resultSet.next()){
-          resultKey = resultSet.getInt(1)
-        }*/
-      }
-    } catch {
-      case e: SQLException =>
-        e.printStackTrace()
-    }
-    conn.close()
-    resultKey
-  }
-  def getFactValues(table: String, factItem: String, items: Array[String], itemValues: Array[Array[Int]]): Array[Array[Int]] = {
-    val connStr = POSTGRESQL_URL
-    val conn = DriverManager.getConnection(connStr, POSTGRESQL_USER, POSTGRESQL_PWD)
-    val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-    val sql = new StringBuilder
-    sql ++= "SELECT " + factItem
-    for(i <- 0 until items.size){
-      sql ++= "," + items(i)
-    }
-    sql ++= " from " + table + " WHERE 1=1 "
-    for(i <- 0 until items.size){
-      sql ++= "AND " + items(i) + " IN ("
-      for (value <- itemValues(i)){
-        sql ++= "\'" + value + "\',"
-      }
-      sql.deleteCharAt(sql.length - 1)
-      sql ++= ") "
-    }
-
-    val resultKeys = new ArrayBuffer[Array[Int]]()
-    try {
-      val resultSet = statement.executeQuery(sql.toString())
-      if(resultSet.first()){
-        resultSet.previous()
-        while(resultSet.next()){
-          val resultKey = new ArrayBuffer[Int]()
-          for(i <- 0 until (items.size + 1)){
-            resultKey.append(resultSet.getInt(i + 1))
-          }
-          resultKeys.append(resultKey.toArray)
-        }
-      }else
-        throw new RuntimeException("No record matching the query condition: " + factItem)
-    } catch {
-      case e: SQLException =>
-        e.printStackTrace()
-    }
-    conn.close()
-    resultKeys.toArray
-  }
   /**
    *
    * @param statement
@@ -602,10 +715,4 @@ class PostgresqlService {
   }
 
 
-}
-
-object PostgresqlService{
-  def main(args: Array[String]): Unit = {
-    new PostgresqlService().updatePath("jdbc:postgresql://125.220.153.26:5432/whugeocube", "geocube", "ypfamily608")
-  }
 }

@@ -45,10 +45,10 @@ case class Parser(_xmlPath: String) {
    */
   def getGainOffset(platform: String, sensor: String, year: String):Array[Float] = {
     val objectMapper=new ObjectMapper()
-    //val node = objectMapper.readTree(new FileInputStream("/home/geocube/data/conf/Gaofen_CalibrationParameters.json"))
+    val node = objectMapper.readTree(new FileInputStream("/home/geocube/data/conf/Gaofen_CalibrationParameters.json"))
     //val node = objectMapper.readTree(new FileInputStream("conf/Gaofen_CalibrationParameters.json"))
-    val fileName = this.getClass().getClassLoader().getResource("Gaofen_CalibrationParameters.json").getPath()
-    val node = objectMapper.readTree(new FileInputStream(fileName))
+//    val fileName = this.getClass().getClassLoader().getResource("Gaofen_CalibrationParameters.json").getPath()
+//    val node = objectMapper.readTree(new FileInputStream(fileName))
 
     val gainOffsetBuffer = new ArrayBuffer[Float]()
     if(node != null && node.has(platform)) {
@@ -83,10 +83,10 @@ case class Parser(_xmlPath: String) {
    */
   def getEsun(platform: String, sensor: String):Array[Float] = {
     val objectMapper=new ObjectMapper()
-    //val node = objectMapper.readTree(new FileInputStream("/home/geocube/data/conf/Gaofen_Esun.json"))
+    val node = objectMapper.readTree(new FileInputStream("/home/geocube/data/conf/Gaofen_Esun.json"))
     //val node = objectMapper.readTree(new FileInputStream("conf/Gaofen_Esun.json"))
-    val fileName = this.getClass().getClassLoader().getResource("Gaofen_Esun.json").getPath()
-    val node = objectMapper.readTree(new FileInputStream(fileName))
+//    val fileName = this.getClass().getClassLoader().getResource("Gaofen_Esun.json").getPath()
+//    val node = objectMapper.readTree(new FileInputStream(fileName))
 
     //val esunBuffer = new ArrayBuffer[Float]()
     if(node != null && node.has(platform)) {
@@ -125,7 +125,7 @@ case class Parser(_xmlPath: String) {
     val solarZenithNode = xml \ "SolarZenith"
     if(solarZenithNode.isEmpty)
       throw new RuntimeException("No SolarZenith Node exists!")
-    solarZenith = 90 - solarZenithNode.text.toFloat
+    solarZenith = solarZenithNode.text.toFloat
 
     platform = (xml \ "SatelliteID").text
     sensor = (xml \ "SensorID").text
