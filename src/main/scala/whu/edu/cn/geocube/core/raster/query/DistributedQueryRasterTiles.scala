@@ -6,12 +6,15 @@ import java.util.Date
 import com.google.gson.{JsonObject, JsonParser}
 import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
+import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.raster.mapalgebra.local.Mean
 import geotrellis.raster.render.{ColorRamp, RGB}
 import geotrellis.raster.{CellType, ColorMap, Raster, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import org.json4s.scalap.scalasig.ScalaSigEntryParsers.index
 import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 import org.locationtech.jts.io.WKTReader
 
@@ -24,9 +27,10 @@ import whu.edu.cn.geocube.core.entity.GcMeasurement._
 import whu.edu.cn.geocube.core.vector.grid.GridTransformer.getGeomGridInfo
 import whu.edu.cn.geocube.util.HbaseUtil.{getTileCell, getTileMeta}
 import whu.edu.cn.geocube.util.{PostgresqlService, TileUtil}
-import whu.edu.cn.geocube.util.TileSerializerCube.deserializeTileData
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
+import whu.edu.cn.geocube.util.TileSerializer.deserializeTileData
+import whu.edu.cn.geocube.util.TileUtil.convertNodataValue
 import whu.edu.cn.util.PostgresqlUtil
+
 
 /**
  * Query raster tiles in a distributed way.
@@ -38,15 +42,15 @@ object DistributedQueryRasterTiles {
    * Query raster tiles and return a RasterRDD.
    *
    * @param sc Spark context
-   * @param p Query parameter
+   * @param p  Query parameter
    * @return A RasterRDD
    */
   def getRasterTiles(implicit sc: SparkContext, p: QueryParams, olap: Boolean = false): RasterRDD = {
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- The inquiry request of raster tiles is being processed...")
     val queryBegin = System.currentTimeMillis()
-    val results:(RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = getRasterTileRDD(sc, p, olap)
+    val results: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = getRasterTileRDD(sc, p, olap)
     val queryEnd = System.currentTimeMillis()
-//    println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Time cost of querying " + results.count + " raster tiles: " + (queryEnd - queryBegin) + " ms")
+    println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Time cost of querying " + results.count + " raster tiles: " + (queryEnd - queryBegin) + " ms")
     new RasterRDD(results._1, results._2)
   }
 
@@ -54,33 +58,33 @@ object DistributedQueryRasterTiles {
    * Query raster tiles and return (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]).
    *
    * @param sc Spark context
-   * @param p Query parameter
+   * @param p  Query parameter
    * @return A RDD tile with metadata
    */
-  def getRasterTileRDD(implicit sc: SparkContext, p: QueryParams, olap: Boolean = false):(RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+  def getRasterTileRDD(implicit sc: SparkContext, p: QueryParams, olap: Boolean = false): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
     if (p.getRasterProductNames.length == 0 || p.getRasterProductNames.length == 1) { //single product
       println("Single Product")
-      if(p.getRasterProductNames.length == 1) p.setRasterProductName(p.getRasterProductNames(0))
-      if(!olap) getRasterTileRDDWithMeta(sc, p)
+      if (p.getRasterProductNames.length == 1) p.setRasterProductName(p.getRasterProductNames(0))
+      if (!olap) getRasterTileRDDWithMeta(sc, p)
       else getRasterTileRDDWithMetaOLAP(sc, p)
     } else { //multiple product
       println("multiple Product")
-      val multiProductTileLayerRdd= ArrayBuffer[RDD[(SpaceTimeBandKey, Tile)]]()
+      val multiProductTileLayerRdd = ArrayBuffer[RDD[(SpaceTimeBandKey, Tile)]]()
       val multiProductTileLayerMeta = ArrayBuffer[RasterTileLayerMetadata[SpaceTimeKey]]()
-      for(rasterProductName <- p.getRasterProductNames){
+      for (rasterProductName <- p.getRasterProductNames) {
         p.setRasterProductName(rasterProductName)
-        val results:(RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
-          if(!olap) getRasterTileRDDWithMeta(sc, p)
+        val results: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
+          if (!olap) getRasterTileRDDWithMeta(sc, p)
           else getRasterTileRDDWithMetaOLAP(sc, p)
-        if(results != null){
+        if (results != null) {
           multiProductTileLayerRdd.append(results._1)
           multiProductTileLayerMeta.append(results._2)
         }
       }
-      if(multiProductTileLayerMeta.length < 1) return null
+      if (multiProductTileLayerMeta.length < 1) return null
       var destTileLayerMetaData = multiProductTileLayerMeta(0).getTileLayerMetadata
       val destRasterProductNames = ArrayBuffer[String]()
-      for(i <- multiProductTileLayerMeta) {
+      for (i <- multiProductTileLayerMeta) {
         destTileLayerMetaData = destTileLayerMetaData.merge(i.getTileLayerMetadata)
         destRasterProductNames.append(i.getProductName)
       }
@@ -93,7 +97,7 @@ object DistributedQueryRasterTiles {
    * Query raster tiles parallel (olap on the fly) and return a RDD of which.
    *
    * @param sc Spark context
-   * @param p Query parameter
+   * @param p  Query parameter
    * @return A RDD of queried raster tiles.
    */
   def getRasterTileRDDWithMetaOLAP(implicit sc: SparkContext, p: QueryParams): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
@@ -145,7 +149,7 @@ object DistributedQueryRasterTiles {
 
         // Extent dimension
         val extentsql = new StringBuilder
-        extentsql ++= "Select extent_key from \"LevelAndExtent_"+cubeId+"\" where 1=1 "
+        extentsql ++= "Select extent_key from \"LevelAndExtent_" + cubeId + "\" where 1=1 "
         if (cityName != "") {
           extentsql ++= "AND city_name like "
           extentsql ++= "\'%"
@@ -184,7 +188,7 @@ object DistributedQueryRasterTiles {
 
         //Product dimension
         val productsql = new StringBuilder;
-        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_"+cubeId+"\" where 1=1 "
+        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_" + cubeId + "\" where 1=1 "
         if (instrument.length != 0) {
           productsql ++= "AND sensor_name IN ("
           for (ins <- instrument) {
@@ -213,11 +217,11 @@ object DistributedQueryRasterTiles {
           productsql ++= level
           productsql ++= "\'"
         }
-        if(month != -1) {
+        if (month != -1) {
           productsql ++= "AND phenomenon_time_month = "
           productsql ++= month.toString
         }
-        if(year != -1) {
+        if (year != -1) {
           productsql ++= "AND phenomenon_time_year = "
           productsql ++= year.toString
         }
@@ -294,7 +298,7 @@ object DistributedQueryRasterTiles {
         }
         println("measurement key: " + measurementKeys)
 
-        val command = "Select tile_data_id,product_key,measurement_key,extent_key,tile_quality_key from gc_raster_tile_fact_"+cubeId+" where extent_key IN" +
+        val command = "Select tile_data_id,product_key,measurement_key,extent_key,tile_quality_key from gc_raster_tile_fact_" + cubeId + " where extent_key IN" +
           extentKeys.toString() + "AND product_key IN" + productKeys.toString() + "AND tile_quality_key IN" +
           qualityKeys.toString() + "AND measurement_key IN" + measurementKeys.toString() + ";"
         println("Raster Tile Fact Query SQL:" + command)
@@ -325,9 +329,11 @@ object DistributedQueryRasterTiles {
         println("-------- Returned " + tileAndDimensionKeys.length + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms --------")
         println("-------- Returned " + tileAndDimensionKeys.length + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms --------")
         println("-------- Returned " + tileAndDimensionKeys.length + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms --------")
-        if(partitions > 96) partitions = 96
-        val queriedRasterTilesRdd: RDD[RasterTile] =  sc.parallelize(tileAndDimensionKeys, partitions)
-          .map(keys => initRasterTile(cubeId,keys(0), keys(1), keys(2), keys(3), keys(4)))
+        if (partitions > 96) partitions = 96
+        val postgresqlService = new PostgresqlService()
+        val hbaseTableName = postgresqlService.getHbaseTableName(cubeId)
+        val queriedRasterTilesRdd: RDD[RasterTile] = sc.parallelize(tileAndDimensionKeys, partitions)
+          .map(keys => initRasterTile(cubeId, keys(0), keys(1), keys(2), keys(3), keys(4), hbaseTableName))
           .filter(_ != null) //过滤掉库内为null的瓦片
           .cache()
         val tileCount = queriedRasterTilesRdd.count()
@@ -335,8 +341,9 @@ object DistributedQueryRasterTiles {
         println("###### Returned " + tileCount + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms ######")
         println("###### Returned " + tileCount + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms ######")
         println("###### Returned " + tileCount + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms ######")
-
         initLayerMeta(queriedRasterTilesRdd, p)
+        //        val layer = initLayerMeta(queriedRasterTilesRdd, p)
+        //        (layer._1.map(value => (value._1._1, value._2)), layer._2)
       }
       finally {
         conn.close
@@ -348,7 +355,7 @@ object DistributedQueryRasterTiles {
    * Query raster tiles and return (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]).
    *
    * @param sc Spark context
-   * @param p Query parameter
+   * @param p  Query parameter
    * @return A RDD with metadata
    */
   def getRasterTileRDDWithMeta(implicit sc: SparkContext, p: QueryParams): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
@@ -398,7 +405,7 @@ object DistributedQueryRasterTiles {
 
         // Extent dimension query
         val extentsql = new StringBuilder
-        extentsql ++= "Select extent_key from \"LevelAndExtent_"+cubeId+"\" where 1=1 "
+        extentsql ++= "Select extent_key from \"LevelAndExtent_" + cubeId + "\" where 1=1 "
 
         if (gridCodes.length != 0) {
           extentsql ++= "AND grid_code IN ("
@@ -480,8 +487,10 @@ object DistributedQueryRasterTiles {
         println("Extent Keys :" + extentKeys)
 
         //Product dimension query
-        val productsql = new StringBuilder;
-        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_"+cubeId+"\" where 1=1 "
+        var productsql = new StringBuilder;
+        //        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_" + cubeId + "\" where 1=1 AND preasure = 1000 "
+        productsql ++= "Select DISTINCT product_key from \"SensorLevelAndProduct_" + cubeId + "\" where 1=1 "
+        productsql = addAdditionalSubset2ProductSQL(productsql, p.getSubsetQuery)
         if (instrument.length != 0) {
           productsql ++= "AND sensor_name IN ("
           for (ins <- instrument) {
@@ -528,7 +537,7 @@ object DistributedQueryRasterTiles {
           productsql ++= level
           productsql ++= "\'"
         }
-        if(startTime != "" && endTime != ""){
+        if (startTime != "" && endTime != "") {
           productsql ++= " AND (phenomenon_time BETWEEN "
           productsql ++= "\'"
           productsql ++= startTime
@@ -538,7 +547,7 @@ object DistributedQueryRasterTiles {
           productsql ++= endTime
           productsql ++= "\'"
         }
-        if(nextStartTime != "" && nextEndTime != ""){
+        if (nextStartTime != "" && nextEndTime != "") {
           productsql ++= " Or phenomenon_time BETWEEN "
           productsql ++= "\'"
           productsql ++= nextStartTime
@@ -547,7 +556,7 @@ object DistributedQueryRasterTiles {
           productsql ++= "\'"
           productsql ++= nextEndTime
           productsql ++= "\')"
-        } else{
+        } else {
           productsql ++= ")"
         }
 
@@ -633,13 +642,14 @@ object DistributedQueryRasterTiles {
         println("Measurement Keys :" + measurementKeys)
 
         //Tile_ID query
-        val command = "Select tile_data_id,product_key,measurement_key,extent_key,tile_quality_key from gc_raster_tile_fact_"+cubeId+" where extent_key IN" +
+        val command = "Select tile_data_id,product_key,measurement_key,extent_key,tile_quality_key from gc_raster_tile_fact_" + cubeId + " where extent_key IN" +
           extentKeys.toString() + "AND product_key IN" + productKeys.toString() + "AND tile_quality_key IN" +
           qualityKeys.toString() + "AND measurement_key IN" + measurementKeys.toString() + ";"
         println("Raster Tile Fact Query SQL:" + command)
 
         val tileIDResults = statement.executeQuery(command)
         val tileAndDimensionKeys = new ArrayBuffer[Array[String]]()
+        val productKeyArray = new ArrayBuffer[String]()
         if (tileIDResults.first()) {
           tileIDResults.previous()
           while (tileIDResults.next()) {
@@ -650,6 +660,7 @@ object DistributedQueryRasterTiles {
             keyArray(3) = tileIDResults.getString(4)
             keyArray(4) = tileIDResults.getString(5)
             tileAndDimensionKeys.append(keyArray)
+            productKeyArray.append(keyArray(1))
           }
         } else {
           println("No tiles of " + rasterProductName + " acquired!")
@@ -658,23 +669,69 @@ object DistributedQueryRasterTiles {
 
         val queryTileIDEnd = System.currentTimeMillis()
         println("-------- Returned " + tileAndDimensionKeys.length + " raster tiles, time cost is " + (queryTileIDEnd - queryTileIDBegin) + "ms --------")
-
+        //        val gcDimensionArray = getOtherDimensions(cubeId, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password, productKeys.toString())
+        val postgresqlService = new PostgresqlService()
+        val gcDimensionArray = postgresqlService.getOtherDimensions(cubeId, productKeys.toString())
+        val hbaseTableName = postgresqlService.getHbaseTableName(cubeId)
+        val minMaxTime: (String, String) = postgresqlService.getMaxMinTime(cubeId, productKeyArray)
         //Distributed access tile data and return a RDD[RasterTile]
         var partitions = tileAndDimensionKeys.length
-        if(partitions > 96) partitions = 96
-        val queriedRasterTilesRdd: RDD[RasterTile] =  sc.parallelize(tileAndDimensionKeys, partitions)
-          .map(keys => initRasterTile(cubeId,keys(0), keys(1), keys(2), keys(3), keys(4)))
+        val firstRasterTile: RasterTile = initRasterTile(cubeId, tileAndDimensionKeys(0)(0), tileAndDimensionKeys(0)(1),
+          tileAndDimensionKeys(0)(2), tileAndDimensionKeys(0)(3), tileAndDimensionKeys(0)(4), hbaseTableName, gcDimensionArray)
+        if (partitions > 96) partitions = 96
+        var queriedRasterTilesRdd: RDD[RasterTile] = sc.parallelize(tileAndDimensionKeys, partitions)
+          .map(
+            keys => initRasterTile(cubeId, keys(0), keys(1), keys(2), keys(3), keys(4), hbaseTableName, gcDimensionArray)
+          )
           .filter(_ != null) //filter null tile
           .cache()
-
-        //Extract metadata of RDD[RasterTile]
-        initLayerMeta(queriedRasterTilesRdd, p)
-
+        initLayerMeta(queriedRasterTilesRdd, p, firstRasterTile, minMaxTime)
+        //        val tileRDD:(RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = initLayerMeta(queriedRasterTilesRdd, p)
+        //        queriedRasterTilesRdd.unpersist()
+        //        tileRDD
       } finally {
         conn.close
       }
     } else
       throw new RuntimeException("connection failed")
+  }
+
+  /**
+   * add the additional subset into the product sql
+   *
+   * @param initSQL          the input sql
+   * @param subsetQueryArray the subset query array
+   * @return the modified sql
+   */
+  def addAdditionalSubset2ProductSQL(initSQL: StringBuilder, subsetQueryArray: ArrayBuffer[SubsetQuery]): StringBuilder = {
+    for (subsetQuery <- subsetQueryArray) {
+      val axisName = subsetQuery.axisName.get
+      // if interval
+      if (subsetQuery.getInterval.isDefined && subsetQuery.getInterval.get) {
+        val lowPoint = subsetQuery.getLowPoint
+        val highPoint = subsetQuery.getHighPoint
+        if (lowPoint.isDefined && subsetQuery.getIsNumber.isDefined && subsetQuery.getIsNumber.get) {
+          initSQL ++= (" AND " + axisName + " > " + lowPoint.get + " ")
+        } else if (lowPoint.isDefined && subsetQuery.getIsNumber.isDefined && !subsetQuery.getIsNumber.get) {
+          initSQL ++= (" AND " + axisName + " > '" + lowPoint.get + "' ")
+        }
+        if (highPoint.isDefined && subsetQuery.getIsNumber.isDefined && subsetQuery.getIsNumber.get) {
+          initSQL ++= (" AND " + axisName + " < " + highPoint.get + " ")
+        } else if (highPoint.isDefined && subsetQuery.getIsNumber.isDefined && !subsetQuery.getIsNumber.get) {
+          initSQL ++= (" AND " + axisName + " < '" + highPoint.get + "' ")
+        }
+      }
+      // if not interval
+      else if (subsetQuery.getIsNumber.isDefined && !subsetQuery.getInterval.get) {
+        val point = subsetQuery.getPoint
+        if (point.isDefined && subsetQuery.getIsNumber.isDefined && subsetQuery.getIsNumber.get) {
+          initSQL ++= (" AND " + axisName + " = " + point.get + " ")
+        } else if (point.isDefined && subsetQuery.getIsNumber.isDefined && !subsetQuery.getIsNumber.get) {
+          initSQL ++= (" AND " + axisName + " = '" + point.get + "' ")
+        }
+      }
+    }
+    initSQL
   }
 
   /**
@@ -687,12 +744,12 @@ object DistributedQueryRasterTiles {
    * @param qualityKey
    * @return A RasterTile object
    */
-  def initRasterTile(cubeId:String,id: String, productKey: String, measurementKey: String, extentKey: String, qualityKey: String): RasterTile = {
+  def initRasterTile(cubeId: String, id: String, productKey: String, measurementKey: String, extentKey: String, qualityKey: String, hbaseTableName: String, gcDimensionArray: ArrayBuffer[GcDimension] = null): RasterTile = {
     val rasterTile = RasterTile(id)
 
     //Access product and measurement dimensional info in postgresql
-    val productMeta = getProductByKey(cubeId,productKey, POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
-    val measurementMeta = getMeasurementByMeasureAndProdKey(cubeId,measurementKey, productKey, POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+    val productMeta = getProductByKey(cubeId, productKey, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password, gcDimensionArray)
+    val measurementMeta = getMeasurementByMeasureAndProdKey(cubeId, measurementKey, productKey, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
 
     rasterTile.setProductMeta(productMeta)
     rasterTile.setMeasurementMeta(measurementMeta)
@@ -702,38 +759,32 @@ object DistributedQueryRasterTiles {
     val tileBytes = getTileCell("hbase_raster_regions", id, "rasterData", "tile")*/
     /*val tileMeta = getTileMeta("hbase_raster", id, "rasterData", "metaData")
     val tileBytes = getTileCell("hbase_raster", id, "rasterData", "tile")*/
+    val tileMeta = getTileMeta(hbaseTableName, id, "rasterData", "metaData")
+    val tileBytes = getTileCell(hbaseTableName, id, "rasterData", "tile")
+    //    val tileMeta =
+    //      if (PostgresqlUtil.url.contains("whugeocube"))
+    //        getTileMeta("hbase_raster", id, "rasterData", "metaData")
+    //      else if (PostgresqlUtil.url.contains("ypgeocube"))
+    //        getTileMeta("hbase_raster_fivehundred", id, "rasterData", "metaData")
+    //      else if (PostgresqlUtil.url.contains("multigeocube"))
+    //        getTileMeta("hbase_raster_regions_" + cubeId, id, "rasterData", "metaData")
+    //      else
+    //        getTileMeta("hbase_raster_regions", id, "rasterData", "metaData")
+    //
+    //    val tileBytes =
+    //      if (PostgresqlUtil.url.contains("whugeocube"))
+    //        getTileCell("hbase_raster", id, "rasterData", "tile")
+    //      else if (PostgresqlUtil.url.contains("ypgeocube"))
+    //        getTileCell("hbase_raster_fivehundred", id, "rasterData", "tile")
+    //      else if (PostgresqlUtil.url.contains("multigeocube"))
+    //        getTileCell("hbase_raster_regions_" + cubeId, id, "rasterData", "tile")
+    //      else
+    //        getTileCell("hbase_raster_regions", id, "rasterData", "tile")
 
-    var tileMeta =
-      if (POSTGRESQL_URL.contains("whugeocube"))
-        getTileMeta("hbase_raster", id, "rasterData", "metaData")
-      else if (POSTGRESQL_URL.contains("ypgeocube"))
-        getTileMeta("hbase_raster_fivehundred", id, "rasterData", "metaData")
-      else if (POSTGRESQL_URL.contains("multigeocube"))
-        getTileMeta("hbase_raster_regions_" + cubeId, id, "rasterData", "metaData")
-      else
-        getTileMeta("hbase_raster_regions", id, "rasterData", "metaData")
-    if(tileMeta==null){
-      tileMeta = getTileMeta("hbase_radar", id, "radarData", "metaData")
-    }
-
-    var tileBytes =
-      if (POSTGRESQL_URL.contains("whugeocube"))
-        getTileCell("hbase_raster", id, "rasterData", "tile")
-      else if (POSTGRESQL_URL.contains("ypgeocube"))
-        getTileCell("hbase_raster_fivehundred", id, "rasterData", "tile")
-      else if (POSTGRESQL_URL.contains("multigeocube"))
-        getTileCell("hbase_raster_regions_" + cubeId, id, "rasterData", "tile")
-      else
-        getTileCell("hbase_raster_regions", id, "rasterData", "tile")
-    if(tileBytes==null){
-      tileBytes = getTileCell("hbase_radar", id, "radarData", "tile")
-    }
-
-    if(tileMeta == null || tileBytes == null) return null //filter null tile
+    if (tileMeta == null || tileBytes == null) return null //filter null tile
 
     val json = new JsonParser()
     val obj = json.parse(tileMeta).asInstanceOf[JsonObject]
-
     //Add hbase attributes to a RasterTile object
     rasterTile.setCRS(obj.get("cRS").toString)
     rasterTile.setColNum(obj.get("column").toString)
@@ -746,10 +797,11 @@ object DistributedQueryRasterTiles {
     rasterTile.setLeftBottomLat(envelope.getMinY.toString)
     rasterTile.setRightUpperLong(envelope.getMaxX.toString)
     rasterTile.setRightUpperLat(envelope.getMaxY.toString)
-    val dType = obj.get("cellType").toString.replace("\"", "")
-
+    //    val dType = obj.get("cellType").toString.replace("\"", "")
+    val postgresqlService = new PostgresqlService
+    val dType = postgresqlService.getCellType(cubeId, productKey)
     //Transform tile data to a Tile Object
-    val tileData: Tile = deserializeTileData(rasterTile.getProductMeta.getPlatform, tileBytes, rasterTile.getProductMeta.tileSize.toInt, dType)
+    var tileData: Tile = deserializeTileData(rasterTile.getProductMeta.getPlatform, tileBytes, rasterTile.getProductMeta.tileSize.toInt, dType)
     rasterTile.setData(tileData)
     rasterTile
   }
@@ -760,52 +812,141 @@ object DistributedQueryRasterTiles {
    * @param rasterTilesRdd
    * @return a TileLayerRDD[(SpaceTimeBandKey, Tile)] with RasterTileLayerMetadata[SpaceTimeKey]
    */
-  def initLayerMeta(rasterTilesRdd:RDD[RasterTile], p: QueryParams):(RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
-    val firstRasterTile = rasterTilesRdd.take(1)(0)
-
+  def initLayerMeta(rasterTilesRdd: RDD[RasterTile], p: QueryParams, firstTile: RasterTile, minMaxTime: (String, String)):
+  (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
     //Translate RDD[RasterTile] to a TileLayerRDD[(SpaceTimeBandKey, Tile)]
-    val layerRdd: RDD[(SpaceTimeBandKey, Tile)] = rasterTilesRdd.map{ tile =>
+    var layerRdd: RDD[(SpaceTimeBandKey, Tile)] = rasterTilesRdd.map { tile =>
       val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       val phenomenonTime = sdf.parse(tile.getProductMeta.getPhenomenonTime).getTime
       val measurement = tile.getMeasurementMeta.getMeasurementName
       val colNum = Integer.parseInt(tile.getColNum)
       val rowNum = Integer.parseInt(tile.getRowNum)
-      val Tile = tile.getData
-      val k = SpaceTimeBandKey(SpaceTimeKey(colNum, rowNum, phenomenonTime), measurement)
-      val v = Tile
-      (k, v)
+      var Tile = tile.getData
+      val k = entity.SpaceTimeBandKey(SpaceTimeKey(colNum, rowNum, phenomenonTime), measurement, tile.getProductMeta.otherDimensions.toArray)
+      Tile = convertNodataValue(Tile)
+      (k, Tile)
     }.cache()
-
-//    layerRdd.count()
+    layerRdd = layerRdd.groupBy(_._1).mapValues(values => Mean(values.map(_._2)))
     rasterTilesRdd.unpersist()
-    val SRE = p.getSizeResAndExtentByCubeId(p.getCubeId,POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD).toList.head
+    // The extent info of the cube
+    val SRE = p.getSizeResAndExtentByCubeId(p.getCubeId, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password).toList.head
 
     //Extract metadata of rasterTilesRdd
-    val productName: String = firstRasterTile.getProductMeta.productName
-    //    val extent = geotrellis.vector.Extent(-180, -90, 180, 90)
+    val productName: String = firstTile.getProductMeta.productName
+    // The extent of the whole cube
     val extent = geotrellis.vector.Extent(SRE._2._1, SRE._2._2, SRE._2._3, SRE._2._4)
-    val tileSize: Int = firstRasterTile.getProductMeta.tileSize.toInt
-    //    val tl = TileLayout(360, 180, tileSize, tileSize)
-    val tl = TileLayout(((SRE._2._3 - SRE._2._1 )/ SRE._1._1).toInt, ((SRE._2._4 - SRE._2._2 )/ SRE._1._1).toInt, tileSize, tileSize)
+    val tileSize: Int = firstTile.getProductMeta.tileSize.toInt
+    // The layout of the cube
+    val tl = TileLayout(((SRE._2._3 - SRE._2._1) / SRE._1._1).toInt, ((SRE._2._4 - SRE._2._2) / SRE._1._1).toInt, tileSize, tileSize)
     val ld = LayoutDefinition(extent, tl)
 
-    //maybe unaccurate actual extent calculated by the query polygon, but faster
+    //maybe unaccurate actual extent calculated by the query polygon, but faster, get the col raw and long lat of the grids
     val colRow: Array[Int] = new Array[Int](4)
     val longLati: Array[Double] = new Array[Double](4)
     getGeomGridInfo(p.getPolygon, ld.layoutCols, ld.layoutRows, ld.extent, colRow, longLati, SRE._1._1)
-    val minCol = colRow(0); val minRow = colRow(1); val maxCol = colRow(2); val maxRow = colRow(3)
-    val minLong = longLati(0); val minLat = longLati(1) ; val maxLong = longLati(2); val maxLat = longLati(3)
+    val minCol = colRow(0);
+    val minRow = colRow(1);
+    val maxCol = colRow(2);
+    val maxRow = colRow(3)
+    val minLong = longLati(0);
+    val minLat = longLati(1);
+    val maxLong = longLati(2);
+    val maxLat = longLati(3)
+    /*val minInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getStartTime).getTime
+    val maxInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getEndTime).getTime*/
+    //    val minInstant =
+    //      if (p.getStartTime != "") new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getStartTime).getTime
+    //      else if (p.getYear != -1 && p.getMonth == -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-01-01 00:00:000").getTime
+    //      else if (p.getYear != -1 && p.getMonth != -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-" + p.getMonth.toString + "-01 00:00:000").getTime
+    //      else throw new RuntimeException("Error date")
+    //    val maxInstant =
+    //      if (p.getEndTime != "") new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getEndTime).getTime
+    //      else if (p.getYear != -1 && p.getMonth == -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-12-31 00:00:000").getTime
+    //      else if (p.getYear != -1 && p.getMonth != -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-" + p.getMonth.toString + "-29 00:00:000").getTime
+    //      else throw new RuntimeException("Error date")
+    // if product doesn't have the time, we will use "1978-01-01 00:00:00" which is equal to long 252432000000
+    val minInstant =
+      if (minMaxTime._1 == "") new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1978-01-01 00:00:00").getTime
+      else new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(minMaxTime._1).getTime
+    val maxInstant =
+      if (minMaxTime._2 == "") new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1978-01-01 00:00:00").getTime
+      else new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(minMaxTime._2).getTime
+
+    val bounds = Bounds(SpaceTimeKey(minCol, minRow, minInstant), SpaceTimeKey(maxCol, maxRow, maxInstant))
+    val actualExtent = Extent(minLong, minLat, maxLong, maxLat)
+    //    val dtype = firstRasterTile.getMeasurementMeta.getMeasurementDType
+    val dtype = firstTile.getMeasurementMeta.getMeasurementDType
+    val celltype = CellType.fromName(dtype)
+    //    val crsStr = firstRasterTile.getCRS.toString.replace("\"", "")
+    val crsStr = firstTile.getCRS.toString.replace("\"", "")
+    val crs: CRS =
+      if (crsStr == "WGS84") CRS.fromEpsgCode(4326)
+      else throw new RuntimeException("Not support " + crsStr)
+
+    (layerRdd, RasterTileLayerMetadata(TileLayerMetadata(celltype, ld, actualExtent, crs, bounds), productName))
+  }
+
+  /**
+   * Extract metadata of RDD[RasterTile] and transform to a TileLayerRDD[(SpaceTimeBandKey, Tile)] with RasterTileLayerMetadata[SpaceTimeKey]
+   *
+   * @param rasterTilesRdd
+   * @return a TileLayerRDD[(SpaceTimeBandKey, Tile)] with RasterTileLayerMetadata[SpaceTimeKey]
+   */
+  def initLayerMeta(rasterTilesRdd: RDD[RasterTile], p: QueryParams): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+    val firstRasterTile = rasterTilesRdd.take(1)(0)
+
+    //Translate RDD[RasterTile] to a TileLayerRDD[(SpaceTimeBandKey, Tile)]
+    var layerRdd: RDD[(SpaceTimeBandKey, Tile)] = rasterTilesRdd.map { tile =>
+      val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+      val phenomenonTime = sdf.parse(tile.getProductMeta.getPhenomenonTime).getTime
+      val measurement = tile.getMeasurementMeta.getMeasurementName
+      val colNum = Integer.parseInt(tile.getColNum)
+      val rowNum = Integer.parseInt(tile.getRowNum)
+      var Tile = tile.getData
+      val k = entity.SpaceTimeBandKey(SpaceTimeKey(colNum, rowNum, phenomenonTime), measurement, tile.getProductMeta.otherDimensions.toArray)
+      Tile = convertNodataValue(Tile)
+      (k, Tile)
+    }.cache()
+
+    //    val a = layerRdd.count()
+    layerRdd = layerRdd.groupBy(_._1).mapValues(values => Mean(values.map(_._2)))
+    rasterTilesRdd.unpersist()
+    // The extent info of the cube
+    val SRE = p.getSizeResAndExtentByCubeId(p.getCubeId, PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password).toList.head
+
+    //Extract metadata of rasterTilesRdd
+    val productName: String = firstRasterTile.getProductMeta.productName
+
+    // The extent of the whole cube
+    val extent = geotrellis.vector.Extent(SRE._2._1, SRE._2._2, SRE._2._3, SRE._2._4)
+    val tileSize: Int = firstRasterTile.getProductMeta.tileSize.toInt
+    // The layout of the cube
+    val tl = TileLayout(((SRE._2._3 - SRE._2._1) / SRE._1._1).toInt, ((SRE._2._4 - SRE._2._2) / SRE._1._1).toInt, tileSize, tileSize)
+    val ld = LayoutDefinition(extent, tl)
+
+    //maybe unaccurate actual extent calculated by the query polygon, but faster, get the col raw and long lat of the grids
+    val colRow: Array[Int] = new Array[Int](4)
+    val longLati: Array[Double] = new Array[Double](4)
+    getGeomGridInfo(p.getPolygon, ld.layoutCols, ld.layoutRows, ld.extent, colRow, longLati, SRE._1._1)
+    val minCol = colRow(0);
+    val minRow = colRow(1);
+    val maxCol = colRow(2);
+    val maxRow = colRow(3)
+    val minLong = longLati(0);
+    val minLat = longLati(1);
+    val maxLong = longLati(2);
+    val maxLat = longLati(3)
     /*val minInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getStartTime).getTime
     val maxInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getEndTime).getTime*/
     val minInstant =
-      if(p.getStartTime != "") new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getStartTime).getTime
-      else if(p.getYear != -1 && p.getMonth == -1) new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getYear.toString + "-01-01 00:00:000").getTime
-      else if(p.getYear != -1 && p.getMonth != -1) new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getYear.toString + "-" + p.getMonth.toString + "-01 00:00:000").getTime
+      if (p.getStartTime != "") new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getStartTime).getTime
+      else if (p.getYear != -1 && p.getMonth == -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-01-01 00:00:000").getTime
+      else if (p.getYear != -1 && p.getMonth != -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-" + p.getMonth.toString + "-01 00:00:000").getTime
       else throw new RuntimeException("Error date")
     val maxInstant =
-      if(p.getEndTime != "") new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getEndTime).getTime
-      else if(p.getYear != -1 && p.getMonth == -1) new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getYear.toString + "-12-31 00:00:000").getTime
-      else if(p.getYear != -1 && p.getMonth != -1) new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(p.getYear.toString + "-" + p.getMonth.toString + "-29 00:00:000").getTime
+      if (p.getEndTime != "") new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getEndTime).getTime
+      else if (p.getYear != -1 && p.getMonth == -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-12-31 00:00:000").getTime
+      else if (p.getYear != -1 && p.getMonth != -1) new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(p.getYear.toString + "-" + p.getMonth.toString + "-29 00:00:000").getTime
       else throw new RuntimeException("Error date")
 
     //accurate actual extent calculation, but may costs too much time
@@ -820,24 +961,24 @@ object DistributedQueryRasterTiles {
     val maxLongT = extentArray.map(x => x(2)).max.toDouble
     val maxLatT = extentArray.map(x => x(3)).max.toDouble*/
 
-    val bounds = Bounds(SpaceTimeKey(minCol,minRow,minInstant),SpaceTimeKey(maxCol,maxRow,maxInstant))
+    val bounds = Bounds(SpaceTimeKey(minCol, minRow, minInstant), SpaceTimeKey(maxCol, maxRow, maxInstant))
     val actualExtent = Extent(minLong, minLat, maxLong, maxLat)
     val dtype = firstRasterTile.getMeasurementMeta.getMeasurementDType
     val celltype = CellType.fromName(dtype)
     val crsStr = firstRasterTile.getCRS.toString.replace("\"", "")
-    val crs:CRS =
+    val crs: CRS =
       if (crsStr == "WGS84") CRS.fromEpsgCode(4326)
       else throw new RuntimeException("Not support " + crsStr)
 
-    (layerRdd, RasterTileLayerMetadata(TileLayerMetadata(celltype,ld,actualExtent,crs,bounds), productName))
+    (layerRdd, RasterTileLayerMetadata(TileLayerMetadata(celltype, ld, actualExtent, crs, bounds), productName))
   }
 
   /**
    * Get coverage with png format.
    * Used by OGC API - Coverages.
    *
-   * @param p query parameters
-   * @param bbox bounding box represented by a string
+   * @param p      query parameters
+   * @param bbox   bounding box represented by a string
    * @param subset bounding box represented by an array
    * @return
    */
@@ -845,13 +986,13 @@ object DistributedQueryRasterTiles {
     val conf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
-      .set("spark.driver.allowMultipleContexts","true")
+      .set("spark.driver.allowMultipleContexts", "true")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
     val sc = new SparkContext(conf)
 
-    val rasterTileLayerRdd:(RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = getRasterTileRDD(sc, p)
-    val rasterTileRdd = rasterTileLayerRdd.map(x=>(x._1.spaceTimeKey.spatialKey, x._2))
+    val rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = getRasterTileRDD(sc, p)
+    val rasterTileRdd = rasterTileLayerRdd.map(x => (x._1.spaceTimeKey.spatialKey, x._2))
     val metadata = rasterTileLayerRdd._2.tileLayerMetadata
     val spatialMetadata = TileLayerMetadata(
       metadata.cellType,
@@ -864,28 +1005,28 @@ object DistributedQueryRasterTiles {
     val stitched: Raster[Tile] = tileLayerRdd.stitch()
     val srcExtent = stitched.extent
 
-    if(bbox != null){
+    if (bbox != null) {
       val coordinates = bbox.split(",")
       val requestedExtent = new Extent(coordinates(0).toDouble, coordinates(1).toDouble, coordinates(2).toDouble, coordinates(3).toDouble)
-      if(requestedExtent.intersects(srcExtent)){
+      if (requestedExtent.intersects(srcExtent)) {
         val intersection = requestedExtent.intersection(srcExtent).get
-        val colMin = (intersection.xmin - srcExtent.xmin)/stitched.cellSize.width
-        val colMax = (intersection.xmax - srcExtent.xmin)/stitched.cellSize.width
-        val rowMin = (intersection.ymin - srcExtent.ymin)/stitched.cellSize.height
-        val rowMax = (intersection.ymax - srcExtent.ymin)/stitched.cellSize.height
-        val colorRamp = ColorRamp(RGB(0,0,0), RGB(255,255,255))
+        val colMin = (intersection.xmin - srcExtent.xmin) / stitched.cellSize.width
+        val colMax = (intersection.xmax - srcExtent.xmin) / stitched.cellSize.width
+        val rowMin = (intersection.ymin - srcExtent.ymin) / stitched.cellSize.height
+        val rowMax = (intersection.ymax - srcExtent.ymin) / stitched.cellSize.height
+        val colorRamp = ColorRamp(RGB(0, 0, 0), RGB(255, 255, 255))
           .stops(100)
           .setAlphaGradient(0xFF, 0xAA)
-        val png = stitched.tile.crop(colMin.toInt, rowMin.toInt, colMax.toInt, rowMax.toInt).renderPng(colorRamp)  //Array[Byte]
+        val png = stitched.tile.crop(colMin.toInt, rowMin.toInt, colMax.toInt, rowMax.toInt).renderPng(colorRamp) //Array[Byte]
         return png
-      }else
+      } else
         return null
     }
 
-    if(subset != null){
-      if(subset.length != 2) throw new RuntimeException("Wrong subset paramters")
+    if (subset != null) {
+      if (subset.length != 2) throw new RuntimeException("Wrong subset paramters")
       val prefix = subset(0).substring(0, subset(0).indexOf("("))
-      val coordinates:Array[String] = prefix match{
+      val coordinates: Array[String] = prefix match {
         case "Lat" => {
           val yCoords = subset(0).substring(subset(0).indexOf("(") + 1, subset(0).indexOf(")")).split(",")
           val xCoords = subset(1).substring(subset(1).indexOf("(") + 1, subset(1).indexOf(")")).split(",")
@@ -900,28 +1041,28 @@ object DistributedQueryRasterTiles {
 
       val requestedExtent = new Extent(coordinates(0).toDouble, coordinates(1).toDouble, coordinates(2).toDouble, coordinates(3).toDouble)
 
-      if(requestedExtent.intersects(srcExtent)){
+      if (requestedExtent.intersects(srcExtent)) {
         val intersection = requestedExtent.intersection(srcExtent).get
         println(intersection.toString())
-        val colMin = (intersection.xmin - srcExtent.xmin)/stitched.cellSize.width
-        val colMax = (intersection.xmax - srcExtent.xmin)/stitched.cellSize.width
-        val rowMin = (intersection.ymin - srcExtent.ymin)/stitched.cellSize.height
-        val rowMax = (intersection.ymax - srcExtent.ymin)/stitched.cellSize.height
+        val colMin = (intersection.xmin - srcExtent.xmin) / stitched.cellSize.width
+        val colMax = (intersection.xmax - srcExtent.xmin) / stitched.cellSize.width
+        val rowMin = (intersection.ymin - srcExtent.ymin) / stitched.cellSize.height
+        val rowMax = (intersection.ymax - srcExtent.ymin) / stitched.cellSize.height
         println(stitched.cellSize.toString)
         println(colMin, colMax, rowMin, rowMax)
-        val colorRamp = ColorRamp(RGB(0,0,0), RGB(255,255,255))
+        val colorRamp = ColorRamp(RGB(0, 0, 0), RGB(255, 255, 255))
           .stops(100)
           .setAlphaGradient(0xFF, 0xAA)
-        val png = stitched.tile.crop(colMin.toInt, rowMin.toInt, colMax.toInt, rowMax.toInt).renderPng(colorRamp)  //Array[Byte]
+        val png = stitched.tile.crop(colMin.toInt, rowMin.toInt, colMax.toInt, rowMax.toInt).renderPng(colorRamp) //Array[Byte]
         return png
-      }else
+      } else
         return null
     }
 
-    val colorRamp = ColorRamp(RGB(0,0,0), RGB(255,255,255))
+    val colorRamp = ColorRamp(RGB(0, 0, 0), RGB(255, 255, 255))
       .stops(100)
       .setAlphaGradient(0xFF, 0xAA)
-    val png = stitched.tile.renderPng(colorRamp)  //Array[Byte]
+    val png = stitched.tile.renderPng(colorRamp) //Array[Byte]
     png
   }
 
@@ -929,6 +1070,7 @@ object DistributedQueryRasterTiles {
    * API test.
    */
   def main(args: Array[String]): Unit = {
+//    val a = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1978-01-01 00:00:00").getTime
     val timebegin = System.currentTimeMillis()
     val conf = new SparkConf()
       .setAppName("query")
@@ -947,7 +1089,7 @@ object DistributedQueryRasterTiles {
     val timeend = System.currentTimeMillis()
     println("query time cost" + (timeend - timebegin))
 
-    val colorRamp = ColorRamp(RGB(0,0,0), RGB(255,255,255))
+    val colorRamp = ColorRamp(RGB(0, 0, 0), RGB(255, 255, 255))
       .stops(100)
       .setAlphaGradient(0xFF, 0xAA)
     rasterRdd.collect().foreach { x =>

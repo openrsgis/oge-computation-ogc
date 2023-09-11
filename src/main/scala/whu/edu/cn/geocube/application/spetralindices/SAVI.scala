@@ -5,15 +5,14 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local.{Add, Divide, Subtract}
 import geotrellis.raster.render.ColorRamp
 import geotrellis.raster.{DoubleArrayTile, DoubleConstantNoDataCellType, Raster, Tile}
-
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-
 import scala.sys.process.ProcessLogger
 import sys.process._
-import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, RasterTileLayerMetadata}
+import whu.edu.cn.geocube.core.entity.{RasterTileLayerMetadata, SpaceTimeBandKey}
+import whu.edu.cn.geocube.core.entity.SpaceTimeBandKey
 import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.view.Info
 

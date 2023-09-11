@@ -1,24 +1,18 @@
 package whu.edu.cn.geocube.core.io
 
-import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, Serializable}
+import java.io.{File, FileOutputStream, Serializable}
 import java.nio.charset.Charset
 import java.util
-import java.util.UUID
 
 import org.geotools.data.Transaction
 import org.geotools.data.collection.ListFeatureCollection
-import org.geotools.data.shapefile.files.ShpFiles
-import org.geotools.data.shapefile.shp.ShapefileReader
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
-import org.geotools.data.simple.{SimpleFeatureCollection, SimpleFeatureIterator}
+import org.geotools.data.simple.SimpleFeatureCollection
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder
 import org.geotools.geojson.feature.FeatureJSON
 import org.geotools.referencing.crs.DefaultGeographicCRS
-import org.locationtech.jts.geom.{Geometry, GeometryFactory}
+import org.locationtech.jts.geom.Geometry
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import whu.edu.cn.geocube.core.cube.vector.GeoObject
-
-import scala.collection.mutable.ArrayBuffer
 
 /**
  * Only for development.
@@ -88,67 +82,5 @@ object Output{
     }
     writer.close()
     ds.dispose()
-  }
-
-  /**
-   * 转换vector为tabular，去掉经纬度信息
-   */
-  def vectorShp2TabularTxt(inPath: String, outPath: String): Unit = {
-    val outfile = new File(outPath)
-    val bw = new BufferedWriter(new FileWriter(outfile))
-    bw.write("longitude latitude geo_name time population households male female geo_address")
-    bw.newLine()
-
-    val dataStoreFactory = new ShapefileDataStoreFactory()
-    val sds = dataStoreFactory.createDataStore(new File(inPath).toURI.toURL)
-      .asInstanceOf[ShapefileDataStore]
-    sds.setCharset(Charset.forName("GBK"))
-    val featureSource = sds.getFeatureSource()
-
-    val iterator: SimpleFeatureIterator = featureSource.getFeatures().features()
-    while (iterator.hasNext) {
-      val feature = iterator.next()
-      val longitude = feature.getAttribute("lon")
-      val latitude = feature.getAttribute("lat")
-      val geoName = feature.getAttribute("geo_name")
-      val time = "2016-07-02"
-      val population = feature.getAttribute("Population")
-      val households = feature.getAttribute("Households")
-      val male = feature.getAttribute("Male")
-      val female = feature.getAttribute("Female")
-      val geoAdrr = feature.getAttribute("geo_addr")
-
-      bw.write(longitude + " " + latitude + " " + geoName + " " + time + " " + population + " " + households + " " + male + " " + female + " " + geoAdrr)
-      bw.newLine()
-    }
-    iterator.close()
-    sds.dispose()
-    bw.close()
-  }
-
-  def main(args: Array[String]): Unit = {
-    /*vectorShp2TabularTxt("E:\\VectorData\\Hainan_Daguangba\\sourceVillage\\mz_Village.shp",
-      "E:\\TabularData\\Hainan_Daguangba\\mz_Village.txt")*/
-    val dataStoreFactory = new ShapefileDataStoreFactory()
-    val sds = dataStoreFactory.createDataStore(new File("E:\\VectorData\\Administry District\\gadm36_CHN_shp\\gadm36_CHN_1.shp").toURI.toURL)
-      .asInstanceOf[ShapefileDataStore]
-    sds.setCharset(Charset.forName("GBK"))
-    val featureSource = sds.getFeatureSource()
-    val iterator: SimpleFeatureIterator = featureSource.getFeatures().features()
-    var count = 0
-    val featureArray = new ArrayBuffer[SimpleFeature]()
-    while (iterator.hasNext) {
-      count += 1
-      val feature = iterator.next()
-      /*if (feature.getAttribute("NAME_2").equals("Wuhan") ||feature.getAttribute("NAME_2").equals("Chongqing") ||feature.getAttribute("NAME_2").equals("Hangzhou"))
-        featureArray.append(feature)*/
-      if (feature.getAttribute("NAME_1").equals("Hubei"))
-        featureArray.append(feature)
-
-    }
-    iterator.close()
-    sds.dispose()
-    saveAsShapefile(featureArray.toArray, "E:\\VectorData\\Administry District\\gadm36_CHN_shp\\test1.shp")
-
   }
 }

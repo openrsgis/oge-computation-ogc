@@ -3,10 +3,10 @@ package whu.edu.cn.geocube.core.vector.query
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.gson.JsonParser
 import geotrellis.layer.{Bounds, SpaceTimeKey, SpatialKey}
-
 import java.sql.{DriverManager, ResultSet}
 import java.text.SimpleDateFormat
 import java.util.Date
+
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
@@ -22,7 +22,6 @@ import whu.edu.cn.geocube.core.entity.{QueryParams, VectorGridLayerMetadata}
 import whu.edu.cn.geocube.core.vector.grid.GridConf
 import whu.edu.cn.geocube.core.vector.grid.GridTransformer.getGeomGridInfo
 import whu.edu.cn.geocube.util.HbaseUtil.getVectorMeta
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_PWD, POSTGRESQL_URL, POSTGRESQL_USER}
 import whu.edu.cn.util.PostgresqlUtil
 
 /**
@@ -74,7 +73,7 @@ object DistributedQueryVectorObjects {
    * @return a RDD[(SpaceTimeKey, Iterable[GeoObject])]
    * */
   def getGridLayerGeoObjectsRDD(implicit sc: SparkContext, p: QueryParams, duplicated: Boolean): (RDD[(SpaceTimeKey, Iterable[GeoObject])], VectorGridLayerMetadata[SpaceTimeKey]) = {
-    val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+    val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
     val cubeId = p.getCubeId
     //product params
     val vectorProductName = p.getVectorProductName
@@ -202,10 +201,8 @@ object DistributedQueryVectorObjects {
         //query vector data ids contained in each grid
         val command = "Select tile_data_id,product_key,extent_key from gc_vector_tile_fact_"+cubeId+" where extent_key IN" +
           extentKeys.toString() + "AND product_key IN" + productKeys.toString() + ";"
-        println(command)
 
         val geoObjectsIDResults = statement.executeQuery(command)
-
         val geoObjectsAndDimensionKeys = new ArrayBuffer[Array[String]]()
         if (geoObjectsIDResults.first()) {
           geoObjectsIDResults.previous()
@@ -219,8 +216,6 @@ object DistributedQueryVectorObjects {
         } else {
           println("No vector objects of " + vectorProductName + " acquired!")
         }
-
-        println("geoObjectsAndDimensionKeys Size====" + geoObjectsAndDimensionKeys.length)
 
         var geoObjectCount = 0
         geoObjectsAndDimensionKeys.foreach { keys =>
@@ -243,9 +238,9 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2)))
+            if(geoObjectKeysNoDuplicated.length()!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2)))
             }
 
           }
@@ -265,7 +260,7 @@ object DistributedQueryVectorObjects {
         val geoObjectsAndDimensionKeysRdd = sc.parallelize(geoObjectsAndDimensionKeysDuplication, partitions)
 
         val gridLayerGeoObjectRdd: RDD[(SpaceTimeKey, Iterable[GeoObject])] = geoObjectsAndDimensionKeysRdd.mapPartitions{ partition =>
-          val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+          val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
           val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
           val results = new ArrayBuffer[(SpaceTimeKey, Iterable[GeoObject])]()
           partition.foreach{ keys =>
@@ -307,7 +302,7 @@ object DistributedQueryVectorObjects {
             //access vectors in the grid
             val fjson = new FeatureJSON()
             val geoObjects:Array[GeoObject] = geoObjectKeys.map { geoObjectkey =>
-              val featureStr = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "metaData")
+              val featureStr = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
               val feature: SimpleFeature = fjson.readFeature(featureStr)
               new GeoObject(geoObjectkey, feature)
             }.filter(geoObject => geoObject.feature.getDefaultGeometry.asInstanceOf[Geometry].isValid)
@@ -317,8 +312,6 @@ object DistributedQueryVectorObjects {
           conn.close()
           results.iterator
         }.cache()
-
-        println("gridLayerGeoObjectRdd.collect().length=======" + gridLayerGeoObjectRdd.collect().length)
 
         val layerMeta: VectorGridLayerMetadata[SpaceTimeKey] = initLayerMeta(geoObjectsAndDimensionKeysDuplication(0)(1), p, gridLayerGeoObjectRdd)
 
@@ -351,7 +344,7 @@ object DistributedQueryVectorObjects {
     //maybe unaccurate actual extent calculated by the query polygon, but faster
     val colRow: Array[Int] = new Array[Int](4)
     val longLati: Array[Double] = new Array[Double](4)
-    getGeomGridInfo(queryParams.getPolygon, gridConf.gridDimX, gridConf.gridDimY, gridConf.extent, colRow, longLati,1)
+    getGeomGridInfo(queryParams.getPolygon, gridConf.gridDimX, gridConf.gridDimX, gridConf.extent, colRow, longLati,1)
     val minCol = colRow(0); val minRow = colRow(1); val maxCol = colRow(2); val maxRow = colRow(3)
     val minLong = longLati(0); val minLat = longLati(1) ; val maxLong = longLati(2); val maxLat = longLati(3)
     val minInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(queryParams.getStartTime).getTime
@@ -426,7 +419,7 @@ object DistributedQueryVectorObjects {
    * @return a RDD[(SpatialKey, Array[GeomId])]
    * */
   def getGridLayerGeoObjectKeysRDD(implicit sc: SparkContext, p: QueryParams, duplicated: Boolean): RDD[(SpatialKey, Array[String])] = {
-    val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+    val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
     val cubeId = p.getCubeId
     //product params
     val vectorProductName = p.getVectorProductName
@@ -584,9 +577,9 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2)))
+            if(geoObjectKeysNoDuplicated.length()!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2)))
             }
 
           }
@@ -598,7 +591,7 @@ object DistributedQueryVectorObjects {
         val geoObjectsAndDimensionKeysRdd = sc.parallelize(geoObjectsAndDimensionKeysDuplication, partitions)
 
         val gridLayerGeoObjectKeysRdd: RDD[(SpatialKey, Array[String])] = geoObjectsAndDimensionKeysRdd.mapPartitions{ partition =>
-          val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+          val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
           val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
           val results = new ArrayBuffer[(SpatialKey, Array[String])]()
           partition.foreach{ keys =>
@@ -691,7 +684,7 @@ object DistributedQueryVectorObjects {
    * @return a RDD[(SpatialKey, ((productKey, factKey), Array[GeomId]))]
    * */
   def getGridLayerGeoObjectAndProductFactKeysRDD(implicit sc: SparkContext, p: QueryParams, duplicated: Boolean): RDD[(SpatialKey, ((String, String), Array[String]))] = {
-    val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+    val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
     val cubeId = p.getCubeId
     //product params
     val vectorProductName = p.getVectorProductName
@@ -851,9 +844,9 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2), keys(3)))
+            if(geoObjectKeysNoDuplicated.length()!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2), keys(3)))
             }
 
           }
@@ -865,7 +858,7 @@ object DistributedQueryVectorObjects {
         val geoObjectsAndDimensionKeysRdd = sc.parallelize(geoObjectsAndDimensionKeysDuplication, partitions)
 
         val gridLayerGeoObjectKeysRdd: RDD[(SpatialKey, ((String, String), Array[String]))] = geoObjectsAndDimensionKeysRdd.mapPartitions{ partition =>
-          val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+          val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
           val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
           val results = new ArrayBuffer[(SpatialKey, ((String, String), Array[String]))]()
           partition.foreach{ keys =>
@@ -1126,10 +1119,10 @@ object DistributedQueryVectorObjects {
                 geoObjectKeysNoDuplicated.append(geoObjectKey + ", ")
               }
             }
-            if(geoObjectKeysNoDuplicated.length!=0){
-              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1)
-              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length-1).toString() + ")", keys(1), keys(2), keys(3)))
-              //geoObjectsAndDimensionKeysResults.append(Array(geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length-1).toString(), keys(1), keys(2)))
+            if(geoObjectKeysNoDuplicated.length()!=0){
+              val wrapGeoObjectKeysNoDuplicated = geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1)
+              geoObjectsAndDimensionKeysResults.append(Array("(" + wrapGeoObjectKeysNoDuplicated.deleteCharAt(wrapGeoObjectKeysNoDuplicated.length()-1).toString() + ")", keys(1), keys(2), keys(3)))
+              //geoObjectsAndDimensionKeysResults.append(Array(geoObjectKeysNoDuplicated.deleteCharAt(geoObjectKeysNoDuplicated.length()-1).toString(), keys(1), keys(2)))
             }
 
           }
@@ -1141,7 +1134,7 @@ object DistributedQueryVectorObjects {
         val geoObjectsAndDimensionKeysRdd = sc.parallelize(geoObjectsAndDimensionKeysDuplication, partitions)
 
         val gridLayerGeoObjectKeysAndCompuIntensityRdd: RDD[(SpatialKey, (Array[String], Long))] = geoObjectsAndDimensionKeysRdd.mapPartitions{ partition =>
-          val conn = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
+          val conn = DriverManager.getConnection(PostgresqlUtil.url, PostgresqlUtil.user, PostgresqlUtil.password)
           val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
           val results = new ArrayBuffer[(SpatialKey, (Array[String], Long))]()
           val processID = processName

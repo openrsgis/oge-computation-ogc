@@ -17,15 +17,19 @@ import scala.io.StdIn
  * */
 object ARDProduct {
   //val inputDirs: Array[String] = Array("E:\\SatelliteImage\\GF1\\GF1_WFV3_E115.7_N28.9_20170729_L1A0002514125")
-  val inputDirs: Array[String] = Array("E:\\SatelliteImage\\GF1\\GF1_PMS1_E109.6_N19.4_20160426_L1A0001540952")
+//  val inputDirs: Array[String] = Array("E:\\SatelliteImage\\GF1\\GF1_PMS1_E109.6_N19.4_20160426_L1A0001540952")
+//  val inputDirs: Array[String] = Array("E:\\项目\\Geocube\\dataStorage\\GF1_PMS1_E113.5_N30.3_20180417_L1A0003127123")
+  val inputDirs: Array[String] = Array("/home/geocube/environment_test/geocube_ogc/data/custom/GF1_PMS1_E113.5_N30.3_20180417_L1A0003127123")
 
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
       .setMaster("local[*]")
+//      .setMaster("spark://125.220.153.26:7077")
       .setAppName("Gaofen-1 ARDProduct")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.store.kryo.KryoRegistrator")
 
+    println("test spark-submit through scala file")
     val sc = new SparkContext(conf)
 
     try {

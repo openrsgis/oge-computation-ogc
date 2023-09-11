@@ -20,14 +20,6 @@ class GeoObject(_id: String,
   var id: String = _id
   @BeanProperty
   var feature: SimpleFeature = _feature
-
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case obj: GeoObject =>
-        this.id == obj.id
-      case _ => false
-    }
-  }
 }
 
 object GeoObject{

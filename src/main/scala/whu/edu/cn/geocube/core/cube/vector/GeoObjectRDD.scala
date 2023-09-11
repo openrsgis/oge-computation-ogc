@@ -62,19 +62,11 @@ object GeoObjectRDD{
     val featureSource = sds.getFeatureSource()
 
     val iterator: SimpleFeatureIterator = featureSource.getFeatures().features()
-    var count = 0
-    while (iterator.hasNext/* && count < 600000*/) {
-      count += 1
+    while (iterator.hasNext) {
       val feature = iterator.next()
-      val geometry = feature.getDefaultGeometry.asInstanceOf[Geometry]
-      if(geometry != null) {
-        if(geometry.isValid){
-          val uuid = UUID.randomUUID().toString
-          val geoObject = new GeoObject(uuid, feature)
-          geomArray += geoObject
-        }
-      }
-
+      val uuid = UUID.randomUUID().toString
+      val geoObject = new GeoObject(uuid, feature)
+      geomArray += geoObject
     }
     iterator.close()
     sds.dispose()
@@ -105,14 +97,9 @@ object GeoObjectRDD{
         val arrayNode:JsonNode = features.next()
         val fcWkt = arrayNode.toString()
         val feature:SimpleFeature = fjson.readFeature(fcWkt)
-        val geometry = feature.getDefaultGeometry.asInstanceOf[Geometry]
-        if(geometry != null) {
-          if(geometry.isValid){
-            val uuid = UUID.randomUUID().toString
-            val geoObject = new GeoObject(uuid, feature)
-            geomArray += geoObject
-          }
-        }
+        val uuid = UUID.randomUUID().toString
+        val geoObject = new GeoObject(uuid, feature)
+        geomArray += geoObject
       }
     }
     val rddShpData = sc.parallelize(geomArray, numPartition)
@@ -139,15 +126,10 @@ object GeoObjectRDD{
     val geoObjects = rddHDFS.map{line =>
       val fjson = new FeatureJSON()
       val feature: SimpleFeature = fjson.readFeature(line)
-      val geometry = feature.getDefaultGeometry.asInstanceOf[Geometry]
-      if(geometry != null) {
-        if(geometry.isValid){
-          val uuid = UUID.randomUUID().toString
-          val geoObject = new GeoObject(uuid, feature)
-          geoObject
-        }else null
-      }else null
-    }.filter(_ != null)
+      val uuid = UUID.randomUUID().toString
+      val geoObject = new GeoObject(uuid, feature)
+      geoObject
+    }
     new GeoObjectRDD(geoObjects)
   }
 

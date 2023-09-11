@@ -3,18 +3,19 @@ package whu.edu.cn.geocube.application.dapa
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+
 import geotrellis.layer.{SpaceTimeKey, SpatialKey}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.{MultibandTile, Raster, Tile}
 import geotrellis.vector.Extent
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.geocube.core.entity.{SpaceTimeBandKey, QueryParams, RasterTileLayerMetadata}
+import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.util.TileUtil
 
 import scala.collection.mutable.ArrayBuffer
-import sys.process._
+import scala.sys.process._
 
 object Cube {
   /**
@@ -30,7 +31,7 @@ object Cube {
    * @param outputDir
    * @return
    */
-  def getDapaCubeRaster(sc: SparkContext, productName: String, bbox: String, startTime: String, endTime: String, measurementsStr: String, outputDir: String): Array[String] = {
+  def getDapaCubeRaster(sc: SparkContext, cubeId: String, productName: String, bbox: String, startTime: String, endTime: String, measurementsStr: String, outputDir: String): Array[String] = {
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
     for(i <- 0 until outputDirArray.length - 1)
@@ -47,6 +48,7 @@ object Cube {
     val extent = bbox.split(",").map(_.toDouble)
     val measurements = measurementsStr.split(",")
     val queryParams: QueryParams = new QueryParams()
+    queryParams.setCubeId(cubeId)
     queryParams.setRasterProductName(productName)
     queryParams.setExtent(extent(0), extent(1), extent(2), extent(3))
     queryParams.setTime(startTime, endTime)
@@ -116,13 +118,15 @@ object Cube {
 
   def main(args: Array[String]): Unit = {
     //parse the web request params
-    val rasterProductName = args(0)
-    val extent = args(1)
-    val startTime = args(2)
-    val endTime = args(3)
-    val measurements = args(4)
-    val outputDir = args(5)
+    val cubeId = args(0)
+    val rasterProductName = args(1)
+    val extent = args(2)
+    val startTime = args(3)
+    val endTime = args(4)
+    val measurements = args(5)
+    val outputDir = args(6)
 
+    println("cubeId: " + cubeId)
     println("rasterProductName: " + rasterProductName)
     println("extent: " + extent)
     println("time: " + (startTime, endTime))
@@ -138,7 +142,7 @@ object Cube {
 
     //query and access
     val timeBegin = System.currentTimeMillis()
-    getDapaCubeRaster(sc, rasterProductName, extent, startTime, endTime, measurements, outputDir)
+    getDapaCubeRaster(sc, cubeId, rasterProductName, extent, startTime, endTime, measurements, outputDir)
     val timeEnd = System.currentTimeMillis()
     println("time cost: " + (timeEnd - timeBegin))
   }

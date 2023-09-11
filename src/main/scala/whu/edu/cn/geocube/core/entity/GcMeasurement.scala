@@ -28,7 +28,7 @@ case class GcMeasurement(){
 object GcMeasurement{
   /**
    * Get measurement info from MeasurementsAndProduct view, and return a GcMeasurement object.
-   * @param cubeId
+    * @param cubeId
    * @param measurementKey
    * @param productKey
    * @param connAddr
@@ -60,15 +60,15 @@ object GcMeasurement{
       throw new RuntimeException("Null connection!")
   }
   /**
-   * Get measurement info from MeasurementsAndProduct view, and return a GcMeasurement object.
-   * @param cubeId
-   * @param productName
-   * @param connAddr
-   * @param user
-   * @param password
-   *
-   * @return a GcMeasurement object.
-   */
+    * Get measurement info from MeasurementsAndProduct view, and return a GcMeasurement object.
+    * @param cubeId
+    * @param productName
+    * @param connAddr
+    * @param user
+    * @param password
+    *
+    * @return a GcMeasurement object.
+    */
   def getMeasurementByProdName(cubeId:String,  productName: String, connAddr: String, user: String, password: String): Array[String] = {
     val conn = DriverManager.getConnection(connAddr, user, password)
     if (conn != null) {
