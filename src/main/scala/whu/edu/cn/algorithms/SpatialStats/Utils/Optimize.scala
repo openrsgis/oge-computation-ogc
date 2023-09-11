@@ -101,7 +101,7 @@ object Optimize {
       //求点0和m+1的差
       val dif = DenseVector(ord_m1) - DenseVector(ord_0)
       eps = sqrt(dif.toArray.map(t => t * t).sum)
-      println(s"the iter is $iter, the difference is $dif, the eps is $eps")
+//      println(s"the iter is $iter, the difference is $dif, the eps is $eps")
 
       //这个是前m个的arr，从0到m
       var ord_0mArr = new ArrayBuffer[Array[Double]]

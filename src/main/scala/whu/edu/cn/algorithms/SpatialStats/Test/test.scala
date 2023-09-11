@@ -5,7 +5,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.AverageNearestNeighbor.aveNearestNeighbor
 import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.DescriptiveStatistics.describe
-import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.PrincipalComponentAnalysis.PCA
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.CorrelationAnalysis._
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.SpatialAutoCorrelation._
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.TemporalAutoCorrelation._
@@ -22,11 +21,12 @@ object test {
   val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
   val sc = new SparkContext(conf)
 
+  val encode="utf-8"
   val shpPath: String = "src\\main\\scala\\whu\\edu\\cn\\algorithms\\SpatialStats\\Test\\testdata\\LNHP100.shp"
-  val shpfile = readShp(sc, shpPath, DEF_ENCODE)
+  val shpfile = readShp(sc, shpPath, encode)
 
   val shpPath2: String = "src\\main\\scala\\whu\\edu\\cn\\algorithms\\SpatialStats\\Test\\testdata\\MississippiHR.shp"
-  val shpfile2 = readShp(sc, shpPath2, DEF_ENCODE)
+  val shpfile2 = readShp(sc, shpPath2, encode)
 
   val csvpath = "src\\main\\scala\\whu\\edu\\cn\\algorithms\\SpatialStats\\Test\\testdata\\test_aqi.csv"
   val csvdata = readcsv(sc, csvpath)
@@ -34,13 +34,12 @@ object test {
 
   def main(args: Array[String]): Unit = {
 
-//    descriptive_test()
-//    sarmodel_test()
-//    morani_test()
-//    acf_test()
-//    linear_test()
-//    correlation_test()
-//    pca_test()
+    descriptive_test()
+    sarmodel_test()
+    morani_test()
+    acf_test()
+    linear_test()
+    correlation_test()
 
   }
 
@@ -50,10 +49,6 @@ object test {
     val mat = corrMat(shpfile, s)
     val tused = (System.currentTimeMillis() - t0) / 1000.0
     println(s"time used is $tused s")
-  }
-
-  def pca_test():Unit= {
-    PCA(shpfile)
   }
 
   def descriptive_test(): Unit = {
@@ -98,20 +93,8 @@ object test {
 
   def acf_test(): Unit = {
     val t1 = System.currentTimeMillis()
-    //test date calculator
-    /*
-    val timep = attributeSelectHead(csvdata, "time_point")
-    val timepattern = "yyyy/MM/dd"
-    val date = timep.map(t => {
-      val date = new SimpleDateFormat(timepattern).parse(t)
-      date
-    })
-    date.foreach(println)
-    println((date(300).getTime - date(0).getTime) / 1000 / 60 / 60 / 24)
-     */
     val tem = attributeSelectHead(csvdata, "temperature")
     val db_tem = tem.map(t => t.toDouble)
-    //    println(db_tem.sum)
     val tem_acf = timeSeriesACF(db_tem, 30)
     tem_acf.foreach(println)
     val tused = (System.currentTimeMillis() - t1) / 1000.0

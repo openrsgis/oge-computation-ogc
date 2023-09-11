@@ -28,7 +28,7 @@ object DescriptiveStatistics{
     val p=f.subplot(0)
     p+=hist(list,m_bins)
     p.title="histogram"
-    f.saveas("hist.png")
+//    f.saveas("hist.png")
 
   }
 }
