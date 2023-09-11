@@ -4,17 +4,20 @@ import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import geotrellis.vector.Extent
+import io.minio.{MinioClient, PutObjectArgs}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
+import whu.edu.cn.algorithms.terrain.calculator
 import whu.edu.cn.entity.OGEClassType.OGEClassType
 import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, ZCurveUtil}
+import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
 
+import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
@@ -39,7 +42,7 @@ object Trigger {
   var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
 
-
+  var userId: String = _
   var level: Int = _
   var layerName: String = _
   var windowExtent: Extent = _
@@ -93,7 +96,7 @@ object Trigger {
     try {
 
       val tempNoticeJson = new JSONObject
-
+      println("args:",funcName+args)
       funcName match {
 
         //Others
@@ -118,11 +121,17 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          coverageRddList += (UUID -> Service.getCoverage(sc, isOptionalArg(args, "coverageID"), level = level))
+          if(args("coverageID").startsWith("data")){
+            coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"),userId,dagId))
+          }else{
+            coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
+          }
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeature" =>
+          featureRddList += (UUID -> Service.getFeature(sc,args("featureId"),isOptionalArg(args,"dataTime"),isOptionalArg(args,"crs")))
 
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -191,7 +200,7 @@ object Trigger {
 
         // Coverage
         case "Coverage.export" =>
-          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam)
+          Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam,dagId)
         case "Coverage.date" =>
           val date: String = Coverage.date(coverage = coverageRddList(args("coverage")))
           tempNoticeJson.put("date", date)
@@ -615,10 +624,28 @@ object Trigger {
         case "Coverage.aspect" =>
           coverageRddList += (UUID -> Coverage.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
+        // Terrain By CYM
+        case "Coverage.terrSlope" =>
+          coverageRddList += (UUID -> calculator.Slope(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+        case "Coverage.terrAspect" =>
+          coverageRddList += (UUID -> calculator.Aspect(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+        case "Coverage.terrRuggedness" =>
+          coverageRddList += (UUID -> calculator.Ruggedness(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+        case "Coverage.terrSlopelength" =>
+          coverageRddList += (UUID -> calculator.SlopeLength(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("Z_factor").toDouble))
+        case "Coverage.terrCurvature" =>
+          coverageRddList += (UUID -> calculator.Curvature(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+
         case "Coverage.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+          println("isBatch",isBatch)
+          if(isBatch == 0){
+            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+          }else{
+            // TODO: 增加添加样式的函数
+            coverageRddList += (UUID ->Coverage.addStyles(coverageRddList(args("coverage")),visParam=visParam))
+          }
 
 
         //Feature
@@ -817,6 +844,8 @@ object Trigger {
         case "Feature.setGeometry" =>
           featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             featureRddList(args("geometry")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.addStyles" =>
+          Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]])
         //      case "Feature.inverseDistanceWeighted" =>
         //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
@@ -936,12 +965,12 @@ object Trigger {
 
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
-              curDagId: String): Unit = {
+              curDagId: String, userID:String): Unit = {
 
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
     dagId = curDagId
-
+    userId = userID
     val time1: Long = System.currentTimeMillis()
 
     val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
@@ -1018,19 +1047,37 @@ object Trigger {
       case e: Throwable =>
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
+        errorJson.put("InputJSON",workTaskJson)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
         outJsonObject.put("workID", Trigger.dagId)
         outJsonObject.put("json", errorJson)
-
+//
         println("Error json = " + outJsonObject)
         sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
-
-        // 打印至后端控制台
+        println("Send to boot!")
+//         打印至后端控制台
         e.printStackTrace()
+        println("lambda Error!")
     } finally {
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      //    // TODO lrx: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
+      val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+      if(scala.reflect.io.File(filePath).exists)
+        scala.reflect.io.File(filePath).delete()
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
@@ -1090,20 +1137,21 @@ object Trigger {
         val errorJson = new JSONObject
         errorJson.put("error", e.toString)
 
-        //        // 回调服务，通过 boot 告知前端：
-        //        val outJsonObject: JSONObject = new JSONObject
-        //        outJsonObject.put("workID", Trigger.dagId)
-        //        outJsonObject.put("json", errorJson)
-        //
-        //        println("Error json = " + outJsonObject)
-        //        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
-        //          outJsonObject.toJSONString)
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("workID", Trigger.dagId)
+        outJsonObject.put("json", errorJson)
+
+        println("Error json = " + outJsonObject)
+        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
 
         // 打印至后端控制台
         e.printStackTrace()
     } finally {
-      val time2: Long = System.currentTimeMillis()
-      println(time2 - time1)
+      val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+      if (scala.reflect.io.File(filePath).exists)
+        scala.reflect.io.File(filePath).delete()
     }
   }
 
@@ -1111,7 +1159,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/NDVI.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1119,13 +1167,14 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
+    userId = "3c3a165b-6604-47b8-bce9-1f0c5470b9f8"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    runMain(sc, workTaskJson, dagId)
+    runMain(sc, workTaskJson, dagId, userId)
 
     //    Thread.sleep(1000000)
     println("Finish")

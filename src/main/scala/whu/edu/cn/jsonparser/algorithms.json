@@ -250,7 +250,7 @@
         "description": "The base url of service."
       },
       {
-        "name": "productId",
+        "name": "productID",
         "type": "String",
         "description": "The id of target collection."
       },
@@ -265,24 +265,6 @@
         "description": "The range of time used for deleting.",
         "default": "null",
         "optional": "True"
-      },
-      {
-        "name": "crs",
-        "type": "String",
-        "description": "The crs of feature.",
-        "default": "null",
-        "optional": "True"
-      }
-    ]
-  },
-  "Coverage.export":{
-    "description": "",
-    "returns": "",
-    "args": [
-      {
-        "name": "coverage",
-        "type": "Coverage",
-        "description": ""
       }
     ]
   },
@@ -713,28 +695,6 @@
       }
     ]
   },
-  "Feature.getItemType": {
-    "description": "Get type of item.",
-    "returns": "String",
-    "args": [
-      {
-        "name": "input",
-        "type": "Feature",
-        "description": "The feature as the input data "
-      }
-    ]
-  },
-  "Coverage.getItemType": {
-    "description": "Get type of item.",
-    "returns": "String",
-    "args": [
-      {
-        "name": "input",
-        "type": "Coverage",
-        "description": "The feature as the input data "
-      }
-    ]
-  },
   "Coverage.domainSet": {
     "description": "Get the domain set of a coverage.",
     "returns": "Dictionary",
@@ -851,6 +811,22 @@
   },
   "Coverage.add": {
     "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.multiply": {
+    "description": "Multiplies the first value by the second. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
     "returns": "Coverage",
     "args": [
       {
@@ -1011,22 +987,6 @@
   },
   "Coverage.divide": {
     "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
-    "returns": "Coverage",
-    "args": [
-      {
-        "name": "coverage1",
-        "type": "Coverage",
-        "description": "The image from which the left operand bands are taken."
-      },
-      {
-        "name": "coverage2",
-        "type": "Coverage",
-        "description": "The image from which the right operand bands are taken."
-      }
-    ]
-  },
-  "Coverage.multiply": {
-    "description": "Multiplies the first value by the second. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
     "returns": "Coverage",
     "args": [
       {
@@ -2450,9 +2410,10 @@
         "optional": "True",
         "default": ""
       }
+
     ]
   },
-  "coverage.contourByGDAL": {
+  "Coverage.contourByGDAL": {
     "description": "Extracts contour lines from any GDAL-supported elevation raster.",
     "returns": "Feature",
     "args": [
@@ -2526,7 +2487,7 @@
       }
     ]
   },
-  "coverage.contourPolygonByGDAL": {
+  "Coverage.contourPolygonByGDAL": {
     "description": "Extracts contour polygons from any GDAL-supported elevation raster.",
     "returns": "Feature",
     "args": [
@@ -2607,7 +2568,7 @@
       }
     ]
   },
-  "coverage.fillNodataByGDAL": {
+  "Coverage.fillNodataByGDAL": {
     "description": "Fill raster regions with no data values by interpolation from edges.",
     "returns": "Coverage",
     "args": [
@@ -2667,7 +2628,7 @@
       }
     ]
   },
-  "coverage.gridAverageByGDAL": {
+  "Coverage.gridAverageByGDAL": {
     "description": "The Moving Average is a simple data averaging algorithm.",
     "returns": "Coverage",
     "args": [
@@ -2741,7 +2702,7 @@
       }
     ]
   },
-  "coverage.gridDataMetricsByGDAL": {
+  "Coverage.gridDataMetricsByGDAL": {
     "description": "Computes some data metrics using the specified window and output grid geometry.",
     "returns": "Coverage",
     "args": [
@@ -3206,7 +3167,7 @@
       }
     ]
   },
-  "coverage.nearBlackByGDAL": {
+  "Coverage.nearBlackByGDAL": {
     "description": "Converts nearly black/white borders to black.",
     "returns": "Coverage",
     "args": [
@@ -3245,7 +3206,7 @@
       }
     ]
   },
-  "coverage.proximityByGDAL": {
+  "Coverage.proximityByGDAL": {
     "description": "Generates a raster proximity map indicating the distance from the center of each pixel to the center of the nearest pixel identified as a target pixel.",
     "returns": "Coverage",
     "args": [
@@ -3319,7 +3280,7 @@
       }
     ]
   },
-  "coverage.roughnessByGDAL": {
+  "Coverage.roughnessByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation.",
     "returns": "Coverage",
     "args": [
@@ -3351,7 +3312,7 @@
       }
     ]
   },
-  "coverage.slopeByGDAL": {
+  "Coverage.slopeByGDAL": {
     "description": "Generates a slope map from any GDAL-supported elevation raster.",
     "returns": "Coverage",
     "args": [
@@ -3411,7 +3372,7 @@
       }
     ]
   },
-  "coverage.tpiTopographicPositionIndexByGDAL": {
+  "Coverage.tpiTopographicPositionIndexByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation. TPI stands for Topographic Position Index, which is defined as the difference between a central pixel and the mean of its surrounding cells.",
     "returns": "Coverage",
     "args": [
@@ -3443,7 +3404,7 @@
       }
     ]
   },
-  "coverage.triTerrainRuggednessIndexByGDAL": {
+  "Coverage.triTerrainRuggednessIndexByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation. TRI stands for Terrain Ruggedness Index, which is defined as the mean difference between a central pixel and its surrounding cells.",
     "returns": "Coverage",
     "args": [
@@ -3475,7 +3436,7 @@
       }
     ]
   },
-  "coverage.clipRasterByExtentByGDAL": {
+  "Coverage.clipRasterByExtentByGDAL": {
     "description": "Clips any GDAL-supported raster file to a given extent.",
     "returns": "Coverage",
     "args": [
@@ -3521,7 +3482,7 @@
       }
     ]
   },
-  "coverage.clipRasterByMaskLayerByGDAL": {
+  "Coverage.clipRasterByMaskLayerByGDAL": {
     "description": "Clips any GDAL-supported raster by a vector mask layer.",
     "returns": "Coverage",
     "args": [
@@ -5929,17 +5890,6 @@
       }
     ]
   },
-  "Feature.addStyles": {
-    "description": "Add the feature to the coverage",
-    "returns": "Feature",
-    "args": [
-      {
-        "name": "feature",
-        "type": "Feature",
-        "description": "The feature to add styles"
-      }
-    ]
-  },
   "Coverage.addStyles": {
     "description": "Add the styles to the coverage.",
     "returns": "Coverage",
@@ -6010,6 +5960,53 @@
         "type": "String",
         "description": "",
         "default": "png",
+        "optional": "True"
+      }
+    ]
+  },
+  "Coverage.export": {
+    "description": "Export a coverage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the Coverage",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported Coverage",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported Coverage",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported Coverage",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported Coverage",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported Coverage",
         "optional": "True"
       }
     ]
@@ -6180,13 +6177,13 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[Double]",
         "description": "Coordinates"
       },
       {
         "name": "properties",
         "type": "String",
-        "description": "Properties"
+        "description": "键值对，通过:隔开"
       },
       {
         "name": "crs",
@@ -6201,13 +6198,13 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[List[Double]]",
         "description": "Coordinates"
       },
       {
         "name": "properties",
         "type": "String",
-        "description": "Properties"
+        "description": "键值对，通过:隔开"
       },
       {
         "name": "crs",
@@ -6222,7 +6219,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[List[Double]]",
         "description": "Coordinates"
       },
       {
@@ -6243,13 +6240,13 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[List[Double]]",
         "description": "Coordinates"
       },
       {
         "name": "properties",
         "type": "String",
-        "description": "Properties"
+        "description": "键值对，通过:隔开"
       },
       {
         "name": "crs",
@@ -6264,7 +6261,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[List[Double]]",
         "description": "Coordinates"
       },
       {
@@ -6285,7 +6282,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[List[List[Double]]]",
         "description": "Coordinates"
       },
       {
@@ -6306,7 +6303,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "String",
+        "type": "List[List[List[List[Double]]]]",
         "description": "Coordinates"
       },
       {
@@ -7153,11 +7150,9 @@
         "description": "the input coverage"
       },
       {
-        "name": "Z_factor",
-        "type": "Float",
-        "description": "Vertical exaggeration",
-        "optional": "True",
-        "default": "1"
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius"
       }
     ]
   },

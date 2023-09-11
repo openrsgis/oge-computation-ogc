@@ -129,10 +129,11 @@ object PostgresqlServiceUtil {
     metaData
   }
 
-  def queryCoverage(coverageId: String): ListBuffer[CoverageMetadata] = {
+  def queryCoverage(coverageId: String,productKey :String): ListBuffer[CoverageMetadata] = {
     val metaData = new ListBuffer[CoverageMetadata]
     val postgresqlUtil = new PostgresqlUtil("")
     val conn: Connection = postgresqlUtil.getConnection
+
     if (conn != null) {
       try {
         // Configure to be Read Only
@@ -150,6 +151,8 @@ object PostgresqlServiceUtil {
         sql ++= " image_identification="
         sql ++= "\'"
         sql ++= coverageId
+        sql ++= "\' AND name = \'"
+        sql ++= productKey
         sql ++= "\'"
         println(sql)
         val extentResults: ResultSet = statement.executeQuery(sql.toString())

@@ -20,13 +20,12 @@ import scala.math.{max, min}
 object CoverageUtil {
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
   def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val coverageRawTiles: RDD[RawTile] = tileRDDReP
-    val extents: (Double, Double, Double, Double) = coverageRawTiles.map(t => {
+    val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
       (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
-    val colRowInstant: (Int, Int, Long, Int, Int, Long) = coverageRawTiles.map(t => {
+    val colRowInstant: (Int, Int, Long, Int, Int, Long) = tileRDDReP.map(t => {
       (t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)), t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
@@ -36,9 +35,9 @@ object CoverageUtil {
     //    }
 
 
-    val firstTile: RawTile = coverageRawTiles.first()
-    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0  ).toInt, 1)
-    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0  ).toInt, 1)
+    val firstTile: RawTile = tileRDDReP.first()
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0).toInt, 1)
 
     val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
 
@@ -49,7 +48,7 @@ object CoverageUtil {
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
     val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
 
-    val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = coverageRawTiles.map(tile => {
+    val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = tileRDDReP.map(tile => {
       val phenomenonTime: Long = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
       val rowNum: Int = tile.getSpatialKey.row
       val colNum: Int = tile.getSpatialKey.col
@@ -70,19 +69,20 @@ object CoverageUtil {
     })
     var coverage = (multibandTileRdd, tileLayerMetadata)
 
-    if(coverage._2.cellType.equalDataType(UByteConstantNoDataCellType) || coverage._2.cellType.equalDataType(UByteCellType))
+    if (coverage._2.cellType.equalDataType(UByteConstantNoDataCellType) || coverage._2.cellType.equalDataType(UByteCellType))
       coverage = toInt8(coverage)
-    else if(coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
+    else if (coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
       coverage = toInt16(coverage)
 
-    coverage = removeZeroFromCoverage(coverage)
+    val coverage1 = removeZeroFromCoverage(coverage)
 
-    coverage
+    coverage1
   }
 
   def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     coverageTemplate(coverage, (tile) => removeZeroFromTile(tile))
   }
+
   def removeZeroFromTile(tile: Tile): Tile = {
     if (tile.cellType.isFloatingPoint)
       tile.mapDouble(i => if (i.equals(0.0)) Double.NaN else i)
@@ -420,10 +420,11 @@ object CoverageUtil {
   }
 
   //获取指定位置的tile
-   def getTileFromCoverage(coverage: Map[SpaceTimeBandKey, MultibandTile]
-                                  ,spaceTimeBandKey: SpaceTimeBandKey) :Option[MultibandTile]={
-   coverage.get(spaceTimeBandKey)
+  def getTileFromCoverage(coverage: Map[SpaceTimeBandKey, MultibandTile]
+                          , spaceTimeBandKey: SpaceTimeBandKey): Option[MultibandTile] = {
+    coverage.get(spaceTimeBandKey)
   }
+
   def focalMethods(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), kernelType: String,
                    focalFunc: (Tile, Neighborhood, Option[GridBounds[Int]], TargetCell) => Tile, radius: Int): (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -439,9 +440,9 @@ object CoverageUtil {
     }
 
     //根据当前tile的col和row，查询相邻瓦块，查询对应的位置的值进行填充，没有的视为0
-    val coverage1= coverage.collect().toMap
+    val coverage1 = coverage.collect().toMap
 
-    val coverageRdd :RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
+    val coverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map(t => {
       val col = t._1.spaceTimeKey.col
       val row = t._1.spaceTimeKey.row
       val time0 = t._1.spaceTimeKey.time
@@ -449,7 +450,7 @@ object CoverageUtil {
       val cols = t._2.cols
       val rows = t._2.rows
 
-      var arrayBuffer :mutable.ArrayBuffer[Tile] = new mutable.ArrayBuffer[Tile] {}
+      var arrayBuffer: mutable.ArrayBuffer[Tile] = new mutable.ArrayBuffer[Tile] {}
       for (index <- t._2.bands.indices) {
         val arrBuffer: Array[Double] = Array.ofDim[Double]((cols + 2 * radius) * (rows + 2 * radius))
         //arr转换为Tile，并拷贝原tile数据
@@ -622,7 +623,7 @@ object CoverageUtil {
           }
         }
       }
-      (t._1,t._2)
+      (t._1, t._2)
     })
     (coverageRdd, coverage._2)
   }

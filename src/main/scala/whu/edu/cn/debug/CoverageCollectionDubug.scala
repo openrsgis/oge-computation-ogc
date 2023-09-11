@@ -77,7 +77,7 @@ object CoverageCollectionDubug {
         .map(t => {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val client: MinioClient = new MinIOUtil().getMinioClient
+            val client: MinioClient = MinIOUtil.getMinioClient
             val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, extent)
             tiles
           }
@@ -94,10 +94,11 @@ object CoverageCollectionDubug {
       val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 90))
       (t._1, tileRDDRePar.map(t => {
         val time1: Long = System.currentTimeMillis()
-        val client: MinioClient = new MinIOUtil().getMinioClient
+        val client: MinioClient = MinIOUtil.getMinioClient
         val tile: RawTile = getTileBuf(client, t)
+        MinIOUtil.releaseMinioClient(client)
         val time2: Long = System.currentTimeMillis()
-        println("Get Tile Time is " + (time2 - time1))
+        println("Get Tile Time1 is " + (time2 - time1))
         tile
       }))
     })

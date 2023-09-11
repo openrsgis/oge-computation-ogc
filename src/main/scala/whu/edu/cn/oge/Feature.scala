@@ -1,16 +1,17 @@
 package whu.edu.cn.oge
 
-import java.io.FileWriter
-import com.alibaba.fastjson.JSON
+import java.io.{BufferedWriter, FileWriter, PrintWriter}
+
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.geocube.util.HbaseUtil._
-
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
+
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
@@ -32,18 +33,25 @@ import whu.edu.cn
 import whu.edu.cn.debug.CoverageDubug.makeTIFF
 import whu.edu.cn.debug.FeatureDebug.saveFeatureRDDToShp
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.PostgresqlUtil
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
+import whu.edu.cn.util.{GlobalConstantUtil, PostgresqlUtil}
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
 import scala.math.{max, min}
 
 object Feature {
   def load(implicit sc: SparkContext, productName: String = null, dataTime: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    var crs1 = crs
+    if(crs == null)
+      crs1 = "EPSG:4326"
     val t1 = System.currentTimeMillis()
     val queryRes = query(productName)
     val t2 = System.currentTimeMillis()
-    println("从pgsql查询元数据的时间：" + (t2 - t1) / 1000)
+    println("从pgsql查询元数据的时间：" + (t2 - t1))
     val metaData = queryRes._3
     val hbaseTableName = queryRes._2
     val productKey = queryRes._1
@@ -68,11 +76,11 @@ object Feature {
     }
     val t3 = System.currentTimeMillis()
     val geometryRdd = getVectorWithPrefixFilter(sc, hbaseTableName, prefix).map(t => {
-      t._2._1.setSRID(crs.split(":")(1).toInt)
+      t._2._1.setSRID(crs1.split(":")(1).toInt)
       t
     })
     val t4 = System.currentTimeMillis()
-    println("从hbase加载数据的时间：" + (t4 - t3) / 1000)
+    println("从hbase加载数据的时间：" + (t4 - t3))
     geometryRdd
   }
 
@@ -140,9 +148,10 @@ object Feature {
   def getVectorWithPrefixFilter(implicit sc: SparkContext, hbaseTableName: String, prefix: String): RDD[(String, (Geometry, Map[String, Any]))] = {
     val t1 = System.currentTimeMillis()
     val queryData = getVectorWithPrefix(hbaseTableName, prefix)
+    println(queryData.length)
     val t2 = System.currentTimeMillis()
     println("取数据执行了！")
-    println("getVectorWithPrefix时间：" + (t2 - t1) / 1000)
+    println("getVectorWithPrefix时间：" + (t2 - t1) )
     val rawRDD = sc.parallelize(queryData)
     rawRDD.map(t => {
       val rowkey = t._1
@@ -172,8 +181,14 @@ object Feature {
     list = list :+ geom
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+      (UUID.randomUUID().toString, (t, getMapFromStr(properties)))
     })
+  }
+
+  private def getMapFromStr(str:String) : Map[String, Any] ={
+    val map = Map.empty[String , Any]
+    map += (str.split(':')(0) -> str.split(':')(1))
+    map
   }
 
   /**
@@ -191,7 +206,7 @@ object Feature {
     list = list :+ geom
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+      (UUID.randomUUID().toString, (t, getMapFromStr(properties)))
     })
   }
 
@@ -229,7 +244,7 @@ object Feature {
     list = list :+ geom
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+      (UUID.randomUUID().toString, (t, getMapFromStr(properties)))
     })
   }
 
@@ -483,10 +498,46 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def toGeoJSONString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[String] = {
-    featureRDD.map(t => {
+  def toGeoJSONString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
+    val data = featureRDD.map(t => {
       Geometry.toGeoJSONString(t._2._1)
     }).collect().toList
+    val jsonObject = new JSONObject
+    val geoArray = new JSONArray()
+    for(feature <- data)
+      geoArray.add(JSON.parseObject(feature))
+    jsonObject.put("type","GeometryCollection")
+    jsonObject.put("geometries",geoArray)
+    val geoJSONString:String =jsonObject.toJSONString()
+    geoJSONString
+  }
+
+  def saveJSONToServer(geoJSONString:String):String = {
+    val time = System.currentTimeMillis()
+
+    val outputVectorPath = "/mnt/storage/algorithmData/vector_" + time + ".json"
+
+    // 创建PrintWriter对象
+    val  writer:BufferedWriter=new BufferedWriter(new FileWriter(outputVectorPath))
+
+    // 写入JSON字符串
+    writer.write(geoJSONString)
+
+    // 关闭PrintWriter
+    writer.close()
+    try {
+      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      val st =
+        raw"""scp "$outputVectorPath" wkx@125.220.153.22:/home/wkx/oge/apache-tomcat-9.0.69/webapps/oge_vector/""".stripMargin
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    val storageURL = "http://125.220.153.22:8027/oge_vector/vector_" + time + ".json"
+    storageURL
   }
 
   /**
@@ -1007,6 +1058,20 @@ object Feature {
     })
 
     (imageRDD, tileLayerMetadata)
+  }
+
+  def visualize(feature: RDD[(String, (Geometry, Map[String, Any]))]):Unit={
+    val geoJson = new JSONObject
+    val geoJSONString = toGeoJSONString(feature)
+    val url = saveJSONToServer(geoJSONString)
+    geoJson.put(Trigger.layerName,geoJSONString)
+    val jsonObject = new JSONObject
+    jsonObject.put("vector",url)
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("workID", Trigger.dagId)
+    outJsonObject.put("json", jsonObject)
+    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    println(outJsonObject.toJSONString)
   }
 
 
