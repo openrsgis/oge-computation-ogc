@@ -1,16 +1,17 @@
 package whu.edu.cn.oge
 
-import java.io.FileWriter
-import com.alibaba.fastjson.{JSON, JSONObject}
+import java.io.{BufferedWriter, FileWriter, PrintWriter}
+
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.geocube.util.HbaseUtil._
-
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
+
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
@@ -34,8 +35,10 @@ import whu.edu.cn.debug.FeatureDebug.saveFeatureRDDToShp
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 import whu.edu.cn.util.{GlobalConstantUtil, PostgresqlUtil}
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
 import scala.math.{max, min}
@@ -495,10 +498,46 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def toGeoJSONString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[String] = {
-    featureRDD.map(t => {
+  def toGeoJSONString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
+    val data = featureRDD.map(t => {
       Geometry.toGeoJSONString(t._2._1)
     }).collect().toList
+    val jsonObject = new JSONObject
+    val geoArray = new JSONArray()
+    for(feature <- data)
+      geoArray.add(JSON.parseObject(feature))
+    jsonObject.put("type","GeometryCollection")
+    jsonObject.put("geometries",geoArray)
+    val geoJSONString:String =jsonObject.toJSONString()
+    geoJSONString
+  }
+
+  def saveJSONToServer(geoJSONString:String):String = {
+    val time = System.currentTimeMillis()
+
+    val outputVectorPath = "/mnt/storage/algorithmData/vector_" + time + ".json"
+
+    // 创建PrintWriter对象
+    val  writer:BufferedWriter=new BufferedWriter(new FileWriter(outputVectorPath))
+
+    // 写入JSON字符串
+    writer.write(geoJSONString)
+
+    // 关闭PrintWriter
+    writer.close()
+    try {
+      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      val st =
+        raw"""scp "$outputVectorPath" wkx@125.220.153.22:/home/wkx/oge/apache-tomcat-9.0.69/webapps/oge_vector/""".stripMargin
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    val storageURL = "http://125.220.153.22:8027/oge_vector/vector_" + time + ".json"
+    storageURL
   }
 
   /**
@@ -1024,17 +1063,15 @@ object Feature {
   def visualize(feature: RDD[(String, (Geometry, Map[String, Any]))]):Unit={
     val geoJson = new JSONObject
     val geoJSONString = toGeoJSONString(feature)
-//    println(geoJSONString)
-    geoJson.put(Trigger.layerName,geoJSONString.toString())
-
+    val url = saveJSONToServer(geoJSONString)
+    geoJson.put(Trigger.layerName,geoJSONString)
     val jsonObject = new JSONObject
-    jsonObject.put("vector",geoJson)
+    jsonObject.put("vector",url)
     val outJsonObject: JSONObject = new JSONObject
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
     sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
     println(outJsonObject.toJSONString)
-//    println( outJsonObject.toJSONString)
   }
 
 
