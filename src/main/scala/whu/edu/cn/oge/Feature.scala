@@ -1064,9 +1064,9 @@ object Feature {
     val geoJson = new JSONObject
     val geoJSONString = toGeoJSONString(feature)
     val url = saveJSONToServer(geoJSONString)
-    geoJson.put(Trigger.layerName,geoJSONString)
+    geoJson.put(Trigger.layerName,url)
     val jsonObject = new JSONObject
-    jsonObject.put("vector",url)
+    jsonObject.put("vector",geoJson)
     val outJsonObject: JSONObject = new JSONObject
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
