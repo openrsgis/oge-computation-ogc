@@ -8084,6 +8084,27 @@
       }
     ]
   },
+  "Coverage.terrHillshade": {
+    "description": "DEM山体阴影计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the hillshade."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the hillshade, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct hillshade calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
   "Cube.normalize": {
     "description": "Calculate the normalize index from the cube",
     "returns": "Cube",
