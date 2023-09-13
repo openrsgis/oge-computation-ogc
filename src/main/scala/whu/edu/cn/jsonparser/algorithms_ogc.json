@@ -2452,7 +2452,7 @@
       }
     ]
   },
-  "coverage.contourByGDAL": {
+  "Coverage.contourByGDAL": {
     "description": "Extracts contour lines from any GDAL-supported elevation raster.",
     "returns": "Feature",
     "args": [
@@ -2526,7 +2526,7 @@
       }
     ]
   },
-  "coverage.contourPolygonByGDAL": {
+  "Coverage.contourPolygonByGDAL": {
     "description": "Extracts contour polygons from any GDAL-supported elevation raster.",
     "returns": "Feature",
     "args": [
@@ -2607,7 +2607,7 @@
       }
     ]
   },
-  "coverage.fillNodataByGDAL": {
+  "Coverage.fillNodataByGDAL": {
     "description": "Fill raster regions with no data values by interpolation from edges.",
     "returns": "Coverage",
     "args": [
@@ -2667,7 +2667,7 @@
       }
     ]
   },
-  "coverage.gridAverageByGDAL": {
+  "Coverage.gridAverageByGDAL": {
     "description": "The Moving Average is a simple data averaging algorithm.",
     "returns": "Coverage",
     "args": [
@@ -2741,7 +2741,7 @@
       }
     ]
   },
-  "coverage.gridDataMetricsByGDAL": {
+  "Coverage.gridDataMetricsByGDAL": {
     "description": "Computes some data metrics using the specified window and output grid geometry.",
     "returns": "Coverage",
     "args": [
@@ -3206,7 +3206,7 @@
       }
     ]
   },
-  "coverage.nearBlackByGDAL": {
+  "Coverage.nearBlackByGDAL": {
     "description": "Converts nearly black/white borders to black.",
     "returns": "Coverage",
     "args": [
@@ -3245,7 +3245,7 @@
       }
     ]
   },
-  "coverage.proximityByGDAL": {
+  "Coverage.proximityByGDAL": {
     "description": "Generates a raster proximity map indicating the distance from the center of each pixel to the center of the nearest pixel identified as a target pixel.",
     "returns": "Coverage",
     "args": [
@@ -3319,7 +3319,7 @@
       }
     ]
   },
-  "coverage.roughnessByGDAL": {
+  "Coverage.roughnessByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation.",
     "returns": "Coverage",
     "args": [
@@ -3351,7 +3351,7 @@
       }
     ]
   },
-  "coverage.slopeByGDAL": {
+  "Coverage.slopeByGDAL": {
     "description": "Generates a slope map from any GDAL-supported elevation raster.",
     "returns": "Coverage",
     "args": [
@@ -3411,7 +3411,7 @@
       }
     ]
   },
-  "coverage.tpiTopographicPositionIndexByGDAL": {
+  "Coverage.tpiTopographicPositionIndexByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation. TPI stands for Topographic Position Index, which is defined as the difference between a central pixel and the mean of its surrounding cells.",
     "returns": "Coverage",
     "args": [
@@ -3443,7 +3443,7 @@
       }
     ]
   },
-  "coverage.triTerrainRuggednessIndexByGDAL": {
+  "Coverage.triTerrainRuggednessIndexByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation. TRI stands for Terrain Ruggedness Index, which is defined as the mean difference between a central pixel and its surrounding cells.",
     "returns": "Coverage",
     "args": [
@@ -3475,7 +3475,7 @@
       }
     ]
   },
-  "coverage.clipRasterByExtentByGDAL": {
+  "Coverage.clipRasterByExtentByGDAL": {
     "description": "Clips any GDAL-supported raster file to a given extent.",
     "returns": "Coverage",
     "args": [
@@ -3521,7 +3521,7 @@
       }
     ]
   },
-  "coverage.clipRasterByMaskLayerByGDAL": {
+  "Coverage.clipRasterByMaskLayerByGDAL": {
     "description": "Clips any GDAL-supported raster by a vector mask layer.",
     "returns": "Coverage",
     "args": [
