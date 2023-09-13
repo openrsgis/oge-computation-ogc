@@ -2,6 +2,7 @@ package whu.edu.cn.trigger
 
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
 import io.minio.{MinioClient, PutObjectArgs}
@@ -58,6 +59,10 @@ object Trigger {
   // 批计算参数
   val batchParam: BatchParam = new BatchParam
 
+  // Onthefly输出计算层级
+  var ontheFlyLevel: Int = _
+
+  var coverageReadFromUploadFile : Boolean = false
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -123,9 +128,11 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          if (args("coverageID").startsWith("data")) {
+          if(args("coverageID").startsWith("myData/")){
+            coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
           } else {
+            coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getTable" =>
@@ -339,7 +346,7 @@ object Trigger {
         case "Coverage.histogram" =>
           stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")), scale = args("scale").toDouble).toString())
         case "Coverage.reproject" =>
-          coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = args("crsCode").toInt, scale = args("resolution").toDouble))
+          coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = CRS.fromEpsgCode(args("crsCode").toInt), scale = args("resolution").toDouble))
         case "Coverage.resample" =>
           coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
         case "Coverage.gradient" =>
@@ -920,12 +927,13 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-          throw new Exception("Error occur in lambda: " +
-            "UUID = " + list(i)._1 + "\t" +
-            "funcName = " + list(i)._2 + "\n" +
-            "innerErrorType = " + e.getClass + "\n" +
-            "innerErrorInfo = " + e.getMessage + "\n" +
-            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+//          throw new Exception("Error occur in lambda: " +
+//            "UUID = " + list(i)._1 + "\t" +
+//            "funcName = " + list(i)._2 + "\n" +
+//            "innerErrorType = " + e.getClass + "\n" +
+//            "innerErrorInfo = " + e.getMessage + "\n" +
+//            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+          throw new Exception(e)
       }
     }
   }
@@ -1066,9 +1074,9 @@ object Trigger {
       lambda(sc, optimizedDagMap("0"))
     } catch {
       case e: Throwable =>
+        e.printStackTrace()
         val errorJson = new JSONObject
-        errorJson.put("error", e.toString)
-        errorJson.put("InputJSON", workTaskJson)
+        errorJson.put("error", e.getCause.getMessage)
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
@@ -1079,9 +1087,9 @@ object Trigger {
         sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
-        //         打印至后端控制台
-        e.printStackTrace()
-        println("lambda Error!")
+//         打印至后端控制台
+
+
     } finally {
       Trigger.optimizedDagMap.clear()
       Trigger.coverageCollectionMetadata.clear()
@@ -1109,10 +1117,10 @@ object Trigger {
 
   def runBatch(implicit sc: SparkContext,
                curWorkTaskJson: String,
-               curDagId: String, userId: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
+               curDagId: String, userID: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
     workTaskJson = curWorkTaskJson
     dagId = curDagId
-
+    userId = userID
     val time1: Long = System.currentTimeMillis()
 
     val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
@@ -1120,7 +1128,7 @@ object Trigger {
 
     isBatch = jsonObject.getString("isBatch").toInt
 
-    batchParam.setUserId(userId)
+    batchParam.setUserId(userID)
     batchParam.setDagId(curDagId)
     batchParam.setCrs(crs)
     batchParam.setScale(scale)
@@ -1181,7 +1189,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeNDVI.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1196,9 +1204,9 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
+//    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
-    //    Thread.sleep(1000000)
     println("Finish")
     sc.stop()
   }
