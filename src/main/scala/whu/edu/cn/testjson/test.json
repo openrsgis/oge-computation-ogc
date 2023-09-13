@@ -1,0 +1,61 @@
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.addStyles",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.aspect",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "Service.getCoverage",
+                  "arguments": {
+                    "coverageID": {
+                      "constantValue": "ASTGTM_N28E056"
+                    },
+                    "baseUrl": {
+                      "constantValue": "http://localhost"
+                    },
+                    "productID": {
+                      "constantValue": "ASTER_GDEM_DEM30"
+                    }
+                  }
+                }
+              },
+              "radius": {
+                "constantValue": 1
+              }
+            }
+          }
+        },
+        "min": {
+          "constantValue": -1
+        },
+        "max": {
+          "constantValue": 1
+        },
+        "palette": {
+          "constantValue": [
+            "gold",
+            "yellow",
+            "brown",
+            "lightblue",
+            "blue"
+          ]
+        }
+      }
+    }
+  },
+  "layerName": "aspect",
+  "isBatch": "0",
+  "map": {
+    "level": 10,
+    "spatialRange": [
+      54.924164,
+      28.02954,
+      57.575836,
+      28.765276
+    ]
+  }
+}

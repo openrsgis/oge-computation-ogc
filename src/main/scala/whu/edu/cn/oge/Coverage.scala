@@ -9,7 +9,7 @@ import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import io.minio.{GetObjectArgs, MinioClient, PutObjectArgs,UploadObjectArgs}
+import io.minio.{GetObjectArgs, MinioClient, PutObjectArgs, UploadObjectArgs}
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -27,6 +27,7 @@ import redis.clients.jedis.Jedis
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.trigger.Trigger.coverageReadFromUploadFile
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -43,13 +44,14 @@ import scala.language.postfixOps
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
+  val resolutionTMSArray: Array[Double] = Array(156543.033928, 78271.516964, 39135.758482, 19567.879241, 9783.939621, 4891.969810, 2445.984905, 1222.992453, 611.496226, 305.748113, 152.874057, 76.437028, 38.218514, 19.109257, 9.554629, 4.777314, 2.388657, 1.194329, 0.597164, 0.298582, 0.149291)
 
   def load(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val time1 = System.currentTimeMillis()
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
-    if(metaList.isEmpty){
+    if (metaList.isEmpty) {
       throw new Exception("No such coverage in database!")
     }
     val queryGeometry: Geometry = metaList.head.getGeom
@@ -871,12 +873,8 @@ object Coverage {
   }
 
   def powNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-             i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    i match {
-      case (x: Int) => coverageTemplate(coverage, (tile) => Pow(tile, x))
-      case (x: Double) => coverageTemplate(coverage, (tile) => Pow(tile, x))
-      case _ => throw new IllegalArgumentException("Invalid arguments")
-    }
+             i: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    coverageTemplate(coverage, (tile) => geotrellis.raster.mapalgebra.local.Pow(tile, i))
   }
 
   /**
@@ -1656,13 +1654,13 @@ object Coverage {
    * @return The reprojected image.
    */
   def reproject(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                crs: Int, scale: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                crs: CRS, scale: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val band = coverage._1.first()._1.measurementName
     val resampleTime = Instant.now.getEpochSecond
     val coverageTileRDD = coverage._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
-    val extent = coverage._2.extent.reproject(coverage._2.crs, CRS.fromEpsgCode(crs))
+    val extent = coverage._2.extent.reproject(coverage._2.crs, crs)
     val tl = TileLayout(((extent.xmax - extent.xmin) / (scale * 256)).toInt, ((extent.ymax - extent.ymin) / (scale * 256)).toInt, 256, 256)
     val ld = LayoutDefinition(extent, tl)
     val cellType = coverage._2.cellType
@@ -1690,7 +1688,7 @@ object Coverage {
     //    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
     //      coverageTMS.reproject(tmsCrs, layoutScheme)
 
-    val (_, coverageTileRDDWithMetadata) = coverageTileLayerRDD.reproject(CRS.fromEpsgCode(crs), ld, geotrellis.raster.resample.Bilinear)
+    val (_, coverageTileRDDWithMetadata) = coverageTileLayerRDD.reproject(crs, ld, geotrellis.raster.resample.Bilinear)
     val coverageNoband = (coverageTileRDDWithMetadata.mapValues(tile => tile: MultibandTile), coverageTileRDDWithMetadata.metadata)
     val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
     val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
@@ -3216,7 +3214,11 @@ object Coverage {
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
-    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(coverage, visParam)
+    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
+      reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(Trigger.level))
+    } else {
+      coverage
+    }, visParam)
 
 
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
@@ -3229,14 +3231,14 @@ object Coverage {
 
     var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
 
-    // TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
-    // 大于0是上采样
+    //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
+    //     大于0是上采样
     if (COGUtil.tileDifference > 0) {
       // 首先对其进行上采样
       // 上采样必须考虑范围缩小，不然非常占用内存
       val levelUp: Int = COGUtil.tileDifference
       val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
-      val extentOrigin: Extent = layoutOrigin.extent
+      val extentOrigin: Extent = coverageTMS.metadata.layout.extent
       val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
       val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
       val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
@@ -3339,7 +3341,7 @@ object Coverage {
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
     // 先转到EPSG:3857，将单位转为米缩放后再转回指定坐标系
     var reprojectTile: Raster[MultibandTile] = stitchedTile.reproject(coverage._2.crs, CRS.fromName("EPSG:3857"))
-    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width*reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height*reprojectTile.rows / batchParam.getScale).toInt, 1))
+    val resample: Raster[MultibandTile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
 
 
@@ -3370,12 +3372,11 @@ object Coverage {
     val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
 
     val outputPath = Paths.get(filePath)
-    val outputStream = new FileOutputStream(outputPath.toFile)
+
     import java.nio.file.StandardCopyOption.REPLACE_EXISTING
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     inputStream.close()
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
-
 
     coverage
   }

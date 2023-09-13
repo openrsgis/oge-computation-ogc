@@ -2,6 +2,7 @@ package whu.edu.cn.trigger
 
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
 import io.minio.{MinioClient, PutObjectArgs}
@@ -58,6 +59,10 @@ object Trigger {
   // 批计算参数
   val batchParam: BatchParam = new BatchParam
 
+  // Onthefly输出计算层级
+  var ontheFlyLevel: Int = _
+
+  var coverageReadFromUploadFile : Boolean = false
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -123,9 +128,11 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
         case "Service.getCoverage" =>
-          if(args("coverageID").startsWith("data/")){
+          if(args("coverageID").startsWith("myData/")){
+            coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
           } else {
+            coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getTable" =>
@@ -339,7 +346,7 @@ object Trigger {
         case "Coverage.histogram" =>
           stringList += (UUID -> Coverage.histogram(coverage = coverageRddList(args("coverage")), scale = args("scale").toDouble).toString())
         case "Coverage.reproject" =>
-          coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = args("crsCode").toInt, scale = args("resolution").toDouble))
+          coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = CRS.fromEpsgCode(args("crsCode").toInt), scale = args("resolution").toDouble))
         case "Coverage.resample" =>
           coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
         case "Coverage.gradient" =>
@@ -1180,7 +1187,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeNDVI.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

@@ -9,6 +9,7 @@ import java.util.Properties
  * A config class for postresql connection.
  * */
 class PostgresqlUtil(sql: String) {
+  Class.forName(POSTGRESQL_DRIVER)
   private val connection: Connection = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
   private val statement: PreparedStatement = connection.prepareStatement(sql)
 
