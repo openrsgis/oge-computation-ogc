@@ -3,7 +3,6 @@ package whu.edu.cn.util
 import io.minio._
 import whu.edu.cn.util.GlobalConstantUtil.{MINIO_ACCESS_KEY, MINIO_ENDPOINT, MINIO_MAX_CONNECTIONS, MINIO_SECRET_KEY}
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object MinIOUtil {
