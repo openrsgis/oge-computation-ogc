@@ -1790,7 +1790,7 @@ object QGIS {
                          ignoreNodata: String = "false",
                          extra: String = "",
                          create3D: String = "false",
-                         nodata: String = "",
+                         nodata: String = "0",
                          offset: Double = 0.0,
                          band: Int = 1,
                          fieldNameMax: String = "ELEV_MAX",
@@ -1808,7 +1808,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour_polygon.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra $extra --create-3d $create3D --nodata $nodata --offset $offset --band $band --field-name-max $fieldNameMax --field-name-min $fieldNameMin --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour_polygon.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra "$extra" --create-3d $create3D --nodata "$nodata" --offset $offset --band $band --field-name-max $fieldNameMax --field-name-min $fieldNameMin --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2082,7 +2082,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistance.py --input "$outputShpPath" --extra $extra --power $power --angle $angle --radius-2 $radius2 --radius-1 $radius1 --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistance.py --input "$outputShpPath" --extra "$extra" --power $power --angle $angle --radius-2 $radius2 --radius-1 $radius1 --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field "$zField" --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2152,7 +2152,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistancenearestneighbor.py --input "$outputShpPath" --extra $extra --power $power --radius $radius --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistancenearestneighbor.py --input "$outputShpPath" --extra "$extra" --power $power --radius $radius --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2990,7 +2990,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_translate.py --input "$outputTiffPath" --extra "$extra" --targetCrs "$targetCrs" --nodata $nodata --dataType $dataTypeInput --copySubdatasets $copySubdatasets --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_translate.py --input "$outputTiffPath" --extra "$extra" --target-crs "$targetCrs" --nodata $nodata --data-type $dataTypeInput --copy-subdatasets $copySubdatasets --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3046,7 +3046,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_warpreproject.py --input "$outputTiffPath" --source-crs $sourceCrs --target-crs $targetCrs --resampling $resampling --nodata $noData --target-resolution $targetResolution --options $options --data-type $dataType --target-extent $targetExtent --target-extent-crs $targetExtentCrs --multithreading $multiThreading --extra $extra --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_warpreproject.py --input "$outputTiffPath"  --target-crs "$targetCrs" --resampling "$resampling" --nodata $noData  --options "$options" --data-type "$dataType"   --multithreading "$multiThreading"  --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
