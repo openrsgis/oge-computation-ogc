@@ -3354,7 +3354,7 @@ object Coverage {
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
 
-    minIOUtil.releaseMinioClient(client)
+//    minIOUtil.releaseMinioClient(client)
 
   }
 
