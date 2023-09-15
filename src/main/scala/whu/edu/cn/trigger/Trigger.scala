@@ -88,20 +88,7 @@ object Trigger {
 
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
-
-    def sendNotice(notice: JSONObject): Unit = {
-
-      val noticeJson = new JSONObject
-      noticeJson.put("workID", Trigger.dagId)
-      noticeJson.put("notice", notice.toJSONString)
-
-      sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverNotice",
-        noticeJson.toJSONString)
-    }
-
-
     try {
-
       val tempNoticeJson = new JSONObject
       println("args:", funcName + args)
       funcName match {
@@ -635,17 +622,17 @@ object Trigger {
 
         // Terrain By CYM
         case "Coverage.terrSlope" =>
-          coverageRddList += (UUID -> calculator.Slope(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> calculator.Slope(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrAspect" =>
-          coverageRddList += (UUID -> calculator.Aspect(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> calculator.Aspect(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrRuggedness" =>
-          coverageRddList += (UUID -> calculator.Ruggedness(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> calculator.Ruggedness(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrSlopelength" =>
-          coverageRddList += (UUID -> calculator.SlopeLength(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> calculator.SlopeLength(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrCurvature" =>
-          coverageRddList += (UUID -> calculator.Curvature(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> calculator.Curvature(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrHillshade" =>
-          coverageRddList += (UUID -> calculator.HillShade(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> calculator.HillShade(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
 
         case "Coverage.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
