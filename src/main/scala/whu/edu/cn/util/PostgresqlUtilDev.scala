@@ -79,6 +79,11 @@ object PostgresqlUtilDev {
     val limitList = new ArrayBuffer[String]()
     range.zipWithIndex.foreach {
       case ((key, operator, value), i) =>
+        if (value == null || value.isEmpty) {
+          throw new IllegalArgumentException(
+            "limitList have empty value!"
+          )
+        }
         if (i == 0) {
           sql ++= key + " " + operator + " ?"
           limitList.append(value)
