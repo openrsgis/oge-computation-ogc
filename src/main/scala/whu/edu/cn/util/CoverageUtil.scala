@@ -76,7 +76,7 @@ object CoverageUtil {
 
     val coverage1 = removeZeroFromCoverage(coverage)
 
-    coverage1
+    coverage
   }
 
   def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -87,7 +87,7 @@ object CoverageUtil {
     if (tile.cellType.isFloatingPoint)
       tile.mapDouble(i => if (i.equals(0.0)) Double.NaN else i)
     else
-      tile.map(i => if (i == 0) NODATA else i)
+      tile.map(i => if (i == 0) -32768 else i)
   }
 
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[

@@ -31,13 +31,14 @@ import scala.collection.mutable
 
 object CoverageDubug {
   def main(args: Array[String]): Unit = {
+    test()
     //    val time1: Long = System.currentTimeMillis()
     //
     //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days
     //    // LC08_L1TP_124038_20181211_20181226_01_T1
     //    // LE07_L1TP_125039_20130110_20161126_01_T1
     //
-    loadLandsat8()
+//    loadLandsat8()
     //    val time2: Long = System.currentTimeMillis()
     //    println("Total Time is " + (time2 - time1))
     //
@@ -79,6 +80,16 @@ object CoverageDubug {
   //    makeTMS(sc, coverage1Select, "aah")
   //  }
 
+
+  def test(): Unit = {
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+    val sc = new SparkContext(conf)
+
+    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056",
+      "ASTER_GDEM_DEM30", 10)
+    makeTIFF(coverage1, "dem")
+
+  }
   def loadLandsat8(): Unit = {
     val time1: Long = System.currentTimeMillis()
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
@@ -171,7 +182,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:/cog/out/" + name + ".tiff"
+    val writePath: String = "C:\\Users\\forDece\\Desktop\\temp\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
