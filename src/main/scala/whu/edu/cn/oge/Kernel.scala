@@ -62,7 +62,7 @@ object Kernel {
    * @return
    */
   def prewitt(normalize: Boolean = false,
-              magnitude: Float = 1): focal.Kernel = {
+              magnitude: Float): focal.Kernel = {
     genKernel(Array[Int](1, 0, -1, 1, 0, -1, 1, 0, -1).map(_.toDouble), 3, 3, normalize, magnitude)
   }
 
@@ -73,7 +73,7 @@ object Kernel {
    * @return
    */
   def kirsch(normalize: Boolean = false,
-             magnitude: Float = 1): focal.Kernel = {
+             magnitude: Float): focal.Kernel = {
     val n: Int = 3
 
     val matrix = Array[Int](5, 5, 5, -3, 0, -3, -3, -3, -3)
@@ -108,7 +108,7 @@ object Kernel {
   //noinspection DuplicatedCode
   def chebyshev(radius: Int,
                 normalize: Boolean = false,
-                magnitude: Float = 1)
+                magnitude: Float)
   : focal.Kernel = {
 
     val n: Int = radius * 2 + 1
@@ -127,8 +127,8 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def circle(radius: Int,
-             normalize: Boolean = true,
-             magnitude: Float = 1)
+             normalize: Boolean,
+             magnitude: Float)
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -148,7 +148,7 @@ object Kernel {
 
 
   //noinspection DuplicatedCode
-  def compass(normalize: Boolean = false, magnitude: Float = 1)
+  def compass(normalize: Boolean = false, magnitude: Float)
   : focal.Kernel = {
     val matrix: Array[Int] = Array[Int](1, 1, -1, 1, -2, -1, 1, 1, -1)
 
@@ -162,8 +162,8 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def diamond(radius: Int,
-              normalize: Boolean = true,
-              magnitude: Float = 1)
+              normalize: Boolean,
+              magnitude: Float)
   : focal.Kernel = {
 
     val n: Int = radius * 2 + 1
@@ -182,8 +182,8 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def euclidean(radius: Int,
-                normalize: Boolean = false,
-                magnitude: Float = 1)
+                normalize: Boolean,
+                magnitude: Float)
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -202,9 +202,9 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def gaussian(radius: Int,
-               sigma: Float = 1,
-               normalize: Boolean = true,
-               magnitude: Float = 1)
+               sigma: Float,
+               normalize: Boolean,
+               magnitude: Float)
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -265,8 +265,8 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def manhattan(radius: Int,
-                normalize: Boolean = false,
-                magnitude: Float = 1)
+                normalize: Boolean,
+                magnitude: Float)
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -284,8 +284,8 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def octagon(radius: Int,
-              normalize: Boolean = true,
-              magnitude: Float = 1)
+              normalize: Boolean,
+              magnitude: Float)
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -304,8 +304,8 @@ object Kernel {
 
   //noinspection DuplicatedCode
   def plus(radius: Int,
-           normalize: Boolean = true,
-           magnitude: Float = 1)
+           normalize: Boolean,
+           magnitude: Float)
   : focal.Kernel = {
     val n: Int = radius * 2 + 1
     val matrix = new Array[Double](n * n)
@@ -322,8 +322,8 @@ object Kernel {
   //noinspection DuplicatedCode
   def rectangle(xRadius: Int,
                 yRadius: Int,
-                normalize: Boolean = true,
-                magnitude: Float = 1)
+                normalize: Boolean,
+                magnitude: Float)
   : focal.Kernel = {
     val rows: Int = yRadius * 2 + 1
     val cols: Int = xRadius * 2 + 1
@@ -334,7 +334,7 @@ object Kernel {
   }
 
 
-  def roberts(normalize: Boolean = false, magnitude: Float = 1)
+  def roberts(normalize: Boolean, magnitude: Float)
   : focal.Kernel = {
 
     genKernel(Array[Double](1, 0, 0, -1), 2, 2, normalize, magnitude)

@@ -4547,9 +4547,14 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "axis",
-        "type": "String",
-        "description": "Specify the direction of the convolution kernel,x/y."
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
       }
     ]
   },
@@ -4807,12 +4812,12 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "xradius",
+        "name": "xRadius",
         "type": "Int",
         "description": "The horizontal radius of the kernel to generate."
       },
       {
-        "name": "yradius",
+        "name": "yRadius",
         "type": "Int",
         "description": "The vertical radius of the kernel to generate."
       },
@@ -4831,13 +4836,7 @@
   "Kernel.laplacian4": {
     "description": "Generates a 3x3 laplacian-4 edge-detection kernel.",
     "returns": "Kernel",
-    "args": [
-      {
-        "name": "normalize",
-        "type": "Boolean",
-        "description": "Normalize the kernel values to sum to 1."
-      }
-    ]
+    "args": []
   },
   "Kernel.laplacian8": {
     "description": "Generates a 3x3 laplacian-8 edge-detection kernel.",
@@ -4871,7 +4870,7 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "kernel1",
+        "name": "kernel",
         "type": "Kernel",
         "description": "The first kernel."
       }
