@@ -1,4 +1,4 @@
-package whu.edu.cn.algorithms.core
+package whu.edu.cn.algorithms.ImageProcess.core
 
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
