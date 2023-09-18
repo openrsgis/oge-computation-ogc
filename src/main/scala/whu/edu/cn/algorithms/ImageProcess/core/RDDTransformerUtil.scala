@@ -1,4 +1,4 @@
-package whu.edu.cn.algorithms.core
+package whu.edu.cn.algorithms.ImageProcess.core
 
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, FloatingLayoutScheme, SpaceTimeKey, SpatialKey, TileLayerMetadata}
