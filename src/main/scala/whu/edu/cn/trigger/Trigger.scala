@@ -265,6 +265,22 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.acos(coverage = coverageRddList(args("coverage"))))
         case "Coverage.atan" =>
           coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.standardDeviationCalculation" =>
+          coverageRddList += (UUID -> Coverage.standardDeviationCalculation(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.cannyEdgeDetection" =>
+          coverageRddList += (UUID -> Coverage.cannyEdgeDetection(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.histogramEqualization" =>
+          coverageRddList += (UUID -> Coverage.histogramEqualization(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.standardDeviationStretching" =>
+          coverageRddList += (UUID -> Coverage.standardDeviationStretching(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.bilateralFilter" =>
+          coverageRddList += (UUID -> Coverage.bilateralFilter(coverage = coverageRddList(args("coverage")), d = args("d").toInt, sigmaSpace = args("sigmaSpace").toDouble, sigmaColor = args("sigmaColor").toDouble, borderType = args("borderType")))
+        case "Coverage.gaussianBlur" =>
+          coverageRddList += (UUID -> Coverage.gaussianBlur(coverage = coverageRddList(args("coverage")), ksize = args("ksize").stripPrefix("List(").stripSuffix(")").split(",").map(_.trim.toInt).toList, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
+        case "Coverage.fakeColorCompose" =>
+          coverageRddList += (UUID -> Coverage.fakeColorCompose(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
+        case "Coverage.linearTransformation" =>
+          coverageRddList += (UUID -> Coverage.linearTransformation(coverage = coverageRddList(args("coverage")), k = args("k").toDouble, b = args("b").toInt))
         case "Coverage.atan2" =>
           coverageRddList += (UUID -> Coverage.atan2(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.eq" =>

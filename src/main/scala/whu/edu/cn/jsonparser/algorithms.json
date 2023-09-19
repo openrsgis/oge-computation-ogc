@@ -8110,5 +8110,182 @@
         "description": "a z-factor for correct hillshade calculations when the surface z units are expressed in units different from the ground x,y units."
       }
     ]
+  },
+  "Coverage.linearTransformation": {
+    "description": "Gray-level linear transformations",
+    "returns": "RDDImage",
+    "args": [
+      {
+        "name": "Image",
+        "type": "RDDImage",
+        "description": "The Coverage to make gray-level linear transformations"
+      },
+      {
+        "name": "MinMaxValue",
+        "type": "Map",
+        "description": "Store the max and min value of every RDD"
+      },
+      {
+        "name": "k",
+        "type": "Double",
+        "description": "The  coefficientLinearTransformation$ to make gray-level linear transformations"
+      },
+      {
+        "name": "b",
+        "type": "Double",
+        "description": "The  constant to add in gray-level linear transformations"
+      }
+    ]
+  },
+  "Coverage.fakeColorCompose": {
+    "description": "Compose single-band photo to color photo",
+    "returns": "RDDImage",
+    "args": [
+      {
+        "name": "RawImage",
+        "type": "RDDImage",
+        "description": "The Coverage to make FakeColorCompose"
+      },
+      {
+        "name": "BandRed",
+        "type": "Int",
+        "description": "Chose one band as red band the number stands for bandindex"
+      },
+      {
+        "name": "BandGreen",
+        "type": "Int",
+        "description": "Chose one band as green band the number stands for bandindex"
+      },
+      {
+        "name": "BandBlue",
+        "type": "Int",
+        "description": "Chose one band as Blue band the number stands for bandindex"
+      }
+    ]
+  },
+  "Coverage.standardDeviationCalculation": {
+    "description": "Calculate the standard deviation of each band of coverage",
+    "returns": "Map",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The coverage to standard deviation calculation."
+      }
+    ]
+  },
+  "coverage.cannyEdgeDetection": {
+    "description": "Edge detection by Canny",
+    "returns": "coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "coverage",
+        "description": "The coverage to Canny edge detection."
+      }
+    ]
+  },
+  "Coverage.standardDeviationStretching": {
+    "description": "Calculate the standard deviation and perform stretching",
+    "returns": "RDDImage",
+    "args": [
+      {
+        "name":"coverage",
+        "type":"Coverage",
+        "description":"Each band of coverage is stretched based on standard deviation."}
+    ]
+  },
+  "Coverage.histogramEqualization": {
+    "description": "Return the new image with equalized histogram.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be histogram equalized."
+      }
+    ]
+  },
+  "Coverage.bilateralFilter": {
+    "description": "Applies a bilateral filter to each band of an image using a named bilateral kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be filtered with bilateral filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "d",
+        "type": "Int",
+        "description": "The side length of the filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaSpace",
+        "type": "Double",
+        "description": "Spatial weight.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaColor",
+        "type": "Double",
+        "description": "Value weight.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.gaussianBlur": {
+    "description": "Applies a gaussian filter to each band of an image using a named gaussian kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be filtered with gaussian filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "ksize",
+        "type": "List[Int]",
+        "description": "The list containing the height and width of the filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaX",
+        "type": "Double",
+        "description": "Standard deviation of the gaussian distribution in the x-direction.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaY",
+        "type": "Double",
+        "description": "Standard deviation of the gaussian distribution in the y-direction.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
   }
 }
