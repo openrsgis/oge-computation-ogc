@@ -134,7 +134,9 @@ object RDDTransformerUtil {
     val data = input.map(t => {
       t._2._2 + (ShapeFileUtil.DEF_GEOM_KEY -> t._2._1)
     }).collect().map(_.asJava).toList.asJava
-    ShapeFileUtil.createShp(outputShpPath, "utf-8", classOf[LineString], data)
+
+    val geomClass = input.first()._2._1.getClass
+    ShapeFileUtil.createShp(outputShpPath, "utf-8", geomClass, data)
     println("成功落地shp")
   }
 

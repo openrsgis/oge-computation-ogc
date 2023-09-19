@@ -2215,7 +2215,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridlinear.py --input "$outputShpPath" --extra $extra --radius $radius --nodata $nodata --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridlinear.py --input "$outputShpPath" --extra "$extra" --radius $radius --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
