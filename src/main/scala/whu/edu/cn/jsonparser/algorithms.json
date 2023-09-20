@@ -8111,7 +8111,7 @@
       }
     ]
   },
-  "linearTransformation": {
+  "Coverage.linearTransformation": {
     "description": "Gray-level linear transformations",
     "returns": "RDDImage",
     "args": [
@@ -8137,7 +8137,7 @@
       }
     ]
   },
-  "fakeColorCompose": {
+  "Coverage.fakeColorCompose": {
     "description": "Compose single-band photo to color photo",
     "returns": "RDDImage",
     "args": [
@@ -8163,7 +8163,7 @@
       }
     ]
   },
-  "standardDeviationCalculation": {
+  "Coverage.standardDeviationCalculation": {
     "description": "Calculate the standard deviation of each band of coverage",
     "returns": "Map",
     "args": [
@@ -8174,7 +8174,7 @@
       }
     ]
   },
-  "cannyEdgeDetection": {
+  "Coverage.cannyEdgeDetection": {
     "description": "Edge detection by Canny",
     "returns": "coverage",
     "args": [
@@ -8185,7 +8185,7 @@
       }
     ]
   },
-  "standardDeviationStretching": {
+  "Coverage.standardDeviationStretching": {
     "description": "Calculate the standard deviation and perform stretching",
     "returns": "RDDImage",
     "args": [
@@ -8195,7 +8195,7 @@
         "description":"Each band of coverage is stretched based on standard deviation."}
     ]
   },
-  "histogramEqualization": {
+  "Coverage.histogramEqualization": {
     "description": "Return the new image with equalized histogram.",
     "returns": "Coverage",
     "args": [
@@ -8206,7 +8206,7 @@
       }
     ]
   },
-  "bilateralFilter": {
+  "Coverage.bilateralFilter": {
     "description": "Applies a bilateral filter to each band of an image using a named bilateral kernel.",
     "returns": "Coverage",
     "args": [
@@ -8247,7 +8247,7 @@
       }
     ]
   },
-  "gaussianBlur": {
+  "Coverage.gaussianBlur": {
     "description": "Applies a gaussian filter to each band of an image using a named gaussian kernel.",
     "returns": "Coverage",
     "args": [
