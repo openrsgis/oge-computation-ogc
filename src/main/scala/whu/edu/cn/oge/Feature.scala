@@ -515,7 +515,7 @@ object Feature {
   def saveJSONToServer(geoJSONString:String):String = {
     val time = System.currentTimeMillis()
 
-    val outputVectorPath = "/mnt/storage/algorithmData/vector_" + time + ".json"
+    val outputVectorPath = "/home/oge/tomcat/apache-tomcat-9.0.80/webapps/oge_vector/vector_" + time + ".json"
 
     // 创建PrintWriter对象
     val  writer:BufferedWriter=new BufferedWriter(new FileWriter(outputVectorPath))
@@ -525,18 +525,8 @@ object Feature {
 
     // 关闭PrintWriter
     writer.close()
-    try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
-      val st =
-        raw"""scp "$outputVectorPath" wkx@125.220.153.22:/home/wkx/oge/apache-tomcat-9.0.69/webapps/oge_vector/""".stripMargin
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
 
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-    val storageURL = "http://125.220.153.22:8027/oge_vector/vector_" + time + ".json"
+    val storageURL = "http://10.101.240.10:8679/oge_vector/vector_" + time + ".json"
     storageURL
   }
 
