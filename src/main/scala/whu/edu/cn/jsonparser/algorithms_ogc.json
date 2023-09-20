@@ -7407,12 +7407,12 @@
     "args": [
       {
         "name": "inputTemperature",
-        "type": "Table",
+        "type": "String",
         "description": "温度表格数据"
       },
       {
         "name": "inputStation",
-        "type": "FeatureCollection",
+        "type": "String",
         "description": "站点数据"
       },
       {
@@ -7427,7 +7427,7 @@
       },
       {
         "name": "timeStep",
-        "type": "Float",
+        "type": "Long",
         "description": "步长"
       }
     ]
@@ -7438,27 +7438,27 @@
     "args": [
       {
         "name": "rate",
-        "type": "Float",
+        "type": "Double",
         "description": "rate"
       },
       {
         "name": "recession",
-        "type": "Float",
+        "type": "Int",
         "description": "recession"
       },
       {
         "name": "tMax",
-        "type": "Float",
+        "type": "Int",
         "description": "tMax"
       },
       {
         "name": "iterception",
-        "type": "Float",
+        "type": "Int",
         "description": "iterception"
       },
       {
         "name": "waterShedArea",
-        "type": "Float",
+        "type": "Int",
         "description": "waterShedArea"
       },
       {
@@ -7473,17 +7473,17 @@
       },
       {
         "name": "timeStep",
-        "type": "Float",
+        "type": "Long",
         "description": "步长"
       },
       {
         "name": "inputTopoIndex",
-        "type": "Table",
+        "type": "String",
         "description": ""
       },
       {
         "name": "inputPrecipEvapFile",
-        "type": "Table",
+        "type": "String",
         "description": ""
       }
     ]
@@ -7494,7 +7494,7 @@
     "args": [
       {
         "name": "input",
-        "type": "Table",
+        "type": "String",
         "description": ""
       }
     ]

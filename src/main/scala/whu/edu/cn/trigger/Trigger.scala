@@ -193,6 +193,13 @@ object Trigger {
           Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = "fileName")
         case "Table.addStyles" =>
           Table.getDownloadUrl(url = tableRddList(isOptionalArg(args, "input")), fileName = " fileName")
+        case "Algorithm.hargreaves" =>
+          Table.hargreaves(args("inputTemperature"), args("inputStation"), args("startTime"), args("endTime"), args("timeStep").toLong)
+        case "Algorithm.topmodel" =>
+          Table.topModel(args("inputPrecipEvapFile"), args("inputTopoIndex"), args("startTime"), args("endTime"), args("timeStep").toLong, args("rate").toDouble,
+            args("recession").toInt, args("tMax").toInt, args("iterception").toInt, args("waterShedArea").toInt)
+        case "Algorithm.SWMM5" =>
+          Table.SWMM5(null)
 
         // Coverage
         case "Coverage.export" =>
