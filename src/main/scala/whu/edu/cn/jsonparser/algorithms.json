@@ -8117,7 +8117,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The Coverage to make gray-level linear transformations"
       },
       {
@@ -8138,7 +8138,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The Coverage to make FakeColorCompose"
       },
       {
@@ -8164,7 +8164,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The coverage to standard deviation calculation."
       }
     ]
@@ -8175,7 +8175,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The coverage to Canny edge detection."
       }
     ]
@@ -8186,7 +8186,7 @@
     "args": [
       {
         "name":"coverage",
-        "type":"RDDImage",
+        "type":"Coverage",
         "description":"Each band of coverage is stretched based on standard deviation."}
     ]
   },
@@ -8196,7 +8196,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The image to be histogram equalized."
       }
     ]
@@ -8207,7 +8207,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The image to be filtered with bilateral filter.",
         "default": "None",
         "optional": "False"
@@ -8248,7 +8248,7 @@
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "The image to be filtered with gaussian filter.",
         "default": "None",
         "optional": "False"
