@@ -8156,11 +8156,6 @@
         "description": "The Coverage to make gray-level linear transformations"
       },
       {
-        "name": "MinMaxValue",
-        "type": "Map",
-        "description": "Store the max and min value of every RDD"
-      },
-      {
         "name": "k",
         "type": "Double",
         "description": "The  coefficient to make gray-level linear transformations"
