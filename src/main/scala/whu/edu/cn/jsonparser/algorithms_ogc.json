@@ -8157,7 +8157,7 @@
       },
       {
         "name": "k",
-        "type": "Double",
+        "type": "Int",
         "description": "The  coefficient to make gray-level linear transformations"
       },
       {

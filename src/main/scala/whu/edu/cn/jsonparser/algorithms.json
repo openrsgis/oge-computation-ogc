@@ -8122,7 +8122,7 @@
       },
       {
         "name": "k",
-        "type": "Double",
+        "type": "Int",
         "description": "The  coefficientLinearTransformation$ to make gray-level linear transformations"
       },
       {
