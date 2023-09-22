@@ -526,6 +526,18 @@ object Feature {
     // 关闭PrintWriter
     writer.close()
 
+    try {
+      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      val st =
+        raw"""scp "$outputVectorPath" root@10.101.240.10:/home/oge/tomcat/apache-tomcat-9.0.80/webapps/oge_vector/""".stripMargin
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
     val storageURL = "http://10.101.240.10:8679/oge_vector/vector_" + time + ".json"
     storageURL
   }
