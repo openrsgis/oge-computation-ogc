@@ -8157,12 +8157,12 @@
       },
       {
         "name": "k",
-        "type": "Int",
+        "type": "Double",
         "description": "The  coefficient to make gray-level linear transformations"
       },
       {
         "name": "b",
-        "type": "Double",
+        "type": "Int",
         "description": "The  constant to add in gray-level linear transformations"
       }
     ]
