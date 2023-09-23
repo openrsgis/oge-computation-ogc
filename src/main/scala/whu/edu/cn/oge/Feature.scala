@@ -515,7 +515,7 @@ object Feature {
   def saveJSONToServer(geoJSONString:String):String = {
     val time = System.currentTimeMillis()
 
-    val outputVectorPath = "/home/oge/tomcat/apache-tomcat-9.0.80/webapps/oge_vector/vector_" + time + ".json"
+    val outputVectorPath = "/mnt/storage/algorithmData/vector_" + time + ".json"
 
     // 创建PrintWriter对象
     val  writer:BufferedWriter=new BufferedWriter(new FileWriter(outputVectorPath))
