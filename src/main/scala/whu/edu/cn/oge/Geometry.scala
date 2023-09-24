@@ -144,7 +144,7 @@ object Geometry {
    * @return
    */
   def geometry(gjson:String,crs:String="EPSG:4326"):Geometry={
-    val geom=getGeomFromCoors(gjson,"")
+    val geom=getGeomFromCoors(gjson,"",isGeoJson = true)
     val srid=crs.split(":")(1).toInt
     geom.setSRID(srid)
     geom
