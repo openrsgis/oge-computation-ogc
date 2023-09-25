@@ -113,7 +113,7 @@ object algorithms_Image {
   }
 
   //直方图均衡化
-  def histogramEqualization(coverage: RDDImage
+  def histogramEqualization(coverage: RDDImage)
   : RDDImage = {
     //求整张影像像素总数
     val eachCount: RDD[Int] = coverage._1.map(t=>{
@@ -196,7 +196,7 @@ object algorithms_Image {
   }
 
   //canny边缘提取
-  def cannyEdgeDetection(coverage: RDDImage
+  def cannyEdgeDetection(coverage: RDDImage)
   : RDDImage = {
     def gradXTileCalculate(tile: Tile, radius: Int): Tile = {
       val rows = tile.rows
@@ -659,7 +659,7 @@ object algorithms_Image {
     (Changed_Image,coverage._2)
   }
    //标准差拉伸
-  def standardDeviationStretching(coverage: RDDImage
+  def standardDeviationStretching(coverage: RDDImage)
   :RDDImage = {
 
 
