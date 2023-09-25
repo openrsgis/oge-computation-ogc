@@ -29,7 +29,7 @@ object Trigger {
   var lazyFunc: mutable.Map[String, (String, mutable.Map[String, String])] = mutable.Map.empty[String, (String, mutable.Map[String, String])]
   var coverageCollectionRddList: mutable.Map[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]] = mutable.Map.empty[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]]
   var coverageRddList: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
-
+  var bandList:mutable.Map[String,immutable.Map[Int,Double]]=mutable.Map.empty[String,immutable.Map[Int,Double]]
   var doubleList: mutable.Map[String, Double] = mutable.Map.empty[String, Double]
   var stringList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var intList: mutable.Map[String, Int] = mutable.Map.empty[String, Int]
@@ -271,7 +271,7 @@ object Trigger {
         case "Coverage.acos" =>
           coverageRddList += (UUID -> Coverage.acos(coverage = coverageRddList(args("coverage"))))
         case "Coverage.standardDeviationCalculation" =>
-          coverageRddList += (UUID -> standardDeviationCalculation(coverage = coverageRddList(args("coverage"))))
+          bandList += (UUID -> standardDeviationCalculation(coverage = coverageRddList(args("coverage"))))
         case "Coverage.cannyEdgeDetection" =>
           coverageRddList += (UUID -> cannyEdgeDetection(coverage = coverageRddList(args("coverage"))))
         case "Coverage.histogramEqualization" =>

@@ -62,7 +62,7 @@ object algorithms_Image {
     (bilateralFilterRDD, coverage._2)
   }
   //高斯滤波
-  def gaussianBlur(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ksize: List[Int], sigmaX: Double, sigmaY: Double, borderType: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def gaussianBlur(coverage: RDDImage, ksize: List[Int], sigmaX: Double, sigmaY: Double, borderType: String): RDDImage = {
     //ksize：高斯核的大小，正奇数；sigmaX sigmaY：X和Y方向上的方差
     // 构建高斯核矩阵
     var kernel = Array.ofDim[Double](ksize(0), ksize(1))
@@ -113,8 +113,8 @@ object algorithms_Image {
   }
 
   //直方图均衡化
-  def histogramEqualization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
-  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def histogramEqualization(coverage: RDDImage
+  : RDDImage = {
     //求整张影像像素总数
     val eachCount: RDD[Int] = coverage._1.map(t=>{
       t._2.rows * t._2.cols
@@ -196,8 +196,8 @@ object algorithms_Image {
   }
 
   //canny边缘提取
-  def cannyEdgeDetection(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
-  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def cannyEdgeDetection(coverage: RDDImage
+  : RDDImage = {
     def gradXTileCalculate(tile: Tile, radius: Int): Tile = {
       val rows = tile.rows
       val cols = tile.cols
@@ -552,7 +552,7 @@ object algorithms_Image {
     standardDeviationCalculate(coverage)
   }
 //线性灰度拉伸
-  def linearTransformation(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), k: Double = 1.0, b: Int = 0): RDDImage = {
+  def linearTransformation(coverage: RDDImage, k: Double = 1.0, b: Int = 0): RDDImage = {
 
     def linear_trans_respectively(image: IntArrayTile, k: Double, b: Int, Min: Int, Max: Int): IntArrayTile = {
       //      print(k,b)
@@ -659,8 +659,8 @@ object algorithms_Image {
     (Changed_Image,coverage._2)
   }
    //标准差拉伸
-  def standardDeviationStretching(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
-  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def standardDeviationStretching(coverage: RDDImage
+  :RDDImage = {
 
 
     def CaculateMeanValue(coverage:RDDImage):Map[Int,Double]=

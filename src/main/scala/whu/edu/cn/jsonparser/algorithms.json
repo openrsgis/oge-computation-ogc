@@ -8116,14 +8116,9 @@
     "returns": "RDDImage",
     "args": [
       {
-        "name": "Image",
-        "type": "RDDImage",
+        "name": "coverage",
+        "type": "Coverage",
         "description": "The Coverage to make gray-level linear transformations"
-      },
-      {
-        "name": "MinMaxValue",
-        "type": "Map",
-        "description": "Store the max and min value of every RDD"
       },
       {
         "name": "k",
@@ -8132,7 +8127,7 @@
       },
       {
         "name": "b",
-        "type": "Double",
+        "type": "Int",
         "description": "The  constant to add in gray-level linear transformations"
       }
     ]
@@ -8142,8 +8137,8 @@
     "returns": "RDDImage",
     "args": [
       {
-        "name": "RawImage",
-        "type": "RDDImage",
+        "name": "coverage",
+        "type": "Coverage",
         "description": "The Coverage to make FakeColorCompose"
       },
       {
@@ -8168,7 +8163,7 @@
     "returns": "Map",
     "args": [
       {
-        "name": "input",
+        "name": "coverage",
         "type": "Coverage",
         "description": "The coverage to standard deviation calculation."
       }
@@ -8179,8 +8174,8 @@
     "returns": "coverage",
     "args": [
       {
-        "name": "input",
-        "type": "coverage",
+        "name": "coverage",
+        "type": "Coverage",
         "description": "The coverage to Canny edge detection."
       }
     ]
