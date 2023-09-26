@@ -12,6 +12,10 @@ class VisualizationParam {
   var opacity: Double = 1.0
   var format: String = "png"
 
+  def getFirstThreeBands: List[String] = {
+    this.bands.take(3)
+  }
+
   def getBands: List[String] = {
     this.bands
   }
