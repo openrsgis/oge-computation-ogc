@@ -4425,6 +4425,221 @@
       }
     ]
   },
+  "Coverage.resampStatsByGrass": {
+    "description": "Resamples raster map layers to a coarser grid using aggregation",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Aggregation method",
+        "optional": "True",
+        "default": "average"
+      },
+      {
+        "name": "quantile",
+        "type": "Float",
+        "description": "Quantile to calculate for method=quantile Options: 0.0-1.0 ",
+        "optional": "True",
+        "default": "0.5"
+      }
+    ]
+  },
+  "Coverage.resampInterpByGrass": {
+    "description": "Resamples raster map to a finer grid using interpolation",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Sampling interpolation method Options: nearest, bilinear, bicubic, lanczos",
+        "optional": "True",
+        "default": "bilinear"
+      }
+    ]
+  },
+  "Coverage.resampBsplineByGrass": {
+    "description": "Performs bilinear or bicubic spline interpolation with Tykhonov regularization.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Spline interpolation algorithm Options: bilinear, bicubic",
+        "optional": "True",
+        "default": "bicubic"
+      }
+    ]
+  },
+  "Coverage.resampFilterByGrass": {
+  "description": "Resamples raster map layers using an analytic kernel.",
+  "returns": "Coverage",
+  "args": [
+    {
+      "name": "input",
+      "type": "Coverage",
+      "description": "Name of input raster map"
+    },
+    {
+      "name": "res",
+      "type": "String",
+      "description": "New resolution ratio after resampling"
+    },
+    {
+      "name": "filter",
+      "type": "String",
+      "description": "Filter kernel(s) Options: box, bartlett, gauss, normal, hermite, sinc, lanczos1, lanczos2, lanczos3, hann, hamming, blackman"
+    },
+    {
+      "name": "radius",
+      "type": "String",
+      "description": "Filter radius"
+    }
+  ]
+},
+  "Coverage.resampleByGrass": {
+  "description": "GRASS raster map layer data resampling capability. ",
+  "returns": "Coverage",
+  "args": [
+    {
+      "name": "input",
+      "type": "Coverage",
+      "description": "Name of input raster map"
+    },
+    {
+      "name": "res",
+      "type": "String",
+      "description": "New resolution ratio after resampling"
+    }
+  ]
+},
+  "Coverage.textureByGrass": {
+    "description": " Generate images with textural features from a raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Textural measurement method Options: asm, contrast, corr, var, idm, sa, sv, se, entr, dv, de, moc1, moc2 "
+      },
+      {
+        "name": "size",
+        "type": "String",
+        "description": "The size of moving window (odd and >= 3)",
+        "optional": "True",
+        "default": "3"
+      },
+      {
+        "name": "distance",
+        "type": "String",
+        "description": "The distance between two samples (>= 1) The distance must be smaller than the size of the moving window",
+        "optional": "True",
+        "default": "1"
+      }
+    ]
+  },
+  "Coverage.viewshedByGrass": {
+    "description": " Computes the viewshed of a point on an elevation raster map.                       Default format: NULL (invisible), vertical angle wrt viewpoint (visible). ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "coordinates",
+        "type": "String",
+        "description": "Coordinates of viewing position"
+      },
+      {
+        "name": "observer_elevation",
+        "type": "String",
+        "description": "Viewing elevation above the ground ",
+        "optional": "True",
+        "default": "1.75"
+      },
+      {
+        "name": "target_elevation",
+        "type": "String",
+        "description": "Offset for target elevation above the ground",
+        "optional": "True",
+        "default": "0.0"
+      },
+      {
+        "name": "max_distance",
+        "type": "String",
+        "description": "Maximum visibility radius. By default infinity (-1) ",
+        "optional": "True",
+        "default": "-1"
+      },
+      {
+        "name": "refraction_coeff",
+        "type": "String",
+        "description": "Refraction coefficient Options: 0.0-1.0 ",
+        "optional": "True",
+        "default": "0.14286"
+      }
+    ]
+  },
+  "Coverage.shadeByGrass": {
+    "description": "Drapes a color raster over an shaded relief or aspect map. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "shade",
+        "type": "Coverage",
+        "description": "Name of shaded relief or aspect raster map "
+      },
+      {
+        "name": "color",
+        "type": "Coverage",
+        "description": "Name of raster to drape over relief raster map Typically, this raster is elevation or other colorful raster"
+      },
+      {
+        "name": "brighten",
+        "type": "String",
+        "description": "Percent to brighten Options: -99-99 ",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
   "Coverage.surfIdwByGrass": {
     "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
     "returns": "Coverage",
@@ -4566,6 +4781,113 @@
         "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
         "optional": "True",
         "default": "6"
+      }
+    ]
+  },
+  "Coverage.reclassByGrass": {
+    "description": "Reclassify raster map based on category values.Creates a new raster map whose category values are based upon a reclassification of the categories in an existing raster map. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster map to be reclassified"
+      },
+      {
+        "name": "rules",
+        "type": "Coverage",
+        "description": "File containing reclass rules '-' for standard input"
+      }
+    ]
+  },
+  "Coverage.reportByGrass": {
+    "description": " Reports statistics for raster maps. ",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description": "Name of raster map to report on"
+      }
+    ]
+  },
+  "Coverage.supportStatsByGrass": {
+    "description": "Update raster map statistics",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description": "Name of raster map"
+      }
+    ]
+  },
+  "Coverage.outDdalByGrass": {
+    "description": " Exports GRASS raster maps into GDAL supported formats. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster map (or group) to export "
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "Raster data format to write (case sensitive, see also -l flag) Options: VRT, GTiff, COG, NITF, HFA, ELAS, AAIGrid, DTED, PNG, JPEG, MEM, GIF, XPM, BMP, PCIDSK, PCRaster, ILWIS, SGI, SRTMHGT, Leveller, Terragen, netCDF, HDF4Image, ISIS3, ISIS2, PDS4, VICAR, ERS, ECW, JP2ECW, JP2OpenJPEG, FIT, GRIB, RMF, WMS, RST, GSAG, GSBG, GS7BG, R, KMLSUPEROVERLAY, WEBP, PDF, Rasterlite, MBTiles, CALS, WMTS, MRF, PNM, PAux, MFF, MFF2, BT, LAN, LCP, GTX, NTv2, CTable2, KRO, ROI_PAC, RRASTER, BYN, ARG, USGSDEM, NWT_GRD, ADRG, BLX, PostGISRaster, SAGA, XYZ, HF2, ZMap, SIGDEM, GPKG, NGW, ENVI, EHdr, ISCE, Zarr ",
+        "optional": "True",
+        "default": "GTiff"
+      }
+    ]
+  },
+  "Coverage.outBinByGrass": {
+    "description": " Exports a GRASS raster to a binary array.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "nu_ll",
+        "type": "String",
+        "description": "Value to write out for null ",
+        "optional": "True",
+        "default": "0"
+      },
+      {
+        "name": "bytes",
+        "type": "String",
+        "description": "Number of bytes per cell Options: 1, 2, 4, 8 "
+      },
+      {
+        "name": "order",
+        "type": "String",
+        "description": "Output byte order \nOptions: big, little, native, swap ",
+        "optional": "True",
+        "default": "native"
+      }
+    ]
+  },
+  "Coverage.inGdalByGrass": {
+    "description": " Imports raster data into a GRASS raster map using GDAL library. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster file to be imported "
+      },
+      {
+        "name": "band",
+        "type": "String",
+        "description": "Band(s) to select (default is all bands) "
+      },
+      {
+        "name": "location",
+        "type": "String",
+        "description": "Name for new location to create "
       }
     ]
   },
