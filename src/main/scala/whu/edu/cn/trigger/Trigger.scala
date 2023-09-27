@@ -549,6 +549,7 @@ object Trigger {
           featureRddList += (UUID -> QGIS.gdalBufferVectors(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
         case "Feature.oneSideBufferByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalOneSideBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), bufferSide = args("bufferSide"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
+
         //    GRASS
         case "Coverage.neighborsByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_neighbors(sc, input = coverageRddList(args("input")), size = args("size"), method = args("method")))
@@ -564,7 +565,7 @@ object Trigger {
           coverageRddList += (UUID -> GrassUtil.r_blend(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), percent = args("percent")))
         case "Coverage.compositeByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_composite(sc, red = coverageRddList(args("red")), green = coverageRddList(args("green")), blue = coverageRddList(args("blue")), levels = args("levels")))
-        case "Coverage.sunmaskeByGrass" =>
+        case "Coverage.sunmaskByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_sunmask(sc, elevation = coverageRddList(args("red")), year = args("year"), month = args("month"), day = args("day"), hour = args("hour"), minute = args("minute"), second = args("second"), timezone = args("timezone")))
         case "Coverage.surfIdwByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_surf_idw(sc, input = coverageRddList(args("input")), npoints = args("npoints")))
@@ -580,6 +581,22 @@ object Trigger {
           grassResultList += (UUID -> GrassUtil.r_volume(sc, input = coverageRddList(args("input")), clump = coverageRddList(args("clump"))))
         case "Coverage.outPNGByGrass" =>
           grassResultList += (UUID -> GrassUtil.r_out_png(sc, input = coverageRddList(args("input")), compression = args("compression")))
+        case "Coverage.resampStatsByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_resamp_stats(sc,coverageRddList(args("input")),args("res"),args("method"),args("quantile")))
+        case "Coverage.resampInterpByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_resamp_interp(sc,coverageRddList(args("input")),args("res"),args("method")))
+        case "Coverage.resampBsplineByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_resamp_bspline(sc,coverageRddList(args("input")),args("res"),args("method")))
+        case "Coverage.resampFilterByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_resamp_filter(sc,coverageRddList(args("input")),args("res"),args("filter"),args("radius")))
+        case "Coverage.resampleByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_resample(sc,coverageRddList(args("input")),args("res")))
+        case "Coverage.textureByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_texture(sc,coverageRddList(args("input")),args("size"),args("distance"),args("method")))
+        case "Coverage.viewshedByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_viewshed(sc,coverageRddList(args("input")),args("coordinates"),args("observer_elevation"),args("target_elevation"),args("max_distance"),args("refraction_coeff")))
+        case "Coverage.shadeByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_shade(sc,coverageRddList(args("shade")),coverageRddList(args("color")),args("brighten")))
         case "Coverage.reclassByGrass" =>
           coverageRddList += (UUID -> GrassUtil.reclassByGrass(sc,coverageRddList(args("input")),args("rules")))
         case "Coverage.reportByGrass" =>
@@ -592,6 +609,7 @@ object Trigger {
           grassResultList += (UUID -> GrassUtil.outBinByGrass(sc,coverageRddList(args("input")),args("nu_ll"),args("bytes"),args("order")))
         case "Coverage.inGdalByGrass" =>
           coverageRddList += (UUID -> GrassUtil.inGdalByGrass(sc,coverageRddList(args("input")),args("band"),args("location")))
+
         // Kernel
         case "Kernel.chebyshev" =>
           kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))
