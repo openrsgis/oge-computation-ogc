@@ -1,4 +1,20 @@
 {
+  "Service.print": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "String",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
   "FeatureCollection.filter": {
     "description": "Applies a filter to a given collection.",
     "returns": "FeatureCollection",
@@ -1142,6 +1158,17 @@
       }
     ]
   },
+  "Coverage.bandNames": {
+    "description": "Get all bands names from a coverage.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to operate."
+      }
+    ]
+  },
   "Coverage.selectBands": {
     "description": "",
     "returns": "Coverage",
@@ -1155,6 +1182,17 @@
         "name": "bands",
         "type": "List<String>",
         "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.bandNum": {
+    "description": "Get the count of the coverage.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage."
       }
     ]
   },
@@ -8113,7 +8151,7 @@
   },
   "Coverage.linearTransformation": {
     "description": "Gray-level linear transformations",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
@@ -8134,7 +8172,7 @@
   },
   "Coverage.fakeColorCompose": {
     "description": "Compose single-band photo to color photo",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
@@ -8182,7 +8220,7 @@
   },
   "Coverage.standardDeviationStretching": {
     "description": "Calculate the standard deviation and perform stretching",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name":"coverage",
