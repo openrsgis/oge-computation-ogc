@@ -552,7 +552,7 @@ object Trigger {
         case "Coverage.neighborsByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_neighbors(sc, input = coverageRddList(args("input")), size = args("size"), method = args("method")))
         case "Coverage.bufferByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_buffer(sc, input = coverageRddList(args("input")), distances = args("distances"), unit = args("units")))
+          coverageRddList += (UUID -> GrassUtil.r_buffer(sc, input = coverageRddList(args("input")), distances = args("distances"), unit = args("unit")))
         case "Coverage.crossByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_cross(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.patchByGrass" =>
