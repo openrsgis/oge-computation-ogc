@@ -2865,7 +2865,7 @@ object Coverage {
     }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      if (z == Trigger.level) {
+      if ( Trigger.level-z<=2 && Trigger.level-z>=0) {
         val layerId: LayerId = LayerId(Trigger.dagId, z)
         println(layerId)
         // If the layer exists already, delete it out before writing
