@@ -4,7 +4,11 @@ import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import com.alibaba.fastjson.JSONObject
 import whu.edu.cn.entity.{CoverageCollectionMetadata, SpaceTimeBandKey}
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.GlobalConstantUtil
+import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 object Service {
 
@@ -34,5 +38,25 @@ object Service {
   def getFeature(implicit sc: SparkContext, featureId: String,dataTime:String= null,crs:String="EPSG:4326")={
     Feature.load(sc,featureId,dataTime = dataTime,crs)
   }
+
+  def print(res:String,name:String,valueType:String):Unit={
+    val j = new JSONObject()
+    j.put("name",name)
+    j.put("value",res)
+    j.put("type",valueType)
+    Trigger.outputInformationList.append(j)
+
+
+    val jsonObject: JSONObject = new JSONObject
+
+    jsonObject.put("info",Trigger.outputInformationList.toArray)
+
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("workID", Trigger.dagId)
+    outJsonObject.put("json", jsonObject)
+    println(outJsonObject)
+    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+  }
+
 
 }
