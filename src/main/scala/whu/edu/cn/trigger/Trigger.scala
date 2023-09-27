@@ -44,6 +44,7 @@ object Trigger {
   var cubeRDDList: mutable.Map[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])]
 
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
+  var outputInformationList:mutable.ListBuffer[JSONObject] = mutable.ListBuffer.empty[JSONObject]
 
   var userId: String = _
   var level: Int = _
@@ -82,8 +83,17 @@ object Trigger {
     }
   }
 
-  def action(): Unit = {
 
+  def getValue(name:String):(String,String)={
+    if(doubleList.contains(name)){
+      (doubleList(name).toString,"double")
+    }else if(intList.contains(name)){
+      (intList(name).toString,"int")
+    }else if(stringList.contains(name)){
+      (stringList(name),"String")
+    }else{
+      throw new Exception("No such element in this calculation")
+    }
   }
 
   @throws(classOf[Throwable])
@@ -94,22 +104,11 @@ object Trigger {
       funcName match {
 
         //Others
-        case "print" =>
-          if (stringList.contains(args("arg"))) {
-            Others.printNotice(args("arg"), stringList(args("arg")))
-          }
-          else if (doubleList.contains(args("arg"))) {
-            Others.printNotice(args("arg"), doubleList(args("arg")).toString)
-          }
-          else if (intList.contains(args("arg"))) {
-            Others.printNotice(args("arg"), intList(args("arg")).toString)
-          }
-          else if (coverageRddList.contains(args("arg"))) {
-            Others.printNotice(args("arg"), coverageRddList(args("arg"))._2.toString)
-          }
-          else {
-            throw new IllegalArgumentException("The specified content could not be found!")
-          }
+        case "Service.print" =>
+          val temp = getValue(args("object"))
+          val res =temp._1
+          val valueType=temp._2
+          Service.print(res,args("name"),valueType)
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
