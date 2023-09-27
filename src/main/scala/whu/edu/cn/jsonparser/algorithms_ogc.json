@@ -26,7 +26,7 @@
       },
       {
         "name": "filter",
-        "type": "Filter",
+        "type": "String",
         "description": "The filter to apply to the collection. "
       }
     ]
@@ -118,7 +118,7 @@
       }
     ]
   },
-  "Collection.map": {
+  "CoverageCollection.map": {
     "description": "Maps an algorithm over a collection.",
     "returns": "Collection",
     "args": [
@@ -131,13 +131,6 @@
         "name": "baseAlgorithm",
         "type": "Algorithm",
         "description": "The algorithm being applied to each element"
-      },
-      {
-        "name": "dropNulls",
-        "type": "Boolean",
-        "description": "If true, the mapped algorithm is allowed to return nulls, and the elements for which it returns nulls will be dropped.",
-        "optional": "True",
-        "default": "False"
       }
     ]
   },
@@ -5925,6 +5918,33 @@
         "name": "coverageCollection",
         "type": "CoverageCollection",
         "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.cat": {
+    "description": "cat the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.visualizeOnTheFly": {
+    "description": "",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "collection",
+        "description": ""
+      },
+      {
+        "name": "visParam",
+        "type": "VisualizationParam",
+        "description": ""
       }
     ]
   },

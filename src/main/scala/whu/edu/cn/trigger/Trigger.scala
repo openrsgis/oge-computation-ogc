@@ -139,13 +139,6 @@ object Trigger {
         case "Filter.bounds" =>
           lazyFunc += (UUID -> (funcName, args))
 
-        // Collection
-        case "Collection.map" =>
-          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
-            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
-            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
-          }
-
         // CoverageCollection
         case "CoverageCollection.filter" =>
           coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
@@ -176,6 +169,14 @@ object Trigger {
         case "CoverageCollection.mode" =>
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> CoverageCollection.mode(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.cat" =>
+          isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
+          coverageRddList += (UUID -> CoverageCollection.cat(coverageCollectionRddList(args("coverageCollection"))))
+        case "CoverageCollection.map" =>
+          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
+            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
+            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
+          }
         case "CoverageCollection.addStyles" =>
           if (isBatch == 0) {
             isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
@@ -862,6 +863,8 @@ object Trigger {
         case "Feature.setGeometry" =>
           featureRddList += (UUID -> Feature.setGeometry(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             featureRddList(args("geom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "Feature.featureCollection" =>
+          featureRddList += (UUID -> Feature.featureCollection(sc,args("featureList").stripPrefix("[").stripSuffix("]").split(",").toList.map(t =>{featureRddList(t).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]})))
         case "Feature.addStyles" =>
           Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]])
         //      case "Feature.inverseDistanceWeighted" =>
@@ -1001,11 +1004,11 @@ object Trigger {
 
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
-              curDagId: String, userID: String): Unit = {
+              curDagID: String, userID: String): Unit = {
 
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
-    dagId = curDagId
+    dagId = curDagID
     userId = userID
     val time1: Long = System.currentTimeMillis()
 
