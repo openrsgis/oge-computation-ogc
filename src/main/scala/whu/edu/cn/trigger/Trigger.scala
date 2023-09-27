@@ -582,6 +582,16 @@ object Trigger {
           grassResultList += (UUID -> GrassUtil.r_out_png(sc, input = coverageRddList(args("input")), compression = args("compression")))
         case "Coverage.reclassByGrass" =>
           coverageRddList += (UUID -> GrassUtil.reclassByGrass(sc,coverageRddList(args("input")),args("rules")))
+        case "Coverage.reportByGrass" =>
+          grassResultList += (UUID -> GrassUtil.reportByGrass(sc,coverageRddList(args("map"))))
+        case "Coverage.supportStatsByGrass" =>
+          grassResultList += (UUID -> GrassUtil.supportStatsByGrass(sc,coverageRddList(args("map"))))
+        case "Coverage.outGdalByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.outGdalByGrass(sc,coverageRddList(args("input")),args("format")))
+        case "Coverage.outBinByGrass" =>
+          grassResultList += (UUID -> GrassUtil.outBinByGrass(sc,coverageRddList(args("input")),args("nu_ll"),args("bytes"),args("order")))
+        case "Coverage.inGdalByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.inGdalByGrass(sc,coverageRddList(args("input")),args("band"),args("location")))
         // Kernel
         case "Kernel.chebyshev" =>
           kernelRddList += (UUID -> Kernel.chebyshev(args("radius").toInt, args("normalize").toBoolean, args("magnitude").toFloat))

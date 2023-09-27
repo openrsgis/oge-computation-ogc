@@ -1614,6 +1614,8 @@ object GrassUtil {
     sourceTiffpath
   }
 
+
+  //剩余算子
   def reclassByGrass(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), rules:String = "-")={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
@@ -1647,5 +1649,183 @@ object GrassUtil {
     tif
   }
 
+  //26
+  def reportByGrass(sc: SparkContext, map: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))={
+    val time_1=System.currentTimeMillis()
+    val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
+    val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
+    saveRDDToTif(map,outputTiffPath_1_out)
+
+    val sourceTiffpath=tifFilePath+"grassoutput_"+System.currentTimeMillis()+".txt"
+    // val epsg=map._2.crs.toString
+    val sourceTiffpath_out=tifFilePath_out+"grassoutput_"+System.currentTimeMillis()+".txt"
+    val locationName="location"+System.currentTimeMillis()
+    val location=grassdataPath+locationName
+    var commandList:List[String] =List.empty
+    commandList=commandList:+"g.mapset -c mapset="+mapset+" location="+locationName
+    val grassInputDataName_1="javainput"+System.currentTimeMillis()
+    commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
+    commandList=commandList:+"r.report"+" map="+grassInputDataName_1+"@"+mapset+" >> "+sourceTiffpath
+
+    val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
+
+    val startShFile=createStartSh2(grassRoot,execShFile,shFilePath_out,shFilePath,outputTiffPath_1,location)
+
+    val startShFile_docker=createStartSh_docker(shFilePath_out,startShFile)
+
+    runGrassSh2(startShFile_docker)
+
+    val file:File=new File(sourceTiffpath_out)
+    while(file.length()==0){}
+    Thread.sleep(1000)
+    val Str = Source.fromFile(sourceTiffpath_out).mkString
+
+    Str
+  }
+
+
+  //26
+  def supportStatsByGrass(sc: SparkContext, map: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) )={
+    /* val time_1=System.currentTimeMillis()
+     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
+     saveRDDToTif(map,outputTiffPath_1)*/
+
+    val time_1=System.currentTimeMillis()
+    val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
+    val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
+    saveRDDToTif(map,outputTiffPath_1_out)
+
+    val sourceTiffpath=tifFilePath+"grassoutput_"+System.currentTimeMillis()+".txt"
+    // val epsg=map._2.crs.toString
+    val sourceTiffpath_out=tifFilePath_out+"grassoutput_"+System.currentTimeMillis()+".txt"
+    val locationName="location"+System.currentTimeMillis()
+    val location=grassdataPath+locationName
+    var commandList:List[String] =List.empty
+    commandList=commandList:+"g.mapset -c mapset="+mapset+" location="+locationName
+    val grassInputDataName_1="javainput"+System.currentTimeMillis()
+    commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
+    commandList=commandList:+"r.support.stats"+" map="+grassInputDataName_1+"@"+mapset+" >> "+sourceTiffpath
+
+    val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
+
+    val startShFile=createStartSh2(grassRoot,execShFile,shFilePath_out,shFilePath,outputTiffPath_1,location)
+
+    val startShFile_docker=createStartSh_docker(shFilePath_out,startShFile)
+
+    runGrassSh2(startShFile_docker)
+
+    val file:File=new File(sourceTiffpath_out)
+    while(file.length()==0){}
+    Thread.sleep(1000)
+    val Str = Source.fromFile(sourceTiffpath_out).mkString
+
+    Str
+
+  }
+
+
+  def outGdalByGrass(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), format:String = "GTiff")={
+    val time_1=System.currentTimeMillis()
+    val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
+    val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
+    saveRDDToTif(input,outputTiffPath_1_out)
+
+    val sourceTiffpath=tifFilePath+"grassoutput_"+System.currentTimeMillis()+".tif"
+    val sourceTiffpath_out=tifFilePath_out+"grassoutput_"+System.currentTimeMillis()+".tif"
+    // val epsg=input._2.crs.toString
+    val locationName="location"+System.currentTimeMillis()
+    val location=grassdataPath+locationName
+    var commandList:List[String] =List.empty
+    commandList=commandList:+"g.mapset -c mapset="+mapset+" location="+locationName
+    val grassInputDataName_1="javainput"+System.currentTimeMillis()
+    commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
+    val grassOutPutDataName="grassoutput"+System.currentTimeMillis()
+    commandList=commandList:+"r.out.gdal"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName +" format="+format
+    commandList=commandList:+"g.region raster="+grassOutPutDataName+" -p"
+    commandList=commandList:+"r.out.gdal input="+grassOutPutDataName+"@"+mapset+" output="+sourceTiffpath
+    val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
+
+    val startShFile=createStartSh2(grassRoot,execShFile,shFilePath_out,shFilePath,outputTiffPath_1,location)
+
+    val startShFile_docker=createStartSh_docker(shFilePath_out,startShFile)
+
+    runGrassSh2(startShFile_docker)
+
+    val file:File=new File(sourceTiffpath_out)
+    while(!file.exists()){}
+    val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
+
+    tif
+  }
+
+  //26
+  def outBinByGrass(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),nu_ll:String = "0",bytes:String ,order:String = "native")={
+    val time_1=System.currentTimeMillis()
+    val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
+    val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
+    saveRDDToTif(input,outputTiffPath_1_out)
+
+    val sourceTiffpath=tifFilePath+"grassoutput_"+System.currentTimeMillis()+".bin"
+    val sourceTiffpath_out=tifFilePath_out+"grassoutput_"+System.currentTimeMillis()+".bin"
+    //  val epsg=input._2.crs.toString
+    val locationName="location"+System.currentTimeMillis()
+    val location=grassdataPath+locationName
+    var commandList:List[String] =List.empty
+    commandList=commandList:+"g.mapset -c mapset="+mapset+" location="+locationName
+    val grassInputDataName_1="javainput"+System.currentTimeMillis()
+    commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
+    val grassOutPutDataName="grassoutput"+System.currentTimeMillis()
+    commandList=commandList:+"r.out.bin"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName +" null="+nu_ll+" bytes="+bytes+" order="+order
+    commandList=commandList:+"g.region raster="+grassOutPutDataName+" -p"
+    commandList=commandList:+"r.out.gdal input="+grassOutPutDataName+"@"+mapset+" output="+sourceTiffpath
+    val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
+
+    val startShFile=createStartSh(grassRoot,execShFile,shFilePath,outputTiffPath_1,location)
+
+    val startShFile_docker=createStartSh_docker(shFilePath_out,startShFile)
+
+    runGrassSh2(startShFile_docker)
+
+    val file:File=new File(sourceTiffpath_out)
+    while(!file.exists()){}
+    // val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
+
+    sourceTiffpath
+  }
+
+  //26
+  def inGdalByGrass(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), band:String, location:String)={
+    val time_1=System.currentTimeMillis()
+    val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
+    val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
+    saveRDDToTif(input,outputTiffPath_1_out)
+
+    val sourceTiffpath=tifFilePath+"grassoutput_"+System.currentTimeMillis()+".tif"
+    //val epsg=input._2.crs.toString
+    val sourceTiffpath_out=tifFilePath_out+"grassoutput_"+System.currentTimeMillis()+".tif"
+    val locationName="location"+System.currentTimeMillis()
+    val location=grassdataPath+locationName
+    var commandList:List[String] =List.empty
+    commandList=commandList:+"g.mapset -c mapset="+mapset+" location="+locationName
+    val grassInputDataName_1="javainput"+System.currentTimeMillis()
+    commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
+    val grassOutPutDataName="grassoutput"+System.currentTimeMillis()
+    commandList=commandList:+"r.in.gdal"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName +" band="+band+" location="+location
+    commandList=commandList:+"g.region raster="+grassOutPutDataName+" -p"
+    commandList=commandList:+"r.out.gdal input="+grassOutPutDataName+"@"+mapset+" output="+sourceTiffpath
+    val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
+
+    val startShFile=createStartSh2(grassRoot,execShFile,shFilePath_out,shFilePath,outputTiffPath_1,location)
+
+    val startShFile_docker=createStartSh_docker(shFilePath_out,startShFile)
+
+    runGrassSh2(startShFile_docker)
+
+    val file:File=new File(sourceTiffpath_out)
+    while(!file.exists()){}
+    val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
+
+    tif
+  }
 
 }
