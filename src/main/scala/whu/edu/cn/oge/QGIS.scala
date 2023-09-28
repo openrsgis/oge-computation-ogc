@@ -1502,7 +1502,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --startWidth $startWidth --endWidth $endWidth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --start-width $startWidth --end-width $endWidth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1544,7 +1544,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_wedgebuffers.py --input "$outputShpPath" --innerRadius $innerRadius --outerRadius $outerRadius --width $width --azimuth $azimuth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_wedgebuffers.py --input "$outputShpPath" --inner-radius $innerRadius --outer-radius $outerRadius --width $width --azimuth $azimuth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1584,7 +1584,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_concavehull.py --input "$outputShpPath" --noMultigeometry "$noMultigeometry" --holes "$holes" --alpha $alpha --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_concavehull.py --input "$outputShpPath" --no-multigeometry "$noMultigeometry" --holes "$holes" --alpha $alpha --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
