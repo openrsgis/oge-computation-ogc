@@ -1,11 +1,43 @@
 {
-  "Service.print": {
+  "Service.printNumber": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "Number",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Service.printString": {
     "description": "Print the Number or List or String to console.",
     "returns": "Unit",
     "args": [
       {
         "name": "object",
         "type": "String",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Service.printList": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "List<String>",
         "description": "The value to print."
       },
       {

@@ -1130,6 +1130,7 @@ object Trigger {
 
 
     } finally {
+      Trigger.outputInformationList.clear()
       Trigger.optimizedDagMap.clear()
       Trigger.coverageCollectionMetadata.clear()
       Trigger.lazyFunc.clear()
