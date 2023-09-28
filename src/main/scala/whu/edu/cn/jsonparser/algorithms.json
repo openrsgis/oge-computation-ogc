@@ -1,4 +1,20 @@
 {
+  "Service.print": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "String",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
   "FeatureCollection.filter": {
     "description": "Applies a filter to a given collection.",
     "returns": "FeatureCollection",
@@ -1142,6 +1158,17 @@
       }
     ]
   },
+  "Coverage.bandNames": {
+    "description": "Get all bands names from a coverage.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to operate."
+      }
+    ]
+  },
   "Coverage.selectBands": {
     "description": "",
     "returns": "Coverage",
@@ -1155,6 +1182,17 @@
         "name": "bands",
         "type": "List<String>",
         "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.bandNum": {
+    "description": "Get the count of the coverage.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage."
       }
     ]
   },
@@ -4547,9 +4585,14 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "axis",
-        "type": "String",
-        "description": "Specify the direction of the convolution kernel,x/y."
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
       }
     ]
   },
@@ -4807,12 +4850,12 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "xradius",
+        "name": "xRadius",
         "type": "Int",
         "description": "The horizontal radius of the kernel to generate."
       },
       {
-        "name": "yradius",
+        "name": "yRadius",
         "type": "Int",
         "description": "The vertical radius of the kernel to generate."
       },
@@ -4831,13 +4874,7 @@
   "Kernel.laplacian4": {
     "description": "Generates a 3x3 laplacian-4 edge-detection kernel.",
     "returns": "Kernel",
-    "args": [
-      {
-        "name": "normalize",
-        "type": "Boolean",
-        "description": "Normalize the kernel values to sum to 1."
-      }
-    ]
+    "args": []
   },
   "Kernel.laplacian8": {
     "description": "Generates a 3x3 laplacian-8 edge-detection kernel.",
@@ -4871,7 +4908,7 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "kernel1",
+        "name": "kernel",
         "type": "Kernel",
         "description": "The first kernel."
       }
@@ -7408,12 +7445,12 @@
     "args": [
       {
         "name": "inputTemperature",
-        "type": "Table",
+        "type": "String",
         "description": "温度表格数据"
       },
       {
         "name": "inputStation",
-        "type": "FeatureCollection",
+        "type": "String",
         "description": "站点数据"
       },
       {
@@ -7428,7 +7465,7 @@
       },
       {
         "name": "timeStep",
-        "type": "Float",
+        "type": "Long",
         "description": "步长"
       }
     ]
@@ -7439,27 +7476,27 @@
     "args": [
       {
         "name": "rate",
-        "type": "Float",
+        "type": "Double",
         "description": "rate"
       },
       {
         "name": "recession",
-        "type": "Float",
+        "type": "Int",
         "description": "recession"
       },
       {
         "name": "tMax",
-        "type": "Float",
+        "type": "Int",
         "description": "tMax"
       },
       {
         "name": "iterception",
-        "type": "Float",
+        "type": "Int",
         "description": "iterception"
       },
       {
         "name": "waterShedArea",
-        "type": "Float",
+        "type": "Int",
         "description": "waterShedArea"
       },
       {
@@ -7474,17 +7511,17 @@
       },
       {
         "name": "timeStep",
-        "type": "Float",
+        "type": "Long",
         "description": "步长"
       },
       {
         "name": "inputTopoIndex",
-        "type": "Table",
+        "type": "String",
         "description": ""
       },
       {
         "name": "inputPrecipEvapFile",
-        "type": "Table",
+        "type": "String",
         "description": ""
       }
     ]
@@ -7495,7 +7532,7 @@
     "args": [
       {
         "name": "input",
-        "type": "Table",
+        "type": "String",
         "description": ""
       }
     ]
@@ -8109,6 +8146,178 @@
         "name": "z-Factor",
         "type": "Double",
         "description": "a z-factor for correct hillshade calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.linearTransformation": {
+    "description": "Gray-level linear transformations",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The Coverage to make gray-level linear transformations"
+      },
+      {
+        "name": "k",
+        "type": "Double",
+        "description": "The  coefficientLinearTransformation$ to make gray-level linear transformations"
+      },
+      {
+        "name": "b",
+        "type": "Int",
+        "description": "The  constant to add in gray-level linear transformations"
+      }
+    ]
+  },
+  "Coverage.fakeColorCompose": {
+    "description": "Compose single-band photo to color photo",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The Coverage to make FakeColorCompose"
+      },
+      {
+        "name": "BandRed",
+        "type": "Int",
+        "description": "Chose one band as red band the number stands for bandindex"
+      },
+      {
+        "name": "BandGreen",
+        "type": "Int",
+        "description": "Chose one band as green band the number stands for bandindex"
+      },
+      {
+        "name": "BandBlue",
+        "type": "Int",
+        "description": "Chose one band as Blue band the number stands for bandindex"
+      }
+    ]
+  },
+  "Coverage.standardDeviationCalculation": {
+    "description": "Calculate the standard deviation of each band of coverage",
+    "returns": "Map",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to standard deviation calculation."
+      }
+    ]
+  },
+  "Coverage.cannyEdgeDetection": {
+    "description": "Edge detection by Canny",
+    "returns": "coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to Canny edge detection."
+      }
+    ]
+  },
+  "Coverage.standardDeviationStretching": {
+    "description": "Calculate the standard deviation and perform stretching",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name":"coverage",
+        "type":"Coverage",
+        "description":"Each band of coverage is stretched based on standard deviation."}
+    ]
+  },
+  "Coverage.histogramEqualization": {
+    "description": "Return the new image with equalized histogram.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be histogram equalized."
+      }
+    ]
+  },
+  "Coverage.bilateralFilter": {
+    "description": "Applies a bilateral filter to each band of an image using a named bilateral kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be filtered with bilateral filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "d",
+        "type": "Int",
+        "description": "The side length of the filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaSpace",
+        "type": "Double",
+        "description": "Spatial weight.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaColor",
+        "type": "Double",
+        "description": "Value weight.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.gaussianBlur": {
+    "description": "Applies a gaussian filter to each band of an image using a named gaussian kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be filtered with gaussian filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "ksize",
+        "type": "List[Int]",
+        "description": "The list containing the height and width of the filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaX",
+        "type": "Double",
+        "description": "Standard deviation of the gaussian distribution in the x-direction.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaY",
+        "type": "Double",
+        "description": "Standard deviation of the gaussian distribution in the y-direction.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
       }
     ]
   }

@@ -232,7 +232,7 @@ object QGIS {
                      input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                      fieldType: String = "0",
                      fieldPrecision: Double = 0,
-                     fieldName: String = "",
+                     fieldName: String = "default",
                      fieldLength: Double = 10):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
 
@@ -271,7 +271,7 @@ object QGIS {
   def nativeAddXYField(implicit sc: SparkContext,
                        input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                        crs: String = "EPSG:4326",
-                       prefix: String = ""):
+                       prefix: String = "default"):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
@@ -413,7 +413,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_affinetransform.py --input "$outputTiffPath" --segments $segments --join-style "$joinStyle" --offset $offset --count $count --miter-limit $miterLimit --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_arrayoffsetlines.py --input "$outputTiffPath" --segments $segments --join-style "$joinStyle" --offset $offset --count $count --miter-limit $miterLimit --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -908,7 +908,7 @@ object QGIS {
    */
   def nativeTransect(implicit sc: SparkContext,
                      input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
-                     side: String = "",
+                     side: String = "2",
                      length: Double = 5.0,
                      angle: Double = 90.0):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
@@ -1462,7 +1462,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_singlesidedbuffer.py --input "$outputShpPath" --side "$sideInput" --distance $distance --segments $segments --joinStyle "$joinStyleInput" --miterLimit $miterLimit --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_singlesidedbuffer.py --input "$outputShpPath" --side "$sideInput" --distance $distance --segments $segments --join-style "$joinStyleInput" --miter-limit $miterLimit --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2215,7 +2215,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridlinear.py --input "$outputShpPath" --extra $extra --radius $radius --nodata $nodata --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridlinear.py --input "$outputShpPath" --extra "$extra" --radius $radius --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
