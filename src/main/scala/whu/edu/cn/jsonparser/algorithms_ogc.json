@@ -2287,7 +2287,7 @@
       }
     ]
   },
-  "Feature.taperedBufferByQIS": {
+  "Feature.taperedBufferByQGIS": {
     "description": "Creates tapered buffer along line geometries, using a specified start and end buffer diameter.",
     "returns": "Feature",
     "args": [
@@ -6689,7 +6689,7 @@
     "returns": "Feature",
     "args": [
       {
-        "name": "gjson",
+        "name": "coors",
         "type": "String",
         "description": "geojson"
       },
