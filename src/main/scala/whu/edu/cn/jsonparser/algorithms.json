@@ -2368,7 +2368,7 @@
       }
     ]
   },
-  "Feature.concaveHullByQIS": {
+  "Feature.concaveHullByQGIS": {
     "description": "Computes the concave hull of the features in an input point layer.",
     "returns": "Feature",
     "args": [
@@ -2400,7 +2400,7 @@
       }
     ]
   },
-  "Feature.delaunayTriangulationByQIS": {
+  "Feature.delaunayTriangulationByQGIS": {
     "description": "Creates a polygon layer with the Delaunay triangulation corresponding to the input point layer.",
     "returns": "Feature",
     "args": [
@@ -2411,7 +2411,7 @@
       }
     ]
   },
-  "Feature.voronoiPolygonsByQIS": {
+  "Feature.voronoiPolygonsByQGIS": {
     "description": "Takes a point layer and generates a polygon layer containing the Voronoi polygons corresponding to those input points.",
     "returns": "Feature",
     "args": [
