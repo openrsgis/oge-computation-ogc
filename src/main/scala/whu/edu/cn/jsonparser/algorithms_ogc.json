@@ -2362,7 +2362,7 @@
       }
     ]
   },
-  "Feature.wedgeBuffersByQIS": {
+  "Feature.wedgeBuffersByQGIS": {
     "description": "Creates wedge shaped buffers from input points.",
     "returns": "Feature",
     "args": [
