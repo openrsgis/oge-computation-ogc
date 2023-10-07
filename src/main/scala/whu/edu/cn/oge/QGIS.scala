@@ -3097,7 +3097,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_dissolve.py --input "$outputShpPath" --explode-collections $explodeCollections --field $field --compute-area $computeArea --keep-attributes $keepAttributes --compute-statistics $computeStatistics --count-features $countFeatures --statistics-attribute $statisticsAttribute --options $options --geometry $geometry --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_dissolve.py --input "$outputShpPath" --explode-collections $explodeCollections --field "$field" --compute-area $computeArea --keep-attributes $keepAttributes --compute-statistics $computeStatistics --count-features $countFeatures --statistics-attribute "$statisticsAttribute" --options "$options" --geometry $geometry --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3120,20 +3120,22 @@ object QGIS {
    */
   def gdalClipVectorByExtent(implicit sc: SparkContext,
                              input: RDD[(String, (Geometry, Map[String, Any]))],
-                             extent: String = "",
+                             extent: RDD[(String, (Geometry, Map[String, Any]))],
                              options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
+    val outputShpPath1 = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
+    val outputShpPath2 = "/mnt/storage/algorithmData/extent_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath)
+    saveFeatureRDDToShp(input, outputShpPath1)
+    saveFeatureRDDToShp(extent, outputShpPath2)
 
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath" --extent $extent --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath1" --extent "$outputShpPath2" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3156,21 +3158,23 @@ object QGIS {
    */
   def gdalClipVectorByPolygon(implicit sc: SparkContext,
                               input: RDD[(String, (Geometry, Map[String, Any]))],
-                              mask: String = "",
+                              mask: RDD[(String, (Geometry, Map[String, Any]))],
                               options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
+    val outputShpPath1 = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
+    val outputShpPath2 = "/mnt/storage/algorithmData/mask_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath)
+    saveFeatureRDDToShp(input, outputShpPath1)
+    saveFeatureRDDToShp(mask, outputShpPath2)
 
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbypolygon.py --input "$outputShpPath" --mask $mask --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbypolygon.py --input "$outputShpPath1" --mask "$outputShpPath2" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3207,7 +3211,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_offsetcurve.py --input "$outputShpPath" --distance $distance --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_offsetcurve.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3245,7 +3249,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_pointsalonglines.py --input "$outputShpPath" --distance $distance --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_pointsalonglines.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3291,7 +3295,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_buffervectors.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field $field --dissolve $dissolve --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_buffervectors.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
 
       println(s"st = $st")
@@ -3342,7 +3346,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;d /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explodecollections $explodeCollections --field $field --bufferSide $bufferSideInput --dissolve $dissolve --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;d /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --buffer-side $bufferSideInput --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
