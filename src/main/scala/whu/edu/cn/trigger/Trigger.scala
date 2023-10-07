@@ -104,11 +104,21 @@ object Trigger {
       funcName match {
 
         //Others
-        case "Service.print" =>
+        case "Service.printString" =>
           val temp = getValue(args("object"))
           val res =temp._1
           val valueType=temp._2
           Service.print(res,args("name"),valueType)
+        case "Service.printNumber" =>
+          val temp = getValue(args("object"))
+          val res = temp._1
+          val valueType = temp._2
+          Service.print(res, args("name"), valueType)
+        case "Service.printList" =>
+          val temp = getValue(args("object"))
+          val res = temp._1
+          val valueType = temp._2
+          Service.print(res, args("name"), valueType)
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))

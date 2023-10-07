@@ -1234,6 +1234,17 @@
       }
     ]
   },
+  "Coverage.bandNum": {
+    "description": "Get the count of the coverage.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage."
+      }
+    ]
+  },
   "Coverage.selectBands": {
     "description": "",
     "returns": "Coverage",
