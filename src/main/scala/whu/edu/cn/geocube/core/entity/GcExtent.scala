@@ -237,29 +237,35 @@ object GcExtent {
    */
   @deprecated("forDece: 该方法未被使用，个人分析认为其应当被弃用")
   def getExtent(extentKey: String, connAddr: String, user: String, password: String): GcExtent = {
-
-    val conn = DriverManager.getConnection(connAddr, user, password)
-    if (conn != null) {
-      try {
-        val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-        // Execute Query
-        val sql = "Select extent_key,grid_code,city_code,city_name,province_name,district_name,extent " +
-          "from gc_extent where extent_key = " + extentKey + ";"
-        val rs = statement.executeQuery(sql)
-        val rsArray = new Array[String](7);
-        val columnCount = rs.getMetaData().getColumnCount()
-        //each tile has unique extent object
-        while (rs.next) {
-          for (i <- 1 to columnCount)
-            rsArray(i - 1) = rs.getString(i)
-        }
-        val extent = new GcExtent(rsArray(0).toInt, rsArray(1), rsArray(2), rsArray(3), rsArray(4), rsArray(5), rsArray(6))
-        extent
-      } finally {
-        conn.close
-      }
-    } else
-      throw new RuntimeException("Null connection!")
+    var extent: GcExtent = null
+    try {
+      PostgresqlUtilDev.simpleSelect(
+        resultNames = Array(
+          "extent_key", "grid_code", "city_code",
+          "city_name", "province_name", "district_name",
+          "extent"),
+        tableName = "gc_extent",
+        rangeLimit = Array(("extent_key", "=", extentKey)),
+        func = resultSet => {
+          val resultSetArray = new Array[String](7)
+          val columnCount: Int = resultSet.getMetaData.getColumnCount
+          //each tile has unique extent object
+          while (resultSet.next()) {
+            for (i <- 1 to columnCount)
+              resultSetArray(i - 1) = resultSet.getString(i)
+          }
+          extent = new GcExtent(
+            resultSetArray(0).toInt,
+            resultSetArray(1), resultSetArray(2),
+            resultSetArray(3), resultSetArray(4),
+            resultSetArray(5), resultSetArray(6)
+          )
+        })
+    } catch {
+      case e: SQLException =>
+        e.printStackTrace()
+    }
+    extent
   }
 
   /**
