@@ -575,21 +575,21 @@ object Trigger {
         case "Coverage.compositeByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_composite(sc, red = coverageRddList(args("red")), green = coverageRddList(args("green")), blue = coverageRddList(args("blue")), levels = args("levels")))
         case "Coverage.sunmaskByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_sunmask(sc, elevation = coverageRddList(args("red")), year = args("year"), month = args("month"), day = args("day"), hour = args("hour"), minute = args("minute"), second = args("second"), timezone = args("timezone")))
+          coverageRddList += (UUID -> GrassUtil.r_sunmask(sc, elevation = coverageRddList(args("elevation")), year = args("year"), month = args("month"), day = args("day"), hour = args("hour"), minute = args("minute"), second = args("second"), timezone = args("timezone")))
         case "Coverage.surfIdwByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_surf_idw(sc, input = coverageRddList(args("input")), npoints = args("npoints")))
         case "Coverage.rescaleByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_rescale(sc, input = coverageRddList(args("input")), to = args("to")))
         case "Coverage.surfAreaByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_surf_area(sc, map = coverageRddList(args("map")), vscale = args("vscale")))
+          stringList += (UUID -> GrassUtil.r_surf_area(sc, map = coverageRddList(args("map")), vscale = args("vscale")))
         case "Coverage.statsByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_stats(sc, input = coverageRddList(args("input")), flags = args("flags"), separator = args("separator"), null_value = args("null_value"), nsteps = args("nsteps")))
+          stringList += (UUID -> GrassUtil.r_stats(sc, input = coverageRddList(args("input")), flags = args("flags"), separator = args("separator"), null_value = args("null_value"), nsteps = args("nsteps")))
         case "Coverage.coinByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_coin(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), units = args("units")))
+          stringList += (UUID -> GrassUtil.r_coin(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), units = args("units")))
         case "Coverage.volumeByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_volume(sc, input = coverageRddList(args("input")), clump = coverageRddList(args("clump"))))
+          stringList += (UUID -> GrassUtil.r_volume(sc, input = coverageRddList(args("input")), clump = coverageRddList(args("clump"))))
         case "Coverage.outPNGByGrass" =>
-          grassResultList += (UUID -> GrassUtil.r_out_png(sc, input = coverageRddList(args("input")), compression = args("compression")))
+          stringList += (UUID -> GrassUtil.r_out_png(sc, input = coverageRddList(args("input")), compression = args("compression")))
         case "Coverage.resampStatsByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_resamp_stats(sc,coverageRddList(args("input")),args("res"),args("method"),args("quantile")))
         case "Coverage.resampInterpByGrass" =>
@@ -609,13 +609,13 @@ object Trigger {
         case "Coverage.reclassByGrass" =>
           coverageRddList += (UUID -> GrassUtil.reclassByGrass(sc,coverageRddList(args("input")),args("rules")))
         case "Coverage.reportByGrass" =>
-          grassResultList += (UUID -> GrassUtil.reportByGrass(sc,coverageRddList(args("map"))))
+          stringList += (UUID -> GrassUtil.reportByGrass(sc,coverageRddList(args("map"))))
         case "Coverage.supportStatsByGrass" =>
-          grassResultList += (UUID -> GrassUtil.supportStatsByGrass(sc,coverageRddList(args("map"))))
+          stringList += (UUID -> GrassUtil.supportStatsByGrass(sc,coverageRddList(args("map"))))
         case "Coverage.outGdalByGrass" =>
           coverageRddList += (UUID -> GrassUtil.outGdalByGrass(sc,coverageRddList(args("input")),args("format")))
         case "Coverage.outBinByGrass" =>
-          grassResultList += (UUID -> GrassUtil.outBinByGrass(sc,coverageRddList(args("input")),args("nu_ll"),args("bytes"),args("order")))
+          stringList += (UUID -> GrassUtil.outBinByGrass(sc,coverageRddList(args("input")),args("nu_ll"),args("bytes"),args("order")))
         case "Coverage.inGdalByGrass" =>
           coverageRddList += (UUID -> GrassUtil.inGdalByGrass(sc,coverageRddList(args("input")),args("band"),args("location")))
 
