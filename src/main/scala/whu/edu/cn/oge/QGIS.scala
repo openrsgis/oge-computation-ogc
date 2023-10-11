@@ -1928,7 +1928,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra $extra --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2009,7 +2009,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra $extra --metric $metricInput --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --metric $metricInput --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2281,7 +2281,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra $extra --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra "$extra" --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3346,7 +3346,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;d /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --buffer-side $bufferSideInput --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --buffer-side $bufferSideInput --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
