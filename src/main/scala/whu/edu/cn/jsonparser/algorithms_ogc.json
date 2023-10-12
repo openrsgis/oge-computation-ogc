@@ -6837,7 +6837,7 @@
   },
   "Feature.coordinates": {
     "description": "compute coordinates",
-    "returns": "List[Array[Coordinate]]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6864,7 +6864,7 @@
   },
   "Feature.isUnbounded": {
     "description": "judge a geometry is unbounded",
-    "returns": "List[Boolean]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6875,7 +6875,7 @@
   },
   "Feature.getType": {
     "description": "Returns the GeoJSON type of the geometry",
-    "returns": "List[String]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6886,7 +6886,7 @@
   },
   "Feature.projection": {
     "description": "Returns the projection of the geometry.",
-    "returns": "List[Int]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6897,7 +6897,7 @@
   },
   "Feature.toGeoJSONString": {
     "description": "Returns a GeoJSON string representation of the geometry.",
-    "returns": "List[String]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6908,7 +6908,7 @@
   },
   "Feature.length": {
     "description": "compute length",
-    "returns": "List[Double]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6940,7 +6940,7 @@
   },
   "Feature.contains": {
     "description": "Returns true iff one geometry contains the other.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6961,7 +6961,7 @@
   },
   "Feature.containedIn": {
     "description": "Returns true iff one geometry is contained in the other.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6982,7 +6982,7 @@
   },
   "Feature.disjoint": {
     "description": "Returns true iff the geometries are disjoint.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7003,7 +7003,7 @@
   },
   "Feature.distance": {
     "description": "Returns the minimum distance between two geometries.",
-    "returns": "Double",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7066,7 +7066,7 @@
   },
   "Feature.intersects": {
     "description": "Returns true iff the geometries intersect.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
