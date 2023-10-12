@@ -10,6 +10,7 @@ import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.geocube.util.HbaseUtil._
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
+import java.util
 import java.util.{Date, UUID}
 
 import geotrellis.layer.stitch.TileLayoutStitcher
@@ -187,7 +188,7 @@ object Feature {
 
   private def getMapFromStr(str:String) : Map[String, Any] ={
     val map = Map.empty[String , Any]
-    map += (str.split(':')(0) -> str.split(':')(1))
+    map += (str.stripPrefix("{").split(':')(0) -> str.split(':')(1))
     map
   }
 
@@ -369,8 +370,8 @@ object Feature {
    * @param crs        the crs for compute area
    * @return
    */
-  def area(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): List[Double] = {
-    featureRDD.map(t => Geometry.area(t._2._1, crs)).collect().toList
+  def area(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): String = {
+    featureRDD.map(t => Geometry.area(t._2._1, crs)).collect().toList.mkString(",")
   }
 
   /**
@@ -459,13 +460,13 @@ object Feature {
    * @param featureRDD
    * @return
    */
-  def isUnbounded(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[Boolean] = {
+  def isUnbounded(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
     featureRDD.map(t => {
       if (t._2._1.getBoundaryDimension < 0)
         false
       else
         true
-    }).collect().toList
+    }).collect().toList.mkString
   }
 
   /**
@@ -474,10 +475,10 @@ object Feature {
    * @param featureRDD the featureRDD to opreate
    * @return
    */
-  def getType(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[String] = {
+  def getType(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
     featureRDD.map(t => {
       t._2._1.getGeometryType
-    }).collect().toList
+    }).collect().toList.mkString
   }
 
   /**
@@ -486,10 +487,10 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def projection(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[Int] = {
+  def projection(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
     featureRDD.map(t => {
       t._2._1.getSRID
-    }).collect().toList
+    }).collect().toList.mkString
   }
 
   /**
@@ -548,10 +549,10 @@ object Feature {
    * @param crs        the crs for compute length
    * @return
    */
-  def getLength(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): List[Double] = {
+  def getLength(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): String = {
     featureRDD.map(t => {
       Geometry.length(t._2._1, crs)
-    }).collect().toList
+    }).collect().toList.mkString
   }
 
   /**
@@ -597,10 +598,10 @@ object Feature {
    * @return
    */
   def contains(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
-               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): String = {
     val geom1 = featureRDD1.first()._2._1
     val geom2 = featureRDD2.first()._2._1
-    Geometry.contains(geom1, geom2, crs)
+    Geometry.contains(geom1, geom2, crs).toString
   }
 
   /**
@@ -613,10 +614,10 @@ object Feature {
    * @return
    */
   def containedIn(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
-                  featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+                  featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): String = {
     val geom1 = featureRDD1.first()._2._1
     val geom2 = featureRDD2.first()._2._1
-    Geometry.containedIn(geom1, geom2, crs)
+    Geometry.containedIn(geom1, geom2, crs).toString
   }
 
   /**
@@ -629,10 +630,10 @@ object Feature {
    * @return
    */
   def disjoint(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
-               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): String = {
     val geom1 = featureRDD1.first()._2._1
     val geom2 = featureRDD2.first()._2._1
-    Geometry.disjoint(geom1, geom2, crs)
+    Geometry.disjoint(geom1, geom2, crs).toString
   }
 
   /**
@@ -645,10 +646,10 @@ object Feature {
    * @return
    */
   def distance(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
-               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): Double = {
+               featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): String = {
     val geom1 = featureRDD1.first()._2._1
     val geom2 = featureRDD2.first()._2._1
-    Geometry.distance(geom1, geom2, crs)
+    Geometry.distance(geom1, geom2, crs).toString
   }
 
   /**
@@ -746,10 +747,10 @@ object Feature {
    * @return
    */
   def withDistance(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
-                   featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], distance: Double, crs: String = "EPSG:3857"): Boolean = {
+                   featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], distance: Double, crs: String = "EPSG:3857"): String = {
     val geom1 = featureRDD1.first()._2._1
     val geom2 = featureRDD2.first()._2._1
-    Geometry.withDistance(geom1, geom2, distance, crs)
+    Geometry.withDistance(geom1, geom2, distance, crs).toString
   }
 
   /**
@@ -825,8 +826,8 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def propertyNames(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[List[String]] = {
-    featureRDD.map(t => t._2._2.keySet.toList).collect().toList
+  def propertyNames(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
+    featureRDD.map(t => t._2._2.keySet.toList).collect().toList.mkString(",")
   }
 
   /**

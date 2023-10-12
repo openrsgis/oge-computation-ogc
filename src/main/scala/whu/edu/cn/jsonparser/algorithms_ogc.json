@@ -4071,7 +4071,7 @@
       },
       {
         "name": "extent",
-        "type": "String",
+        "type": "Feature",
         "description": "Defines the bounding box that should be used for the output vector file. It has to be defined in target CRS coordinates.",
         "optional": "True",
         "default": ""
@@ -4096,7 +4096,7 @@
       },
       {
         "name": "mask",
-        "type": "String",
+        "type": "Feature",
         "description": "Layer to be used as clipping extent for the input vector layer.",
         "optional": "True",
         "default": ""
@@ -4596,11 +4596,6 @@
         "description": "Name of input raster map"
       },
       {
-        "name": "method",
-        "type": "String",
-        "description": "Textural measurement method Options: asm, contrast, corr, var, idm, sa, sv, se, entr, dv, de, moc1, moc2 "
-      },
-      {
         "name": "size",
         "type": "String",
         "description": "The size of moving window (odd and >= 3)",
@@ -4613,6 +4608,11 @@
         "description": "The distance between two samples (>= 1) The distance must be smaller than the size of the moving window",
         "optional": "True",
         "default": "1"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Textural measurement method Options: asm, contrast, corr, var, idm, sa, sv, se, entr, dv, de, moc1, moc2 "
       }
     ]
   },
