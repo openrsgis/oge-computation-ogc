@@ -41,6 +41,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -2151,11 +2152,9 @@ object Coverage {
    */
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val coverageConverted =
       (coverage._1.map(t => {
         (t._1, t._2.convert(ByteConstantNoDataCellType))
       }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    coverageConverted
   }
 
   /**
@@ -2975,7 +2974,7 @@ object Coverage {
 
     val outputPath = Paths.get(filePath)
 
-    import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     inputStream.close()
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)

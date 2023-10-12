@@ -215,8 +215,7 @@ object Trigger {
         case "Coverage.export" =>
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
         case "Coverage.date" =>
-          val date: String = Coverage.date(coverage = coverageRddList(args("coverage")))
-          tempNoticeJson.put("date", date)
+          stringList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
           coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.subtractNum" =>
