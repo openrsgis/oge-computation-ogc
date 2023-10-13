@@ -5,14 +5,16 @@ import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{FloatArrayTile, Raster, Tile}
 import geotrellis.raster.render.{ColorRamp, RGB}
 import geotrellis.spark._
+
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig
+
 import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
-import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.geocube.view.Info
 
 /**
@@ -95,7 +97,7 @@ object CloudFilter {
             for (key <- keys) {
               val tile = bandTileMap.get(key).get
               val maskTilePixelValue = maskTile.get(i, j)
-              if (!GcConstant.cloudValueLs8.contains(maskTilePixelValue) && !GcConstant.cloudShadowValueLs8.contains(maskTilePixelValue))
+              if (!GlobalConfig.GcConf.cloudValueLs8.contains(maskTilePixelValue) && !GlobalConfig.GcConf.cloudShadowValueLs8.contains(maskTilePixelValue))
                 matrix.setQuick(bandNameIndexMap.get(key).get, instantIndex, tile.getDouble(i, j))
               bandIndex += 1
             }
@@ -197,7 +199,7 @@ object CloudFilter {
             for (key <- keys) {
               val tile = bandTileMap.get(key).get
               val maskTilePixelValue = maskTile.get(i, j)
-              if (!GcConstant.cloudValueLs8.contains(maskTilePixelValue) && !GcConstant.cloudShadowValueLs8.contains(maskTilePixelValue))
+              if (!GlobalConfig.GcConf.cloudValueLs8.contains(maskTilePixelValue) && !GlobalConfig.GcConf.cloudShadowValueLs8.contains(maskTilePixelValue))
                 matrix.setQuick(bandNameIndexMap.get(key).get, instantIndex, tile.getDouble(i, j))
               bandIndex += 1
             }
@@ -234,9 +236,9 @@ object CloudFilter {
     val colorRamp = ColorRamp(RGB(0, 0, 0), RGB(255, 255, 255))
       .stops(100)
       .setAlphaGradient(0xFF, 0xAA)
-    stitched.tile.renderPng(colorRamp).write(GcConstant.localHtmlRoot + uuid + "_noCloud.png")
+    stitched.tile.renderPng(colorRamp).write(GlobalConfig.GcConf.localHtmlRoot + uuid + "_noCloud.png")
 
-    results += Info(GcConstant.localHtmlRoot + uuid + "_noCloud.png", 0, "Cloud/Cloud Shadow Free")
+    results += Info(GlobalConfig.GcConf.localHtmlRoot + uuid + "_noCloud.png", 0, "Cloud/Cloud Shadow Free")
     results.toArray
   }
 

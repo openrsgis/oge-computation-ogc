@@ -3,21 +3,14 @@ package whu.edu.cn.geocube.application.spetralindices
 import com.fasterxml.jackson.databind.ObjectMapper
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.{Raster, Tile}
-import geotrellis.spark.{ContextRDD, TileLayerRDD}
-import geotrellis.vector.Extent
+import geotrellis.raster.render.{ColorRamp, RGB}
+import geotrellis.raster.{stitch, _}
+import geotrellis.spark._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
-import geotrellis.raster.render.{ColorRamp, RGB}
-import geotrellis.raster.{Tile, _}
-import geotrellis.spark._
-import geotrellis.vector.Extent
-import org.apache.spark.rdd.RDD
-import whu.edu.cn.geocube.core.entity.{GcMeasurement, QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
-import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
-import whu.edu.cn.geocube.util.GcConstant
 
 import java.io.{File, FileOutputStream}
 import java.util.UUID
@@ -59,8 +52,7 @@ object Slope {
     val SoutputTiffPath = executorOutputDir + uuid + "_slope.TIF"
     val slopeRaster: Raster[Tile] =Raster(slopeTile,srcExtent)
     GeoTiff(slopeRaster, spatialMetadata.crs).write(SoutputTiffPath)
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
+
 
     val outputMetaPath = executorOutputDir + "slope_job_res_meta.json"
     val objectMapper =new ObjectMapper()

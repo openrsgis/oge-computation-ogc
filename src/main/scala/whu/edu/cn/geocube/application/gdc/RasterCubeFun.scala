@@ -11,8 +11,9 @@ import whu.edu.cn.geocube.core.entity.{GcDimension, QueryParams, RasterTileLayer
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import geotrellis.raster.mapalgebra.local._
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
-import whu.edu.cn.geocube.util.{GcConstant, PostgresqlService}
+import whu.edu.cn.geocube.util.PostgresqlService
 import geotrellis.spark._
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 import whu.edu.cn.geocube.application.gdc.GDCTrigger.isOptionalArg
 
 import java.io.{File, FileOutputStream}
@@ -430,8 +431,6 @@ object RasterCubeFun {
     val outputMetaPath = filePath.split("\\.")(0) + ".json"
     println(outputMetaPath)
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", filePath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extent)

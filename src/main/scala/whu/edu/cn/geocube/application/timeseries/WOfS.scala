@@ -8,6 +8,7 @@ import geotrellis.vector.Extent
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local.{Add, LessOrEqual, Subtract}
 import geotrellis.raster.render.{ColorRamp, Exact, GreaterThanOrEqualTo, LessThanOrEqualTo, RGB}
+
 import java.io.{File, FileOutputStream}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
@@ -15,6 +16,8 @@ import java.util
 import java.util.{Date, UUID}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot, localHtmlRoot}
+
 import scala.collection.mutable.ArrayBuffer
 import sys.process._
 import scala.util.control.Breaks._
@@ -24,7 +27,7 @@ import whu.edu.cn.geocube.core.raster.query.{DistributedQueryRasterTiles, QueryR
 import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.core.entity.{RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
-import whu.edu.cn.geocube.util.{GcConstant, RuntimeData, TileUtil}
+import whu.edu.cn.geocube.util.{RuntimeData, TileUtil}
 import whu.edu.cn.geocube.view.Info
 import whu.edu.cn.geocube.application.timeseries.WOfSBatchScript._
 
@@ -34,22 +37,21 @@ import whu.edu.cn.geocube.application.timeseries.WOfSBatchScript._
  * during a time period, and summarizing the results as
  * the number of times that water is detected at each pixel.
  */
-object WOfS{
+object WOfS {
   /**
    * Used in Jupyter Notebook.
    *
    * Using RDD[(SpaceTimeBandKey,Tile)] as input.
    *
    * @param tileLayerRddWithMeta a rdd of raster tiles
-   *
    * @return result info
    */
-  def wofs(tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
+  def wofs(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
     println("Task is running ...")
-    val tranTileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
+    val tranTileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
 
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
     val srcMetadata = tranTileLayerRddWithMeta._2.tileLayerMetadata
     val results = new ArrayBuffer[Info]()
 
@@ -61,9 +63,9 @@ object WOfS{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -77,15 +79,15 @@ object WOfS{
         val timeLength = list.length
         val (cols, rows) = (srcMetadata.tileCols, srcMetadata.tileRows)
         val wofsTile = ArrayTile(Array.fill(cols * rows)(Double.NaN), cols, rows)
-        for(i <- 0 until cols; j <- 0 until rows){
-          var waterCount:Double = 0.0
+        for (i <- 0 until cols; j <- 0 until rows) {
+          var waterCount: Double = 0.0
           var nanCount: Int = 0
-          for(k <- list){
+          for (k <- list) {
             val value = k._2.getDouble(i, j)
-            if(value.equals(Double.NaN)) nanCount += 1
+            if (value.equals(Double.NaN)) nanCount += 1
             else waterCount += value / 255.0
           }
-          wofsTile.setDouble(i, j, waterCount/(timeLength-nanCount))
+          wofsTile.setDouble(i, j, waterCount / (timeLength - nanCount))
         }
         (x._1, wofsTile)
       }
@@ -114,11 +116,11 @@ object WOfS{
       0x68101AAA
     )
     val uuid = UUID.randomUUID
-    stitched.tile.renderPng(colorRamp).write(GcConstant.localHtmlRoot + uuid + "_wofs.png")
+    stitched.tile.renderPng(colorRamp).write(localHtmlRoot + uuid + "_wofs.png")
 
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_wofs.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_wofs.TIF"
     GeoTiff(stitched, srcMetadata.crs).write(outputTiffPath)
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_wofs_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_wofs_thematic.png"
     val stdout = new StringBuilder
     val stderr = new StringBuilder
     Seq("/home/geocube/qgis/run.sh", "-t", "Wofs", "-r", s"$outputTiffPath", "-o", s"$outputThematicPngPath") ! ProcessLogger(stdout append _, stderr append _)
@@ -131,20 +133,19 @@ object WOfS{
    *
    * Using Array[(SpaceTimeBandKey,Tile)] as input.
    *
-   * @param sc a SparkContext
+   * @param sc                     a SparkContext
    * @param tileLayerArrayWithMeta an array of raster tiles
-   *
    * @return result info
    */
-  def wofs(implicit sc:SparkContext, tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
+  def wofs(implicit sc: SparkContext, tileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- WOfS task is submitted")
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- WOfS task is running ...")
     val analysisBegin = System.currentTimeMillis()
 
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
 
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
     val results = new ArrayBuffer[Info]()
 
@@ -156,9 +157,9 @@ object WOfS{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -175,18 +176,18 @@ object WOfS{
         val rd = new RuntimeData(0, 16, 0)
         val assignedCellNum = cols / rd.defThreadCount
         val flag = Array.fill(rd.defThreadCount)(0)
-        for(threadId <- 0 until rd.defThreadCount){
-          new Thread(){
+        for (threadId <- 0 until rd.defThreadCount) {
+          new Thread() {
             override def run(): Unit = {
-              for(i <- (threadId * assignedCellNum) until (threadId+1) * assignedCellNum; j <- 0 until rows){
-                var waterCount:Double = 0.0
+              for (i <- (threadId * assignedCellNum) until (threadId + 1) * assignedCellNum; j <- 0 until rows) {
+                var waterCount: Double = 0.0
                 var nanCount: Int = 0
-                for(k <- list){
+                for (k <- list) {
                   val value = k._2.getDouble(i, j)
-                  if(value.equals(Double.NaN)) nanCount += 1
+                  if (value.equals(Double.NaN)) nanCount += 1
                   else waterCount += value / 255.0
                 }
-                wofsTile.setDouble(i, j, waterCount/(timeLength-nanCount))
+                wofsTile.setDouble(i, j, waterCount / (timeLength - nanCount))
               }
               flag(threadId) = 1
             }
@@ -195,8 +196,8 @@ object WOfS{
         while (flag.contains(0)) {
           try {
             Thread.sleep(1)
-          }catch {
-            case ex: InterruptedException  => {
+          } catch {
+            case ex: InterruptedException => {
               ex.printStackTrace() // 打印到标准err
               System.err.println("exception===>: ...")
             }
@@ -229,11 +230,11 @@ object WOfS{
       0x68101AAA
     )
     val uuid = UUID.randomUUID
-    stitched.tile.renderPng(colorRamp).write(GcConstant.localHtmlRoot + uuid + "_wofs.png")
+    stitched.tile.renderPng(colorRamp).write(localHtmlRoot + uuid + "_wofs.png")
 
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_wofs.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_wofs.TIF"
     GeoTiff(stitched, srcMetadata.crs).write(outputTiffPath)
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_wofs_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_wofs_thematic.png"
     val stdout = new StringBuilder
     val stderr = new StringBuilder
     Seq("/home/geocube/qgis/run.sh", "-t", "Wofs", "-r", s"$outputTiffPath", "-o", s"$outputThematicPngPath") ! ProcessLogger(stdout append _, stderr append _)
@@ -252,19 +253,18 @@ object WOfS{
    *
    * @param tileLayerRddWithMeta a rdd of tiles
    * @param outputDir
-   *
    * @return
    */
-  def wofs(tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+  def wofs(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
            outputDir: String): Unit = {
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
-    for(i <- 0 until outputDirArray.length - 1)
+    for (i <- 0 until outputDirArray.length - 1)
       sessionDir.append(outputDirArray(i) + "/")
 
-    val tranTileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
+    val tranTileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
     val srcMetadata = tranTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -275,9 +275,9 @@ object WOfS{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiShortTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiShortTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -294,18 +294,18 @@ object WOfS{
         val rd = new RuntimeData(0, 16, 0)
         val assignedCellNum = cols / rd.defThreadCount
         val flag = Array.fill(rd.defThreadCount)(0)
-        for(threadId <- 0 until rd.defThreadCount){
-          new Thread(){
+        for (threadId <- 0 until rd.defThreadCount) {
+          new Thread() {
             override def run(): Unit = {
-              for(i <- (threadId * assignedCellNum) until (threadId+1) * assignedCellNum; j <- 0 until rows){
-                var waterCount:Double = 0.0
+              for (i <- (threadId * assignedCellNum) until (threadId + 1) * assignedCellNum; j <- 0 until rows) {
+                var waterCount: Double = 0.0
                 var nanCount: Int = 0
-                for(k <- list){
+                for (k <- list) {
                   val value = k._2.get(i, j)
-                  if(isNoData(value)) nanCount += 1
+                  if (isNoData(value)) nanCount += 1
                   else waterCount += value / 255.0
                 }
-                wofsTile.setDouble(i, j, waterCount/(timeLength - nanCount))
+                wofsTile.setDouble(i, j, waterCount / (timeLength - nanCount))
               }
               flag(threadId) = 1
             }
@@ -314,8 +314,8 @@ object WOfS{
         while (flag.contains(0)) {
           try {
             Thread.sleep(1)
-          }catch {
-            case ex: InterruptedException  => {
+          } catch {
+            case ex: InterruptedException => {
               ex.printStackTrace()
               System.err.println("exception===>: ...")
             }
@@ -374,10 +374,8 @@ object WOfS{
     stitched.tile.renderPng(colorMap).write(outputPath)
 
     val outputMetaPath = executorOutputDir + "WOfS.json"
-    val objectMapper =new ObjectMapper()
+    val objectMapper = new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -389,23 +387,22 @@ object WOfS{
    *
    * Using Array[(SpaceTimeBandKey,Tile)] as input.
    *
-   * @param sc a SparkContext
+   * @param sc                     a SparkContext
    * @param tileLayerArrayWithMeta Query tiles
    * @param outputDir
-   *
    * @return
    */
   def wofs(implicit sc: SparkContext,
-           tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+           tileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
            outputDir: String): Unit = {
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
-    for(i <- 0 until outputDirArray.length - 1)
+    for (i <- 0 until outputDirArray.length - 1)
       sessionDir.append(outputDirArray(i) + "/")
 
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -416,16 +413,16 @@ object WOfS{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
     //group by SpatialKey to get a time-series RDD, i.e. RDD[(SpatialKey, Iterable[(SpaceTimeKey,Tile)])]
     val spatialGroupRdd = NDWIRdd.groupBy(_._1.spatialKey).cache()
 
-    val timeDimension = spatialGroupRdd.map( ele => ele._2.toList.length).reduce((x, y) => Math.max(x, y))
+    val timeDimension = spatialGroupRdd.map(ele => ele._2.toList.length).reduce((x, y) => Math.max(x, y))
 
     //calculate water presence frequency
     val wofsRdd: RDD[(SpatialKey, Tile)] = spatialGroupRdd
@@ -437,18 +434,18 @@ object WOfS{
         val rd = new RuntimeData(0, 16, 0)
         val assignedCellNum = cols / rd.defThreadCount
         val flag = Array.fill(rd.defThreadCount)(0)
-        for(threadId <- 0 until rd.defThreadCount){
-          new Thread(){
+        for (threadId <- 0 until rd.defThreadCount) {
+          new Thread() {
             override def run(): Unit = {
-              for(i <- (threadId * assignedCellNum) until (threadId+1) * assignedCellNum; j <- 0 until rows){
-                var waterCount:Double = 0.0
+              for (i <- (threadId * assignedCellNum) until (threadId + 1) * assignedCellNum; j <- 0 until rows) {
+                var waterCount: Double = 0.0
                 var nanCount: Int = 0
-                for(k <- list){
+                for (k <- list) {
                   val value = k._2.getDouble(i, j)
-                  if(value.equals(Double.NaN)) nanCount += 1
+                  if (value.equals(Double.NaN)) nanCount += 1
                   else waterCount += value / 255.0
                 }
-                wofsTile.setDouble(i, j, waterCount/(timeLength-nanCount))
+                wofsTile.setDouble(i, j, waterCount / (timeLength - nanCount))
               }
               flag(threadId) = 1
             }
@@ -457,8 +454,8 @@ object WOfS{
         while (flag.contains(0)) {
           try {
             Thread.sleep(1)
-          }catch {
-            case ex: InterruptedException  => {
+          } catch {
+            case ex: InterruptedException => {
               ex.printStackTrace()
               System.err.println("exception===>: ...")
             }
@@ -501,7 +498,7 @@ object WOfS{
           pixelValue(i) = (pixelValue(i) + i) / timeDimension.toDouble
           (pixelValue(i), colorArray(pixelValue.length - i - 1))
         }.toMap
-      }else{
+      } else {
         Map(
           0.0 -> 0xFFFFFFFF,
           0.11 -> 0xF6EDB1FF,
@@ -538,10 +535,8 @@ object WOfS{
     stitched.tile.renderPng(colorMap).write(outputPath)
 
     val outputMetaPath = executorOutputDir + "WOfS.json"
-    val objectMapper =new ObjectMapper()
+    val objectMapper = new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -553,8 +548,7 @@ object WOfS{
    *
    * Used in web service and web platform.
    *
-   *
-   * @param batches num of batches
+   * @param batches     num of batches
    * @param queryParams query parameters
    * @param outputDir
    */
@@ -575,13 +569,13 @@ object WOfS{
 
     var queryTilesCount: Long = 0
     val spatialTiles = ArrayBuffer[(SpatialKey, Tile)]()
-    if(batchInterval == gridCodes.length) {
+    if (batchInterval == gridCodes.length) {
       throw new RuntimeException("Grid codes length is " + gridCodes.length + ", batches is " + batches + ", batch interval is " + batchInterval + ", which is too large, please increase the batches!")
-    } else if (batchInterval <= 1){
+    } else if (batchInterval <= 1) {
       throw new RuntimeException("Grid codes length is " + gridCodes.length + ", batches is " + batches + ", batch interval is " + batchInterval + ", which is too small, please reduce the batches!")
-    } else{
+    } else {
       (0 until batches).foreach { i =>
-        breakable{
+        breakable {
           val conf = new SparkConf()
             .setAppName("WOfS analysis")
             .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -590,16 +584,16 @@ object WOfS{
 
           val batchGridCodes: ArrayBuffer[String] = new ArrayBuffer[String]()
           ((i * batchInterval) until (i + 1) * batchInterval).foreach(j => batchGridCodes.append(gridCodes(j)))
-          if(i == (batches - 1) && gridCodes.length % batches != 0){
+          if (i == (batches - 1) && gridCodes.length % batches != 0) {
             ((i + 1) * batchInterval until gridCodes.length).foreach(j => batchGridCodes.append(gridCodes(j)))
           }
           queryParams.setGridCodes(batchGridCodes)
 
           //query batch tiles
           val batchQueryBegin = System.currentTimeMillis()
-          val tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) =
+          val tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
             DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
-          if(tileLayerRddWithMeta == null) {
+          if (tileLayerRddWithMeta == null) {
             sc.stop()
             break()
           }
@@ -609,13 +603,14 @@ object WOfS{
 
           //analyze batch tiles
           val batchAnalysisBegin = System.currentTimeMillis()
-          val batchWOfS:Array[(SpatialKey, Tile)] = wofsSpatialBatch(tileLayerRddWithMeta)
+          val batchWOfS: Array[(SpatialKey, Tile)] = wofsSpatialBatch(tileLayerRddWithMeta)
           spatialTiles.appendAll(batchWOfS)
           val batchAnalysisEnd = System.currentTimeMillis()
           analysisTimeCost += (batchAnalysisEnd - batchAnalysisBegin)
 
           print("########### Query grid codes length:" + gridCodes.length + ", grid codes of spatial batch " + i + ":")
-          batchGridCodes.foreach(ele => print(ele + " ")); println(" ###########")
+          batchGridCodes.foreach(ele => print(ele + " "));
+          println(" ###########")
 
           sc.stop()
         }
@@ -668,10 +663,8 @@ object WOfS{
     stitched.tile.renderPng(colorMap).write(outputPath)
 
     val outputMetaPath = executorOutputDir + "WOfS.json"
-    val objectMapper =new ObjectMapper()
+    val objectMapper = new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -680,19 +673,20 @@ object WOfS{
     val stitchEnd = System.currentTimeMillis()
     analysisTimeCost += (stitchEnd - stitchBegin)
 
-    if(batchInterval == gridCodes.length) {
+    if (batchInterval == gridCodes.length) {
       throw new RuntimeException("Batch interval is " + batchInterval + ", which is too large, please increase the batches!")
-    } else if (batchInterval <= 1){
+    } else if (batchInterval <= 1) {
       throw new RuntimeException("Batch interval is " + batchInterval + ", which is too small, please reduce the batches!")
     } else {
       (0 until batches).foreach { i =>
         val batchGridCodes: ArrayBuffer[String] = new ArrayBuffer[String]()
         ((i * batchInterval) until (i + 1) * batchInterval).foreach(j => batchGridCodes.append(gridCodes(j)))
-        if(i == (batches - 1) && gridCodes.length % batches != 0){
+        if (i == (batches - 1) && gridCodes.length % batches != 0) {
           ((i + 1) * batchInterval until gridCodes.length).foreach(j => batchGridCodes.append(gridCodes(j)))
         }
         print("########### Query grid codes length:" + gridCodes.length + ", grid codes of spatial batch " + i + ":")
-        batchGridCodes.foreach(ele => print(ele + " ")); println(" ###########")
+        batchGridCodes.foreach(ele => print(ele + " "));
+        println(" ###########")
       }
     }
 
@@ -708,10 +702,10 @@ object WOfS{
    * @param tileLayerArrayWithMeta
    * @return
    */
-  def wofsSpatialBatch(tileLayerArrayWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey])):Array[(SpatialKey, Tile)] = {
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerArrayWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+  def wofsSpatialBatch(tileLayerArrayWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): Array[(SpatialKey, Tile)] = {
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerArrayWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -725,7 +719,7 @@ object WOfS{
         /*if(greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
         val ndwi:Tile = NDWI.ndwiShortTile(greenBandTile.get, nirBandTile.get, 0.01)*/
-        val ndwi: Tile = if(greenBandTile == None || nirBandTile == None) null else NDWI.ndwiShortTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = if (greenBandTile == None || nirBandTile == None) null else NDWI.ndwiShortTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }.filter(x => x._2 != null)
 
@@ -742,18 +736,18 @@ object WOfS{
         val rd = new RuntimeData(0, 16, 0)
         val assignedCellNum = cols / rd.defThreadCount
         val flag = Array.fill(rd.defThreadCount)(0)
-        for(threadId <- 0 until rd.defThreadCount){
-          new Thread(){
+        for (threadId <- 0 until rd.defThreadCount) {
+          new Thread() {
             override def run(): Unit = {
-              for(i <- (threadId * assignedCellNum) until (threadId+1) * assignedCellNum; j <- 0 until rows){
-                var waterCount:Double = 0.0
+              for (i <- (threadId * assignedCellNum) until (threadId + 1) * assignedCellNum; j <- 0 until rows) {
+                var waterCount: Double = 0.0
                 var nanCount: Int = 0
-                for(k <- list){
+                for (k <- list) {
                   val value = k._2.get(i, j)
-                  if(isNoData(value)) nanCount += 1
+                  if (isNoData(value)) nanCount += 1
                   else waterCount += value / 255.0
                 }
-                wofsTile.setDouble(i, j, waterCount/(timeLength - nanCount))
+                wofsTile.setDouble(i, j, waterCount / (timeLength - nanCount))
               }
               flag(threadId) = 1
             }
@@ -762,8 +756,8 @@ object WOfS{
         while (flag.contains(0)) {
           try {
             Thread.sleep(1)
-          }catch {
-            case ex: InterruptedException  => {
+          } catch {
+            case ex: InterruptedException => {
               ex.printStackTrace()
               System.err.println("exception===>: ...")
             }
@@ -774,7 +768,7 @@ object WOfS{
     wofsRdd.collect()
   }
 
-  def main(args:Array[String]):Unit = {
+  def main(args: Array[String]): Unit = {
     /**
      * Using raster tile array as input
      */
@@ -822,7 +816,7 @@ object WOfS{
     val startTime = args(3) + " 00:00:00.000"
     val endTime = args(4) + " 00:00:00.000"
     val outputDir = args(5)
-    println("rasterProductName: " + rasterProductNames.foreach(x=>print(x + "|")))
+    println("rasterProductName: " + rasterProductNames.foreach(x => print(x + "|")))
     println("extent: " + (extent(0), extent(1), extent(2), extent(3)))
     println("time: " + (startTime, endTime))
 
@@ -841,7 +835,7 @@ object WOfS{
     queryParams.setTime(startTime, endTime)
     queryParams.setMeasurements(Array("Green", "Near-Infrared")) //该条件为NDWI分析固定条件
     //queryParams.setLevel("4000") //default 4000 in this version
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) = DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
     val queryEnd = System.currentTimeMillis()
 
     //wofs
