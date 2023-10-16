@@ -137,7 +137,10 @@ object Trigger {
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeature" =>
           if(args("featureId").startsWith("myData/")){
-            featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, isOptionalArg(args, "crs")))
+            if(args.contains("crs"))
+              featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, isOptionalArg(args, "crs")))
+            else
+              featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, "EPSG:4326"))
           } else {
             featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
           }
