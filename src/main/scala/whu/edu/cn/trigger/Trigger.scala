@@ -1090,7 +1090,7 @@ object Trigger {
       // 将这些新的瓦片编号存到 Redis
       //        jedis.sadd(key, zIndexStr)
     }
-
+    jedis.close()
     if (zIndexStrArray.isEmpty) {
       //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
       println("窗口范围无明显变化，没有新的瓦片待计算")
