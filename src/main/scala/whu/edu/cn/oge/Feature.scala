@@ -528,19 +528,20 @@ object Feature {
     val jsonObject = new JSONObject
     val geoArray = new JSONArray()
     for (feature <- data) {
-      val temp = new JSONObject
+      val combinedObject = new JSONObject()
       val coors = JSON.parseObject(feature._1)
       val pro = new JSONObject()
       feature._2.foreach(x => {
         pro.put(x._1, x._2)
       })
-      temp.put("properties", pro)
-      temp.put("geometry", coors)
-      geoArray.add(temp)
+      combinedObject.put("type", "Feature")
+      combinedObject.put("geometry", coors)
+      combinedObject.put("properties", pro)
+      geoArray.add(combinedObject)
     }
 
-    jsonObject.put("type", "GeometryCollection")
-    jsonObject.put("geometries", geoArray)
+    jsonObject.put("type", "FeatureCollection")
+    jsonObject.put("features", geoArray)
     val geoJSONString: String = jsonObject.toJSONString()
     geoJSONString
   }
