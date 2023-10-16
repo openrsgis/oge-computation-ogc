@@ -20,11 +20,12 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import whu.edu.cn.util.SSHClientUtil._
+
 import scala.util.control.Breaks._
-
 import java.nio.file._
+import java.util.concurrent.TimeUnit
 
-import  whu.edu.cn.util.RDDTransformerUtil._
+import whu.edu.cn.util.RDDTransformerUtil._
 
 /**
   * 用于消耗java进程与grass进程之间的输入信息流和错误信息流，避免缓冲区堵塞
@@ -680,8 +681,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -713,8 +720,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -777,8 +790,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
     //    val tif=makeRDDFromTif(sc,input.head._2,sourceTiffpath)
 
@@ -835,8 +854,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -868,8 +893,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -914,8 +945,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -964,8 +1001,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -999,8 +1042,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1039,8 +1088,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1076,8 +1131,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1111,8 +1172,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1146,8 +1213,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1181,8 +1254,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1216,8 +1295,16 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+//    val file:File=new File(sourceTiffpath_out)
+//    while(!file.exists()){}
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1249,8 +1336,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1290,8 +1383,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1384,8 +1483,14 @@ object GrassUtil {
 
     //    runGrassSh(startShFile)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1418,8 +1523,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1452,8 +1563,17 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+//    val file:File=new File(sourceTiffpath_out)
+//    while(file.length()==0){}
+//    Thread.sleep(1000)
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(file.length()==0){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     Thread.sleep(1000)
     val Str = Source.fromFile(sourceTiffpath_out).mkString
 
@@ -1487,8 +1607,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(file.length()==0){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     Thread.sleep(1000)
     val Str = Source.fromFile(sourceTiffpath_out).mkString
 
@@ -1528,8 +1654,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(file.length()==0){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     Thread.sleep(1000)
     val Str = Source.fromFile(sourceTiffpath_out).mkString
 
@@ -1569,8 +1701,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(file.length()==0){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     Thread.sleep(1000)
     val Str = Source.fromFile(sourceTiffpath_out).mkString
 
@@ -1608,8 +1746,15 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
+    Thread.sleep(1000)
     //    val tif=makeRDDFromTif(sc,input,sourceTiffpath)
 
     sourceTiffpath
@@ -1643,8 +1788,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(!file.exists()){}
+    while(!file.exists()&&duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     val tif=makeChangedRasterRDDFromTif(sc,sourceTiffpath_out)
 
     tif
@@ -1676,8 +1827,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(file.length()==0){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     Thread.sleep(1000)
     val Str = Source.fromFile(sourceTiffpath_out).mkString
 
@@ -1715,8 +1872,14 @@ object GrassUtil {
 
     runGrassSh2(startShFile_docker)
 
+    val start = System.nanoTime()
+    var end = System.nanoTime()
+    var duration = TimeUnit.NANOSECONDS.toMillis(end - start)
     val file:File=new File(sourceTiffpath_out)
-    while(file.length()==0){}
+    while(file.length()==0 && duration<60000){
+      end = System.nanoTime()
+      duration = TimeUnit.NANOSECONDS.toMillis(end - start)
+    }
     Thread.sleep(1000)
     val Str = Source.fromFile(sourceTiffpath_out).mkString
 
@@ -1724,7 +1887,7 @@ object GrassUtil {
 
   }
 
-
+//  ？？  前端无法执行
   def outGdalByGrass(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), format:String = "GTiff")={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
