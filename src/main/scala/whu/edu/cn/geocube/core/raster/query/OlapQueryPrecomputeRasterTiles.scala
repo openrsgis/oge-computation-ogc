@@ -2,13 +2,12 @@ package whu.edu.cn.geocube.core.raster.query
 
 import java.io.{File, FileOutputStream}
 import java.sql.ResultSet
-
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 
 import scala.collection.mutable.ArrayBuffer
 import sys.process._
-import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.util.PostgresqlUtil
 
 /**
@@ -184,8 +183,8 @@ object OlapQueryPrecomputeRasterTiles {
           val metaName = new File(metaPath).getName
           val objMap = new ObjectMapper
           val root = objMap.readTree(new File(outputDir + metaName)).asInstanceOf[ObjectNode]
-          root.put("path", outputDir.replace(GcConstant.localDataRoot, GcConstant.httpDataRoot) + dataName)
-          root.put("meta", outputDir.replace(GcConstant.localDataRoot, GcConstant.httpDataRoot) + metaName)
+          root.put("path", outputDir.replace(localDataRoot, httpDataRoot) + dataName)
+          root.put("meta", outputDir.replace(localDataRoot, httpDataRoot) + metaName)
           objMap.writerWithDefaultPrettyPrinter().writeValue(new FileOutputStream(outputDir + metaName), root)
         }
         paths.toArray

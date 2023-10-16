@@ -3,7 +3,6 @@ package whu.edu.cn.geocube.application.dapa
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
-
 import com.fasterxml.jackson.databind.ObjectMapper
 import geotrellis.layer._
 import geotrellis.raster.io.geotiff.GeoTiff
@@ -12,10 +11,10 @@ import geotrellis.raster.render.{ColorRamp, RGB}
 import geotrellis.raster.{Tile, _}
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
-import whu.edu.cn.geocube
-.core.raster.query.DistributedQueryRasterTiles
-import whu.edu.cn.geocube.util.{GcConstant, TileUtil}
+import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
+import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.view.Info
 
 import scala.collection.mutable.ListBuffer
@@ -238,14 +237,12 @@ object MinAggregate {
       val outputMetaPath = executorOutputDir + "Min_" + band + ".json"
       val objectMapper =new ObjectMapper()
       val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
       node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("band", band)
       node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
       objectMapper.writerWithDefaultPrettyPrinter().writeValue(new FileOutputStream(outputMetaPath), node)
-      val scpMetaCommand1 = "scp " + outputMetaPath + " geocube@gisweb1:" + outputDir
+      val scpMetaCommand1: String = "scp " + outputMetaPath + " geocube@gisweb1:" + outputDir
 
       scpPngCommand.!
       scpMetaCommand1.!

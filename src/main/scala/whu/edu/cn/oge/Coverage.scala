@@ -9,8 +9,7 @@ import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import geotrellis.raster.summary.types.MaxValue
-import io.minio.{GetObjectArgs, MinioClient, PutObjectArgs, UploadObjectArgs}
+import io.minio.{GetObjectArgs, MinioClient, UploadObjectArgs}
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -20,22 +19,21 @@ import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
 import javafx.scene.paint.Color
-import org.apache.hadoop.fs.FileSystem.mkdirs
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
+import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
+import whu.edu.cn.config.GlobalConfig.DagBootConf._
+import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.coverageReadFromUploadFile
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
-import java.io.{ByteArrayInputStream, File, FileOutputStream, InputStream, PrintWriter, RandomAccessFile}
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZonedDateTime}
@@ -2433,7 +2431,7 @@ object Coverage {
           val gainVis: Double = visParam.getGain.headOption.getOrElse(1.0)
           val biasVis: Double = visParam.getGain.headOption.getOrElse(0.0)
           coverageOneBand = (coverageOneBand._1.map(t => (t._1, t._2.mapBands((_, tile) => {
-            Add(Multiply(tile, gainVis),biasVis)
+            Add(Multiply(tile, gainVis), biasVis)
           }))), coverageOneBand._2)
         }
         // 如果存在最小最大值拉伸
@@ -2445,7 +2443,7 @@ object Coverage {
           val gainVis0: Double = getGainBias(coverageOneBand, 0, minVis, maxVis)._1
           val biasVis0: Double = getGainBias(coverageOneBand, 0, minVis, maxVis)._2
           coverageOneBand = (coverageOneBand._1.map(t => (t._1, t._2.mapBands((_, tile) => {
-              Add(Multiply(tile, gainVis0), biasVis0)
+            Add(Multiply(tile, gainVis0), biasVis0)
           }))), coverageOneBand._2)
         }
         // 如果存在gamma值
@@ -2608,7 +2606,7 @@ object Coverage {
               if (i == 0) {
                 Add(Multiply(tile, gainVis0), biasVis0)
               }
-              else{
+              else {
                 Add(Multiply(tile, gainVis1), biasVis1)
               }
             }))), coverageTwoBand._2)
@@ -2701,7 +2699,7 @@ object Coverage {
             else {
               Add(Multiply(tile, gainVis2), biasVis2)
             }
-          }))), coverageThreeBand ._2)
+          }))), coverageThreeBand._2)
         }
         //如果存在最小最大值拉伸
         else if (minNum * maxNum != 0) {
@@ -2733,21 +2731,21 @@ object Coverage {
             maxVis2 = visParam.getMax(2)
           }
           //分别对三个波段进行最小最大值拉伸
-          val gainVis0: Double = getGainBias(coverageThreeBand,0,minVis0,maxVis0)._1
-          val biasVis0: Double = getGainBias(coverageThreeBand,0,minVis0,maxVis0)._2
-          val gainVis1: Double = getGainBias(coverageThreeBand,1,minVis1,maxVis1)._1
-          val biasVis1: Double = getGainBias(coverageThreeBand,1,minVis1,maxVis1)._2
-          val gainVis2: Double = getGainBias(coverageThreeBand,2,minVis2,maxVis2)._1
-          val biasVis2: Double = getGainBias(coverageThreeBand,2,minVis2,maxVis2)._2
+          val gainVis0: Double = getGainBias(coverageThreeBand, 0, minVis0, maxVis0)._1
+          val biasVis0: Double = getGainBias(coverageThreeBand, 0, minVis0, maxVis0)._2
+          val gainVis1: Double = getGainBias(coverageThreeBand, 1, minVis1, maxVis1)._1
+          val biasVis1: Double = getGainBias(coverageThreeBand, 1, minVis1, maxVis1)._2
+          val gainVis2: Double = getGainBias(coverageThreeBand, 2, minVis2, maxVis2)._1
+          val biasVis2: Double = getGainBias(coverageThreeBand, 2, minVis2, maxVis2)._2
           coverageThreeBand = (coverageThreeBand._1.map(t => (t._1, t._2.mapBands((i, tile) => {
             if (i == 0) {
-              Add(Multiply(tile,gainVis0), biasVis0)
+              Add(Multiply(tile, gainVis0), biasVis0)
             }
-            else if( i == 1) {
-              Add(Multiply(tile,gainVis1), biasVis1)
+            else if (i == 1) {
+              Add(Multiply(tile, gainVis1), biasVis1)
             }
-            else{
-              Add(Multiply(tile,gainVis2), biasVis2)
+            else {
+              Add(Multiply(tile, gainVis2), biasVis2)
             }
           }))), coverageThreeBand._2)
         }
@@ -2783,9 +2781,9 @@ object Coverage {
     coverageThreeBand
   }
 
-  def getGainBias(coverage:(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),bandOrder:Int,minParam: Double, maxParam: Double)
-  : (Double,Double) = {
-    val coverageVis:(RDD[(SpaceTimeBandKey, MultibandTile)],TileLayerMetadata[SpaceTimeKey])=coverage
+  def getGainBias(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), bandOrder: Int, minParam: Double, maxParam: Double)
+  : (Double, Double) = {
+    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage
     // 首先找到现有的最小最大值
     val minMaxBand: (Double, Double) = coverageVis._1.map(t => {
       val noNaNArray: Array[Double] = t._2.bands(bandOrder).toArrayDouble().filter(!_.isNaN)
@@ -2799,7 +2797,7 @@ object Coverage {
 
     val gainBand: Double = (maxParam - minParam) / (minMaxBand._2 - minMaxBand._1)
     val biasBand: Double = (minMaxBand._2 * minParam - minMaxBand._1 * maxParam) / (minMaxBand._2 - minMaxBand._1)
-    (gainBand,biasBand)
+    (gainBand, biasBand)
   }
 
 
@@ -2864,7 +2862,7 @@ object Coverage {
     }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      if ( Trigger.level-z<=2 && Trigger.level-z>=0) {
+      if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
         val layerId: LayerId = LayerId(Trigger.dagId, z)
         println(layerId)
         // If the layer exists already, delete it out before writing
@@ -2898,7 +2896,7 @@ object Coverage {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
 
-    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 
     println("outputJSON: ", outJsonObject.toJSONString)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
@@ -2907,7 +2905,7 @@ object Coverage {
     zIndexStrArray.foreach(zIndexStr => {
       val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
       jedis.sadd(key, "cached")
-      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
+      jedis.expire(key, REDIS_CACHE_TTL)
     })
     jedis.close()
 
@@ -2955,7 +2953,7 @@ object Coverage {
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
 
-//    minIOUtil.releaseMinioClient(client)
+    //    minIOUtil.releaseMinioClient(client)
 
   }
 

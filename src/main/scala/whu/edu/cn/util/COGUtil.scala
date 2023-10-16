@@ -7,7 +7,7 @@ import geotrellis.vector.reproject.Reproject
 import io.minio.{GetObjectArgs, MinioClient}
 import org.locationtech.jts.geom.{Envelope, Geometry}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile}
-import whu.edu.cn.util.GlobalConstantUtil.MINIO_HEAD_SIZE
+import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 
 import java.io.{ByteArrayOutputStream, InputStream}
 import scala.collection.mutable

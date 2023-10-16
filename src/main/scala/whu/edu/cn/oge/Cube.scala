@@ -2,49 +2,39 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer
-import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
+import geotrellis.layer.{Bounds, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.proj4.CRS
-import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.mapalgebra.local.{Add, Max, Mean, Min, Multiply}
-import geotrellis.raster.{ByteConstantNoDataCellType, ColorMap, ColorRamp, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
-import geotrellis.raster.render.Png
+import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.{ByteConstantNoDataCellType, DoubleConstantNoDataCellType, MultibandTile, ShortConstantNoDataCellType, Tile, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
+import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.FileLayerWriter
-import geotrellis.spark.{TileLayerRDD, _}
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
-import geotrellis.vector.Extent
 import javafx.scene.paint.Color
-import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory, Polygon}
-import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
-import org.json4s._
-import org.json4s.jackson.Serialization
-import org.json4s.jackson.Serialization._
+import org.apache.spark.rdd.RDD
 import redis.clients.jedis.Jedis
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
+import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity.VisualizationParam
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
-import whu.edu.cn.geocube.application.gdc.gdcCoverage.{getCropExtent, getMultiBandStitchRDD, getSingleStitchRDD, scaleCoverage, stitchRDDWriteFile}
+import whu.edu.cn.geocube.application.gdc.gdcCoverage._
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
-import whu.edu.cn.geocube.core.cube.vector.GeoObjectRDD
 import whu.edu.cn.geocube.core.entity.{GcDimension, QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
-import whu.edu.cn.geocube.core.io.Output.saveAsGeojson
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
-import whu.edu.cn.geocube.util.{PostgresqlService, TileUtil}
+import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.JedisUtil
 
-import java.io.{BufferedWriter, File, FileWriter}
-import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
-import java.util.Date
 import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, Map}
+import scala.collection.mutable.ArrayBuffer
 
 object Cube {
   /**
@@ -619,7 +609,7 @@ object Cube {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
 
-    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 
     println("outputJSON: ", outJsonObject.toJSONString)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
@@ -628,7 +618,7 @@ object Cube {
     zIndexStrArray.foreach(zIndexStr => {
       val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
       jedis.sadd(key, "cached")
-      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
+      jedis.expire(key, REDIS_CACHE_TTL)
     })
     jedis.close()
 

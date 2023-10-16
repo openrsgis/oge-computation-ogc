@@ -5,9 +5,10 @@ import geotrellis.raster.MultibandTile
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import com.alibaba.fastjson.JSONObject
+import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.entity.{CoverageCollectionMetadata, SpaceTimeBandKey}
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.GlobalConstantUtil
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 object Service {
@@ -55,7 +56,7 @@ object Service {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
     println(outJsonObject)
-    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
   }
 
 
