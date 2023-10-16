@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedWriter, FileWriter, PrintWriter}
-
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
@@ -12,7 +11,6 @@ import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util
 import java.util.{Date, UUID}
-
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
@@ -27,6 +25,7 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.rasterize.Rasterizer
 import geotrellis.raster.rasterize.Rasterizer.Options
 import geotrellis.raster.render.{ColorRamp, ColorRamps}
+import io.minio.GetObjectArgs
 import whu.edu.cn.geocube.core.entity
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.logging.{Log, LogFactory}
@@ -37,11 +36,13 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{GlobalConstantUtil, PostgresqlUtil}
+import whu.edu.cn.util.{GlobalConstantUtil, MinIOUtil, PostgresqlUtil}
 
+import java.nio.file.Paths
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
+import scala.io.Source
 import scala.math.{max, min}
 
 object Feature {
@@ -316,12 +317,30 @@ object Feature {
    * @return
    */
   def geometry(implicit sc: SparkContext, gjson: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
-    val geom = Geometry.geometry(gjson, crs)
+    val jsonobject:JSONObject=JSON.parseObject(gjson)
+    val array=jsonobject.getJSONArray("features")
     var list: List[Geometry] = List.empty
-    list = list :+ geom
+    for(i <- 0 until(array.size())){
+      val geom = Geometry.geometry(array.getJSONObject(i), crs)
+      list = list :+ geom
+    }
     val geomRDD = sc.parallelize(list)
     geomRDD.map(t => {
       (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
+    })
+  }
+
+  def geometryFromGeojson(implicit sc: SparkContext, gjson: String, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val jsonobject:JSONObject=JSON.parseObject(gjson)
+    val array=jsonobject.getJSONArray("features")
+    var list: List[(Geometry,String)] = List.empty
+    for(i <- 0 until(array.size())){
+      val geom = Geometry.geometry(array.getJSONObject(i), crs)
+      list = list :+ (geom,array.getJSONObject(i).get("properties").toString)
+    }
+    val geomRDD = sc.parallelize(list)
+    geomRDD.map(t => {
+      (UUID.randomUUID().toString, (t._1, getMapFromJsonStr(t._2)))
     })
   }
 
@@ -501,12 +520,22 @@ object Feature {
    */
   def toGeoJSONString(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
     val data = featureRDD.map(t => {
-      Geometry.toGeoJSONString(t._2._1)
+      (Geometry.toGeoJSONString(t._2._1),t._2._2)
     }).collect().toList
     val jsonObject = new JSONObject
     val geoArray = new JSONArray()
-    for(feature <- data)
-      geoArray.add(JSON.parseObject(feature))
+    for(feature <- data) {
+      val temp = new JSONObject
+      val coors = JSON.parseObject(feature._1)
+      val pro = new JSONObject()
+      feature._2.foreach(x=>{
+        pro.put(x._1,x._2)
+      })
+      temp.put("properties",pro)
+      temp.put("geometry",coors)
+      geoArray.add(temp)
+    }
+
     jsonObject.put("type","GeometryCollection")
     jsonObject.put("geometries",geoArray)
     val geoJSONString:String =jsonObject.toJSONString()
@@ -549,7 +578,7 @@ object Feature {
    * @param crs        the crs for compute length
    * @return
    */
-  def getLength(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): String = {
+  def length(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:3857"): String = {
     featureRDD.map(t => {
       Geometry.length(t._2._1, crs)
     }).collect().toList.mkString
@@ -1077,6 +1106,28 @@ object Feature {
   }
 
 
+  // 下载用户上传的geojson文件
+  def loadFeatureFromUpload(implicit sc: SparkContext, featureId: String, userID: String, dagId: String,crs: String="EPSG:4326"): (RDD[(String, (Geometry, Map[String, Any]))]) = {
+    var path: String = new String()
+
+      path = s"$userID/$featureId"
+
+
+    val client = MinIOUtil.getMinioClient
+    val filePath = s"/mnt/storage/temp/${dagId}.geojson"
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+
+    val outputPath = Paths.get(filePath)
+
+    import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    inputStream.close()
+
+    val temp=Source.fromFile(filePath).mkString
+    val feature = geometryFromGeojson(sc, temp, crs)
+
+    feature
+  }
 
 
 }
