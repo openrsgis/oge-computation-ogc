@@ -3,8 +3,8 @@ package whu.edu.cn.geocube.application.dapa
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
-
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import geotrellis.layer._
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.render.{ColorRamp, RGB}
@@ -13,9 +13,10 @@ import geotrellis.spark._
 import geotrellis.vector.Extent
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 import whu.edu.cn.geocube.core.entity.{GcMeasurement, QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
-import whu.edu.cn.geocube.util.{GcConstant, TileUtil}
+import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.util.PostgresqlUtil
 
 import scala.sys.process._
@@ -210,11 +211,9 @@ object ValueAggregate {
 
 
 
-      val outputMetaPath = executorOutputDir +  bandName+ "_"  + instantRet + ".json"
+      val outputMetaPath: String = executorOutputDir +  bandName+ "_"  + instantRet + ".json"
       val objectMapper =new ObjectMapper()
-      val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
+      val node: ObjectNode = objectMapper.createObjectNode()
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("time", instantRet)
       node.put("field",bandName)
@@ -240,8 +239,8 @@ object ValueAggregate {
 //    val outputMetaPath = executorOutputDir +  bandName+ "_"  + ".json"
 //    val objectMapper =new ObjectMapper()
 //    val node = objectMapper.createObjectNode()
-//    val localDataRoot = GcConstant.localDataRoot
-//    val httpDataRoot = GcConstant.httpDataRoot
+//    val localDataRoot = GlobalConfig.localDataRoot
+//    val httpDataRoot = GlobalConfig.httpDataRoot
 //    node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
 //    node.put("field",bandName)
 //    node.put("value",value)
@@ -306,8 +305,6 @@ object ValueAggregate {
     val outputMetaPath = executorOutputDir +  bandName+ "_"  + ".json"
     val objectMapper =new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("field",bandName)
     node.put("value",value.toString())

@@ -1,21 +1,18 @@
 package whu.edu.cn.geocube.application.gdc
 
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
-import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.{MultibandTile, Tile}
+import geotrellis.layer.SpaceTimeKey
+import geotrellis.raster.Tile
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.json4s.{Formats, NoTypeHints}
 import org.json4s.native.JsonMethods.parse
 import org.json4s.native.Serialization
-import whu.edu.cn.geocube.conf.SparkCustomConf
+import org.json4s.{Formats, NoTypeHints}
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey, WorkflowCollectionParam}
-import whu.edu.cn.geocube.util.GcConstant
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.{immutable, mutable}
-import scala.io.{BufferedSource, Source}
 import scala.util.Random
 
 object GDCTrigger {

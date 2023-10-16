@@ -1,6 +1,6 @@
 package whu.edu.cn.util
 
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_DRIVER, POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
+import whu.edu.cn.config.GlobalConfig.PostgreSqlConf.{POSTGRESQL_DRIVER, POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
 
 import java.sql.{Connection, DriverManager, PreparedStatement}
 import java.util.Properties

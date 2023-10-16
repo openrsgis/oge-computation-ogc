@@ -1,6 +1,6 @@
 package whu.edu.cn.geocube.core.entity
 
-import whu.edu.cn.util.GlobalConstantUtil.POSTGRESQL_DRIVER
+import whu.edu.cn.config.GlobalConfig.PostgreSqlConf.POSTGRESQL_DRIVER
 import whu.edu.cn.util.PostgresqlUtil
 
 import java.sql.{Connection, DriverManager, ResultSet}

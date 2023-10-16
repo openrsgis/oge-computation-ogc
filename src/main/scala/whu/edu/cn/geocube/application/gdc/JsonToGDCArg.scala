@@ -1,9 +1,7 @@
 package whu.edu.cn.geocube.application.gdc
 
-import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
-import squants.market.MoneyConversions.dollar.->
-import whu.edu.cn.geocube.application.gdc.Node
-import whu.edu.cn.geocube.util.GcConstant
+import com.alibaba.fastjson.{JSON, JSONObject}
+import whu.edu.cn.config.GlobalConfig.GcConf.algorithmJson
 
 import scala.collection.JavaConversions._
 //import java.util
@@ -14,8 +12,8 @@ import scala.util.control.Breaks
 
 // TODO lrx: 解析的时候加上数据类型？
 object JsonToGDCArg {
-//  var jsonAlgorithms: String = "/mnt/storage/process_description.json"
-  var jsonAlgorithms: String = GcConstant.algorithmJson
+  //  var jsonAlgorithms: String = "/mnt/storage/process_description.json"
+  var jsonAlgorithms: String = algorithmJson
   var dagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
 
   //  def numberOfArgs(functionName: String): Int = {
@@ -158,10 +156,10 @@ object JsonToGDCArg {
 
     val json: JSONObject = JSON.parseObject(getArgNameByIndex(node.getFunctionName, 0))
     val keys = json.keySet()
-    for(key <- keys){
+    for (key <- keys) {
       val args: String = node.getArguments.getString(key)
       if (args != null) {
-        if(args.take(1) != "["){
+        if (args.take(1) != "[") {
           if (args.containsSlice("process")) {
             val nodeChildren: Node = new Node
             nodeChildren.setFunctionName(JSON.parseObject(args).getString("process"))
@@ -203,7 +201,7 @@ object JsonToGDCArg {
     val loop = new Breaks
     loop.breakable {
       val json: JSONObject = JSON.parseObject(getArgNameByIndex(node.getFunctionName, 0))
-      val keys:java.util.Set[String]= json.keySet()
+      val keys: java.util.Set[String] = json.keySet()
 
       for (key <- keys) { // 在这里写处理逻辑，例如打印每个元素
         val args: String = node.getArguments.getString(key)
@@ -221,22 +219,22 @@ object JsonToGDCArg {
         }
       }
 
-//      keys.forEach(k => {
-//        val args: String = node.getArguments.getString(k)
-//        if (args != null) {
-//          if (args.take(1) != "[") {
-//            if (args.containsSlice("process")) {
-//              map += (k , (node.getUUID+"0"))
-//            }
-//            else {
-//              map += (k , args)
-//            }
-//          }
-//          else {
-//            map += (k , args)
-//          }
-//        }
-//      })
+      //      keys.forEach(k => {
+      //        val args: String = node.getArguments.getString(k)
+      //        if (args != null) {
+      //          if (args.take(1) != "[") {
+      //            if (args.containsSlice("process")) {
+      //              map += (k , (node.getUUID+"0"))
+      //            }
+      //            else {
+      //              map += (k , args)
+      //            }
+      //          }
+      //          else {
+      //            map += (k , args)
+      //          }
+      //        }
+      //      })
     }
     //    loop.breakable {
     //      for (i <- 0 until num) {

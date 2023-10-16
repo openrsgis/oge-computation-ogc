@@ -16,13 +16,16 @@ import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, 
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter,cannyEdgeDetection, fakeColorCompose, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, cannyEdgeDetection, fakeColorCompose, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
+
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -1136,7 +1139,7 @@ object Trigger {
         outJsonObject.put("json", errorJson)
         //
         println("Error json = " + outJsonObject)
-        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+        sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
 //         打印至后端控制台
@@ -1225,7 +1228,7 @@ object Trigger {
         outJsonObject.put("json", errorJson)
 
         println("Error json = " + outJsonObject)
-        sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl",
+        sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
 
         // 打印至后端控制台
