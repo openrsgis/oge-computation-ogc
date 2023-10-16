@@ -24,16 +24,16 @@ object HbaseUtil {
   configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
 
   //set RPC timeout
-  configuration.set("hbase.rpc.timeout", "100000")
+  configuration.set("hbase.rpc.timeout", "200000")
 
   //set scanner cache
-  configuration.set("hbase.client.scanner.caching", "2000000")
+  configuration.set("hbase.client.scanner.caching", "200000")
 
   //set scanner timeout
-  configuration.set("hbase.client.scanner.timeout.period", "100000")
+  configuration.set("hbase.client.scanner.timeout.period", "200000")
 
   //set mapreduce task timeout
-  configuration.setInt("mapreduce.task.timeout", 10000)
+  configuration.setInt("mapreduce.task.timeout", 60000)
 
   //  configuration.setInt("hbase.client.retries.number",3)
 

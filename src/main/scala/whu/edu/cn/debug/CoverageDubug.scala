@@ -44,7 +44,6 @@ object CoverageDubug {
     //
     //
     //    println("_")
-    new File("D:\\cog\\1.txt")
   }
 
   //  def ndviLandsat7(): Unit = {
@@ -182,7 +181,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "C:\\Users\\forDece\\Desktop\\temp\\" + name + ".tiff"
+    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 

@@ -5,7 +5,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
 import geotrellis.raster.mapalgebra.local.{LocalTileBinaryOp, LocalTileComparatorOp}
-import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleConstantNoDataCellType, FloatConstantNoDataCellType, GridBounds, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, isNoData}
+import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleCellType, DoubleConstantNoDataCellType, FloatCellType, FloatConstantNoDataCellType, GridBounds, IntCellType, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, byteNODATA, doubleNODATA, floatNODATA, isNoData, shortNODATA}
 import geotrellis.spark._
 import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
@@ -74,20 +74,50 @@ object CoverageUtil {
     else if (coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
       coverage = toInt16(coverage)
 
-    val coverage1 = removeZeroFromCoverage(coverage)
-
-    coverage
+    removeZeroFromCoverage(coverage)
   }
 
   def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    coverageTemplate(coverage, (tile) => removeZeroFromTile(tile))
+    if(coverage._2.cellType == UByteConstantNoDataCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(ByteConstantNoDataCellType))
+      }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,byteNODATA))
+    else if (coverage._2.cellType == IntCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(IntConstantNoDataCellType))
+      }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,NODATA))
+    else if (coverage._2.cellType == FloatCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(FloatConstantNoDataCellType))
+      }), TileLayerMetadata(FloatConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,floatNODATA))
+    else if (coverage._2.cellType == DoubleCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(DoubleConstantNoDataCellType))
+      }), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,doubleNODATA))
+
+    else if (coverage._2.cellType == ByteConstantNoDataCellType)
+      coverageTemplate(coverage,tile => removeZeroFromTile(tile,ByteConstantNoDataCellType.noDataValue))
+    else if (coverage._2.cellType == ShortConstantNoDataCellType || coverage._2.cellType == UShortCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(IntConstantNoDataCellType))
+      }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile, NODATA))
+    else if (coverage._2.cellType == IntConstantNoDataCellType)
+      coverageTemplate(coverage, tile => removeZeroFromTile(tile, IntConstantNoDataCellType.noDataValue))
+    else if (coverage._2.cellType == FloatConstantNoDataCellType)
+      coverageTemplate(coverage, tile => removeZeroFromTile(tile, FloatConstantNoDataCellType.noDataValue))
+    else if (coverage._2.cellType == DoubleConstantNoDataCellType)
+      coverageTemplate(coverage, tile => removeZeroFromTile(tile, DoubleConstantNoDataCellType.noDataValue))
+
+    else
+      coverage
   }
 
-  def removeZeroFromTile(tile: Tile): Tile = {
-    if (tile.cellType.isFloatingPoint)
-      tile.mapDouble(i => if (i.equals(0.0)) Double.NaN else i)
-    else
-      tile.map(i => if (i == 0) -32768 else i)
+  def removeZeroFromTile(tile: Tile,value:Int): Tile = {
+    tile.map(i => if (i.equals(0)) value else i)
+  }
+
+  def removeZeroFromTile(tile: Tile, value: Double): Tile = {
+      tile.mapDouble(i => if (i.equals(0.0)) value else i)
   }
 
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[

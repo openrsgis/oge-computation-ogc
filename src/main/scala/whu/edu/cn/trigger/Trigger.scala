@@ -140,7 +140,10 @@ object Trigger {
           featureRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeature" =>
           if(args("featureId").startsWith("myData/")){
-            featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, isOptionalArg(args, "crs")))
+            if(args.contains("crs"))
+              featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, isOptionalArg(args, "crs")))
+            else
+              featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, "EPSG:4326"))
           } else {
             featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
           }
@@ -221,8 +224,7 @@ object Trigger {
         case "Coverage.export" =>
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
         case "Coverage.date" =>
-          val date: String = Coverage.date(coverage = coverageRddList(args("coverage")))
-          tempNoticeJson.put("date", date)
+          stringList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
           coverageRddList += (UUID -> Coverage.subtract(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.subtractNum" =>
@@ -1097,7 +1099,7 @@ object Trigger {
       // 将这些新的瓦片编号存到 Redis
       //        jedis.sadd(key, zIndexStr)
     }
-
+    jedis.close()
     if (zIndexStrArray.isEmpty) {
       //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
       println("窗口范围无明显变化，没有新的瓦片待计算")
