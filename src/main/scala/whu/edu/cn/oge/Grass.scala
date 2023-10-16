@@ -1205,8 +1205,9 @@ object GrassUtil {
     commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
     val grassOutPutDataName="grassoutput"+System.currentTimeMillis()
     commandList=commandList:+"r.texture"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName +" size="+size+" distance="+distance+" method="+method
-    commandList=commandList:+"g.region raster="+grassOutPutDataName+"_"+method+" -p"
-    commandList=commandList:+"r.out.gdal input="+grassOutPutDataName+"_"+method+"@"+mapset+" output="+sourceTiffpath
+    val method_upper=method.toUpperCase
+    commandList=commandList:+"g.region raster="+grassOutPutDataName+"_"+method_upper+" -p"
+    commandList=commandList:+"r.out.gdal input="+grassOutPutDataName+"_"+method_upper+"@"+mapset+" output="+sourceTiffpath
     val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
 
     val startShFile=createStartSh2(grassRoot,execShFile,shFilePath_out,shFilePath,outputTiffPath_1,location)
