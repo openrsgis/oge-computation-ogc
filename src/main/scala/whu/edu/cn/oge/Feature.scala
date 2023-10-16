@@ -7,6 +7,7 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.geocube.util.HbaseUtil._
+
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util
@@ -30,13 +31,14 @@ import whu.edu.cn.geocube.core.entity
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.logging.{Log, LogFactory}
 import whu.edu.cn
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.debug.CoverageDubug.makeTIFF
 import whu.edu.cn.debug.FeatureDebug.saveFeatureRDDToShp
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{GlobalConstantUtil, MinIOUtil, PostgresqlUtil}
+import whu.edu.cn.util.{MinIOUtil, PostgresqlUtil}
 
 import java.nio.file.Paths
 import scala.collection.mutable
@@ -1101,7 +1103,7 @@ object Feature {
     val outJsonObject: JSONObject = new JSONObject
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
-    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
     println(outJsonObject.toJSONString)
   }
 
