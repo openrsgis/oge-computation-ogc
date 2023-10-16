@@ -1162,9 +1162,13 @@ object Trigger {
       Trigger.featureRddList.clear()
       Trigger.cubeRDDList.clear()
       Trigger.cubeLoad.clear()
-      val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+      val tempFilePath = GlobalConfig.Others.tempFilePath
+      val filePath = s"${tempFilePath}${dagId}.tiff"
       if (scala.reflect.io.File(filePath).exists)
         scala.reflect.io.File(filePath).delete()
+      val featurePath = s"${tempFilePath}${dagId}.geojson"
+      if (scala.reflect.io.File(featurePath).exists)
+        scala.reflect.io.File(featurePath).delete()
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
@@ -1199,7 +1203,7 @@ object Trigger {
 
 
     if (sc.master.contains("local")) {
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1236,9 +1240,13 @@ object Trigger {
         // 打印至后端控制台
         e.printStackTrace()
     } finally {
-      val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+      val tempFilePath = GlobalConfig.Others.tempFilePath
+      val filePath = s"${tempFilePath}${dagId}.tiff"
       if (scala.reflect.io.File(filePath).exists)
         scala.reflect.io.File(filePath).delete()
+      val featurePath = s"${tempFilePath}${dagId}.geojson"
+      if (scala.reflect.io.File(featurePath).exists)
+        scala.reflect.io.File(featurePath).delete()
     }
   }
 

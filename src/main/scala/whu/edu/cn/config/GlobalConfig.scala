@@ -51,4 +51,11 @@ object GlobalConfig {
       7080, 7084, 7104, 7108, 7112, 7116)
   }
 
+  object Others{
+    final val jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json" //存储json解析文件地址
+    final val tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
+    final val tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
+    final val ontheFlyStorage = "/mnt/storage/on-the-fly" //tms瓦片存储地址
+    final val jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
+  }
 }

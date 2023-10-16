@@ -436,12 +436,9 @@ object CoverageUtil {
   def coverageTemplate(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), func: Tile => Tile): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     def funcMulti(multibandTile: MultibandTile): MultibandTile = {
-      val bands: Vector[Tile] = multibandTile.bands
-      val bandsFunc: mutable.ArrayBuffer[Tile] = mutable.ArrayBuffer.empty[Tile]
-      for (i <- bands.indices) {
-        bandsFunc.append(func(bands(i)))
-      }
-      MultibandTile(bandsFunc)
+      multibandTile.mapBands((_,tile)=>{
+        func(tile)
+      })
     }
 
     val cellType: CellType = coverage._1.first()._2.cellType
