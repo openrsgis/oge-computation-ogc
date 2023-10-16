@@ -31,6 +31,7 @@ import whu.edu.cn.geocube.core.entity
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.logging.{Log, LogFactory}
 import whu.edu.cn
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.debug.CoverageDubug.makeTIFF
 import whu.edu.cn.debug.FeatureDebug.saveFeatureRDDToShp
@@ -547,7 +548,7 @@ object Feature {
   def saveJSONToServer(geoJSONString: String): String = {
     val time = System.currentTimeMillis()
 
-    val outputVectorPath = "/mnt/storage/algorithmData/vector_" + time + ".json"
+    val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
 
     // 创建PrintWriter对象
     val writer: BufferedWriter = new BufferedWriter(new FileWriter(outputVectorPath))
@@ -1117,7 +1118,8 @@ object Feature {
 
 
     val client = MinIOUtil.getMinioClient
-    val filePath = s"/mnt/storage/temp/${dagId}.geojson"
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}.geojson"
     val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
 
     val outputPath = Paths.get(filePath)

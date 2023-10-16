@@ -23,6 +23,7 @@ import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
@@ -2851,7 +2852,7 @@ object Coverage {
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
 
-    val outputPath: String = "/mnt/storage/on-the-fly"
+    val outputPath: String = GlobalConfig.Others.ontheFlyStorage
     // Create the attributes store that will tell us information about our catalog.
     val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
     // Create the writer that we will use to store the tiles in the local catalog.
@@ -2885,10 +2886,10 @@ object Coverage {
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
     if (visParam.getFormat == "png") {
-      rasterJsonObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
+      rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.png")
     }
     else {
-      rasterJsonObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-jpg/" + Trigger.dagId + "/{z}/{x}/{y}.jpg")
+      rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
     jsonObject.put("raster", rasterJsonObject)
 
@@ -2945,7 +2946,7 @@ object Coverage {
 
 
     // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
-    val saveFilePath = s"/mnt/storage/temp/${dagId}.tiff"
+    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
@@ -2967,7 +2968,8 @@ object Coverage {
     }
 
     val client = MinIOUtil.getMinioClient
-    val filePath = s"/mnt/storage/temp/${dagId}.tiff"
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}.tiff"
     val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
 
     val outputPath = Paths.get(filePath)
