@@ -2901,14 +2901,17 @@ object Coverage {
 
     println("outputJSON: ", outJsonObject.toJSONString)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
-    val jedis: Jedis = new JedisUtil().getJedis
-    jedis.select(1)
-    zIndexStrArray.foreach(zIndexStr => {
-      val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
-      jedis.sadd(key, "cached")
-      jedis.expire(key, REDIS_CACHE_TTL)
-    })
-    jedis.close()
+    try{
+      val jedis: Jedis = new JedisUtil().getJedis
+      jedis.select(1)
+      zIndexStrArray.foreach(zIndexStr => {
+        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+        jedis.sadd(key, "cached")
+        jedis.expire(key, REDIS_CACHE_TTL)
+      })
+      jedis.close()
+    }
+
 
 
     // 清空list
