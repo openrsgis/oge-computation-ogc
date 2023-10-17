@@ -318,21 +318,8 @@ object Feature {
    * @param crs        projection of geometry
    * @return
    */
-  def geometry(implicit sc: SparkContext, gjson: String, properties: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
-    val jsonobject: JSONObject = JSON.parseObject(gjson)
-    val array = jsonobject.getJSONArray("features")
-    var list: List[Geometry] = List.empty
-    for (i <- 0 until (array.size())) {
-      val geom = Geometry.geometry(array.getJSONObject(i), crs)
-      list = list :+ geom
-    }
-    val geomRDD = sc.parallelize(list)
-    geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t, getMapFromJsonStr(properties)))
-    })
-  }
 
-  def geometryFromGeojson(implicit sc: SparkContext, gjson: String, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
+  def geometry(implicit sc: SparkContext, gjson: String, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
     val jsonobject: JSONObject = JSON.parseObject(gjson)
     val array = jsonobject.getJSONArray("features")
     var list: List[(Geometry, String)] = List.empty
@@ -454,10 +441,12 @@ object Feature {
    * @param featureRDD the featureRDD to operate
    * @return
    */
-  def coordinates(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): List[Array[Coordinate]] = {
-    featureRDD.map(t => {
+  def coordinates(featureRDD: RDD[(String, (Geometry, Map[String, Any]))]): String = {
+    val result: List[Array[Coordinate]] =featureRDD.map(t => {
       t._2._1.getCoordinates
     }).collect().toList
+
+    result.flatten.map(coordinate => s"(${coordinate.x}, ${coordinate.y})").mkString(", ")
   }
 
   /**
@@ -728,10 +717,10 @@ object Feature {
    * @return
    */
   def intersects(featureRDD1: RDD[(String, (Geometry, Map[String, Any]))],
-                 featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): Boolean = {
+                 featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], crs: String = "EPSG:4326"): String = {
     val geom1 = featureRDD1.first()._2._1
     val geom2 = featureRDD2.first()._2._1
-    Geometry.intersects(geom1, geom2, crs)
+    Geometry.intersects(geom1, geom2, crs).toString
   }
 
   /**
@@ -1128,7 +1117,7 @@ object Feature {
     inputStream.close()
 
     val temp = Source.fromFile(filePath).mkString
-    val feature = geometryFromGeojson(sc, temp, crs)
+    val feature = geometry(sc, temp, crs)
 
     feature
   }

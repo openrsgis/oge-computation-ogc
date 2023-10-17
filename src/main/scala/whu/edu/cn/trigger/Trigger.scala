@@ -768,9 +768,9 @@ object Trigger {
             featureRddList += (UUID -> Feature.multiPolygon(sc, args("coors"), args("properties")))
         case "Feature.geometry" =>
           if (isOptionalArg(args, "crs") != null)
-            featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("properties"), args("crs")))
+            featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("crs")))
           else
-            featureRddList += (UUID -> Feature.geometry(sc, args("coors"), args("properties")))
+            featureRddList += (UUID -> Feature.geometry(sc, args("coors")))
         case "Feature.area" =>
           if (isOptionalArg(args, "crs") != null)
             stringList += (UUID -> Feature.area(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
@@ -797,7 +797,7 @@ object Trigger {
           else
             featureRddList += (UUID -> Feature.convexHull(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.coordinates" =>
-          featureRddList += (UUID -> Feature.coordinates(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+          stringList += (UUID -> Feature.coordinates(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.reproject" =>
           featureRddList += (UUID -> Feature.reproject(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("tarCrsCode")))
         case "Feature.isUnbounded" =>
@@ -864,7 +864,7 @@ object Trigger {
               featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.intersects" =>
           if (isOptionalArg(args, "crs") != null)
-            featureRddList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+            stringList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
               featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("crs")))
           else
             featureRddList += (UUID -> Feature.intersects(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
