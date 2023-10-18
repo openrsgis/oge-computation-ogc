@@ -6720,11 +6720,6 @@
         "description": "geojson"
       },
       {
-        "name": "properties",
-        "type": "String",
-        "description": "Properties"
-      },
-      {
         "name": "crs",
         "type": "String",
         "description": "CRS"
