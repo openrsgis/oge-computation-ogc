@@ -4,6 +4,7 @@ import breeze.linalg.{DenseVector, _}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
+import scala.util.control.Breaks
 
 /**
  * 提供参数优化的计算方法：黄金分割法和Nelder-Mead算法
@@ -18,10 +19,10 @@ object Optimize {
    * @param function  获取（更新）优化值的函数，需要为输入double，输出double的类型
    * @return  优化结果
    */
-  def goldenSelection(lower: Double, upper: Double, eps: Double = 1e-12, function: Double => Double): Double = {
+  def goldenSelection(lower: Double, upper: Double, eps: Double = 1e-10, findMax: Boolean = true, function: Double => Double): Double = {
     var iter: Int = 0
     val max_iter = 1000
-
+    val loop = new Breaks
     val ratio: Double = (sqrt(5) - 1) / 2.0
     var a = lower + 1e-12
     var b = upper - 1e-12
@@ -33,27 +34,54 @@ object Optimize {
     var f_p = function(p)
     var f_q = function(q)
     //    println(f_a,f_b,f_p,f_q)
-    while (abs(f_a - f_b) >= eps && iter < max_iter) {
-      if (f_p > f_q) {
-        b = q
-        f_b = f_q
-        q = p
-        f_q = f_p
-        step = b - a
-        p = a + (1 - ratio) * step
-        f_p = function(p)
-      } else {
-        a = p
-        f_a = f_p
-        p = q
-        f_p = f_q
-        step = b - a
-        q = a + ratio * step
-        f_q = function(q)
+    loop.breakable {
+      while (abs(f_a - f_b) >= eps && iter < max_iter) {
+        if (findMax) {
+          if (f_p > f_q) {
+            b = q
+            f_b = f_q
+            q = p
+            f_q = f_p
+            step = b - a
+            p = a + (1 - ratio) * step
+            f_p = function(p)
+          } else {
+            a = p
+            f_a = f_p
+            p = q
+            f_p = f_q
+            step = b - a
+            q = a + ratio * step
+            f_q = function(q)
+          }
+        }
+        else {
+          if (f_p < f_q) {
+            b = q
+            f_b = f_q
+            q = p
+            f_q = f_p
+            step = b - a
+            p = a + (1 - ratio) * step
+            f_p = function(p)
+          } else {
+            a = p
+            f_a = f_p
+            p = q
+            f_p = f_q
+            step = b - a
+            q = a + ratio * step
+            f_q = function(q)
+          }
+        }
+        iter += 1
+        println(s"the iter is $iter, optimize value is ${(b + a) / 2.0}, optimize result is ${function((b + a) / 2.0)}")
+        if (abs(a - b) < eps / 10) {
+          loop.break()
+        }
       }
-      iter += 1
     }
-//    println((b + a) / 2.0)
+    //    println((b + a) / 2.0, function((b + a) / 2.0))
     (b + a) / 2.0
   }
 

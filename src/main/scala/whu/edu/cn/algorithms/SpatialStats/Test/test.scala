@@ -12,6 +12,7 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.LinearRegression.lin
 import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.SpatialDurbinModel
 import whu.edu.cn.algorithms.SpatialStats.Utils.FeatureDistance._
 import whu.edu.cn.algorithms.SpatialStats.Utils.OtherUtils._
+import whu.edu.cn.algorithms.SpatialStats.GWModels.GWRbasic
 import whu.edu.cn.oge.Feature._
 import whu.edu.cn.util.ShapeFileUtil._
 
@@ -40,7 +41,26 @@ object test {
     acf_test()
     linear_test()
     correlation_test()
+    gwrbasic_test()
+    sc.stop()
+  }
 
+  def gwrbasic_test(): Unit = {
+    val t1 = System.currentTimeMillis()
+    val x1 = shpfile.map(t => t._2._2("FLOORSZ").asInstanceOf[String].toDouble).collect()
+    val x2 = shpfile.map(t => t._2._2("PROF").asInstanceOf[String].toDouble).collect()
+    val y = shpfile.map(t => t._2._2("PURCHASE").asInstanceOf[String].toDouble).collect()
+    val x = Array(DenseVector(x1), DenseVector(x2))
+    val mdl = new GWRbasic
+    mdl.init(shpfile)
+    mdl.setX(x)
+    mdl.setY(y)
+    //    mdl.fit(bw = 10000,kernel="bisquare",adaptive = false)
+    //    val bw=mdl.bandwidthSelection(adaptive = false)
+    //    mdl.fit(bw = bw,kernel="gaussian",adaptive = false)
+    mdl.auto(kernel = "gaussian", approach = "CV", adaptive = false)
+    val tused = (System.currentTimeMillis() - t1) / 1000.0
+    println(s"time used is $tused s")
   }
 
   def correlation_test(): Unit = {
