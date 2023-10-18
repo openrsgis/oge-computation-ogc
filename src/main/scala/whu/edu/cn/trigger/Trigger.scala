@@ -58,6 +58,7 @@ object Trigger {
   var workTaskJson: String = _
   // DAG-ID
   var dagId: String = _
+  var dagMd5: String = _
   val zIndexStrArray = new mutable.ArrayBuffer[String]
 
   // 批计算参数
@@ -1073,7 +1074,8 @@ object Trigger {
     println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
 
     windowExtent = new Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
-    val key: String = dagId + ":solvedTile:" + level
+    dagMd5 = Others.md5HashPassword(curWorkTaskJson)
+    val key: String = dagMd5 + ":solvedTile:" + level
 
 
     val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)

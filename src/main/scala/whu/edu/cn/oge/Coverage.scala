@@ -2903,9 +2903,8 @@ object Coverage {
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
     try{
       val jedis: Jedis = new JedisUtil().getJedis
-      jedis.select(1)
       zIndexStrArray.foreach(zIndexStr => {
-        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+        val key: String = Trigger.dagMd5 + ":solvedTile:" + Trigger.level + zIndexStr
         jedis.sadd(key, "cached")
         jedis.expire(key, REDIS_CACHE_TTL)
       })
