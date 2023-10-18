@@ -3120,22 +3120,20 @@ object QGIS {
    */
   def gdalClipVectorByExtent(implicit sc: SparkContext,
                              input: RDD[(String, (Geometry, Map[String, Any]))],
-                             extent: RDD[(String, (Geometry, Map[String, Any]))],
+                             extent: String = "",
                              options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath1 = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
-    val outputShpPath2 = "/mnt/storage/algorithmData/extent_" + time + ".shp"
+    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath1)
-    saveFeatureRDDToShp(extent, outputShpPath2)
+    saveFeatureRDDToShp(input, outputShpPath)
 
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath1" --extent "$outputShpPath2" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath" --extent "$extent" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
