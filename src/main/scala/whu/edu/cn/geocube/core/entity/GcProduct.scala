@@ -1,8 +1,9 @@
 package whu.edu.cn.geocube.core.entity
 
+import whu.edu.cn.config.GlobalConfig.PostgreSqlConf.POSTGRESQL_DRIVER
 import whu.edu.cn.util.PostgresqlUtil
 
-import java.sql.{DriverManager, ResultSet}
+import java.sql.{Connection, DriverManager, ResultSet}
 import scala.beans.BeanProperty
 import scala.collection.mutable.ArrayBuffer
 
@@ -96,9 +97,11 @@ object GcProduct {
    * @return the all coordinates of the dimension
    */
   def getDimensionCoordinates(gcDimension: GcDimension, cubeId: String, connAddr: String, user: String, password: String, productKeys: String = null): ArrayBuffer[String] = {
-    PostgresqlUtil.get()
-    Class.forName(PostgresqlUtil.driver)
-    val conn = DriverManager.getConnection(connAddr, user, password)
+//    PostgresqlUtil.get()
+//    Class.forName(PostgresqlUtil.driver)
+//    val conn = DriverManager.getConnection(connAddr, user, password)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn: Connection = postgresqlUtil.getConnection
     val rsArray = new ArrayBuffer[String]()
     if (conn != null) {
       try {
@@ -128,9 +131,11 @@ object GcProduct {
    * @return get all dimensions
    */
   def getOtherDimensions(cubeId: String, connAddr: String, user: String, password: String, productKeys: String = null): ArrayBuffer[GcDimension] = {
-    PostgresqlUtil.get()
-    Class.forName(PostgresqlUtil.driver)
-    val conn = DriverManager.getConnection(connAddr, user, password)
+//    PostgresqlUtil.get()
+//    Class.forName(PostgresqlUtil.driver)
+//    val conn = DriverManager.getConnection(connAddr, user, password)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn: Connection = postgresqlUtil.getConnection
     val gcDimensionArray: ArrayBuffer[GcDimension] = new ArrayBuffer[GcDimension]()
     if (conn != null) {
       try {
@@ -183,6 +188,7 @@ object GcProduct {
                       gcDimensionArray: ArrayBuffer[GcDimension] = null): GcProduct = {
 //    Class.forName("org.postgresql.Driver")
 //    val conn = DriverManager.getConnection(connAddr, user, password)
+    Class.forName(POSTGRESQL_DRIVER)
     val postgresqlUtil = new PostgresqlUtil("")
     val conn = postgresqlUtil.getConnection
     if (conn != null) {
@@ -268,6 +274,7 @@ object GcProduct {
    */
   def getProductByName(cubeId: String, productName: String, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
     val productArray = new ArrayBuffer[GcProduct]()
+    Class.forName(POSTGRESQL_DRIVER)
 //    Class.forName("org.postgresql.Driver")
 //    val conn = DriverManager.getConnection(connAddr, user, password)
     val postgresqlUtil = new PostgresqlUtil("")
@@ -346,9 +353,11 @@ object GcProduct {
    */
   def getAllProducts(cubeId: String, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
     val productArray = new ArrayBuffer[GcProduct]()
-    PostgresqlUtil.get()
-    Class.forName(PostgresqlUtil.driver)
-    val conn = DriverManager.getConnection(connAddr, user, password)
+//    PostgresqlUtil.get()
+//    Class.forName(PostgresqlUtil.driver)
+//    val conn = DriverManager.getConnection(connAddr, user, password)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn: Connection = postgresqlUtil.getConnection
     if (conn != null) {
       try {
         val statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
@@ -445,8 +454,10 @@ object GcProduct {
    * @return multiple GcProduct objects.
    */
   def getProducts(p: QueryParams, connAddr: String, user: String, password: String): ArrayBuffer[GcProduct] = {
-    Class.forName("org.postgresql.Driver")
-    val conn = DriverManager.getConnection(connAddr, user, password)
+//    Class.forName(POSTGRESQL_DRIVER)
+//    val conn = DriverManager.getConnection(connAddr, user, password)
+    val postgresqlUtil = new PostgresqlUtil("")
+    val conn: Connection = postgresqlUtil.getConnection
     val cubeId = p.getCubeId
     //Temporal params
     val startTime = p.getStartTime

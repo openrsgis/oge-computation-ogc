@@ -96,7 +96,7 @@ object CoverageCollectionDubug {
         val time1: Long = System.currentTimeMillis()
         val client: MinioClient = MinIOUtil.getMinioClient
         val tile: RawTile = getTileBuf(client, t)
-        MinIOUtil.releaseMinioClient(client)
+//        MinIOUtil.releaseMinioClient(client)
         val time2: Long = System.currentTimeMillis()
         println("Get Tile Time1 is " + (time2 - time1))
         tile

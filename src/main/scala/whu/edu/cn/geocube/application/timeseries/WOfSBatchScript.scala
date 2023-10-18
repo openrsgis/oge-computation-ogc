@@ -7,14 +7,17 @@ import geotrellis.layer._
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.render.GreaterThanOrEqualTo
+
 import java.io.{File, FileOutputStream, PrintWriter}
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
+
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import sys.process._
 import whu.edu.cn.geocube.application.timeseries.WOfS.wofsSpatialBatch
-import whu.edu.cn.geocube.util.{GcConstant, TileUtil}
+import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
 
@@ -24,7 +27,7 @@ import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
  * Since there are some bugs when calling wofsSpatialBatch() in WOfS class,
  * this class has eliminated these bugs.
  */
-object WOfSBatchScript{
+object WOfSBatchScript {
   def wofsBatchExecutor(batches: Int,
                         queryParams: QueryParams,
                         outputDir: String): Unit = {
@@ -62,12 +65,12 @@ object WOfSBatchScript{
 
     //extract grid codes
     val gridCodes: Array[String] = queryParams.getGridCodes.toArray
-    println("all gridCodes: " + gridCodes.foreach(x => print (x + " ")))
+    println("all gridCodes: " + gridCodes.foreach(x => print(x + " ")))
 
     val batchInterval = gridCodes.length / batches
-    if(batchInterval == gridCodes.length) {
+    if (batchInterval == gridCodes.length) {
       throw new RuntimeException("Grid codes length is " + gridCodes.length + ", batches is " + batches + ", batch interval is " + batchInterval + ", which is too large, please increase the batches!")
-    } else if (batchInterval <= 1){
+    } else if (batchInterval <= 1) {
       throw new RuntimeException("Grid codes length is " + gridCodes.length + ", batches is " + batches + ", batch interval is " + batchInterval + ", which is too small, please reduce the batches!")
     } else {
       (0 until batches).foreach { i =>
@@ -80,7 +83,7 @@ object WOfSBatchScript{
         //extract grid code for each batch
         val batchGridCodeArray: ArrayBuffer[String] = new ArrayBuffer[String]()
         ((i * batchInterval) until (i + 1) * batchInterval).foreach(j => batchGridCodeArray.append(gridCodes(j)))
-        if(i == (batches - 1) && gridCodes.length % batches != 0){
+        if (i == (batches - 1) && gridCodes.length % batches != 0) {
           ((i + 1) * batchInterval until gridCodes.length).foreach(j => batchGridCodeArray.append(gridCodes(j)))
         }
         val batchGridCodes = new StringBuilder
@@ -104,7 +107,7 @@ object WOfSBatchScript{
     var queryTime: Long = 0
     var analysisTime: Long = 0
     var tileCount: Long = 0
-    metaPaths.foreach{x =>
+    metaPaths.foreach { x =>
       println(executorOutputDir + x)
       val metaFile = Source.fromFile(executorOutputDir + x)
       val lines = metaFile.getLines()
@@ -119,7 +122,7 @@ object WOfSBatchScript{
 
     val tilePaths: Array[String] = dir.list().filter(x => x.endsWith("TIF"))
     val spatialTiles = ArrayBuffer[(SpatialKey, Tile)]()
-    tilePaths.foreach{x =>
+    tilePaths.foreach { x =>
       println(executorOutputDir + x)
       val col_row = x.replace(".TIF", "").split("_")
       val (col, row) = (col_row(0).toInt, col_row(1).toInt)
@@ -166,10 +169,8 @@ object WOfSBatchScript{
     stitched.tile.renderPng(colorMap).write(outputPath)
 
     val outputMetaPath = executorOutputDir + "WOfS.json"
-    val objectMapper =new ObjectMapper()
+    val objectMapper = new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -193,22 +194,22 @@ object WOfSBatchScript{
       .set("spark.rpc.message.maxSize", "1024")
       .set("spark.driver.maxResultSize", "8g")
     val sc = new SparkContext(conf)
-    try{
+    try {
       //data access
       val batchQueryBegin = System.currentTimeMillis()
-      val tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) =
+      val tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
         DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
-      if(tileLayerRddWithMeta == null)
+      if (tileLayerRddWithMeta == null)
         return
       val batchQueryEnd = System.currentTimeMillis()
       val queryTilesCount = tileLayerRddWithMeta._1.count()
 
       //data processing
       val batchAnalysisBegin = System.currentTimeMillis()
-      val batchWOfS:Array[(SpatialKey, Tile)] = wofsSpatialBatch(tileLayerRddWithMeta)
+      val batchWOfS: Array[(SpatialKey, Tile)] = wofsSpatialBatch(tileLayerRddWithMeta)
       val batchAnalysisEnd = System.currentTimeMillis()
 
-      batchWOfS.foreach{x =>
+      batchWOfS.foreach { x =>
         val (col, row) = (x._1.col, x._1.row)
         val metaDataPath = executorOutputDir + col + "_" + row + ".txt"
         val metaWriter = new PrintWriter(new File(metaDataPath))
@@ -219,7 +220,7 @@ object WOfSBatchScript{
 
         val tileDataPath = executorOutputDir + col + "_" + row + ".TIF"
         val tile = x._2.localMultiply(10).convert(ByteCellType)
-        val crs:CRS = CRS.fromEpsgCode(4326)
+        val crs: CRS = CRS.fromEpsgCode(4326)
         val globalExtent = geotrellis.vector.Extent(-180, -90, 180, 90)
         val tileSize: Int = queryParams.getLevel.toInt
         val tl = TileLayout(360, 180, tileSize, tileSize)
@@ -228,16 +229,16 @@ object WOfSBatchScript{
         GeoTiff(Raster(tile, extent), crs).write(tileDataPath)
       }
       println("batch " + batchCount + " success")
-    }finally {
+    } finally {
       sc.stop()
     }
 
   }
 
-  def main(args:Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     val rasterProductNames = args(0).split(",")
-    val startTime = args(1)+ " 00:00:00.000"
-    val endTime = args(2)+ " 00:00:00.000"
+    val startTime = args(1) + " 00:00:00.000"
+    val endTime = args(2) + " 00:00:00.000"
     val extent = args(3).split(",").map(_.toDouble)
     val gridCodes = args(4).split(",")
     val executorOutputDir = args(5)
@@ -245,7 +246,7 @@ object WOfSBatchScript{
 
     println("rasterProductNames: " + rasterProductNames.foreach(x => print(x + " ")))
     println("time: " + (startTime, endTime))
-    println("gridCodes of the current batch: " + gridCodes.foreach(x => print (x + " ")))
+    println("gridCodes of the current batch: " + gridCodes.foreach(x => print(x + " ")))
 
     val queryParams = new QueryParams
     queryParams.setRasterProductNames(rasterProductNames)

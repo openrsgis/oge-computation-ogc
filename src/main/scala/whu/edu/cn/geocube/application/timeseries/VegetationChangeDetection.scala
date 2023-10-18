@@ -7,11 +7,12 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.spark._
 import geotrellis.raster.render.{ColorRamp, Exact, RGB}
 import org.apache.spark.rdd.RDD
+
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, UUID}
-
 import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot, localHtmlRoot}
 
 import scala.collection.mutable.ArrayBuffer
 import sys.process._
@@ -19,7 +20,6 @@ import whu.edu.cn.geocube.core.entity.{RasterTileLayerMetadata, SpaceTimeBandKey
 import whu.edu.cn.geocube.application.spetralindices.NDVI
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.{DistributedQueryRasterTiles, QueryRasterTiles}
-import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.geocube.view.Info
 
 object VegetationChangeDetection{
@@ -110,11 +110,11 @@ object VegetationChangeDetection{
           strict = false
         )
       )
-    stitched.tile.renderPng(colorMap).write(GcConstant.localHtmlRoot + uuid + "_vegetation_change.png")
+    stitched.tile.renderPng(colorMap).write(localHtmlRoot + uuid + "_vegetation_change.png")
 
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_vegetation_change.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_vegetation_change.TIF"
     GeoTiff(stitched, srcMetadata.crs).write(outputTiffPath)
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_vegetation_change_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_vegetation_change_thematic.png"
     val stdout = new StringBuilder
     val stderr = new StringBuilder
     Seq("/home/geocube/qgis/run.sh", "-t", "Vegetation_change", "-r", s"$outputTiffPath", "-o", s"$outputThematicPngPath") ! ProcessLogger(stdout append _, stderr append _)
@@ -338,8 +338,6 @@ object VegetationChangeDetection{
     val outputMetaPath = executorOutputDir + "VegetationChangeDetection.json"
     val objectMapper =new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -453,8 +451,6 @@ object VegetationChangeDetection{
     val outputMetaPath = executorOutputDir + "VegetationChangeDetection.json"
     val objectMapper =new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)

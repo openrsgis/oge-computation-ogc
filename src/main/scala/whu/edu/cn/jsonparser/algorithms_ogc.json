@@ -1,4 +1,52 @@
 {
+  "Service.printNumber": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "Number",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Service.printString": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "String",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Service.printList": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "List<String>",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
   "FeatureCollection.filter": {
     "description": "Applies a filter to a given collection.",
     "returns": "FeatureCollection",
@@ -26,7 +74,7 @@
       },
       {
         "name": "filter",
-        "type": "Filter",
+        "type": "String",
         "description": "The filter to apply to the collection. "
       }
     ]
@@ -118,7 +166,7 @@
       }
     ]
   },
-  "Collection.map": {
+  "CoverageCollection.map": {
     "description": "Maps an algorithm over a collection.",
     "returns": "Collection",
     "args": [
@@ -131,13 +179,6 @@
         "name": "baseAlgorithm",
         "type": "Algorithm",
         "description": "The algorithm being applied to each element"
-      },
-      {
-        "name": "dropNulls",
-        "type": "Boolean",
-        "description": "If true, the mapped algorithm is allowed to return nulls, and the elements for which it returns nulls will be dropped.",
-        "optional": "True",
-        "default": "False"
       }
     ]
   },
@@ -1179,6 +1220,28 @@
         "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
         "optional": "True",
         "default": "None"
+      }
+    ]
+  },
+  "Coverage.bandNames": {
+    "description": "Get all bands names from a coverage.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to operate."
+      }
+    ]
+  },
+  "Coverage.bandNum": {
+    "description": "Get the count of the coverage.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage."
       }
     ]
   },
@@ -2267,7 +2330,7 @@
       }
     ]
   },
-  "Feature.taperedBufferByQIS": {
+  "Feature.taperedBufferByQGIS": {
     "description": "Creates tapered buffer along line geometries, using a specified start and end buffer diameter.",
     "returns": "Feature",
     "args": [
@@ -2299,7 +2362,7 @@
       }
     ]
   },
-  "Feature.wedgeBuffersByQIS": {
+  "Feature.wedgeBuffersByQGIS": {
     "description": "Creates wedge shaped buffers from input points.",
     "returns": "Feature",
     "args": [
@@ -2338,7 +2401,7 @@
       }
     ]
   },
-  "Feature.concaveHullByQIS": {
+  "Feature.concaveHullByQGIS": {
     "description": "Computes the concave hull of the features in an input point layer.",
     "returns": "Feature",
     "args": [
@@ -2370,7 +2433,7 @@
       }
     ]
   },
-  "Feature.delaunayTriangulationByQIS": {
+  "Feature.delaunayTriangulationByQGIS": {
     "description": "Creates a polygon layer with the Delaunay triangulation corresponding to the input point layer.",
     "returns": "Feature",
     "args": [
@@ -2381,7 +2444,7 @@
       }
     ]
   },
-  "Feature.voronoiPolygonsByQIS": {
+  "Feature.voronoiPolygonsByQGIS": {
     "description": "Takes a point layer and generates a polygon layer containing the Voronoi polygons corresponding to those input points.",
     "returns": "Feature",
     "args": [
@@ -2452,7 +2515,7 @@
       }
     ]
   },
-  "coverage.contourByGDAL": {
+  "Coverage.contourByGDAL": {
     "description": "Extracts contour lines from any GDAL-supported elevation raster.",
     "returns": "Feature",
     "args": [
@@ -2526,7 +2589,7 @@
       }
     ]
   },
-  "coverage.contourPolygonByGDAL": {
+  "Coverage.contourPolygonByGDAL": {
     "description": "Extracts contour polygons from any GDAL-supported elevation raster.",
     "returns": "Feature",
     "args": [
@@ -2607,7 +2670,7 @@
       }
     ]
   },
-  "coverage.fillNodataByGDAL": {
+  "Coverage.fillNodataByGDAL": {
     "description": "Fill raster regions with no data values by interpolation from edges.",
     "returns": "Coverage",
     "args": [
@@ -2667,7 +2730,7 @@
       }
     ]
   },
-  "coverage.gridAverageByGDAL": {
+  "Coverage.gridAverageByGDAL": {
     "description": "The Moving Average is a simple data averaging algorithm.",
     "returns": "Coverage",
     "args": [
@@ -2741,7 +2804,7 @@
       }
     ]
   },
-  "coverage.gridDataMetricsByGDAL": {
+  "Coverage.gridDataMetricsByGDAL": {
     "description": "Computes some data metrics using the specified window and output grid geometry.",
     "returns": "Coverage",
     "args": [
@@ -3206,7 +3269,7 @@
       }
     ]
   },
-  "coverage.nearBlackByGDAL": {
+  "Coverage.nearBlackByGDAL": {
     "description": "Converts nearly black/white borders to black.",
     "returns": "Coverage",
     "args": [
@@ -3245,7 +3308,7 @@
       }
     ]
   },
-  "coverage.proximityByGDAL": {
+  "Coverage.proximityByGDAL": {
     "description": "Generates a raster proximity map indicating the distance from the center of each pixel to the center of the nearest pixel identified as a target pixel.",
     "returns": "Coverage",
     "args": [
@@ -3319,7 +3382,7 @@
       }
     ]
   },
-  "coverage.roughnessByGDAL": {
+  "Coverage.roughnessByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation.",
     "returns": "Coverage",
     "args": [
@@ -3351,7 +3414,7 @@
       }
     ]
   },
-  "coverage.slopeByGDAL": {
+  "Coverage.slopeByGDAL": {
     "description": "Generates a slope map from any GDAL-supported elevation raster.",
     "returns": "Coverage",
     "args": [
@@ -3411,7 +3474,7 @@
       }
     ]
   },
-  "coverage.tpiTopographicPositionIndexByGDAL": {
+  "Coverage.tpiTopographicPositionIndexByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation. TPI stands for Topographic Position Index, which is defined as the difference between a central pixel and the mean of its surrounding cells.",
     "returns": "Coverage",
     "args": [
@@ -3443,7 +3506,7 @@
       }
     ]
   },
-  "coverage.triTerrainRuggednessIndexByGDAL": {
+  "Coverage.triTerrainRuggednessIndexByGDAL": {
     "description": "Outputs a single-band raster with values computed from the elevation. TRI stands for Terrain Ruggedness Index, which is defined as the mean difference between a central pixel and its surrounding cells.",
     "returns": "Coverage",
     "args": [
@@ -3475,7 +3538,7 @@
       }
     ]
   },
-  "coverage.clipRasterByExtentByGDAL": {
+  "Coverage.clipRasterByExtentByGDAL": {
     "description": "Clips any GDAL-supported raster file to a given extent.",
     "returns": "Coverage",
     "args": [
@@ -3521,7 +3584,7 @@
       }
     ]
   },
-  "coverage.clipRasterByMaskLayerByGDAL": {
+  "Coverage.clipRasterByMaskLayerByGDAL": {
     "description": "Clips any GDAL-supported raster by a vector mask layer.",
     "returns": "Coverage",
     "args": [
@@ -4008,7 +4071,7 @@
       },
       {
         "name": "extent",
-        "type": "String",
+        "type": "Feature",
         "description": "Defines the bounding box that should be used for the output vector file. It has to be defined in target CRS coordinates.",
         "optional": "True",
         "default": ""
@@ -4033,7 +4096,7 @@
       },
       {
         "name": "mask",
-        "type": "String",
+        "type": "Feature",
         "description": "Layer to be used as clipping extent for the input vector layer.",
         "optional": "True",
         "default": ""
@@ -4405,6 +4468,221 @@
       }
     ]
   },
+  "Coverage.resampStatsByGrass": {
+    "description": "Resamples raster map layers to a coarser grid using aggregation",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Aggregation method",
+        "optional": "True",
+        "default": "average"
+      },
+      {
+        "name": "quantile",
+        "type": "Float",
+        "description": "Quantile to calculate for method=quantile Options: 0.0-1.0 ",
+        "optional": "True",
+        "default": "0.5"
+      }
+    ]
+  },
+  "Coverage.resampInterpByGrass": {
+    "description": "Resamples raster map to a finer grid using interpolation",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Sampling interpolation method Options: nearest, bilinear, bicubic, lanczos",
+        "optional": "True",
+        "default": "bilinear"
+      }
+    ]
+  },
+  "Coverage.resampBsplineByGrass": {
+    "description": "Performs bilinear or bicubic spline interpolation with Tykhonov regularization.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Spline interpolation algorithm Options: bilinear, bicubic",
+        "optional": "True",
+        "default": "bicubic"
+      }
+    ]
+  },
+  "Coverage.resampFilterByGrass": {
+  "description": "Resamples raster map layers using an analytic kernel.",
+  "returns": "Coverage",
+  "args": [
+    {
+      "name": "input",
+      "type": "Coverage",
+      "description": "Name of input raster map"
+    },
+    {
+      "name": "res",
+      "type": "String",
+      "description": "New resolution ratio after resampling"
+    },
+    {
+      "name": "filter",
+      "type": "String",
+      "description": "Filter kernel(s) Options: box, bartlett, gauss, normal, hermite, sinc, lanczos1, lanczos2, lanczos3, hann, hamming, blackman"
+    },
+    {
+      "name": "radius",
+      "type": "String",
+      "description": "Filter radius"
+    }
+  ]
+},
+  "Coverage.resampleByGrass": {
+  "description": "GRASS raster map layer data resampling capability. ",
+  "returns": "Coverage",
+  "args": [
+    {
+      "name": "input",
+      "type": "Coverage",
+      "description": "Name of input raster map"
+    },
+    {
+      "name": "res",
+      "type": "String",
+      "description": "New resolution ratio after resampling"
+    }
+  ]
+},
+  "Coverage.textureByGrass": {
+    "description": " Generate images with textural features from a raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "String",
+        "description": "The size of moving window (odd and >= 3)",
+        "optional": "True",
+        "default": "3"
+      },
+      {
+        "name": "distance",
+        "type": "String",
+        "description": "The distance between two samples (>= 1) The distance must be smaller than the size of the moving window",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Textural measurement method Options: asm, contrast, corr, var, idm, sa, sv, se, entr, dv, de, moc1, moc2 "
+      }
+    ]
+  },
+  "Coverage.viewshedByGrass": {
+    "description": " Computes the viewshed of a point on an elevation raster map.                       Default format: NULL (invisible), vertical angle wrt viewpoint (visible). ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "coordinates",
+        "type": "String",
+        "description": "Coordinates of viewing position"
+      },
+      {
+        "name": "observer_elevation",
+        "type": "String",
+        "description": "Viewing elevation above the ground ",
+        "optional": "True",
+        "default": "1.75"
+      },
+      {
+        "name": "target_elevation",
+        "type": "String",
+        "description": "Offset for target elevation above the ground",
+        "optional": "True",
+        "default": "0.0"
+      },
+      {
+        "name": "max_distance",
+        "type": "String",
+        "description": "Maximum visibility radius. By default infinity (-1) ",
+        "optional": "True",
+        "default": "-1"
+      },
+      {
+        "name": "refraction_coeff",
+        "type": "String",
+        "description": "Refraction coefficient Options: 0.0-1.0 ",
+        "optional": "True",
+        "default": "0.14286"
+      }
+    ]
+  },
+  "Coverage.shadeByGrass": {
+    "description": "Drapes a color raster over an shaded relief or aspect map. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "shade",
+        "type": "Coverage",
+        "description": "Name of shaded relief or aspect raster map "
+      },
+      {
+        "name": "color",
+        "type": "Coverage",
+        "description": "Name of raster to drape over relief raster map Typically, this raster is elevation or other colorful raster"
+      },
+      {
+        "name": "brighten",
+        "type": "String",
+        "description": "Percent to brighten Options: -99-99 ",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
   "Coverage.surfIdwByGrass": {
     "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
     "returns": "Coverage",
@@ -4549,6 +4827,113 @@
       }
     ]
   },
+  "Coverage.reclassByGrass": {
+    "description": "Reclassify raster map based on category values.Creates a new raster map whose category values are based upon a reclassification of the categories in an existing raster map. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster map to be reclassified"
+      },
+      {
+        "name": "rules",
+        "type": "Coverage",
+        "description": "File containing reclass rules '-' for standard input"
+      }
+    ]
+  },
+  "Coverage.reportByGrass": {
+    "description": " Reports statistics for raster maps. ",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description": "Name of raster map to report on"
+      }
+    ]
+  },
+  "Coverage.supportStatsByGrass": {
+    "description": "Update raster map statistics",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description": "Name of raster map"
+      }
+    ]
+  },
+  "Coverage.outDdalByGrass": {
+    "description": " Exports GRASS raster maps into GDAL supported formats. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster map (or group) to export "
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "Raster data format to write (case sensitive, see also -l flag) Options: VRT, GTiff, COG, NITF, HFA, ELAS, AAIGrid, DTED, PNG, JPEG, MEM, GIF, XPM, BMP, PCIDSK, PCRaster, ILWIS, SGI, SRTMHGT, Leveller, Terragen, netCDF, HDF4Image, ISIS3, ISIS2, PDS4, VICAR, ERS, ECW, JP2ECW, JP2OpenJPEG, FIT, GRIB, RMF, WMS, RST, GSAG, GSBG, GS7BG, R, KMLSUPEROVERLAY, WEBP, PDF, Rasterlite, MBTiles, CALS, WMTS, MRF, PNM, PAux, MFF, MFF2, BT, LAN, LCP, GTX, NTv2, CTable2, KRO, ROI_PAC, RRASTER, BYN, ARG, USGSDEM, NWT_GRD, ADRG, BLX, PostGISRaster, SAGA, XYZ, HF2, ZMap, SIGDEM, GPKG, NGW, ENVI, EHdr, ISCE, Zarr ",
+        "optional": "True",
+        "default": "GTiff"
+      }
+    ]
+  },
+  "Coverage.outBinByGrass": {
+    "description": " Exports a GRASS raster to a binary array.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "nu_ll",
+        "type": "String",
+        "description": "Value to write out for null ",
+        "optional": "True",
+        "default": "0"
+      },
+      {
+        "name": "bytes",
+        "type": "String",
+        "description": "Number of bytes per cell Options: 1, 2, 4, 8 "
+      },
+      {
+        "name": "order",
+        "type": "String",
+        "description": "Output byte order \nOptions: big, little, native, swap ",
+        "optional": "True",
+        "default": "native"
+      }
+    ]
+  },
+  "Coverage.inGdalByGrass": {
+    "description": " Imports raster data into a GRASS raster map using GDAL library. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster file to be imported "
+      },
+      {
+        "name": "band",
+        "type": "String",
+        "description": "Band(s) to select (default is all bands) "
+      },
+      {
+        "name": "location",
+        "type": "String",
+        "description": "Name for new location to create "
+      }
+    ]
+  },
   "Kernel.fixed": {
     "description": "Creates a Kernel.",
     "returns": "Kernel",
@@ -4586,9 +4971,14 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "axis",
-        "type": "String",
-        "description": "Specify the direction of the convolution kernel,x/y."
+        "name": "normalize",
+        "type": "Boolean",
+        "description": "Normalize the kernel values to sum to 1."
+      },
+      {
+        "name": "magnitude",
+        "type": "Float",
+        "description": "Scale each value by this amount."
       }
     ]
   },
@@ -4846,12 +5236,12 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "xradius",
+        "name": "xRadius",
         "type": "Int",
         "description": "The horizontal radius of the kernel to generate."
       },
       {
-        "name": "yradius",
+        "name": "yRadius",
         "type": "Int",
         "description": "The vertical radius of the kernel to generate."
       },
@@ -4870,13 +5260,7 @@
   "Kernel.laplacian4": {
     "description": "Generates a 3x3 laplacian-4 edge-detection kernel.",
     "returns": "Kernel",
-    "args": [
-      {
-        "name": "normalize",
-        "type": "Boolean",
-        "description": "Normalize the kernel values to sum to 1."
-      }
-    ]
+    "args": []
   },
   "Kernel.laplacian8": {
     "description": "Generates a 3x3 laplacian-8 edge-detection kernel.",
@@ -4910,7 +5294,7 @@
     "returns": "Kernel",
     "args": [
       {
-        "name": "kernel1",
+        "name": "kernel",
         "type": "Kernel",
         "description": "The first kernel."
       }
@@ -5929,6 +6313,33 @@
       }
     ]
   },
+  "CoverageCollection.cat": {
+    "description": "cat the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.visualizeOnTheFly": {
+    "description": "",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "collection",
+        "description": ""
+      },
+      {
+        "name": "visParam",
+        "type": "VisualizationParam",
+        "description": ""
+      }
+    ]
+  },
   "Feature.addStyles": {
     "description": "Add the feature to the coverage",
     "returns": "Feature",
@@ -6321,14 +6732,9 @@
     "returns": "Feature",
     "args": [
       {
-        "name": "gjson",
+        "name": "coors",
         "type": "String",
         "description": "geojson"
-      },
-      {
-        "name": "properties",
-        "type": "String",
-        "description": "Properties"
       },
       {
         "name": "crs",
@@ -6426,7 +6832,7 @@
   },
   "Feature.coordinates": {
     "description": "compute coordinates",
-    "returns": "List[Array[Coordinate]]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6453,7 +6859,7 @@
   },
   "Feature.isUnbounded": {
     "description": "judge a geometry is unbounded",
-    "returns": "List[Boolean]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6464,7 +6870,7 @@
   },
   "Feature.getType": {
     "description": "Returns the GeoJSON type of the geometry",
-    "returns": "List[String]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6475,7 +6881,7 @@
   },
   "Feature.projection": {
     "description": "Returns the projection of the geometry.",
-    "returns": "List[Int]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6486,7 +6892,7 @@
   },
   "Feature.toGeoJSONString": {
     "description": "Returns a GeoJSON string representation of the geometry.",
-    "returns": "List[String]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6497,7 +6903,7 @@
   },
   "Feature.length": {
     "description": "compute length",
-    "returns": "List[Double]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6529,7 +6935,7 @@
   },
   "Feature.contains": {
     "description": "Returns true iff one geometry contains the other.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6550,7 +6956,7 @@
   },
   "Feature.containedIn": {
     "description": "Returns true iff one geometry is contained in the other.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6571,7 +6977,7 @@
   },
   "Feature.disjoint": {
     "description": "Returns true iff the geometries are disjoint.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6592,7 +6998,7 @@
   },
   "Feature.distance": {
     "description": "Returns the minimum distance between two geometries.",
-    "returns": "Double",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6655,7 +7061,7 @@
   },
   "Feature.intersects": {
     "description": "Returns true iff the geometries intersect.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7408,12 +7814,12 @@
     "args": [
       {
         "name": "inputTemperature",
-        "type": "Table",
+        "type": "String",
         "description": "温度表格数据"
       },
       {
         "name": "inputStation",
-        "type": "FeatureCollection",
+        "type": "String",
         "description": "站点数据"
       },
       {
@@ -7428,7 +7834,7 @@
       },
       {
         "name": "timeStep",
-        "type": "Float",
+        "type": "Long",
         "description": "步长"
       }
     ]
@@ -7439,27 +7845,27 @@
     "args": [
       {
         "name": "rate",
-        "type": "Float",
+        "type": "Double",
         "description": "rate"
       },
       {
         "name": "recession",
-        "type": "Float",
+        "type": "Int",
         "description": "recession"
       },
       {
         "name": "tMax",
-        "type": "Float",
+        "type": "Int",
         "description": "tMax"
       },
       {
         "name": "iterception",
-        "type": "Float",
+        "type": "Int",
         "description": "iterception"
       },
       {
         "name": "waterShedArea",
-        "type": "Float",
+        "type": "Int",
         "description": "waterShedArea"
       },
       {
@@ -7474,17 +7880,17 @@
       },
       {
         "name": "timeStep",
-        "type": "Float",
+        "type": "Long",
         "description": "步长"
       },
       {
         "name": "inputTopoIndex",
-        "type": "Table",
+        "type": "String",
         "description": ""
       },
       {
         "name": "inputPrecipEvapFile",
-        "type": "Table",
+        "type": "String",
         "description": ""
       }
     ]
@@ -7495,7 +7901,7 @@
     "args": [
       {
         "name": "input",
-        "type": "Table",
+        "type": "String",
         "description": ""
       }
     ]
@@ -8084,6 +8490,27 @@
       }
     ]
   },
+  "Coverage.terrHillshade": {
+    "description": "DEM山体阴影计算.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the hillshade."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the hillshade, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct hillshade calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
   "Cube.normalize": {
     "description": "Calculate the normalize index from the cube",
     "returns": "Cube",
@@ -8123,6 +8550,178 @@
         "name": "method",
         "type": "String",
         "description": "The method name to perform aggregation"
+      }
+    ]
+  },
+  "Coverage.linearTransformation": {
+    "description": "Gray-level linear transformations",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The Coverage to make gray-level linear transformations"
+      },
+      {
+        "name": "k",
+        "type": "Double",
+        "description": "The  coefficient to make gray-level linear transformations"
+      },
+      {
+        "name": "b",
+        "type": "Int",
+        "description": "The  constant to add in gray-level linear transformations"
+      }
+    ]
+  },
+  "Coverage.fakeColorCompose": {
+    "description": "Compose single-band photo to color photo",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The Coverage to make FakeColorCompose"
+      },
+      {
+        "name": "BandRed",
+        "type": "Int",
+        "description": "Chose one band as red band the number stands for bandindex"
+      },
+      {
+        "name": "BandGreen",
+        "type": "Int",
+        "description": "Chose one band as green band the number stands for bandindex"
+      },
+      {
+        "name": "BandBlue",
+        "type": "Int",
+        "description": "Chose one band as Blue band the number stands for bandindex"
+      }
+    ]
+  },
+  "Coverage.standardDeviationCalculation": {
+    "description": "Calculate the standard deviation of each band of coverage",
+    "returns": "Map",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to standard deviation calculation."
+      }
+    ]
+  },
+  "Coverage.cannyEdgeDetection": {
+    "description": "Edge detection by Canny",
+    "returns": "coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to Canny edge detection."
+      }
+    ]
+  },
+  "Coverage.standardDeviationStretching": {
+    "description": "Calculate the standard deviation and perform stretching",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name":"coverage",
+        "type":"Coverage",
+        "description":"Each band of coverage is stretched based on standard deviation."}
+    ]
+  },
+  "Coverage.histogramEqualization": {
+    "description": "Return the new image with equalized histogram.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be histogram equalized."
+      }
+    ]
+  },
+  "Coverage.bilateralFilter": {
+    "description": "Applies a bilateral filter to each band of an image using a named bilateral kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be filtered with bilateral filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "d",
+        "type": "Int",
+        "description": "The side length of the filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaSpace",
+        "type": "Double",
+        "description": "Spatial weight.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaColor",
+        "type": "Double",
+        "description": "Value weight.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.gaussianBlur": {
+    "description": "Applies a gaussian filter to each band of an image using a named gaussian kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image to be filtered with gaussian filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "ksize",
+        "type": "List[Int]",
+        "description": "The list containing the height and width of the filter.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaX",
+        "type": "Double",
+        "description": "Standard deviation of the gaussian distribution in the x-direction.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaY",
+        "type": "Double",
+        "description": "Standard deviation of the gaussian distribution in the y-direction.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
       }
     ]
   }

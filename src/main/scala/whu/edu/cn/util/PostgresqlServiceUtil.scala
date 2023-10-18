@@ -11,15 +11,21 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 object PostgresqlServiceUtil {
   def main(args: Array[String]): Unit = {
-    val md = new CoverageCollectionMetadata
-    md.setProductName("LC08_L1TP_C01_T1")
-    md.setSensorName("")
-    md.setMeasurementName("[B4,B5]")
-    md.setStartTime("2018/01/01")
-    md.setEndTime("2018/12/31")
-    md.setExtent("[113,29,120,34]")
-    md.setCrs("4326")
-    queryCoverageCollection(md.getProductName, null, md.getMeasurementName, md.getStartTime, md.getEndTime, md.getExtent, md.getCrs)
+
+    val res: ListBuffer[CoverageMetadata] = queryCoverage("ASTGTM_N28E056", "ASTER_GDEM_DEM30")
+
+    res.foreach(println)
+
+
+    //    val md = new CoverageCollectionMetadata
+    //    md.setProductName("LC08_L1TP_C01_T1")
+    //    md.setSensorName("")
+    //    md.setMeasurementName("[B4,B5]")
+    //    md.setStartTime("2018/01/01")
+    //    md.setEndTime("2018/12/31")
+    //    md.setExtent("[113,29,120,34]")
+    //    md.setCrs("4326")
+    //    queryCoverageCollection(md.getProductName, null, md.getMeasurementName, md.getStartTime, md.getEndTime, md.getExtent, md.getCrs)
   }
 
   def queryCoverageCollection(productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Geometry = null, crs: CRS = null): ListBuffer[CoverageMetadata] = {
@@ -129,34 +135,39 @@ object PostgresqlServiceUtil {
     metaData
   }
 
-  def queryCoverage(coverageId: String,productKey :String): ListBuffer[CoverageMetadata] = {
+  def queryCoverage(coverageId: String, productKey: String): ListBuffer[CoverageMetadata] = {
     val metaData = new ListBuffer[CoverageMetadata]
-    val postgresqlUtil = new PostgresqlUtil("")
-    val conn: Connection = postgresqlUtil.getConnection
 
-    if (conn != null) {
-      try {
-        // Configure to be Read Only
-        val statement: Statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-
-        val sql = new mutable.StringBuilder
-        sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, st_astext(oge_image.geom) as geom, oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.dtype"
-        sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.band_train, oge_product_measurement.resolution_m"
-        sql ++= " from oge_image "
-        sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
-        sql ++= "join oge_product_measurement on oge_product_measurement.product_key=oge_data_resource_product.id join oge_measurement on oge_product_measurement.measurement_key=oge_measurement.measurement_key "
-        // productName is not null
-        var t = "where"
-        sql ++= t
-        sql ++= " image_identification="
-        sql ++= "\'"
-        sql ++= coverageId
-        sql ++= "\' AND name = \'"
-        sql ++= productKey
-        sql ++= "\'"
-        println(sql)
-        val extentResults: ResultSet = statement.executeQuery(sql.toString())
-
+    // 查询数据并处理
+    PostgresqlUtilDev.simpleSelect(
+      resultNames = Array(
+        "oge_image.product_key", "oge_image.image_identification",
+        "oge_image.crs", "oge_image.path", "st_astext(oge_image.geom)"
+      ),
+      tableName = "oge_image",
+      rangeLimit = Array(
+        ("image_identification", "=", coverageId),
+        ("name", "=", productKey)
+      ),
+      aliases = Array(
+        "geom",
+        "oge_image.phenomenon_time",
+        "oge_data_resource_product.name",
+        "oge_data_resource_product.dtype",
+        "oge_product_measurement.band_num",
+        "oge_product_measurement.band_rank",
+        "oge_product_measurement.band_train",
+        " oge_product_measurement.resolution_m"
+      ),
+      jointLimit = Array(
+        ("oge_data_resource_product",
+          "oge_image.product_key= oge_data_resource_product.id"),
+        ("oge_product_measurement",
+          "oge_product_measurement.product_key=oge_data_resource_product.id"),
+        ("oge_measurement",
+          "oge_product_measurement.measurement_key=oge_measurement.measurement_key")
+      ),
+      func = extentResults => {
         // 排除BQA波段
         while (extentResults.next()) {
           if (extentResults.getInt("band_train") != 0) {
@@ -174,10 +185,7 @@ object PostgresqlServiceUtil {
           }
         }
       }
-      finally {
-        conn.close()
-      }
-    } else throw new RuntimeException("connection failed")
+    )
 
     metaData
   }

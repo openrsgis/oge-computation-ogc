@@ -3,7 +3,7 @@ package whu.edu.cn.util;
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
-import whu.edu.cn.util.GlobalConstantUtil.{JEDIS_HOST, JEDIS_PORT, JEDIS_PWD}
+import whu.edu.cn.config.GlobalConfig.RedisConf.{JEDIS_HOST, JEDIS_PORT, JEDIS_PWD}
 
 import java.time.Duration
 

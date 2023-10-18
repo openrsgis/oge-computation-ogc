@@ -1,6 +1,6 @@
 package whu.edu.cn.util
 
-import whu.edu.cn.util.GlobalConstantUtil.{POSTGRESQL_DRIVER, POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
+import whu.edu.cn.config.GlobalConfig.PostgreSqlConf.{POSTGRESQL_DRIVER, POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
 
 import java.sql.{Connection, DriverManager, PreparedStatement}
 import java.util.Properties
@@ -8,9 +8,13 @@ import java.util.Properties
 /**
  * A config class for postresql connection.
  * */
+@deprecated("forDece: 该类已被弃用，" +
+  "如有相关需求请移步 PostgresqlUtilDev")
 class PostgresqlUtil(sql: String) {
+  Class.forName(POSTGRESQL_DRIVER)
   private val connection: Connection = DriverManager.getConnection(POSTGRESQL_URL, POSTGRESQL_USER, POSTGRESQL_PWD)
   private val statement: PreparedStatement = connection.prepareStatement(sql)
+  println("正在创建已被弃用的类！！")
 
   def getConnection: Connection = {
     var retries = 0
@@ -34,8 +38,12 @@ class PostgresqlUtil(sql: String) {
     connection
   }
 
+  @deprecated("forDece: 该类已被弃用，" +
+    "如有相关需求请移步 PostgresqlUtilDev")
   def getStatement: PreparedStatement = statement
 
+  @deprecated("forDece: 该类已被弃用，" +
+    "如有相关需求请移步 PostgresqlUtilDev")
   def close(): Unit = {
     try {
       this.connection.close()
@@ -47,6 +55,8 @@ class PostgresqlUtil(sql: String) {
   }
 }
 
+@deprecated("forDece: 该对象已被弃用，" +
+  "如有相关需求请移步 PostgresqlUtilDev")
 object PostgresqlUtil {
   //val url = "jdbc:postgresql://125.220.153.26:5432/geocube"
   //val url = "jdbc:postgresql://125.220.153.26:5432/whugeocube"
