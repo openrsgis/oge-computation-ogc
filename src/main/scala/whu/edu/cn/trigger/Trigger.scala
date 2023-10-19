@@ -556,7 +556,7 @@ object Trigger {
         case "Feature.dissolveByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalDissolve(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], explodeCollections = args("explodeCollections"), field = args("field"), computeArea = args("computeArea"), keepAttributes = args("keepAttributes"), computeStatistics = args("computeStatistics"), countFeatures = args("countFeatures"), statisticsAttribute = args("statisticsAttribute"), options = args("options"), geometry = args("geometry")))
         case "Feature.clipVectorByExtentByGDAL" =>
-          featureRddList += (UUID -> QGIS.gdalClipVectorByExtent(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], extent = featureRddList(args("extent")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], options = args("options")))
+          featureRddList += (UUID -> QGIS.gdalClipVectorByExtent(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], extent = args("extent"), options = args("options")))
         case "Feature.clipVectorByPolygonByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalClipVectorByPolygon(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], mask = featureRddList(args("mask")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], options = args("options")))
         case "Feature.offsetCurveByGDAL" =>
