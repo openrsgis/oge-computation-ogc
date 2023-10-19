@@ -1,0 +1,42 @@
+DagBootConf: # dag-boot 服务根路径
+  DAG_ROOT_URL: "http://125.220.153.22:8085/oge-dag-22"
+
+
+RedisConf:
+  JEDIS_HOST: "125.220.153.26"
+  JEDIS_PORT: 6379
+  JEDIS_PWD: "ypfamily608"
+  # Redis 超时时间
+  REDIS_CACHE_TTL: 120
+
+MinioConf:
+  # MinIO 基础配置
+  MINIO_ENDPOINT: "http://125.220.153.22:9006"
+  MINIO_ACCESS_KEY: "rssample"
+  MINIO_SECRET_KEY: "ypfamily608"
+  MINIO_BUCKET_NAME: "oge"
+  MINIO_HEAD_SIZE: 5000000
+  MINIO_MAX_CONNECTIONS: 10000
+
+PostgreSqlConf:
+  # PostgreSQL 基础配置
+  POSTGRESQL_URL: "jdbc:postgresql://125.220.153.23:30865/oge"
+  POSTGRESQL_DRIVER: "org.postgresql.Driver"
+  POSTGRESQL_USER: "oge"
+  POSTGRESQL_PWD: "ypfamily608"
+  POSTGRESQL_MAX_RETRIES: 3
+  POSTGRESQL_RETRY_DELAY: 500
+
+# GcConst
+GcConf:
+  localDataRoot: "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/data/gdc_api/"
+  httpDataRoot: "http://125.220.153.26:8093/data/gdc_api/"
+  localHtmlRoot: "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/"
+  algorithmJson: "/home/geocube/kernel/geocube-core/tb19/process_description.json"
+
+Others:
+  jsonAlgorithms: "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json" # 存储json解析文件地址
+  tempFilePath: "/mnt/storage/temp/" # 各类临时文件的地址
+  tmsPath: "http://oge.whu.edu.cn/api/oge-tms-png/" # tms服务url
+  ontheFlyStorage: "/mnt/storage/on-the-fly" # tms瓦片存储地址
+  jsonSavePath: "/mnt/storage/algorithmData/" # geojson临时存储地址
