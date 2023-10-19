@@ -125,6 +125,7 @@ object RDDTransformerUtil {
       (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), ListBuffer("Aspect")), t._2)
     })
 
+
     println("成功读取tif")
     (tiledOut, metaData)
   }
