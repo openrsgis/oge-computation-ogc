@@ -29,6 +29,7 @@ import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.trigger.Trigger.windowExtent
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -49,31 +50,18 @@ object Coverage {
 
   def load(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val time1 = System.currentTimeMillis()
+//    println("WindowExtent",windowExtent.xmin,windowExtent.ymin,windowExtent.xmax,windowExtent.ymax)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
 
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
     if (metaList.isEmpty) {
       throw new Exception("No such coverage in database!")
     }
-    val queryGeometry: Geometry = metaList.head.getGeom
 
-    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    //    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
-    //      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
-    //      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
-    //      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
-    //      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
-    //      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
-    //
-    //      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
-    //      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
-    //      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
-    //      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
-    //      geometry
-    //    }).reduce((a, b) => {
-    //      a.union(b)
-    //    })
-    val union: Geometry = metaList.head.getGeom
+    var union: Extent = Trigger.windowExtent
+    if(union == null){
+      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
+    }
 
     //    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
@@ -2902,13 +2890,13 @@ object Coverage {
     println("outputJSON: ", outJsonObject.toJSONString)
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
     try{
-      val jedis: Jedis = new JedisUtil().getJedis
-      zIndexStrArray.foreach(zIndexStr => {
-        val key: String = Trigger.dagMd5 + ":solvedTile:" + Trigger.level + zIndexStr
-        jedis.sadd(key, "cached")
-        jedis.expire(key, REDIS_CACHE_TTL)
-      })
-      jedis.close()
+//      val jedis: Jedis = new JedisUtil().getJedis
+//      zIndexStrArray.foreach(zIndexStr => {
+//        val key: String = Trigger.dagMd5 + ":solvedTile:" + Trigger.level + zIndexStr
+//        jedis.sadd(key, "cached")
+//        jedis.expire(key, REDIS_CACHE_TTL)
+//      })
+//      jedis.close()
     }
 
 
