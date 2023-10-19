@@ -81,7 +81,7 @@ object FeatureTrigger {
       }
       case "Feature.geometry" => {
         if (argOrNot(args, "crs") != null)
-          rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"), args("properties"), args("crs")))
+          rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"),args("crs")))
         else
           rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"), args("properties")))
       }
