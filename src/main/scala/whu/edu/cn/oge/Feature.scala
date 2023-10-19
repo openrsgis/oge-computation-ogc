@@ -192,7 +192,7 @@ object Feature {
 
   private def getMapFromStr(str: String): Map[String, Any] = {
     val map = Map.empty[String, Any]
-    map += (str.stripPrefix("{").split(':')(0) -> str.split(':')(1))
+    map += (str.stripPrefix("{").split(':')(0) -> str.stripSuffix("}").split(':')(1))
     map
   }
 
