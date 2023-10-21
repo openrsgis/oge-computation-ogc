@@ -4491,7 +4491,7 @@
       },
       {
         "name": "quantile",
-        "type": "Float",
+        "type": "String",
         "description": "Quantile to calculate for method=quantile Options: 0.0-1.0 ",
         "optional": "True",
         "default": "0.5"
