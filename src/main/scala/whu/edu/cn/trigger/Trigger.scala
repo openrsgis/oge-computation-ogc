@@ -58,6 +58,7 @@ object Trigger {
   var workTaskJson: String = _
   // DAG-ID
   var dagId: String = _
+  var dagMd5: String = _
   val zIndexStrArray = new mutable.ArrayBuffer[String]
 
   // 批计算参数
@@ -252,7 +253,7 @@ object Trigger {
         case "Coverage.normalizedDifference" =>
           coverageRddList += (UUID -> Coverage.normalizedDifference(coverageRddList(args("coverage")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
         case "Coverage.binarization" =>
-          coverageRddList += (UUID -> Coverage.binarization(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toInt))
+          coverageRddList += (UUID -> Coverage.binarization(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toDouble))
         case "Coverage.and" =>
           coverageRddList += (UUID -> Coverage.and(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.or" =>
@@ -1072,11 +1073,11 @@ object Trigger {
       .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
     println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
 
-    windowExtent = new Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
+    windowExtent = Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
+    println("WindowExtent",windowExtent.xmin,windowExtent.ymin,windowExtent.xmax,windowExtent.ymax)
+    dagMd5 = Others.md5HashPassword(curWorkTaskJson)
+    val key: String = dagMd5 + ":solvedTile:" + level
 
-    val jedis: Jedis = new JedisUtil().getJedis
-    val key: String = dagId + ":solvedTile:" + level
-    jedis.select(1)
 
     val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)
     val xMaxOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmax, level)
@@ -1086,25 +1087,41 @@ object Trigger {
     System.out.println("xMinOfTile - xMaxOfTile: " + xMinOfTile + " - " + xMaxOfTile)
     System.out.println("yMinOfTile - yMaxOfTile: " + yMinOfTile + " - " + yMaxOfTile)
 
-    // z曲线编码后的索引字符串
-    //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
-    // 等价于两层循环
-    for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
-         if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
-      // 排除 redis 已经存在的前端瓦片编码
-         ) { // redis里存在当前的索引
-      // Redis 里没有的前端瓦片编码
-      val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-      zIndexStrArray.append(zIndexStr)
-      // 将这些新的瓦片编号存到 Redis
-      //        jedis.sadd(key, zIndexStr)
+
+    try {
+//      val jedis: Jedis = new JedisUtil().getJedis
+//
+//      // z曲线编码后的索引字符串
+//      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
+//      // 等价于两层循环
+//      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
+//           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+//        // 排除 redis 已经存在的前端瓦片编码
+//           ) { // redis里存在当前的索引
+//        // Redis 里没有的前端瓦片编码
+//        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+//        zIndexStrArray.append(zIndexStr)
+//        // 将这些新的瓦片编号存到 Redis
+//        //        jedis.sadd(key, zIndexStr)
+//      }
+//      jedis.close()
+//      if (zIndexStrArray.isEmpty) {
+//        //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
+//        println("窗口范围无明显变化，没有新的瓦片待计算")
+//        return
+//      }
+    }finally {
+      // 处理redis异常情况
+      if(zIndexStrArray.isEmpty){
+        zIndexStrArray.clear()
+        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
+          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+          zIndexStrArray.append(zIndexStr)
+        }
+      }
+
     }
-    jedis.close()
-    if (zIndexStrArray.isEmpty) {
-      //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
-      println("窗口范围无明显变化，没有新的瓦片待计算")
-      return
-    }
+
     println("***********************************************************")
 
 
