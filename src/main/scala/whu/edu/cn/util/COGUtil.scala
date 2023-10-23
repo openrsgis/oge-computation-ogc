@@ -52,7 +52,7 @@ object COGUtil {
    * @param bandCounts    多波段
    * @return 后端瓦片
    */
-  def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Extent, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
+  def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, windowsExtent: Extent,queryGeometry:Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
     tmsLevel = level
     var bandCount = 1
     if (bandCounts.length > 1) throw new RuntimeException("bandCount 参数最多传一个")
@@ -84,7 +84,7 @@ object COGUtil {
 
     parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
 
-    getTiles(level, coverageMetadata,  tileOffsets, cell, geoTrans, tileByteCounts, bandCount,queryGeometry)
+    getTiles(level, coverageMetadata,  tileOffsets, cell, geoTrans, tileByteCounts, bandCount,windowsExtent,queryGeometry)
 
   }
 
@@ -123,7 +123,7 @@ object COGUtil {
    * @param productName
    * @return
    */
-  def getTiles(level: Int, coverageMetadata: CoverageMetadata, tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], cell: mutable.ArrayBuffer[Double], geoTrans: mutable.ArrayBuffer[Double], tileByteCounts: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], bandCount: Int, windowsExtent: Extent): mutable.ArrayBuffer[RawTile] = {
+  def getTiles(level: Int, coverageMetadata: CoverageMetadata, tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], cell: mutable.ArrayBuffer[Double], geoTrans: mutable.ArrayBuffer[Double], tileByteCounts: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], bandCount: Int, windowsExtent: Extent,queryGeometry:Geometry): mutable.ArrayBuffer[RawTile] = {
     val time1 = System.currentTimeMillis()
     var tileLevel: Int = 0
     var resolutionTMS: Double = .0
@@ -154,8 +154,12 @@ object COGUtil {
 
     // 使用窗口范围的全局变量
 
+    val visualExtent = Reproject(windowsExtent, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
+    val queryEnv: Envelope = queryGeometry.getEnvelopeInternal
 
-    val queryMbr: Extent = Reproject(windowsExtent, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
+    val queryMbr: Extent = Reproject(queryEnv, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
+
+    //
 
     // 将传入的范围改为数据所在坐标系下，方便两个范围进行相交
     // 传入的范围始终是 4326 坐标系下的

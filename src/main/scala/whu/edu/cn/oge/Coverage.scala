@@ -63,6 +63,8 @@ object Coverage {
       union = Extent(metaList.head.getGeom.getEnvelopeInternal)
     }
 
+    val queryGeometry = metaList.head.getGeom
+
     //    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
@@ -75,7 +77,7 @@ object Coverage {
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union,queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -323,7 +325,7 @@ object Coverage {
    * @return
    */
   // 自动转成uint8数据类型
-  def binarization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), threshold: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def binarization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), threshold: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val cellType = coverage._1.first()._2.cellType
     (coverage._1.map(t => {
       (t._1, t._2.mapBands((_, tile) => {
@@ -2429,8 +2431,9 @@ object Coverage {
           val minVis: Double = visParam.getMin.headOption.getOrElse(0.0)
           val maxVis: Double = visParam.getMax.headOption.getOrElse(1.0)
           //计算最大最小拉伸参数
-          val gainVis0: Double = getGainBias(coverageOneBand, 0, minVis, maxVis)._1
-          val biasVis0: Double = getGainBias(coverageOneBand, 0, minVis, maxVis)._2
+          val temp = getGainBias(coverageOneBand, 0, minVis, maxVis)
+          val gainVis0: Double = temp._1
+          val biasVis0: Double = temp._2
           coverageOneBand = (coverageOneBand._1.map(t => (t._1, t._2.mapBands((_, tile) => {
             Add(Multiply(tile, gainVis0), biasVis0)
           }))), coverageOneBand._2)
@@ -2470,37 +2473,30 @@ object Coverage {
         val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
         coverageOneBand = (coverageOneBand._1.map(t => {
           val bandR: Tile = t._2.bands(0).mapDouble(d => {
-            var R: Double = 0.0
-            for (i <- colorRGB.indices) {
-              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                R = colorRGB(i)._1 * 255.0
-              }
-            }
-            R
+            if (d.isNaN)
+              d
+            else
+              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._1
           })
           val bandG: Tile = t._2.bands(0).mapDouble(d => {
-            var G: Double = 0.0
-            for (i <- colorRGB.indices) {
-              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                G = colorRGB(i)._2 * 255.0
-              }
-            }
-            G
+            if (d.isNaN)
+              d
+            else
+              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._2
           })
           val bandB: Tile = t._2.bands(0).mapDouble(d => {
-            var B: Double = 0.0
-            for (i <- colorRGB.indices) {
-              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                B = colorRGB(i)._3 * 255.0
-              }
-            }
-            B
+            if (d.isNaN)
+              d
+            else
+              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._3
           })
           (t._1, MultibandTile(bandR, bandG, bandB))
         }), coverageOneBand._2)
       }
     }
+    makeTIFF(coverageOneBand,"coverage")
     coverageOneBand
+
   }
 
   def addStyles2Band(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -2797,7 +2793,7 @@ object Coverage {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "/mnt/storage/temp/" + name + ".tiff"
+    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
@@ -2807,7 +2803,6 @@ object Coverage {
     } else {
       coverage
     }, visParam)
-
 
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
     val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)

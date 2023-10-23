@@ -78,7 +78,7 @@ object CoverageCollectionDubug {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
             val client: MinioClient = MinIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, extent)
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, extent,metaList.head.getGeom)
             tiles
           }
           val time2: Long = System.currentTimeMillis()

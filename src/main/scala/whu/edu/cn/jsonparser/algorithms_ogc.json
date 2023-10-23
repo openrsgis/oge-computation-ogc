@@ -1200,7 +1200,7 @@
       },
       {
         "name": "threshold",
-        "type": "Int",
+        "type": "Double",
         "description": "threshold"
       }
     ]
