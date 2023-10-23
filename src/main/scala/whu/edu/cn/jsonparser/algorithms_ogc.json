@@ -4934,6 +4934,55 @@
       }
     ]
   },
+  "Coverage.gorwByGrass": {
+    "description": " Generates a raster map layer with contiguous areas grown by one cell.  ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map. "
+      }
+    ]
+  },
+  "Coverage.fillnullByGrass": {
+    "description": " Fills no-data areas in raster maps using spline interpolation. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map. "
+      }
+    ]
+  },
+  "Coverage.randomByGrass": {
+    "description": "Creates randomly placed raster cells or vector points.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map "
+      },
+      {
+        "name": "npoints",
+        "type": "String",
+        "description": "The number(%) of points/cells to generate."
+      }
+    ]
+  },
+  "Coverage.univarByGrass": {
+    "description": "Calculate univariate statistics from the non-null cells of a raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map "
+      }
+    ]
+  },
   "Kernel.fixed": {
     "description": "Creates a Kernel.",
     "returns": "Kernel",
