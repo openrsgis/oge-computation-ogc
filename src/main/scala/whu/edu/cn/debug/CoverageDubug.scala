@@ -143,7 +143,7 @@ object CoverageDubug {
         val time1: Long = System.currentTimeMillis()
         val rawTiles: mutable.ArrayBuffer[RawTile] = {
           val client: MinioClient = MinIOUtil.getMinioClient
-          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, queryGeometry)
+          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, queryGeometry.getEnvelopeInternal,queryGeometry)
 //          MinIOUtil.releaseMinioClient(client)
           tiles
         }
