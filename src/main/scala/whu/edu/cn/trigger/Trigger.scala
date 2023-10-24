@@ -627,6 +627,15 @@ object Trigger {
           stringList += (UUID -> GrassUtil.outBinByGrass(sc,coverageRddList(args("input")),args("nu_ll"),args("bytes"),args("order")))
         case "Coverage.inGdalByGrass" =>
           coverageRddList += (UUID -> GrassUtil.inGdalByGrass(sc,coverageRddList(args("input")),args("band"),args("location")))
+        case "Coverage.growByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_grow(sc,coverageRddList(args("input"))))
+        case "Coverage.fillnullByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_fillnulls(sc,coverageRddList(args("input"))))
+        case "Coverage.randomByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_random(sc,coverageRddList(args("input")),args("npoints")))
+        case "Coverage.univarByGrass" =>
+          coverageRddList += (UUID -> GrassUtil.r_univar(sc,coverageRddList(args("input"))))
+
 
         // Kernel
         case "Kernel.chebyshev" =>
