@@ -17,13 +17,12 @@ import whu.edu.cn.oge.Feature._
 import whu.edu.cn.util.ShapeFileUtil._
 
 object test {
-
   //global variables
   val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
   val sc = new SparkContext(conf)
-
   val encode="utf-8"
-  val shpPath: String = "src\\main\\scala\\whu\\edu\\cn\\algorithms\\SpatialStats\\Test\\testdata\\LNHP100.shp"
+
+  val shpPath: String = "src\\main\\scala\\whu\\edu\\cn\\algorithms\\SpatialStats\\Test\\testdata\\LNHP.shp"
   val shpfile = readShp(sc, shpPath, encode)
 
   val shpPath2: String = "src\\main\\scala\\whu\\edu\\cn\\algorithms\\SpatialStats\\Test\\testdata\\MississippiHR.shp"
@@ -35,30 +34,29 @@ object test {
 
   def main(args: Array[String]): Unit = {
 
-    descriptive_test()
-    sarmodel_test()
-    morani_test()
-    acf_test()
-    linear_test()
-    correlation_test()
+    //    descriptive_test()
+    //    sarmodel_test()
+    //    morani_test()
+    //    acf_test()
+    //    linear_test()
+    //    correlation_test()
+    //    pca_test()
     gwrbasic_test()
     sc.stop()
   }
 
   def gwrbasic_test(): Unit = {
     val t1 = System.currentTimeMillis()
-    val x1 = shpfile.map(t => t._2._2("FLOORSZ").asInstanceOf[String].toDouble).collect()
-    val x2 = shpfile.map(t => t._2._2("PROF").asInstanceOf[String].toDouble).collect()
-    val y = shpfile.map(t => t._2._2("PURCHASE").asInstanceOf[String].toDouble).collect()
-    val x = Array(DenseVector(x1), DenseVector(x2))
     val mdl = new GWRbasic
     mdl.init(shpfile)
-    mdl.setX(x)
-    mdl.setY(y)
-    //    mdl.fit(bw = 10000,kernel="bisquare",adaptive = false)
-    //    val bw=mdl.bandwidthSelection(adaptive = false)
-    //    mdl.fit(bw = bw,kernel="gaussian",adaptive = false)
-    mdl.auto(kernel = "gaussian", approach = "CV", adaptive = false)
+    mdl.setX("FLOORSZ,PROF")
+    mdl.setY("PURCHASE")
+//    val re=mdl.fit(bw = 10000,kernel="bisquare",adaptive = false)
+//    val bw=mdl.bandwidthSelection(adaptive = false)
+//    mdl.fit(bw = bw,kernel="gaussian",adaptive = false)
+    mdl.auto(kernel="gaussian",approach = "CV", adaptive = false)
+//    val re_rdd=sc.makeRDD(re)
+//    writeshpfile(re_rdd,"D:\\Java\\testdata\\re_gwr.shp")
     val tused = (System.currentTimeMillis() - t1) / 1000.0
     println(s"time used is $tused s")
   }
@@ -113,8 +111,20 @@ object test {
 
   def acf_test(): Unit = {
     val t1 = System.currentTimeMillis()
+    //test date calculator
+    /*
+    val timep = attributeSelectHead(csvdata, "time_point")
+    val timepattern = "yyyy/MM/dd"
+    val date = timep.map(t => {
+      val date = new SimpleDateFormat(timepattern).parse(t)
+      date
+    })
+    date.foreach(println)
+    println((date(300).getTime - date(0).getTime) / 1000 / 60 / 60 / 24)
+     */
     val tem = attributeSelectHead(csvdata, "temperature")
     val db_tem = tem.map(t => t.toDouble)
+    //    println(db_tem.sum)
     val tem_acf = timeSeriesACF(db_tem, 30)
     tem_acf.foreach(println)
     val tused = (System.currentTimeMillis() - t1) / 1000.0

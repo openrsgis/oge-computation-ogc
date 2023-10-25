@@ -55,7 +55,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
   def fit(): Array[Double] = {
 
     val interval = get_interval()
-    val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)
+    val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)._1
     _lagY = _Y - rho * _wy
     val betas = get_betas(X = _1X, Y = _lagY)
     val betas_map = betasMap(betas)

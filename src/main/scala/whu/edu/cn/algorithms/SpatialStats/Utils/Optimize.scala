@@ -13,16 +13,18 @@ object Optimize {
 
   /**
    *
-   * @param lower     优化值的下限
-   * @param upper     优化值的上限
-   * @param eps       优化条件，迭代相差小于eps时退出
-   * @param function  获取（更新）优化值的函数，需要为输入double，输出double的类型
-   * @return  优化结果
+   * @param lower    优化值的下限
+   * @param upper    优化值的上限
+   * @param eps      优化条件，迭代相差小于eps时退出
+   * @param findMax  寻找最大值为true，寻找最小值为false，默认为true
+   * @param function 获取（更新）优化值的函数，需要为输入double，输出double的类型
+   * @return 优化结果
    */
-  def goldenSelection(lower: Double, upper: Double, eps: Double = 1e-10, findMax: Boolean = true, function: Double => Double): Double = {
+  def goldenSelection(lower: Double, upper: Double, eps: Double = 1e-10, findMax: Boolean = true, function: Double => Double):
+  (Double, Array[Double], Array[Double], Array[Double]) = {
     var iter: Int = 0
     val max_iter = 1000
-    val loop = new Breaks
+    val loop=new Breaks
     val ratio: Double = (sqrt(5) - 1) / 2.0
     var a = lower + 1e-12
     var b = upper - 1e-12
@@ -33,6 +35,9 @@ object Optimize {
     var f_b = function(b)
     var f_p = function(p)
     var f_q = function(q)
+    val opt_iter = new ArrayBuffer[Double]()
+    val opt_val = new ArrayBuffer[Double]()
+    val opt_res = new ArrayBuffer[Double]()
     //    println(f_a,f_b,f_p,f_q)
     loop.breakable {
       while (abs(f_a - f_b) >= eps && iter < max_iter) {
@@ -75,15 +80,22 @@ object Optimize {
           }
         }
         iter += 1
-        println(s"the iter is $iter, optimize value is ${(b + a) / 2.0}, optimize result is ${function((b + a) / 2.0)}")
-        if (abs(a - b) < eps / 10) {
+        opt_iter += iter
+        //        opt_val += (b + a) / 2.0
+        //        opt_res += function(sc, (b + a) / 2.0)
+        opt_val += p
+        opt_res += f_p
+        println(s"Iter: $iter, optimize value: $p, result is $f_p")
+        if (abs(a - b) < eps/10) {
           loop.break()
         }
       }
     }
     //    println((b + a) / 2.0, function((b + a) / 2.0))
-    (b + a) / 2.0
+    //    ((b + a) / 2.0, opt_iter.toArray, opt_val.toArray)
+    ((b + a) / 2.0, opt_iter.toArray, opt_val.toArray, opt_res.toArray)
   }
+
 
   def nelderMead(optparams: Array[Double], function: (Array[Double]) => Double): Array[Double] = {
     var iter = 0
@@ -129,7 +141,7 @@ object Optimize {
       //求点0和m+1的差
       val dif = DenseVector(ord_m1) - DenseVector(ord_0)
       eps = sqrt(dif.toArray.map(t => t * t).sum)
-//      println(s"the iter is $iter, the difference is $dif, the eps is $eps")
+      println(s"the iter is $iter, the difference is $dif, the eps is $eps")
 
       //这个是前m个的arr，从0到m
       var ord_0mArr = new ArrayBuffer[Array[Double]]
@@ -223,10 +235,10 @@ object Optimize {
       //      println(lagsse_r <= lagsse_0 ,lagsse_r > lagsse_0 && lagsse_r <= lagsse_m, lagsse_r > lagsse_m && lagsse_r <= lagsse_m1, lagsse_r > lagsse_m1)
       iter += 1
     }
-//    println("-------result--------")
-//    ord_Arr.map(t => t.foreach(println))
-//    println("----------input----------")
-//    optParameter.foreach(println)
+    //    println("-------result--------")
+    //    ord_Arr.map(t => t.foreach(println))
+    //    println("----------input----------")
+    //    optParameter.foreach(println)
     println("----------Nelder-Mead optimize result----------")
     ord_Arr(0).foreach(println)
     ord_Arr(0)

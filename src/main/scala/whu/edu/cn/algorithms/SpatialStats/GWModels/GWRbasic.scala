@@ -1,22 +1,34 @@
 package whu.edu.cn.algorithms.SpatialStats.GWModels
 
 import breeze.linalg.{*, DenseMatrix, DenseVector, MatrixSingularException, det, eig, inv, qr, sum, trace}
+import breeze.plot.{Figure, plot}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.locationtech.jts.geom.Geometry
 
 import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
 
+import scala.collection.mutable
+
 class GWRbasic extends GWRbase {
 
   var _xrows = 0
   var _xcols = 0
-  val select_eps=1e-2
+  val select_eps = 1e-2
+
+  var opt_value: Array[Double] = _
+  var opt_result: Array[Double] = _
+  var opt_iters: Array[Double] = _
 
   private var _dX: DenseMatrix[Double] = _
 
-  override def setX(x: Array[DenseVector[Double]]): Unit = {
+  override def setX(properties: String, split:String=","): Unit = {
+    _nameX = properties.split(split)
+    val x = _nameX.map(s => {
+      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
+    })
     _X = x
     _xcols = x.length
     _xrows = _X(0).length
@@ -24,47 +36,78 @@ class GWRbasic extends GWRbase {
     _dX = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
   }
 
-  override def setY(y: Array[Double]): Unit = {
-    _Y = DenseVector(y)
+  override def setY(property: String): Unit = {
+    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
   }
 
-  def auto(kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = true):
-  (Array[DenseVector[Double]], DenseVector[Double], DenseVector[Double], DenseMatrix[Double], Array[DenseVector[Double]]) = {
+  def auto(kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = true): Array[(String, (Geometry, mutable.Map[String, Any]))] = {
+    println("start bandwidth selection")
     val bwselect = bandwidthSelection(kernel = kernel, approach = approach, adaptive = adaptive)
     println(s"best bandwidth is $bwselect")
+    val f = Figure()
+    val p = f.subplot(0)
+    val optv_sort = opt_value.zipWithIndex.map(t => (t._1, opt_result(t._2))).sortBy(_._1)
+    p += plot(optv_sort.map(_._1), optv_sort.map(_._2))
+    p.xlabel = "bandwidth"
+    p.ylabel = s"$approach"
     fit(bwselect, kernel = kernel, adaptive = adaptive)
   }
 
-  def fit(bw:Double= 0, kernel: String="gaussian", adaptive: Boolean = true):
-  (Array[DenseVector[Double]], DenseVector[Double], DenseVector[Double], DenseMatrix[Double], Array[DenseVector[Double]]) = {
-    if(bw > 0){
+  def fit(bw: Double = 0, kernel: String = "gaussian", adaptive: Boolean = true): Array[(String, (Geometry, mutable.Map[String, Any]))] = {
+    if (bw > 0) {
       setweight(bw, kernel, adaptive)
-    }else if(spweight_dvec!=null){
+    } else if (spweight_dvec != null) {
 
-    }else{
+    } else {
       throw new IllegalArgumentException("bandwidth should be over 0 or spatial weight should be initialized")
     }
     //    printweight()
     val results = fitFunction(_dX, _Y, spweight_dvec)
-//    val results = fitRDDFunction(sc,_dX, _Y, spweight_dvec)
-    val betas = results._1
-    val yhat = results._2
-    val residual = results._3
-    val shat = results._4
-    println("*************************************")
-    println(yhat)
-    println(residual)
-    print(s"bandwidth of GWR is $bw")
-    calDiagnostic(_dX, _Y, residual, shat)
-//    val bwselect = bandwidthSelection(kernel = "bisquare", approach = "CV", adaptive = true)
-//    println(bwselect)
-    println("*************************************")
-    results
+    //    val results = fitRDDFunction(sc,_dX, _Y, spweight_dvec)
+    val betas = DenseMatrix.create(_xcols + 1, _xrows, data = results._1.flatMap(t => t.toArray))
+    val arr_yhat = results._2.toArray
+    val arr_residual = results._3.toArray
+    val shpRDDidx = shpRDD.collect().zipWithIndex
+    shpRDDidx.foreach(t=>t._1._2._2.clear())
+    shpRDDidx.map(t => {
+      t._1._2._2 += ("yhat" -> arr_yhat(t._2))
+      t._1._2._2 += ("residual" -> arr_residual(t._2))
+    })
+    val name=Array("Intercept")++_nameX
+    for(i<-0 until betas.rows){
+      shpRDDidx.map(t=>{
+        val a=betas(i,t._2)
+        t._1._2._2 += (name(i) -> a)
+      })
+    }
+//    val a=shpRDDidx.map(t=>t._1._2._2)
+//    a.foreach(println)
+    //    sc.makeRDD(shpRDDidx.map(t => t._1))
+    //    println(betas)
+    //    results._1.foreach(println)
+    var bw_type = "Fixed"
+    if (adaptive) {
+      bw_type = "Adaptive"
+    }
+    println("*********************************************************************************")
+    println("*               Results of Geographically Weighted Regression                   *")
+    println("*********************************************************************************")
+    println("**************************Model calibration information**************************")
+    print(s"Kernel function: $kernel\n$bw_type bandwidth: ")
+    print(f"$bw%.2f\n")
+//    println("Distance metric: Euclidean distance metric is used.")
+    calDiagnostic(_dX, _Y, results._3, results._4)
+    shpRDDidx.map(t => t._1)
   }
 
   private def fitFunction(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, weight: Array[DenseVector[Double]] = spweight_dvec):
   (Array[DenseVector[Double]], DenseVector[Double], DenseVector[Double], DenseMatrix[Double], Array[DenseVector[Double]]) = {
-    val xtw = weight.map(w => eachColProduct(X, w).t)
+    //    val xtw = weight.map(w => eachColProduct(X, w).t)
+    val xtw = weight.map(w => {
+      val v1 = (DenseVector.ones[Double](_xrows) * w).toArray
+      val xw = _X.flatMap(t => (t * w).toArray)
+      DenseMatrix.create(_xrows, _xcols + 1, data = v1 ++ xw).t
+    })
     val xtwx = xtw.map(t => t * X)
     val xtwy = xtw.map(t => t * Y)
     val xtwx_inv = xtwx.map(t => inv(t))
@@ -74,28 +117,32 @@ class GWRbasic extends GWRbase {
     val ci_idx = ci.zipWithIndex
     val sum_ci = ci.map(t => t.map(t => t * t)).map(t => sum(t(*, ::)))
     val si = ci_idx.map(t => {
-      val a=X(t._2, ::).inner.toDenseMatrix
-      val b=t._1.toDenseMatrix
+      val a = X(t._2, ::).inner.toDenseMatrix
+      val b = t._1.toDenseMatrix
       a * b
-//      (X(t._2, ::) * t._1).inner
+      //      (X(t._2, ::) * t._1).inner
     })
     val shat = DenseMatrix.create(rows = si.length, cols = si.length, data = si.flatMap(t => t.toArray))
     val yhat = getYHat(X, betas)
     val residual = Y - yhat
-    //是不是可以用一个struct来存
     (betas, yhat, residual, shat, sum_ci)
   }
 
   private def fitRDDFunction(implicit sc: SparkContext, X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, weight: Array[DenseVector[Double]] = spweight_dvec):
   (Array[DenseVector[Double]], DenseVector[Double], DenseVector[Double], DenseMatrix[Double], Array[DenseVector[Double]]) = {
-    val xtw = sc.makeRDD(weight.map(w => eachColProduct(X, w).t))
+    val xtw0 = weight.map(w => {
+      val v1 = (DenseVector.ones[Double](_xrows) * w).toArray
+      val xw = _X.flatMap(t => (t * w).toArray)
+      DenseMatrix.create(_xrows, _xcols + 1, data = v1 ++ xw).t
+    })
+    val xtw = sc.makeRDD(xtw0)
     val xtwx = xtw.map(t => t * X)
     val xtwy = xtw.map(t => t * Y)
     val xtwx_inv = xtwx.map(t => inv(t))
     val xtwx_inv_idx = xtwx_inv.zipWithIndex
-    val arr_xtwy=xtwy.collect()
+    val arr_xtwy = xtwy.collect()
     val betas = xtwx_inv_idx.map(t => t._1 * arr_xtwy(t._2.toInt))
-    val arr_xtw=xtw.collect()
+    val arr_xtw = xtw.collect()
     val ci = xtwx_inv_idx.map(t => t._1 * arr_xtw(t._2.toInt))
     val ci_idx = ci.zipWithIndex
     val sum_ci = ci.map(t => t.map(t => t * t)).map(t => sum(t(*, ::)))
@@ -106,7 +153,7 @@ class GWRbasic extends GWRbase {
     })
     val shat = DenseMatrix.create(rows = si.collect().length, cols = si.collect().length, data = si.collect().flatMap(t => t.toArray))
     val yhat = getYhat(X, betas.collect())
-    val residual = Y - getYhat(X, betas.collect())
+    val residual = Y - yhat
     (betas.collect(), yhat, residual, shat, sum_ci.collect())
   }
 
@@ -127,7 +174,11 @@ class GWRbasic extends GWRbase {
       approachfunc = bandwidthCV
     }
     try {
-      bw = goldenSelection(lower, upper, eps = select_eps, findMax = false, function = approachfunc)
+      val re = goldenSelection(lower, upper, eps = select_eps, findMax = false, function = approachfunc)
+      opt_iters = re._2
+      opt_value = re._3
+      opt_result = re._4
+      bw = re._1
     } catch {
       case e: MatrixSingularException => {
         val low = lower * 2
@@ -146,10 +197,14 @@ class GWRbasic extends GWRbase {
       approachfunc = bandwidthCV
     }
     try {
-      bw = round(goldenSelection(lower, upper, eps = select_eps, findMax = false, function = approachfunc)).toInt
+      val re = goldenSelection(lower, upper, eps = select_eps, findMax = false, function = approachfunc)
+      opt_iters = re._2
+      opt_value = re._3
+      opt_result = re._4
+      bw = re._1.toInt
     } catch {
       case e: MatrixSingularException => {
-                println("error")
+        println("error")
         val low = lower + 1
         bw = adaptiveBandwidthSelection(kernel, approach, upper, low)
       }
@@ -179,7 +234,7 @@ class GWRbasic extends GWRbase {
       setweight(bw, _kernel, _adaptive)
     }
     val spweight_idx = spweight_dvec.zipWithIndex
-    spweight_idx.map(t => t._1(t._2) = 0)
+    spweight_idx.foreach(t => t._1(t._2) = 0)
     val results = fitFunction(_dX, _Y, spweight_dvec)
     val residual = results._3
     residual.toArray.map(t => t * t).sum
@@ -196,20 +251,20 @@ class GWRbasic extends GWRbase {
   }
 
   def getYHat(X: DenseMatrix[Double], betas: Array[DenseVector[Double]]): DenseVector[Double] = {
-    val betas_idx=betas.zipWithIndex
-    val yhat=betas_idx.map(t=>{
-      sum(t._1 * X(t._2,::).inner)
+    val betas_idx = betas.zipWithIndex
+    val yhat = betas_idx.map(t => {
+      sum(t._1 * X(t._2, ::).inner)
     })
     DenseVector(yhat)
   }
 
-  private def eachColProduct(Mat: DenseMatrix[Double], Vec: DenseVector[Double]): DenseMatrix[Double] = {
-    val arrbuf = new ArrayBuffer[DenseVector[Double]]()
-    for (i <- 0 until Mat.cols) {
-      arrbuf += Mat(::, i) * Vec
-    }
-    val data = arrbuf.toArray.flatMap(t => t.toArray)
-    DenseMatrix.create(rows = Mat.rows, cols = Mat.cols, data = data)
-  }
+  //  def eachColProduct(Mat: DenseMatrix[Double], Vec: DenseVector[Double]): DenseMatrix[Double] = {
+  //    val arrbuf = new ArrayBuffer[DenseVector[Double]]()
+  //    for (i <- 0 until Mat.cols) {
+  //      arrbuf += Mat(::, i) * Vec
+  //    }
+  //    val data = arrbuf.toArray.flatMap(t => t.toArray)
+  //    DenseMatrix.create(rows = Mat.rows, cols = Mat.cols, data = data)
+  //  }
 
 }

@@ -57,7 +57,7 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
    */
   def fit(): Array[Double] = {
     val interval = get_interval()
-    val lambda = goldenSelection(interval._1, interval._2, function = lambda4optimize)
+    val lambda = goldenSelection(interval._1, interval._2, function = lambda4optimize)._1
     //    println(s"lambda is $lambda")
     _errorX = _1X - lambda * _wx
     _errorY = _Y - lambda * _wy

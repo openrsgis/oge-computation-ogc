@@ -152,7 +152,7 @@ object FeatureSpatialWeight {
       fbw = distcopy(abw - 1)
     }
     else {
-      println("Error bandwidth, biggest bandwidth has been set")
+      fbw = distcopy.max * abw / dist.length
     }
     fbw
   }
