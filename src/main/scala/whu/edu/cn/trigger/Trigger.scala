@@ -224,6 +224,8 @@ object Trigger {
         // Coverage
         case "Coverage.export" =>
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
+        case "Coverage.rasterAreaSta" =>
+          doubleList += (UUID -> Coverage.rasterAreaSta(coverage = coverageRddList(args("coverage")),ValList = args("valueRange").substring(1, args("valueRange").length - 1).split(",").toList,resolution = args("resolution").toDouble))
         case "Coverage.date" =>
           stringList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
