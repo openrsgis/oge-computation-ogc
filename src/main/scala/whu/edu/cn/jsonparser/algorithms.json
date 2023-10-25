@@ -1167,7 +1167,7 @@
       },
       {
         "name": "threshold",
-        "type": "Int",
+        "type": "Double",
         "description": "threshold"
       }
     ]
@@ -4039,7 +4039,7 @@
       },
       {
         "name": "extent",
-        "type": "Feature",
+        "type": "String",
         "description": "Defines the bounding box that should be used for the output vector file. It has to be defined in target CRS coordinates.",
         "optional": "True",
         "default": ""
@@ -4459,7 +4459,7 @@
       },
       {
         "name": "quantile",
-        "type": "Float",
+        "type": "String",
         "description": "Quantile to calculate for method=quantile Options: 0.0-1.0 ",
         "optional": "True",
         "default": "0.5"

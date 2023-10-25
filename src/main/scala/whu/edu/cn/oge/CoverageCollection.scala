@@ -67,7 +67,7 @@ object CoverageCollection {
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
             val minIOUtil = MinIOUtil
             val client: MinioClient = minIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, Extent(union.getEnvelopeInternal),union)
 //            minIOUtil.releaseMinioClient(client)
             tiles
           }
