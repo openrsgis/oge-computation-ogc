@@ -82,7 +82,7 @@ object Trigger {
       case OGEClassType.CoverageCollection =>
         if (!coverageCollectionRddList.contains(UUID)) {
           val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
-          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime, endTime = metadata.endTime, extent = metadata.extent, crs = metadata.crs, level = level))
+          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level))
         }
     }
   }
