@@ -474,7 +474,7 @@ object Trigger {
         case "Feature.randomPointsInLayerBoundsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsInLayerBounds(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], pointsNumber = args("pointsNumber").toInt, minDistance = args("minDistance").toDouble))
         case "Feature.angleToNearestByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAngleToNearest(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], referenceLayer = args("referenceLayer"), maxDistance = args("maxDistance").toDouble, fieldName = args("fieldName"), applySymbology = args("applySymbology")))
+          featureRddList += (UUID -> QGIS.nativeAngleToNearest(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], referenceLayer = featureRddList(args("referenceLayer")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], maxDistance = args("maxDistance").toDouble, fieldName = args("fieldName"), applySymbology = args("applySymbology")))
         case "Feature.boundaryByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeBoundary(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.miniEnclosingCircleByQGIS" =>
