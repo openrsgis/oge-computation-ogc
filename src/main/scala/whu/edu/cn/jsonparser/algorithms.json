@@ -3703,7 +3703,7 @@
       }
     ]
   },
-  "Feature.rasterizeOverByGDAL": {
+  "Coverage.rasterizeOverByGDAL": {
     "description": "Overwrites a raster layer with values from a vector layer. New values are assigned based on the attribute value of the overlapping vector feature.",
     "returns": "Coverage",
     "args": [
@@ -3936,7 +3936,7 @@
       }
     ]
   },
-  "Feature.assignProjectionByGDAL": {
+  "Coverage.assignProjectionByGDAL": {
     "description": "Clips any OGR-supported vector file to a given extent.",
     "returns": "Feature",
     "args": [

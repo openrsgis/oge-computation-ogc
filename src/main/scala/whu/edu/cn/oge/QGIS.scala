@@ -2846,7 +2846,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
