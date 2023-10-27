@@ -754,6 +754,27 @@
       }
     ]
   },
+  "Coverage.rasterAreaSta": {
+    "description": "Get the area of a raster with given pixel value range.",
+    "returns": "Double",
+    "args": [
+      {
+        "name": "raster",
+        "type": "Coverage",
+        "description": "The Coverage as the input data "
+      },
+      {
+        "name": "valueRange",
+        "type": "List<String>",
+        "description": "The range of raster value for statistically "
+      },
+      {
+        "name": "resolution",
+        "type": "Double",
+        "description": "Defines the resolution of area statistic "
+      }
+    ]
+  },
   "Coverage.rangeSet": {
     "description": "Get the range set of a coverage.",
     "returns": "Dictionary",
