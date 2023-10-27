@@ -964,6 +964,11 @@ object Trigger {
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
+        case "Cube.build" => {
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, args("coverageID"), args("productID"), level = level))
+          }
+        case "Cube.export" =>
+          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("coverage")), batchParam = batchParam, dagId)
       }
 
 

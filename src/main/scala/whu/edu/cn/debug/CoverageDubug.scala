@@ -13,6 +13,7 @@ import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index._
+import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -133,7 +134,10 @@ object CoverageDubug {
     val queryGeometry: Geometry = metaList.head.getGeom
 
     //    val queryGeometry: Geometry = geotrellis.vector.io.readWktOrWkb("POLYGON((110.45709 30.26141,110.59998 30.26678,110.58066 29.94492,110.4869 29.93994,110.45709 30.26141))")
-
+    var union: Extent = Trigger.windowExtent
+    if(union == null){
+      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
+    }
     println("bandNum is " + metaList.length)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
@@ -143,7 +147,7 @@ object CoverageDubug {
         val time1: Long = System.currentTimeMillis()
         val rawTiles: mutable.ArrayBuffer[RawTile] = {
           val client: MinioClient = MinIOUtil.getMinioClient
-          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, queryGeometry)
+          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t,  union, queryGeometry)
 //          MinIOUtil.releaseMinioClient(client)
           tiles
         }
