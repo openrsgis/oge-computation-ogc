@@ -2109,7 +2109,7 @@
       },
       {
         "name": "referenceLayer",
-        "type": "String",
+        "type": "Feature",
         "description": "Layer to find the closest feature from for rotation calculation",
         "optional": "True",
         "default": ""
