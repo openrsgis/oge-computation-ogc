@@ -77,7 +77,7 @@ object GlobalConfig {
 
   object MinioConf {
     // MinIO 基础配置
-    final val MINIO_ENDPOINT: String = "http://125.220.153.22:9006"
+    final val MINIO_ENDPOINT: String = "http://125.220.153.23:9006"
     final val MINIO_ACCESS_KEY: String = "rssample"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "oge"
