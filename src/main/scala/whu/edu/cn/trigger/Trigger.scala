@@ -965,10 +965,14 @@ object Trigger {
           Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
         case "Cube.build" => {
-          cubeRDDList += (UUID -> Cube.cubeBuild(sc, args("coverageID"), args("productID"), level = level))
+          val coverageString = args("coverageIDList")
+          val productString = args("productIDList")
+          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
+          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
           }
         case "Cube.export" =>
-          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("coverage")), batchParam = batchParam, dagId)
+          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), batchParam = batchParam, dagId)
       }
 
 

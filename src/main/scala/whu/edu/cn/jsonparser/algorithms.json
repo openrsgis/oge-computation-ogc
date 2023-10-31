@@ -8158,12 +8158,12 @@
         "description": "The base url of service."
       },
       {
-        "name": "productID",
+        "name": "productIDList",
         "type": "String",
         "description": "The id of target collection."
       },
       {
-        "name": "coverageID",
+        "name": "coverageIDList",
         "type": "String",
         "description": "The id of target coverage."
       },

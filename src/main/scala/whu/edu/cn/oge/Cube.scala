@@ -663,30 +663,90 @@ object Cube {
     var reprojectTile: Raster[Tile] = stitchedTile.reproject(rasterTileLayerRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
     val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
-
-    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-    val minIOUtil = MinIOUtil
-    val client: MinioClient = minIOUtil.getMinioClient
+    val saveFilePath = s"D:/cog/out/${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-
-    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
   }
 
-  def cubeBuild(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+  def cubeBuild(implicit sc: SparkContext, coverageIdList: List[String], productKeyList: List[String], level: Int): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+    // (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])
     val time1 = System.currentTimeMillis()
+    val time2 = System.currentTimeMillis()
+    var cube: RDD[(SpaceTimeBandKey, Tile)]  = sc.emptyRDD[(SpaceTimeBandKey, Tile)]
+    var rasterTileLayerMetadata: RasterTileLayerMetadata[SpaceTimeKey] = null
+    coverageIdList.zipWithIndex.foreach { case (coverageId, index) =>
+      val productKey = productKeyList(index)
+      val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
+      val result = makeCubeRDD(rawTileRdd)
+      cube = cube.union(result._1)
+      if (rasterTileLayerMetadata == null) rasterTileLayerMetadata = result._2
+    }
+    println("Make RDD Time: " + (System.currentTimeMillis() - time2))
+    (cube, rasterTileLayerMetadata)
+  }
+
+  def makeCubeRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+    val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
+      (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
+    }).reduce((a, b) => {
+      (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
+    })
+    val colRowInstant: (Int, Int, Long, Int, Int, Long) = tileRDDReP.map(t => {
+      (t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)), t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
+    }).reduce((a, b) => {
+      (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
+    })
+
+    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._3, extents._4)
+
+    val firstTile: RawTile = tileRDDReP.first()
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0).toInt, 1)
+
+    //    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
+
+    val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
+    val ld: LayoutDefinition = LayoutDefinition(extent, tl)
+    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
+    val crs: CRS = firstTile.getCrs
+    val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
+//    val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+
+    val dtype = firstTile.getDataType.toString
+    //    val cellType: CellType = CellType.fromName(dtype)
+    //    val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
+    val rasterTileLayerMetadata: RasterTileLayerMetadata[SpaceTimeKey] = RasterTileLayerMetadata(TileLayerMetadata(cellType, ld, extent, crs, bounds), firstTile.getCoverageId)
+
+    // Map RasterTile to (SpaceTimeBandKey, Tile)
+    val cubeRDD: RDD[(SpaceTimeBandKey, Tile)] = tileRDDReP.map { tile =>
+      //      val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm")
+      val rowNum: Int = tile.getSpatialKey.row
+      val colNum: Int = tile.getSpatialKey.col
+      val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(colNum, rowNum, tile.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
+      val Tile: Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+      val bandKey = SpaceTimeBandKey(spaceTimeKey, tile.getCoverageId, null)
+      (bandKey, Tile)
+    }
+
+    (cubeRDD, rasterTileLayerMetadata)
+  }
+
+  def getRawTileRDD(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
     val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
     if (metaList.isEmpty) {
       throw new Exception("No such coverage in database!")
     }
+
     var union: Extent = Trigger.windowExtent
     if(union == null){
       union = Extent(metaList.head.getGeom.getEnvelopeInternal)
     }
-    val queryGeometry = metaList.head.getGeom
-    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
+    val queryGeometry: Geometry = metaList.head.getGeom
+    println(metaList)
+    //    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
+    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
         val minIOUtil = MinIOUtil
@@ -714,55 +774,13 @@ object Cube {
       val client: MinioClient = MinIOUtil.getMinioClient
       par.map(t => {
         getTileBuf(client, t)
-
       })
     })
-
+    println("=============================")
+    println(rawTileRdd.first().getDataType.toString)
+    println("=============================")
     println(rawTileRdd.first().toString)
-    println("Loading data Time: " + (System.currentTimeMillis() - time1))
-    val time2 = System.currentTimeMillis()
-    val cube = makeCubeRDD(rawTileRdd)
-    println("Make RDD Time: " + (System.currentTimeMillis() - time2))
-    cube
-  }
-
-
-  def makeCubeRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
-    val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
-      (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
-    }).reduce((a, b) => {
-      (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
-    })
-    val colRowInstant: (Int, Int, Long, Int, Int, Long) = tileRDDReP.map(t => {
-      (t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)), t.getSpatialKey.col, t.getSpatialKey.row, t.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
-    }).reduce((a, b) => {
-      (min(a._1, b._1), min(a._2, b._2), min(a._3, b._3), max(a._4, b._4), max(a._5, b._5), max(a._6, b._6))
-    })
-
-    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._3, extents._4)
-
-    val firstTile: RawTile = tileRDDReP.first()
-    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)
-    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0).toInt, 1)
-    val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
-
-    val ld: LayoutDefinition = LayoutDefinition(extent, tl)
-    val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
-    val crs: CRS = firstTile.getCrs
-    val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
-
-    val dtype = firstTile.getDataType.toString
-    val rasterTileLayerMetadata: RasterTileLayerMetadata[SpaceTimeKey] = RasterTileLayerMetadata(TileLayerMetadata(cellType, ld, extent, crs, bounds), firstTile.getCoverageId)
-    val cubeRDD: RDD[(SpaceTimeBandKey, Tile)] = tileRDDReP.map { tile =>
-      val rowNum: Int = tile.getSpatialKey.row
-      val colNum: Int = tile.getSpatialKey.col
-      val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(colNum, rowNum, tile.getTime.toEpochSecond(ZoneOffset.ofHours(0)))
-      val Tile: Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      val bandKey = SpaceTimeBandKey(spaceTimeKey, tile.getCoverageId, null)
-      (bandKey, Tile)
-    }
-
-    (cubeRDD, rasterTileLayerMetadata)
+    rawTileRdd
   }
 
 
