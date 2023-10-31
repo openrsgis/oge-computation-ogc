@@ -166,12 +166,6 @@ object COGUtil {
     val queryMbrReproj: Extent = Extent(queryMbr.xmin, queryMbr.ymin, queryMbr.xmax, queryMbr.ymax)
 
     extent = queryMbrReproj
-    val pMin = new Array[Double](2)
-    val pMax = new Array[Double](2)
-    pMin(0) = queryMbrReproj.xmin
-    pMin(1) = queryMbrReproj.ymin
-    pMax(0) = queryMbrReproj.xmax
-    pMax(1) = queryMbrReproj.ymax
 
     // 图像范围
     // 东西方向空间分辨率  --->像素宽度
@@ -193,10 +187,10 @@ object COGUtil {
     var pRight: Int = 0
     var pLower: Int = 0
     var pUpper: Int = 0
-    pLeft = ((pMin(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-    pRight = ((pMax(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-    pLower = ((yMax - pMax(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
-    pUpper = ((yMax - pMin(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
+    pLeft = ((queryMbrReproj.xmin - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
+    pRight = ((queryMbrReproj.xmax - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
+    pLower = ((yMax - queryMbrReproj.ymax) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
+    pUpper = ((yMax - queryMbrReproj.ymin) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
     var pCoordinate: Array[Int] = null
     var srcSize: Array[Double] = null
     var pRange: Array[Double] = null
@@ -205,14 +199,20 @@ object COGUtil {
     srcSize = Array[Double](wReso, hReso)
     pRange = Array[Double](xMin, yMax)
 //    val time2 = System.currentTimeMillis()
-    for (i <- Math.max(pCoordinate(0), 0) to (if (pCoordinate(1) >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1
-    else pCoordinate(1))) {
-      for (j <- Math.max(pCoordinate(2), 0) to (if (pCoordinate(3) >= tileOffsets(tileLevel)(i).length) tileOffsets(tileLevel)(i).length - 1
-      else pCoordinate(3))) {
+    val i_max = if (pUpper >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1 else pUpper
+    val s = coverageMetadata.measurement
+    s
+    val r = cell(1)
+    r
+
+    for (i <- Math.max(pLower, 0) to (if (pUpper >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1
+    else pUpper)) {
+      for (j <- Math.max(pLeft, 0) to (if (pRight >= tileOffsets(tileLevel)(i).length) tileOffsets(tileLevel)(i).length - 1
+      else pRight)) {
         for (k <- 0 until bandCount) {
 //          val t1 = System.currentTimeMillis()
           val extent = new Extent(j * (256 * srcSize(0) * Math.pow(2, tileLevel)) + pRange(0), (i + 1) * (256 * -srcSize(1) * Math.pow(2, tileLevel)) + pRange(1), (j + 1) * (256 * srcSize(0) * Math.pow(2, tileLevel)) + pRange(0), i * (256 * -srcSize(1) * Math.pow(2, tileLevel)) + pRange(1))
-          if (extent.intersects(queryMbrReproj)) {
+          if (extent.intersects(visualExtent)) {
             val t = new RawTile
             val kPlus: Int = tileOffsets(tileLevel).length / bandCount
             t.setOffset(tileOffsets(tileLevel)(i + k * kPlus)(j))
@@ -243,6 +243,7 @@ object COGUtil {
         }
       }
     }
+    println(coverageMetadata.measurement,tiles.size,tileLevel)
     val time3 = System.currentTimeMillis()
 //    println("t3-t1",time3-time1)
 //    println("t2-t1",time2-time1)

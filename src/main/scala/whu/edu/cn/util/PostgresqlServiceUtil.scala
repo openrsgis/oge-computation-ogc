@@ -28,7 +28,7 @@ object PostgresqlServiceUtil {
     //    queryCoverageCollection(md.getProductName, null, md.getMeasurementName, md.getStartTime, md.getEndTime, md.getExtent, md.getCrs)
   }
 
-  def queryCoverageCollection(productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Geometry = null, crs: CRS = null): ListBuffer[CoverageMetadata] = {
+  def queryCoverageCollection(productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Geometry = null, crs: CRS = null): ListBuffer[CoverageMetadata] = {
     val metaData = new ListBuffer[CoverageMetadata]
     val postgresqlUtil = new PostgresqlUtil("")
     val conn: Connection = postgresqlUtil.getConnection
@@ -38,7 +38,7 @@ object PostgresqlServiceUtil {
         val statement: Statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
 
         val sql = new mutable.StringBuilder
-        sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.dtype"
+        sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, st_astext(oge_image.geom) AS geom,oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.dtype"
         sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.band_train, oge_product_measurement.resolution_m"
         sql ++= " from oge_image "
         sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
@@ -82,14 +82,14 @@ object PostgresqlServiceUtil {
           sql ++= t
           sql ++= " phenomenon_time >= "
           sql ++= "\'"
-          sql ++= startTime.toString
+          sql ++= startTime
           sql ++= "\'"
           t = " AND"
         }
         if (endTime != null) {
           sql ++= t
           sql ++= "\' "
-          sql ++= endTime.toString
+          sql ++= endTime
           sql ++= "\'"
           sql ++= " >= phenomenon_time"
           t = " AND"
@@ -121,6 +121,7 @@ object PostgresqlServiceUtil {
             coverageMetadata.setPath(extentResults.getString("path") + "/" + coverageMetadata.getCoverageID + "_" + coverageMetadata.getMeasurement + ".tif")
             coverageMetadata.setTime(extentResults.getString("phenomenon_time"))
             coverageMetadata.setCrs(extentResults.getString("crs"))
+            coverageMetadata.setGeom(extentResults.getString("geom"))
             coverageMetadata.setDataType(extentResults.getString("dtype"))
             coverageMetadata.setResolution(extentResults.getDouble("resolution_m"))
             metaData.append(coverageMetadata)
