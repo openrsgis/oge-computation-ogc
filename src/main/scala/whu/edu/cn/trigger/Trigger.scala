@@ -82,7 +82,7 @@ object Trigger {
       case OGEClassType.CoverageCollection =>
         if (!coverageCollectionRddList.contains(UUID)) {
           val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
-          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime, endTime = metadata.endTime, extent = metadata.extent, crs = metadata.crs, level = level))
+          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level))
         }
     }
   }
@@ -224,6 +224,8 @@ object Trigger {
         // Coverage
         case "Coverage.export" =>
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
+        case "Coverage.rasterAreaSta" =>
+          doubleList += (UUID -> Coverage.rasterAreaSta(coverage = coverageRddList(args("coverage")),ValList = args("valueRange").substring(1, args("valueRange").length - 1).split(",").toList,resolution = args("resolution").toDouble))
         case "Coverage.date" =>
           stringList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
@@ -474,7 +476,7 @@ object Trigger {
         case "Feature.randomPointsInLayerBoundsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsInLayerBounds(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], pointsNumber = args("pointsNumber").toInt, minDistance = args("minDistance").toDouble))
         case "Feature.angleToNearestByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeAngleToNearest(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], referenceLayer = args("referenceLayer"), maxDistance = args("maxDistance").toDouble, fieldName = args("fieldName"), applySymbology = args("applySymbology")))
+          featureRddList += (UUID -> QGIS.nativeAngleToNearest(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], referenceLayer = featureRddList(args("referenceLayer")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], maxDistance = args("maxDistance").toDouble, fieldName = args("fieldName"), applySymbology = args("applySymbology")))
         case "Feature.boundaryByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeBoundary(sc, input = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.miniEnclosingCircleByQGIS" =>
@@ -551,7 +553,7 @@ object Trigger {
           coverageRddList += (UUID -> QGIS.gdalTranslate(sc, coverageRddList(args("input")), extra = args("extra"), targetCrs = args("targetCrs"), nodata = args("nodata").toDouble, dataType = args("dataType"), copySubdatasets = args("copySubdatasets"), options = args("options")))
         case "Coverage.warpByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalWarp(sc, coverageRddList(args("input")), sourceCrs = args("sourceCrs"), targetCrs = args("targetCrs"), resampling = args("resampling"), noData = args("noData").toDouble, targetResolution = args("targetResolution").toDouble, options = args("options"), dataType = args("dataType"), targetExtent = args("targetExtent"), targetExtentCrs = args("targetExtentCrs"), multiThreading = args("multiThreading"), extra = args("extra")))
-        case "Feature.assignProjectionByGDAL" =>
+        case "Coverage.assignProjectionByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAssignProjection(sc, coverageRddList(args("input")), crs = args("crs")))
         case "Feature.dissolveByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalDissolve(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], explodeCollections = args("explodeCollections"), field = args("field"), computeArea = args("computeArea"), keepAttributes = args("keepAttributes"), computeStatistics = args("computeStatistics"), countFeatures = args("countFeatures"), statisticsAttribute = args("statisticsAttribute"), options = args("options"), geometry = args("geometry")))

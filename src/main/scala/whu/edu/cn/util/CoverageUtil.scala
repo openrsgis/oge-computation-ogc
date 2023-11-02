@@ -50,8 +50,9 @@ object CoverageUtil {
 
     val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = tileRDDReP.map(tile => {
       val phenomenonTime: Long = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-      val rowNum: Int = tile.getSpatialKey.row
-      val colNum: Int = tile.getSpatialKey.col
+      // 所有值减去最小的key，得到以0开始的key的位置
+      val rowNum: Int = tile.getSpatialKey.row - colRowInstant._2
+      val colNum: Int = tile.getSpatialKey.col - colRowInstant._1
       val measurementRank: Int = tile.getMeasurementRank
       val measurement: String = tile.getMeasurement
       val Tile: Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)

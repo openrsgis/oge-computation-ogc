@@ -787,6 +787,27 @@
       }
     ]
   },
+  "Coverage.rasterAreaSta": {
+    "description": "Get the area of a raster with given pixel value range.",
+    "returns": "Double",
+    "args": [
+      {
+        "name": "raster",
+        "type": "Coverage",
+        "description": "The Coverage as the input data "
+      },
+      {
+        "name": "valueRange",
+        "type": "List<String>",
+        "description": "The range of raster value for statistically "
+      },
+      {
+        "name": "resolution",
+        "type": "Double",
+        "description": "Defines the resolution of area statistic "
+      }
+    ]
+  },
   "Coverage.rangeSet": {
     "description": "Get the range set of a coverage.",
     "returns": "Dictionary",
@@ -2109,7 +2130,7 @@
       },
       {
         "name": "referenceLayer",
-        "type": "String",
+        "type": "Feature",
         "description": "Layer to find the closest feature from for rotation calculation",
         "optional": "True",
         "default": ""
@@ -3735,7 +3756,7 @@
       }
     ]
   },
-  "Feature.rasterizeOverByGDAL": {
+  "Coverage.rasterizeOverByGDAL": {
     "description": "Overwrites a raster layer with values from a vector layer. New values are assigned based on the attribute value of the overlapping vector feature.",
     "returns": "Coverage",
     "args": [
@@ -3968,7 +3989,7 @@
       }
     ]
   },
-  "Feature.assignProjectionByGDAL": {
+  "Coverage.assignProjectionByGDAL": {
     "description": "Clips any OGR-supported vector file to a given extent.",
     "returns": "Feature",
     "args": [
