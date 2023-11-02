@@ -1155,20 +1155,22 @@ object QGIS {
    */
   def nativeAngleToNearest(implicit sc: SparkContext,
                            input: RDD[(String, (Geometry, Map[String, Any]))],
-                           referenceLayer:String,
+                           referenceLayer: RDD[(String, (Geometry, Map[String, Any]))],
                            maxDistance: Double,
                            fieldName:String="rotation",
                            applySymbology: String="True")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + ".shp"
+    val outputShpPath1 = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + ".shp"
+    val outputShpPath2 = "/mnt/storage/algorithmData/referenceLayer_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath)
+    saveFeatureRDDToShp(input, outputShpPath1)
+    saveFeatureRDDToShp(referenceLayer, outputShpPath2)
 
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_angletonearest.py --input "$outputShpPath" --max-distance $maxDistance --field-name $fieldName --apply-symbology $applySymbology --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_angletonearest.py --input "$outputShpPath1" --max-distance $maxDistance --field-name "$fieldName" --apply-symbology "$applySymbology"  --reference-layer "$outputShpPath2" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")

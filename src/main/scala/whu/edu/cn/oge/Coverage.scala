@@ -42,6 +42,7 @@ import java.time.{Instant, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import scala.util.control.Breaks
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -104,6 +105,97 @@ object Coverage {
     val coverage = makeCoverageRDD(rawTileRdd)
     println("Make RDD Time: " + (System.currentTimeMillis() - time2))
     coverage
+  }
+
+  def rasterAreaSta(implicit coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ValList: List[String], resolution: Double): Double = {
+
+    //先转投影,转到3857计算面积
+    val crs = CRS.fromEpsgCode(3857)
+    val coverage_pro = reproject(coverage, crs, resolution)
+
+    //再统计栅格数量
+    //先map遍历每一个RDD
+    val tar_pix_num: Double = (coverage_pro._1.map(t => {
+
+      val tile = t._2.band(0) //由于输入要求一个波段，直接band（0）获取栅格
+      var count: Double = 0 //用于统计栅格数量
+
+      //由于没有输出，所以用foreach遍历每一个栅格值，而不是用map
+      tile.foreachDouble(pix => {
+        val loop = new Breaks
+        loop.breakable {
+          //循环解析输入的栅格值范围
+          if (ValList.isEmpty) {
+            throw new Exception("Please input value extent!")
+          }
+          for (element <- ValList) {
+            //分解单个范围如"0-1"，获取起始值entend_start（0）和终止值entend_end（1）
+            val extent = element.split(":")
+            if (extent.length != 2) {
+              throw new Exception("Please input valid value extent like 0:1!")
+            }
+
+            val entend_start = extent(0)
+            val entend_end = extent(1)
+            //如果输入范围内没有空值，也就是没有无穷量
+            if (extent(0) != "" & extent(1) != "") {
+
+
+              val entent_start = extent(0).toDouble
+              val entent_end = extent(1).toDouble
+
+              if (entent_start > entent_end) {
+                throw new Exception("The starting value of the input range is greater than the ending value!")
+              }
+              //如果起始值和终止值一样，就统计值为该值的栅格数量
+              if (entent_start == entent_end) {
+                if (pix == entent_end) {
+                  count += 1
+                  loop.break
+                }
+              }
+              //如果起始值和终止值不一样，就统计值在开区间内的栅格数量
+              else {
+                if (pix > entent_start & pix < entent_end) {
+                  count += 1
+                  loop.break
+                }
+              }
+            }
+            //如果输入范围只有终止值，就只统计小于终止值的栅格数量
+            if (extent(0) == "" & extent(1) != "") {
+              val entent_end = extent(1).toDouble
+              if (pix < entent_end) {
+                count += 1
+                loop.break
+
+              }
+            }
+            //如果输入范围只有起始值，就只统计大于起始值的栅格数量
+            if (extent(0) != "" & extent(1) == "") {
+              val entent_start = extent(0).toDouble
+              if (pix > entent_start) {
+                count += 1
+                loop.break
+
+              }
+            }
+            //如果输入范围起始值和终止值都没有，就统计所有栅格
+            if (extent(0) == "" & extent(1) == "") {
+              count += 1
+              loop.break
+            }
+          }
+        }
+      })
+      count
+    })
+
+      ).reduce((a, b) => a + b)
+
+    //根据数的栅格数量和分辨率大小计算最终面积，单位为m2
+    val area_sum_square_m: Double = tar_pix_num * resolution * resolution
+    area_sum_square_m
   }
 
   /**
