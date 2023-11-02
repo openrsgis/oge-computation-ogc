@@ -1166,7 +1166,7 @@ object Trigger {
         outJsonObject.put("workID", Trigger.dagId)
         outJsonObject.put("json", errorJson)
         //
-        println("Error json = " + outJsonObject)
+//        println("Error json = " + outJsonObject)
         sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
