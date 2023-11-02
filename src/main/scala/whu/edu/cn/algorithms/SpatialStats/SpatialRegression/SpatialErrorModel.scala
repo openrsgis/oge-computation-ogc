@@ -2,9 +2,12 @@ package whu.edu.cn.algorithms.SpatialStats.SpatialRegression
 
 import breeze.linalg.{DenseMatrix, DenseVector, eig, inv, qr, sum}
 import breeze.numerics.sqrt
-import scala.math._
+import org.locationtech.jts.geom.Geometry
 
+import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+
+import scala.collection.mutable
 
 /**
  * 空间误差模型，考虑自变量误差项λ。
@@ -31,7 +34,11 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
    *
    * @param x 自变量
    */
-  override def setX(x: Array[DenseVector[Double]]): Unit = {
+  override def setX(properties: String, split: String = ","): Unit = {
+    _nameX = properties.split(split)
+    val x = _nameX.map(s => {
+      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
+    })
     _X = x
     _xcols = x.length
     _xrows = _X(0).length
@@ -46,8 +53,8 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
    *
    * @param y 因变量
    */
-  override def setY(y: Array[Double]): Unit = {
-    _Y = DenseVector(y)
+  override def setY(property: String): Unit = {
+    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
   }
 
   /**
@@ -55,7 +62,7 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
    *
    * @return 返回拟合值（Array）形式
    */
-  def fit(): Array[Double] = {
+  def fit(): Array[(String, (Geometry, mutable.Map[String, Any]))]= {
     val interval = get_interval()
     val lambda = goldenSelection(interval._1, interval._2, function = lambda4optimize)._1
     //    println(s"lambda is $lambda")
@@ -76,7 +83,11 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
     println(s"coeffients:\n$betas_map")
     calDiagnostic(X = _dX, Y = _Y, residuals = res, loglikelihood = lllambda, df = _df)
     println("------------------------------------------------------------------------------------")
-    fitvalue
+    val shpRDDidx = shpRDD.collect().zipWithIndex
+    shpRDDidx.map(t => {
+      t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+    })
+    shpRDDidx.map(t => t._1)
   }
 
   def get_betas(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, W: DenseMatrix[Double] = DenseMatrix.eye(_xrows)): DenseVector[Double] = {

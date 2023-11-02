@@ -2,9 +2,12 @@ package whu.edu.cn.algorithms.SpatialStats.SpatialRegression
 
 import breeze.linalg.{DenseMatrix, DenseVector, eig, inv, qr, sum}
 import breeze.numerics.sqrt
-import scala.math._
+import org.locationtech.jts.geom.Geometry
 
+import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+
+import scala.collection.mutable
 
 /**
  * 空间杜宾模型，同时考虑自变量误差项λ与因变量滞后项ρ。
@@ -29,7 +32,11 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
    *
    * @param x 自变量
    */
-  override def setX(x: Array[DenseVector[Double]]): Unit = {
+  override def setX(properties: String, split: String = ","): Unit = {
+    _nameX = properties.split(split)
+      val x = _nameX.map(s => {
+        DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
+      })
     _X = x
     _xcols = x.length
     _xrows = _X(0).length
@@ -44,16 +51,16 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
    *
    * @param y 因变量
    */
-  override def setY(y: Array[Double]): Unit = {
-    _Y = DenseVector(y)
+  override def setY(property: String): Unit = {
+    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
   }
 
   /**
    * 回归计算
    *
-   * @return 返回拟合值（Array）形式
+   * @return 返回拟合值
    */
-  def fit(): Array[Double] = {
+  def fit(): Array[(String, (Geometry, mutable.Map[String, Any]))]= {
     val arr = firstvalue()
     val optresult = nelderMead(arr, paras4optimize)
 //    println("----------optimize result----------")
@@ -77,7 +84,11 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     println(s"coeffients:\n$betas_map")
     calDiagnostic(X = _dX, Y = _Y, residuals = res, loglikelihood = -llopt, df = _df + 2)
     println("------------------------------------------------------------------------------------")
-    fitvalue
+    val shpRDDidx = shpRDD.collect().zipWithIndex
+    shpRDDidx.map(t => {
+      t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+    })
+    shpRDDidx.map(t => t._1)
   }
 
   def get_betas(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, W: DenseMatrix[Double] = DenseMatrix.eye(_xrows)): DenseVector[Double] = {

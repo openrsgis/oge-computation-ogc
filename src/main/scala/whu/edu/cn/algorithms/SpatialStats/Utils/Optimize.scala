@@ -85,7 +85,7 @@ object Optimize {
         //        opt_res += function(sc, (b + a) / 2.0)
         opt_val += p
         opt_res += f_p
-        println(s"Iter: $iter, optimize value: $p, result is $f_p")
+//        println(s"Iter: $iter, optimize value: $p, result is $f_p")
         if (abs(a - b) < eps/10) {
           loop.break()
         }

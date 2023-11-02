@@ -157,7 +157,7 @@ class GWRbasic extends GWRbase {
     (betas.collect(), yhat, residual, shat, sum_ci.collect())
   }
 
-  def bandwidthSelection(kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = true): Double = {
+  protected def bandwidthSelection(kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = true): Double = {
     if (adaptive) {
       adaptiveBandwidthSelection(kernel = kernel, approach = approach)
     } else {
@@ -240,7 +240,7 @@ class GWRbasic extends GWRbase {
     residual.toArray.map(t => t * t).sum
   }
 
-  def getYhat(X: DenseMatrix[Double], betas: Array[DenseVector[Double]]): DenseVector[Double] = {
+  private def getYhat(X: DenseMatrix[Double], betas: Array[DenseVector[Double]]): DenseVector[Double] = {
     val arrbuf = new ArrayBuffer[Double]()
     for (i <- 0 until X.rows) {
       val rowvec = X(i, ::).inner

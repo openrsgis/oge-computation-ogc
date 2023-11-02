@@ -9,7 +9,7 @@ import whu.edu.cn.algorithms.SpatialStats.STCorrelations.CorrelationAnalysis._
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.SpatialAutoCorrelation._
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.TemporalAutoCorrelation._
 import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.LinearRegression.linearRegression
-import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.SpatialDurbinModel
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
 import whu.edu.cn.algorithms.SpatialStats.Utils.FeatureDistance._
 import whu.edu.cn.algorithms.SpatialStats.Utils.OtherUtils._
 import whu.edu.cn.algorithms.SpatialStats.GWModels.GWRbasic
@@ -34,13 +34,12 @@ object test {
 
   def main(args: Array[String]): Unit = {
 
-    //    descriptive_test()
-    //    sarmodel_test()
-    //    morani_test()
-    //    acf_test()
-    //    linear_test()
-    //    correlation_test()
-    //    pca_test()
+        descriptive_test()
+        sarmodel_test()
+        morani_test()
+        acf_test()
+        linear_test()
+        correlation_test()
     gwrbasic_test()
     sc.stop()
   }
@@ -78,15 +77,10 @@ object test {
 
   def sarmodel_test(): Unit = {
     val t1 = System.currentTimeMillis()
-    val x1 = shpfile2.map(t => t._2._2("PO60").asInstanceOf[String].toDouble).collect()
-    val x2 = shpfile2.map(t => t._2._2("UE60").asInstanceOf[String].toDouble).collect()
-    val y = shpfile2.map(t => t._2._2("HR60").asInstanceOf[String].toDouble).collect()
-    val x = Array(DenseVector(x1), DenseVector(x2))
-    //    x.foreach(println)
     val mdl = new SpatialDurbinModel//error，lag
     mdl.init(shpfile2)
-    mdl.setX(x)
-    mdl.setY(y)
+    mdl.setX("PO60,UE60")
+    mdl.setY("HR60")
     mdl.fit()
     val tused = (System.currentTimeMillis() - t1) / 1000.0
     println(s"time used is $tused s")
@@ -137,10 +131,10 @@ object test {
     val per = attributeSelectHead(csvdata, "precipitation").map(t => t.toDouble)
     val tem = attributeSelectHead(csvdata, "temperature").map(t => t.toDouble)
     val x = Array(DenseVector(tem), DenseVector(per))
-    val re = linearRegression(x, DenseVector(aqi))
-    println(re._1)
-    println(re._2)
-    println(re._3)
+//    val re = linearRegression(x, DenseVector(aqi))
+//    println(re._1)
+//    println(re._2)
+//    println(re._3)
     val tused = (System.currentTimeMillis() - t1) / 1000.0
     println(s"time used is $tused s")
   }
