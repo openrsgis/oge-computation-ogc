@@ -3583,6 +3583,11 @@
         "description": "Input Elevation raster layer"
       },
       {
+        "name": "mask",
+        "type": "Feature",
+        "description": "Vector mask for clipping the raster."
+      },
+      {
         "name": "cropToCutLine",
         "type": "String",
         "description": "Applies the vector layer extent to the output raster if checked.",
@@ -3619,11 +3624,6 @@
 
       },
       {
-        "name": "xResolution",
-        "type": "Double",
-        "description": "The width of the cells in the output raster."
-      },
-      {
         "name": "keepResolution",
         "type": "String",
         "description": "The resolution of the output raster will not be changed.",
@@ -3645,28 +3645,11 @@
         "default": ""
       },
       {
-        "name": "mask",
-        "type": "String",
-        "description": "Vector mask for clipping the raster.",
-        "optional": "True",
-        "default":""
-      },
-      {
         "name": "multithreading",
         "type": "String",
         "description": "Two threads will be used to process chunks of image and perform input/output operation simultaneously. Note that computation is not multithreaded itself.",
         "optional": "True",
         "default": "False"
-      },
-      {
-        "name": "nodata",
-        "type": "Double",
-        "description": "Defines a value that should be inserted for the nodata values in the output raster."
-      },
-      {
-        "name": "yResolution",
-        "type": "Double",
-        "description": "The height of the cells in the output raster."
       },
       {
         "name": "dataType",
