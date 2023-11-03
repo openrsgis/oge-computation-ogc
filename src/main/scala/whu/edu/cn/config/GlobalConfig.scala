@@ -110,7 +110,7 @@ object GlobalConfig {
   }
 
   object Others {
-    final var jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json" //存储json解析文件地址
+    final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
     final var ontheFlyStorage = "/mnt/storage/on-the-fly" //tms瓦片存储地址
