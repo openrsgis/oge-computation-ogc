@@ -2713,38 +2713,32 @@ object QGIS {
    *
    * @param sc             Alias object for SparkContext
    * @param input          The input raster
+   * @param mask           Vector mask for clipping the raster
    * @param cropToCutLine  Applies the vector layer extent to the output raster if checked.
    * @param targetExtent   Extent of the output file to be created
    * @param setResolution  Shall the output resolution (cell size) be specified
    * @param extra          Add extra GDAL command line options
    * @param targetCrs      Set the coordinate reference to use for the mask layer
-   * @param xResolution    The width of the cells in the output raster
    * @param keepResolution The resolution of the output raster will not be changed
    * @param alphaBand      Creates an alpha band for the result. The alpha band then includes the transparency values of the pixels.
    * @param options        For adding one or more creation options that control the raster to be created
-   * @param mask           Vector mask for clipping the raster
    * @param multithreading Two threads will be used to process chunks of image and perform input/output operation simultaneously. Note that computation is not multithreaded itself.
-   * @param nodata         Defines a value that should be inserted for the nodata values in the output raster
-   * @param yResolution    The height of the cells in the output raster
    * @param dataType       Defines the format of the output raster file.
    * @param sourceCrs      Set the coordinate reference to use for the input raster
    * @return Output raster layer clipped by the vector layer
    */
   def gdalClipRasterByMaskLayer(implicit sc: SparkContext,
                                 input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                mask: RDD[(String, (Geometry, Map[String, Any]))],
                                 cropToCutLine: String = "True",
                                 targetExtent: String = "",
                                 setResolution: String = "False",
                                 extra: String = "",
                                 targetCrs: String = "",
-                                xResolution: Double ,
                                 keepResolution: String = "False",
                                 alphaBand: String = "False",
                                 options: String = "",
-                                mask: String = "",
                                 multithreading: String = "False",
-                                nodata: Double,
-                                yResolution: Double,
                                 dataType: String = "0",
                                 sourceCrs: String = "")
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -2752,8 +2746,10 @@ object QGIS {
     val time = System.currentTimeMillis()
 
     val outputTiffPath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + ".tif"
+    val maskPath = "/mnt/storage/algorithmData/gdalClipMaskLayer_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
+    saveFeatureRDDToShp(mask, maskPath)
 
 
     val dataTypeInput: String = Map(
@@ -2774,7 +2770,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs" --x-resolution $xResolution --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$mask" --multithreading $multithreading --nodata $nodata --y-resolution $yResolution --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs"  --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$maskPath" --multithreading $multithreading  --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
