@@ -8271,6 +8271,11 @@
         "description": "The cube to be exported"
       },
       {
+        "name": "exportedName",
+        "type": "String",
+        "description": "The layer to be exported"
+      },
+      {
         "name": "description",
         "type": "String",
         "description": "The description of the Cube",

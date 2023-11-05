@@ -674,7 +674,6 @@ object Cube {
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-    println("导出到这里了")
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
   }
