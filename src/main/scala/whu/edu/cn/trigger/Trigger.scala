@@ -972,7 +972,7 @@ object Trigger {
           cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
           }
         case "Cube.export" =>
-          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), batchParam = batchParam, dagId)
+          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("name"), batchParam = batchParam, dagId)
       }
 
 

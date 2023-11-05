@@ -29,6 +29,7 @@ import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, VisualizationPa
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
 import whu.edu.cn.geocube.application.gdc.gdcCoverage._
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
+import whu.edu.cn.geocube.core.entity
 import whu.edu.cn.geocube.core.entity.{GcDimension, GcMeasurement, GcProduct, QueryParams, RasterTile, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
@@ -654,34 +655,52 @@ object Cube {
     }
   }
 
-  def visualizeBatch(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String) : Unit = {
-    val rasterArray: Array[(SpatialKey, Tile)] = rasterTileLayerRdd._1.map(t => {
+  def visualizeBatch(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), exportProductName: String, batchParam: BatchParam, dagId: String) : Unit = {
+    val exportedRasterRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])
+    = (rasterTileLayerRdd._1.filter{
+      case (key, _) => key.measurementName == exportProductName
+    }, rasterTileLayerRdd._2)
+    println(exportedRasterRdd)
+    val rasterArray: Array[(SpatialKey, Tile)] = exportedRasterRdd._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(rasterArray)
-    val stitchedTile: Raster[Tile] = Raster(tile, rasterTileLayerRdd._2.tileLayerMetadata.extent)
-    var reprojectTile: Raster[Tile] = stitchedTile.reproject(rasterTileLayerRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
+    val stitchedTile: Raster[Tile] = Raster(tile, exportedRasterRdd._2.tileLayerMetadata.extent)
+    var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
     val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
     val saveFilePath = s"D:/cog/out/${dagId}.tiff"
+
+    val minIOUtil = MinIOUtil
+    val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+    println("导出到这里了")
+    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
   }
 
   def cubeBuild(implicit sc: SparkContext, coverageIdList: List[String], productKeyList: List[String], level: Int): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
     // (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])
-    val time1 = System.currentTimeMillis()
     val time2 = System.currentTimeMillis()
-    var cube: RDD[(SpaceTimeBandKey, Tile)]  = sc.emptyRDD[(SpaceTimeBandKey, Tile)]
-    var rasterTileLayerMetadata: RasterTileLayerMetadata[SpaceTimeKey] = null
+    //    var cube: RDD[(SpaceTimeBandKey, Tile)]  = sc.emptyRDD[(SpaceTimeBandKey, Tile)]
+    val multiProductTileLayerRdd = ArrayBuffer[RDD[(SpaceTimeBandKey, Tile)]]()
+    val multiProductTileLayerMeta = ArrayBuffer[RasterTileLayerMetadata[SpaceTimeKey]]()
     coverageIdList.zipWithIndex.foreach { case (coverageId, index) =>
       val productKey = productKeyList(index)
       val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
       val result = makeCubeRDD(rawTileRdd)
-      cube = cube.union(result._1)
-      if (rasterTileLayerMetadata == null) rasterTileLayerMetadata = result._2
+      multiProductTileLayerRdd.append(result._1)
+      multiProductTileLayerMeta.append(result._2)
     }
+    var destTileLayerMetaData = multiProductTileLayerMeta(0).getTileLayerMetadata
+    val destRasterProductNames = ArrayBuffer[String]()
+    for (i <- multiProductTileLayerMeta) {
+      destTileLayerMetaData = destTileLayerMetaData.merge(i.getTileLayerMetadata)
+      destRasterProductNames.append(i.getProductName)
+    }
+    val destRasterTileLayerMetaData = entity.RasterTileLayerMetadata[SpaceTimeKey](destTileLayerMetaData, _productNames = destRasterProductNames)
     println("Make RDD Time: " + (System.currentTimeMillis() - time2))
-    (cube, rasterTileLayerMetadata)
+    (sc.union(multiProductTileLayerRdd), destRasterTileLayerMetaData)
   }
 
   def makeCubeRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
@@ -709,11 +728,7 @@ object Cube {
     val cellType: CellType = CellType.fromName(firstTile.getDataType.toString)
     val crs: CRS = firstTile.getCrs
     val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3), SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
-//    val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
-
     val dtype = firstTile.getDataType.toString
-    //    val cellType: CellType = CellType.fromName(dtype)
-    //    val tileLayerMetadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld, extent, crs, bounds)
     val rasterTileLayerMetadata: RasterTileLayerMetadata[SpaceTimeKey] = RasterTileLayerMetadata(TileLayerMetadata(cellType, ld, extent, crs, bounds), firstTile.getCoverageId)
 
     // Map RasterTile to (SpaceTimeBandKey, Tile)
@@ -743,8 +758,6 @@ object Cube {
       union = Extent(metaList.head.getGeom.getEnvelopeInternal)
     }
     val queryGeometry: Geometry = metaList.head.getGeom
-    println(metaList)
-    //    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
     val tileRDDFlat: RDD[RawTile] = tileMetadata
@@ -776,10 +789,6 @@ object Cube {
         getTileBuf(client, t)
       })
     })
-    println("=============================")
-    println(rawTileRdd.first().getDataType.toString)
-    println("=============================")
-    println(rawTileRdd.first().toString)
     rawTileRdd
   }
 
