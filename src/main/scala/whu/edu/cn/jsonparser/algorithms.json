@@ -316,6 +316,36 @@
       }
     ]
   },
+  "Service.getCube": {
+    "description": "Getting resource Cube of certain Name",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "CubeName",
+        "type": "String",
+        "description": "The Name of target collection."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "dataTime",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Service.getCoverageCollection": {
     "description": "Getting resource coverage collection of certain id",
     "returns": "CoverageCollection",
