@@ -24,7 +24,7 @@ object Optimize {
   (Double, Array[Double], Array[Double], Array[Double]) = {
     var iter: Int = 0
     val max_iter = 1000
-    val loop=new Breaks
+    val loop = new Breaks
     val ratio: Double = (sqrt(5) - 1) / 2.0
     var a = lower + 1e-12
     var b = upper - 1e-12
@@ -85,12 +85,15 @@ object Optimize {
         //        opt_res += function(sc, (b + a) / 2.0)
         opt_val += p
         opt_res += f_p
-//        println(s"Iter: $iter, optimize value: $p, result is $f_p")
-        if (abs(a - b) < eps/10) {
+        //        println(s"Iter: $iter, optimize value: $p, result is $f_p")
+        if (abs(a - b) < eps / 10) {
           loop.break()
         }
       }
     }
+    opt_iter += (iter + 1)
+    opt_val += (b + a) / 2.0
+    opt_res += function((b + a) / 2.0)
     //    println((b + a) / 2.0, function((b + a) / 2.0))
     //    ((b + a) / 2.0, opt_iter.toArray, opt_val.toArray)
     ((b + a) / 2.0, opt_iter.toArray, opt_val.toArray, opt_res.toArray)
@@ -141,7 +144,7 @@ object Optimize {
       //求点0和m+1的差
       val dif = DenseVector(ord_m1) - DenseVector(ord_0)
       eps = sqrt(dif.toArray.map(t => t * t).sum)
-      println(s"the iter is $iter, the difference is $dif, the eps is $eps")
+      //      println(s"the iter is $iter, the difference is $dif, the eps is $eps")
 
       //这个是前m个的arr，从0到m
       var ord_0mArr = new ArrayBuffer[Array[Double]]
@@ -239,8 +242,8 @@ object Optimize {
     //    ord_Arr.map(t => t.foreach(println))
     //    println("----------input----------")
     //    optParameter.foreach(println)
-    println("----------Nelder-Mead optimize result----------")
-    ord_Arr(0).foreach(println)
+    //    println("----------Nelder-Mead optimize result----------")
+    //    ord_Arr(0).foreach(println)
     ord_Arr(0)
   }
 

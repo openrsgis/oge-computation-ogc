@@ -2,6 +2,7 @@ package whu.edu.cn.algorithms.SpatialStats.STCorrelations
 
 import breeze.linalg._
 import breeze.plot._
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.algorithms.SpatialStats.Utils.FeatureSpatialWeight._
@@ -15,17 +16,17 @@ object SpatialAutoCorrelation {
   /**
    * 输入RDD直接计算全局莫兰指数
    *
-   * @param featRDD     RDD
+   * @param featureRDD     RDD
    * @param property    要计算的属性，String
    * @param plot        bool类型，是否画散点图，默认为否(false)
    * @param test        是否进行测试(计算P值等)
    * @param weightstyle 邻接矩阵的权重类型，参考 getNeighborWeight 函数
-   * @return （全局莫兰指数，峰度）(Double,Double)形式
+   * @return 全局莫兰指数，峰度
    */
-  def globalMoranI(featRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, plot: Boolean = false, test: Boolean = false, weightstyle: String = "W"): (Double, Double) = {
-    val nb_weight = getNeighborWeight(featRDD, weightstyle)
+  def globalMoranI(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, plot: Boolean = false, test: Boolean = false, weightstyle: String = "W"): String = {
+    val nb_weight = getNeighborWeight(featureRDD, weightstyle)
     val sum_weight = sumWeight(nb_weight)
-    val arr = featRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
+    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
     val arr_mean = meandiff(arr)
     val arr_mul = arr_mean.map(t => {
       val re = new Array[Double](arr_mean.length)
@@ -43,6 +44,8 @@ object SpatialAutoCorrelation {
     if (plot) {
       plotmoran(arr, nb_weight, moran_i)
     }
+    var outStr=s"global Moran's I is: ${moran_i.formatted("%.4f")}\n"
+    outStr += s"kurtosis is: ${kurtosis.formatted("%.4f")}\n"
     if (test) {
       val E_I = -1.0 / (n - 1)
       val S_1 = 0.5 * nb_weight.map(t => sum(t * 2.0 * t * 2.0)).sum()
@@ -54,24 +57,28 @@ object SpatialAutoCorrelation {
       val Z_I = (moran_i - E_I) / sqrt(V_I)
       val gaussian = breeze.stats.distributions.Gaussian(0, 1)
       val Pvalue = 2 * (1.0 - gaussian.cdf(Z_I))
-      println(s"global Moran's I is: $moran_i")
-      println(s"Z-Score is: $Z_I , p-value is: $Pvalue")
+      //      println(s"global Moran's I is: $moran_i")
+      //      println(s"Z-Score is: $Z_I , p-value is: $Pvalue")
+      outStr += s"Z-Score is: ${Z_I.formatted("%.4f")} , "
+      outStr += s"p-value is: ${Pvalue.formatted("%.6f")}"
     }
-    (moran_i, kurtosis)
+    println(outStr)
+    outStr
+    //    (moran_i, kurtosis)
   }
 
   /**
    * 输入RDD直接计算局部莫兰指数
    *
-   * @param featRDD  RDD
+   * @param featureRDD  RDD
    * @param property 要计算的属性，String
    * @param adjust   是否调整n的取值。false(默认):n；true:n-1
-   * @return （局部莫兰指数，均值，方差，Z值，P值）的Tuple形式，每个单独的值为一个Array
+   * @return RDD内含局部莫兰指数和预测值等
    */
-  def localMoranI(featRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, adjust: Boolean = false):
-  Tuple5[Array[Double], Array[Double], Array[Double], Array[Double], Array[Double]] = {
-    val nb_weight = getNeighborWeight(featRDD)
-    val arr = featRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
+  def localMoranI(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, adjust: Boolean = false):
+  RDD[(String, (Geometry, Map[String, Any]))] = {
+    val nb_weight = getNeighborWeight(featureRDD)
+    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
     val arr_mean = meandiff(arr)
     val arr_mul = arr_mean.map(t => {
       val re = arr_mean.clone()
@@ -102,8 +109,16 @@ object SpatialAutoCorrelation {
     val Z_I = (local_moranI - expectation) / var_I.map(t => sqrt(t))
     val gaussian = breeze.stats.distributions.Gaussian(0, 1)
     val pv_I = Z_I.map(t => 2 * (1.0 - gaussian.cdf(t)))
-
-    (local_moranI.toArray, expectation.toArray, var_I.toArray, Z_I.toArray, pv_I.toArray)
+    val featRDDidx = featureRDD.zipWithIndex()
+    featRDDidx.map(t => {
+      t._1._2._2 += ("local_moranI" -> local_moranI(t._2.toInt))
+      t._1._2._2 += ("expectation" -> expectation(t._2.toInt))
+      t._1._2._2 += ("local_var" -> var_I(t._2.toInt))
+      t._1._2._2 += ("local_z" -> Z_I(t._2.toInt))
+      t._1._2._2 += ("local_pv" -> pv_I(t._2.toInt))
+    })
+    //    (local_moranI.toArray, expectation.toArray, var_I.toArray, Z_I.toArray, pv_I.toArray)
+    featRDDidx.map(_._1)
   }
 
 
