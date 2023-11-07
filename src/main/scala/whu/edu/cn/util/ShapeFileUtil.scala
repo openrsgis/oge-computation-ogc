@@ -13,12 +13,15 @@ import org.geotools.referencing.crs.DefaultGeographicCRS
 import org.locationtech.jts.geom.Geometry
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import whu.edu.cn.util.WKTUtil.{jsonToWkt, wktToGeom}
-
 import java.io._
 import java.nio.charset.Charset
 import java.util
 import java.util.zip.{ZipEntry, ZipOutputStream}
 import java.util.{Objects, UUID}
+
+import org.geotools.referencing.CRS
+import org.opengis.referencing.crs.CoordinateReferenceSystem
+
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.collection.JavaConverters._
@@ -62,6 +65,10 @@ object ShapeFileUtil {
       //创建shape文件对象+
       val file = new File(shpPath)
       val params = new util.HashMap[String, Serializable]
+      val geom:Geometry = data.get(0).get("the_geom").asInstanceOf[Geometry]
+      val srid :Int = geom.getSRID()
+      val cood = "EPSG:" + srid.toString
+      val crs: CoordinateReferenceSystem = CRS.decode(cood)
       params.put(ShapefileDataStoreFactory.URLP.key, file.toURI.toURL)
       val ds = new ShapefileDataStoreFactory().createNewDataStore(params).asInstanceOf[ShapefileDataStore]
       //定义图形信息和属性信息
@@ -70,6 +77,7 @@ object ShapeFileUtil {
       //设置编码
       val charset = Charset.forName(encode)
       ds.setCharset(charset)
+      ds.forceSchemaCRS(crs)
       //设置Writer
       val writer: FeatureWriter[SimpleFeatureType, SimpleFeature] = ds.getFeatureWriter(ds.getTypeNames()(0), Transaction.AUTO_COMMIT)
       import scala.collection.JavaConversions._
@@ -154,6 +162,9 @@ object ShapeFileUtil {
     val charset = Charset.forName(encode)
     store.setCharset(charset)
     val sfSource = store.getFeatureSource
+    val coor = sfSource.getSchema.getCoordinateReferenceSystem
+    val crs: String = CRS.lookupIdentifier(coor, false)
+    val srid=crs.split(":")(1).toInt
     val sfIter = sfSource.getFeatures.features
     // 从ShapeFile文件中遍历每一个Feature，然后将Feature转为GeoJSON字符串
     val preRdd: ArrayBuffer[(String, (Geometry, Map[String, Any]))] = ArrayBuffer.empty[(String, (Geometry, Map[String, Any]))]
@@ -168,6 +179,7 @@ object ShapeFileUtil {
       val sJson = parseObject(writer.toString)
       val wkt = jsonToWkt(sJson)
       val geom = wktToGeom(wkt)
+      geom.setSRID(srid)
       val properties = sJson.getJSONObject("properties")
       val props = mutable.Map.empty[String, Any]
       val keys = properties.keySet().asScala.toSet

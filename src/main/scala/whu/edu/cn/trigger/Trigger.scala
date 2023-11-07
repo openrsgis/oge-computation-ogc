@@ -545,7 +545,7 @@ object Trigger {
         case "Coverage.clipRasterByExtentByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalClipRasterByExtent(sc, coverageRddList(args("input")), projwin = args("projwin"), extra = args("extra"), nodata = args("nodata").toDouble, dataType = args("dataType"), options = args("options")))
         case "Coverage.clipRasterByMaskLayerByGDAL" =>
-          coverageRddList += (UUID -> QGIS.gdalClipRasterByMaskLayer(sc, coverageRddList(args("input")), cropToCutLine = args("cropToCutLine"), targetExtent = args("targetExtent"), setResolution = args("setResolution"), extra = args("extra"), targetCrs = args("targetCrs"), xResolution = args("xResolution").toDouble, keepResolution = args("keepResolution"), alphaBand = args("alphaBand"), options = args("options"), mask = args("mask"), multithreading = args("multithreading"), nodata = args("nodata").toDouble, yResolution = args("yResolution").toDouble, dataType = args("dataType"), sourceCrs = args("sourceCrs")))
+          coverageRddList += (UUID -> QGIS.gdalClipRasterByMaskLayer(sc, coverageRddList(args("input")),  featureRddList(args("mask")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], cropToCutLine = args("cropToCutLine"), targetExtent = args("targetExtent"), setResolution = args("setResolution"), extra = args("extra"), targetCrs = args("targetCrs"), keepResolution = args("keepResolution"), alphaBand = args("alphaBand"), options = args("options"), multithreading = args("multithreading"), dataType = args("dataType"), sourceCrs = args("sourceCrs")))
         case "Coverage.polygonizeByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalPolygonize(sc, coverageRddList(args("input")), extra = args("extra"), field = args("field"), band = args("band").toInt, eightConnectedness = args("eightConnectedness")))
         case "Coverage.rasterizeOverByGDAL" =>
@@ -969,10 +969,16 @@ object Trigger {
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
-//        case "Cube.selectProducts" => {
-//          cubeRDDList += (UUID -> Cube.selectProducts(sc, productList = isOptionalArg(args, "cubeID"), dateTime = isOptionalArg(args, "dateTime"), geom = isOptionalArg(args, "geom"),
-//            ))
-//        }
+
+        case "Cube.build" => {
+          val coverageString = args("coverageIDList")
+          val productString = args("productIDList")
+          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
+          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
+          }
+        case "Cube.export" =>
+          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
       }
 
 
