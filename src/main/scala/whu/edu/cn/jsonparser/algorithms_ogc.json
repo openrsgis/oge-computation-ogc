@@ -3615,6 +3615,11 @@
         "description": "Input Elevation raster layer"
       },
       {
+        "name": "mask",
+        "type": "Feature",
+        "description": "Vector mask for clipping the raster."
+      },
+      {
         "name": "cropToCutLine",
         "type": "String",
         "description": "Applies the vector layer extent to the output raster if checked.",
@@ -3648,12 +3653,6 @@
         "description": "Set the coordinate reference to use for the mask layer.",
         "optional": "True",
         "default": ""
-
-      },
-      {
-        "name": "xResolution",
-        "type": "Double",
-        "description": "The width of the cells in the output raster."
       },
       {
         "name": "keepResolution",
@@ -3677,13 +3676,6 @@
         "default": ""
       },
       {
-        "name": "mask",
-        "type": "String",
-        "description": "Vector mask for clipping the raster.",
-        "optional": "True",
-        "default":""
-      },
-      {
         "name": "multithreading",
         "type": "String",
         "description": "Two threads will be used to process chunks of image and perform input/output operation simultaneously. Note that computation is not multithreaded itself.",
@@ -3691,22 +3683,11 @@
         "default": "False"
       },
       {
-        "name": "nodata",
-        "type": "Double",
-        "description": "Defines a value that should be inserted for the nodata values in the output raster."
-      },
-      {
-        "name": "yResolution",
-        "type": "Double",
-        "description": "The height of the cells in the output raster."
-      },
-      {
         "name": "dataType",
         "type": "String",
         "description": "Defines the format of the output raster file.",
         "optional": "True",
         "default": "0"
-
       },
       {
         "name": "sourceCrs",

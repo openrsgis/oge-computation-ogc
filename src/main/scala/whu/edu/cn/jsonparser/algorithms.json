@@ -3583,6 +3583,11 @@
         "description": "Input Elevation raster layer"
       },
       {
+        "name": "mask",
+        "type": "Feature",
+        "description": "Vector mask for clipping the raster."
+      },
+      {
         "name": "cropToCutLine",
         "type": "String",
         "description": "Applies the vector layer extent to the output raster if checked.",
@@ -3619,11 +3624,6 @@
 
       },
       {
-        "name": "xResolution",
-        "type": "Double",
-        "description": "The width of the cells in the output raster."
-      },
-      {
         "name": "keepResolution",
         "type": "String",
         "description": "The resolution of the output raster will not be changed.",
@@ -3645,28 +3645,11 @@
         "default": ""
       },
       {
-        "name": "mask",
-        "type": "String",
-        "description": "Vector mask for clipping the raster.",
-        "optional": "True",
-        "default":""
-      },
-      {
         "name": "multithreading",
         "type": "String",
         "description": "Two threads will be used to process chunks of image and perform input/output operation simultaneously. Note that computation is not multithreaded itself.",
         "optional": "True",
         "default": "False"
-      },
-      {
-        "name": "nodata",
-        "type": "Double",
-        "description": "Defines a value that should be inserted for the nodata values in the output raster."
-      },
-      {
-        "name": "yResolution",
-        "type": "Double",
-        "description": "The height of the cells in the output raster."
       },
       {
         "name": "dataType",
@@ -8148,6 +8131,41 @@
       }
     ]
   },
+  "Cube.build": {
+    "description": "Building Cube from coverage id",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productIDList",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "coverageIDList",
+        "type": "String",
+        "description": "The id of target coverage."
+      },
+      {
+        "name": "subset",
+        "type": "List<Float>",
+        "description": "The subset of target coverage.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Get the bands.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Cube.band": {
     "description": "Select a new cube by band name",
     "returns": "Cube",
@@ -8239,6 +8257,58 @@
         "type": "String",
         "description": "png",
         "default": "False",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.export": {
+    "description": "Export a Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to be exported"
+      },
+      {
+        "name": "exportedName",
+        "type": "String",
+        "description": "The layer to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the Cube",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported Cube",
         "optional": "True"
       }
     ]
