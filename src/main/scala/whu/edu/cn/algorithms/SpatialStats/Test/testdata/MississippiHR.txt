@@ -1,0 +1,20 @@
+Variable	Description
+NAME	County name
+STATE_NAME	State name
+STATE_FIPS	State fips code (character)
+CNTY_FIPS	County fips code (character)
+FIPS	Combined state and county fips code (character)
+STFIPS	State fips code (numeric)
+COFIPS	County fips code (numeric)
+FIPSNO	FIPS code as numeric variable
+SOUTH	Dummy variable for Southern counties (South = 1)
+HR**	Homicide rate per 100,000 population (1960, 1970, 1980, and 1990)
+PO**	County population in 1960, 1970, 1980, and 1990
+UE**	Unemployment rate in 1960, 1970, 1980, and 1990
+DV**	Divorce rate in 1960, 1970, 1980, and 1990 (pct of males over 14 divorced)
+MA**	Median age in 1960, 1970, 1980, and 1990
+DNL**	Log of population density in 1960, 1970, 1980, and 1990
+FP**	Percentage of families below poverty in 1960, 1970, 1980, and 1990
+BLK**	Percentage of black in 1960, 1970, 1980, and 1990
+GI**	Gini index of family income inequality in 1960, 1970, 1980, and 1990
+FH**	Percentage of female headed households in 1960, 1970, 1980, and 1990

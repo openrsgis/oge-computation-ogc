@@ -1,0 +1,9 @@
+地理加权技术相关
+包括以下模型：
+-GWR basic
+-GTWR
+-GWBR
+-GWPR
+-GW Average
+-GW Correlation
+-MGWR
