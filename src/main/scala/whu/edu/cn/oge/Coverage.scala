@@ -19,6 +19,7 @@ import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.Extent
 import javafx.scene.paint.Color
+import org.apache.commons.math3.distribution.FDistribution
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
@@ -107,7 +108,322 @@ object Coverage {
     coverage
   }
 
-  def rasterAreaSta(implicit coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ValList: List[String], resolution: Double): Double = {
+  def geoDetector(implicit depVar_In: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  facVar_name_In:String,
+                  facVar_In: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  norExtent_sta:Double,norExtent_end:Double,NaN_value:Double) = {
+    //将栅格数据中值在范围之外的像素赋值为指定的异常值
+    def clamp_NodataV(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), low: Double, high: Double,
+              NodataV: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+      val coverageRddClamped = coverage._1.map(t =>
+        (t._1, t._2.mapBands((t1, t2) => t2.mapDouble(t3 => {
+          if (t3 > high | t3 < low) {
+            NodataV
+          }
+          else {
+            t3
+          }
+        }
+        ))))
+      (coverageRddClamped, coverage._2)
+    }
+    //对因变量栅格数据进行异常值清晰
+    val depVar = clamp_NodataV(depVar_In,norExtent_sta,norExtent_end,(norExtent_sta+norExtent_end)/2)
+    val facVar = List(facVar_In)
+    val facVar_name = List(facVar_name_In)
+
+    //获取因变量depVar的整体方差和样本数
+    //首先map reduce计算deVar的栅格数量和栅格均值
+    val summary = depVar._1.map { t =>
+      val deptile: Tile = t._2.band(0)
+      val pixelArray = deptile.toArrayDouble()
+
+      // 过滤掉 NaN 值和正常值范围外的异常值
+      var validPixels = pixelArray.filter(_ != null)
+      validPixels = validPixels.filter(_ >= norExtent_sta)
+      validPixels = validPixels.filter(_ <= norExtent_end)
+
+      val pixelCount = validPixels.length
+      val pixelSum = validPixels.sum
+      (pixelCount, pixelSum)
+    }.reduce { (left, right) =>
+      (left._1 + right._1, left._2 + right._2)
+    }
+    val depVar_N: Int = summary._1
+    val depVar_mean: Double = summary._2 / summary._1
+
+    //再根据栅格均值，进行map reduce计算deVar的方差
+    val depVar_Var_sum = depVar._1.map { t =>
+      val deptile: Tile = t._2.band(0)
+      val deptile_arr = deptile.toArrayDouble()
+      // 过滤掉 NaN 值
+      val validPixels = deptile_arr.filter(!_.isNaN)
+      // 计算有效像素的平方差总和
+      val devSqSum = validPixels.map(x => math.pow(x - depVar_mean, 2)).sum
+      devSqSum
+    }.reduce { (a, b) => a + b }
+    val depVar_Var: Double = depVar_Var_sum / depVar_N
+
+    val sst = depVar_N*depVar_Var
+
+    //定义一个可变的Map，用于存储每个影响因子的类别数量和对应的栅格数量
+    val facVar_claNum = mutable.Map.empty[String, mutable.Map[Double, Double]]
+    //定义一个可变的Map，用于存储每个影响因子的类别数量和对应的方差
+    val facVar_claVar = mutable.Map.empty[String, mutable.Map[Double, Double]]
+    //定义一个可变的Map，用于存储每个影响因子的类别数量和对应的均值
+    val facVar_claMean = mutable.Map.empty[String, mutable.Map[Double, Double]]
+
+      //遍历每一个影响因子获取影响因子类别数量
+      for (fac <- facVar.indices) {
+        //定义一个可变的Map，用于动态存储每一类的像素值和栅格数量
+        var fac_class_tmp = mutable.ListBuffer.empty[Double]
+        //首先遍历每个rdd
+        val fac_class_Sum = facVar(fac)._1.map{ t =>
+          val factile: Tile = t._2.band(0)
+          //然后再foreach遍历rdd中tile的每个像素,累计类别存入fac_class
+          factile.foreachDouble { pix =>
+            //如果是非有效值，就不统计为类别
+            if (pix != NaN_value & !fac_class_tmp.contains(pix)) {
+              fac_class_tmp.append(pix)
+            }
+          }
+          fac_class_tmp
+        }.reduce { (a,b) =>a union b}
+
+        val fac_class_Union = fac_class_Sum.distinct
+        val claNum_tmp2 = mutable.Map.empty[Double, Double]
+        //根据fac_class_Union初始化facVar_claNum
+        for(fac_class <- fac_class_Union){
+          val tmp2 = fac_class -> 1d
+          claNum_tmp2 += tmp2
+        }
+
+        facVar_claNum(facVar_name(fac)) = claNum_tmp2
+    }
+
+    //基于coverageTemplate进行双栅格数据处理
+    //循环遍历每一个影响因子
+    for (fac <- facVar.indices) {
+      val facRDD = facVar(fac)
+      val facType = facVar_name(fac)//该影响因子对应的名称
+      val facClassNum = facVar_claNum(facType).size//该影响因子对应的类别数量
+      val facClass_List = facVar_claNum(facType).keys.toList//该影响因子对应的类别值list
+
+      //循环遍历每一个影响因子的每一类
+      for(fac_Class_ind <- facClass_List.indices){
+        val target_class =facClass_List(fac_Class_ind)//该影响因子当前类别
+        //联合计算，如果depVar对应的facVar的值不是当前类别，就赋值为0，为后面计算平均值
+        val classifiedRDD: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
+        = coverageTemplate(depVar, facRDD, (tile1, tile2) => classifyFunction(tile1, tile2, target_class))
+
+        //遍历classifiedRDD获取当前类别下depVar的平均值
+        //由于非当前类别下depVar的值被赋值为了0，对求和没有影响
+        val summary_1 = classifiedRDD._1.map { t =>
+          val classTile: Tile = t._2.band(0)
+          val pixelSum = classTile.toArrayDouble().sum
+          val nonZeroCount = classTile.toArrayDouble().count(_ != 0)
+          (pixelSum,nonZeroCount)
+        }.reduce { (a,b) => (a._1+b._1, a._2+ b._2) }
+
+        val class_mean: Double = summary_1._1 / summary_1._2
+        val class_num: Double = summary_1._2
+
+        //更新facVar_claMean
+        val tmp1 = target_class -> class_mean
+        if(facVar_claMean.contains(facType)){
+          //这里已有当前因子，也就是有当前的key
+          //就要先获取当前类别（如‘dem’）下的map，然后再进行+=，否则由于都是同key会被覆盖
+          val Mean_value: mutable.Map[Double, Double] = facVar_claMean(facType)
+          Mean_value += tmp1
+          facVar_claMean(facType) = Mean_value
+        }else{
+          //如果没有当前因子，也就是没有当前的key，则可以直接添加
+          var tmp1_mutable = mutable.Map.empty[Double, Double]
+          tmp1_mutable += tmp1
+          val newfacMean = facVar_name(fac) -> tmp1_mutable
+          facVar_claMean += newfacMean
+        }
+
+        //更新facVar_claNum
+        val tmp2_5 = target_class -> class_num
+          //这里已有当前因子，也就是有当前的key
+          //就要先获取当前类别（如‘dem’）下的map，然后再进行+=，否则由于都是同key会被覆盖
+          val Num_value: mutable.Map[Double, Double] = facVar_claNum(facType)
+          Num_value += tmp2_5
+          facVar_claNum(facType) = Num_value
+
+        val varSumRDD: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
+        = coverageTemplate(depVar, facRDD, (tile1, tile2) => varSum_Function(tile1, tile2, target_class,class_mean))
+
+        val summary_2 = varSumRDD._1.map { t =>
+          val varTile: Tile = t._2.band(0)
+          val pixelSum = varTile.toArrayDouble().sum
+          pixelSum
+        }.reduce { (a, b) => a + b }
+
+        val fac_var_class = summary_2 / class_num
+
+        //更新facVar_claVar
+        val tmp3 = target_class -> fac_var_class
+        if (facVar_claVar.contains(facType)) {
+          //这里已有当前因子，也就是有当前的key
+          //就要先获取当前类别（如‘dem’）下的map，然后再进行+=，否则由于都是同key会被覆盖
+          val Var_value: mutable.Map[Double, Double] = facVar_claVar(facType)
+          Var_value += tmp3
+          facVar_claVar(facType) = Var_value
+        } else {
+          //如果没有当前因子，也就是没有当前的key，则可以直接添加
+          var tmp3_mutable = mutable.Map.empty[Double, Double]
+          tmp3_mutable += tmp3
+          val newfacVar = facVar_name(fac) -> tmp3_mutable
+          facVar_claVar += newfacVar
+        }
+
+      }
+
+      //用于对depVar进行分类
+      def classifyFunction(depVar_Tile: Tile, facVar_Tile: Tile, tar_fac_Class:Double): Tile= {
+        val resultTile = depVar_Tile.combineDouble(facVar_Tile) { (value1, value2) =>
+          // 根据 tile1 的类别对 tile2 的像素值进行分类
+          if (value2 == tar_fac_Class) {
+            value1
+          } else {
+            0
+          }
+        }
+        resultTile
+      }
+
+      //用于计算特定分类的depVar的差方和
+      def varSum_Function(depVar_Tile: Tile, facVar_Tile: Tile, tar_fac_Class:Double, fac_Class_mean: Double): Tile = {
+        val resultTile = depVar_Tile.combineDouble(facVar_Tile) { (value1, value2) =>
+          if (value2 == tar_fac_Class) {
+            (value1 - fac_Class_mean)*(value1 - fac_Class_mean)
+          } else {
+            0
+          }
+        }
+        resultTile
+      }
+    }
+
+    var q_fac_list = Map.empty[String, Double]
+    var p_fac_list = Map.empty[String, Double]
+
+    //遍历每一种因子，计算q值和p值
+    for(fac <- facVar.indices){
+      val facType = facVar_name(fac) //该影响因子对应的名称
+      val facClassNum = facVar_claNum(facType).size //该影响因子对应的类别数量
+      val facClass_List = facVar_claNum(facType).keys.toList //该影响因子对应的类别值list
+
+      val facClaNum = facVar_claNum(facType)
+      val facClaVar = facVar_claVar(facType)
+      val facClaMean = facVar_claMean(facType)
+      var ssw:Double = 0
+      var lambda1:Double = 0
+      var lambda2:Double = 0
+
+      for(farcls <- facClass_List){
+        val Nh = facClaNum(farcls)
+        val xigemah = facClaVar(farcls)
+        val Ymean = facClaMean(farcls)
+        var fac_num:Double = 0
+        fac_num += Nh
+        ssw += Nh * xigemah
+        lambda1+=Ymean*Ymean
+        lambda2+=math.sqrt(Nh)*Ymean
+      }
+
+      val q_fac = 1-ssw/sst
+      val F_fac = ((depVar_N-facClassNum)*q_fac)/((facClassNum-1)*(1-q_fac))
+      val lambda_fac = (lambda1-lambda2*lambda2/depVar_N)/depVar_Var
+
+      val fDistribution_fac = new FDistribution(facClassNum - 1, depVar_N - facClassNum, lambda_fac)
+      val p_fac = 1.0 - fDistribution_fac.cumulativeProbability(F_fac)
+
+
+      val newPair_q = facType -> q_fac
+      q_fac_list += newPair_q
+
+      val newPair_p = facType -> p_fac
+      p_fac_list += newPair_p
+    }
+
+    val depVar_mean_format = f"%%.4f".format(depVar_mean)
+    val depVar_Var_format = f"%%.4f".format(depVar_Var)
+//    var result_mes = "地理探测器的计算结果如下：\n因变量因子的全局平均值为"+depVar_mean_format+",全局方差为"+depVar_Var_format+"\n"
+    var result_mes = "因变量因子的全局平均值为"+depVar_mean_format+",全局方差为"+depVar_Var_format+"\n"
+
+    for(index <- facVar_name.indices){
+      val facVar_name_inc = facVar_name(index)
+      val facVar_claMean_inc = facVar_claMean(facVar_name_inc)
+      val facVar_claVar_inc = facVar_claVar(facVar_name_inc)
+      val facVar_claNum_inc = facVar_claNum(facVar_name_inc)
+      val facVar_clasind =  facVar_claVar_inc.keys.toList.sorted
+
+      val facVar_q = f"%%.4f".format(q_fac_list(facVar_name_inc))
+
+      val tmp_str1 = "影响因子"+facVar_name_inc+"对因变量的空间分异性解释程度为"+facVar_q+"\n其中：\n"
+      result_mes+=tmp_str1
+
+      for(facVar_clas <- facVar_clasind){
+        val facVar_clas_mean = f"%%.4f".format(facVar_claMean_inc(facVar_clas))
+        val facVar_clas_var = f"%%.4f".format(facVar_claVar_inc(facVar_clas))
+        val facVar_clas_num = facVar_claNum_inc(facVar_clas)
+        val tmp_str2 = "类别"+facVar_clas.toInt.toString+"有"+facVar_clas_num.toInt.toString+"个像素,类内平均值为"+facVar_clas_mean+",类内方差为"+facVar_clas_var+"\n"
+        result_mes+=tmp_str2
+      }
+      result_mes+="\n"
+    }
+
+    result_mes
+  }
+
+
+  def reclass(implicit coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+              rules:List[(Double,Double,Double)],
+              NaN_value: Double) = {
+
+    def reclassifyPixel(pixelValue: Double,rules:List[(Double,Double,Double)]): Double = {
+      val loop = new Breaks
+      var new_val:Double = NaN_value
+      loop.breakable {
+        for (extent <- rules) {
+          val extent_sta = extent._1
+          val extent_end = extent._2
+          val extent_val = extent._3
+          if (pixelValue >= extent_sta & pixelValue <= extent_end) {
+            new_val = extent_val
+            loop.break
+          }
+        }
+      }
+      new_val
+    }
+
+    val cov_reclass: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) =
+      (coverage._1.map(t => {
+        (t._1, t._2.mapBands((_, tile) => {
+          val tile_reclass: Tile = tile.mapDouble(pixle => {
+            reclassifyPixel(pixle, rules)
+          })
+          tile_reclass
+        }
+        ))
+      }),coverage._2)
+
+    cov_reclass
+  }
+
+  //获取两个栅格数据重叠区域的数据，返回coverage2重叠区域的数据
+  def rasterUnion(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))={
+    val coverageUnion = coverageTemplate(coverage1, coverage2, (tile1, tile2) => Subtract(Add(tile1, tile2), tile1))
+
+    coverageUnion
+  }
+
+  def area(implicit coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ValList: List[String], resolution: Double): Double = {
 
     //先转投影,转到3857计算面积
     val crs = CRS.fromEpsgCode(3857)

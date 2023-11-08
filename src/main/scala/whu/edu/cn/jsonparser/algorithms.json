@@ -15,6 +15,79 @@
       }
     ]
   },
+  "Coverage.geoDetector": {
+    "description": "Calculate to what extent a certain factor X explains the spatial variation of attribute Y.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "depVar_In",
+        "type": "Coverage",
+        "description": "dependent variable input raster"
+      },
+      {
+        "name": "facVar_name_In",
+        "type": "String",
+        "description": "Impact factor variable input raster name"
+      },
+      {
+        "name": "facVar_In",
+        "type": "Coverage",
+        "description": "Impact factor variable input raster"
+      },
+      {
+        "name": "norExtent_sta",
+        "type": "Double",
+        "description": "Starting value of normal range of dependent variable"
+      },
+      {
+        "name": "norExtent_end",
+        "type": "Double",
+        "description": "Ending value of normal range of dependent variable"
+      },
+      {
+        "name": "NaN_value",
+        "type": "Double",
+        "description": "Nan value of dependent variable input raster"
+      }
+    ]
+  },
+  "Coverage.reclass": {
+    "description": "Reclassify the raster based on specified rules.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Input raster to reclass"
+      },
+      {
+        "name": "rules",
+        "type": "List<(Double,Double,Double)>",
+        "description": "rules of reclass"
+      },
+      {
+        "name": "NaN_value",
+        "type": "Double",
+        "description": "Nan value of input raster"
+      }
+    ]
+  },
+  "Coverage.rasterUnion": {
+    "description": "use a raster to clip another raster",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "clip raster providing extent"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "Input raster to clip"
+      }
+    ]
+  },
   "Service.printString": {
     "description": "Print the Number or List or String to console.",
     "returns": "Unit",
@@ -784,7 +857,7 @@
       }
     ]
   },
-  "Coverage.rasterAreaSta": {
+  "Coverage.area": {
     "description": "Get the area of a raster with given pixel value range.",
     "returns": "Double",
     "args": [

@@ -230,8 +230,31 @@ object Trigger {
         // Coverage
         case "Coverage.export" =>
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
-        case "Coverage.rasterAreaSta" =>
-          doubleList += (UUID -> Coverage.rasterAreaSta(coverage = coverageRddList(args("coverage")),ValList = args("valueRange").substring(1, args("valueRange").length - 1).split(",").toList,resolution = args("resolution").toDouble))
+        case "Coverage.area" =>
+          doubleList += (UUID -> Coverage.area(coverage = coverageRddList(args("coverage")),ValList = args("valueRange").substring(1, args("valueRange").length - 1).split(",").toList,resolution = args("resolution").toDouble))
+        case "Coverage.geoDetector" =>
+          stringList += (UUID ->Coverage.geoDetector(depVar_In = coverageRddList(args("depVar_In")),
+            facVar_name_In = args("facVar_name_In"),
+            facVar_In = coverageRddList(args("facVar_In")),
+            norExtent_sta = args("norExtent_sta").toDouble,norExtent_end = args("norExtent_end").toDouble,NaN_value = args("NaN_value").toDouble))
+        case "Coverage.rasterUnion" =>
+          coverageRddList += (UUID -> Coverage.rasterUnion(coverage1 = coverageRddList(args("coverage1")),coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.reclass" =>
+          // 移除外部方括号并使用正则表达式分割字符串
+          val pattern = "\\],\\["
+          val subStrings = args("rules").stripPrefix("[").stripSuffix("]").split(pattern)
+          // 使用 map 函数将每个子字符串解析成列表
+          val rules_res = subStrings.map { subString =>
+            val elements = subString.split(",").map { element =>
+              element.stripPrefix("[").stripSuffix("]").toDouble
+            }
+            elements.toList
+          }.map {
+            case List(a, b, c) => (a, b, c)
+          }.toList
+          coverageRddList += (UUID -> Coverage.reclass(coverage = coverageRddList(args("coverage")),
+            rules = rules_res,
+            NaN_value= args("NaN_value").toDouble))
         case "Coverage.date" =>
           stringList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
