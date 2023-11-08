@@ -136,10 +136,7 @@ object Trigger {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getCube" =>
-          if (args("coverageID").startsWith("myData/")) {
-            coverageReadFromUploadFile = true
-            cubeRDDList += (UUID -> Cube.load(sc, args("CubeName"), args("extent"), args("dateTime")))
-          }
+            cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
