@@ -1,0 +1,9 @@
+时空回归
+包括以下模型：
+-全局线性回归
+-逻辑回归
+-泊松回归
+-空间误差模型 Spatial Error Model
+-空间滞后模型 Spatial Lag Model
+-空间杜宾模型 Spatial Durbin Model
+其中，后三个为空间自回归模型：SpatialAutoRegression model

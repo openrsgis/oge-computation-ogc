@@ -15,6 +15,79 @@
       }
     ]
   },
+  "Coverage.geoDetector": {
+    "description": "Calculate to what extent a certain factor X explains the spatial variation of attribute Y.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "depVar_In",
+        "type": "Coverage",
+        "description": "dependent variable input raster"
+      },
+      {
+        "name": "facVar_name_In",
+        "type": "String",
+        "description": "Impact factor variable input raster name"
+      },
+      {
+        "name": "facVar_In",
+        "type": "Coverage",
+        "description": "Impact factor variable input raster"
+      },
+      {
+        "name": "norExtent_sta",
+        "type": "Double",
+        "description": "Starting value of normal range of dependent variable"
+      },
+      {
+        "name": "norExtent_end",
+        "type": "Double",
+        "description": "Ending value of normal range of dependent variable"
+      },
+      {
+        "name": "NaN_value",
+        "type": "Double",
+        "description": "Nan value of dependent variable input raster"
+      }
+    ]
+  },
+  "Coverage.reclass": {
+    "description": "Reclassify the raster based on specified rules.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Input raster to reclass"
+      },
+      {
+        "name": "rules",
+        "type": "List<(Double,Double,Double)>",
+        "description": "rules of reclass"
+      },
+      {
+        "name": "NaN_value",
+        "type": "Double",
+        "description": "Nan value of input raster"
+      }
+    ]
+  },
+  "Coverage.rasterUnion": {
+    "description": "use a raster to clip another raster",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "clip raster providing extent"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "Input raster to clip"
+      }
+    ]
+  },
   "Service.printString": {
     "description": "Print the Number or List or String to console.",
     "returns": "Unit",
@@ -306,6 +379,36 @@
         "name": "featureId",
         "type": "String",
         "description": "The id of target feature."
+      },
+      {
+        "name": "dataTime",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getCube": {
+    "description": "Getting resource Cube of certain Name",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "CubeName",
+        "type": "String",
+        "description": "The Name of target collection."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent used for deleting.",
+        "default": "null",
+        "optional": "True"
       },
       {
         "name": "dataTime",
@@ -754,7 +857,7 @@
       }
     ]
   },
-  "Coverage.rasterAreaSta": {
+  "Coverage.area": {
     "description": "Get the area of a raster with given pixel value range.",
     "returns": "Double",
     "args": [
@@ -8131,6 +8234,41 @@
       }
     ]
   },
+  "Cube.build": {
+    "description": "Building Cube from coverage id",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productIDList",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "coverageIDList",
+        "type": "String",
+        "description": "The id of target coverage."
+      },
+      {
+        "name": "subset",
+        "type": "List<Float>",
+        "description": "The subset of target coverage.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Get the bands.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Cube.band": {
     "description": "Select a new cube by band name",
     "returns": "Cube",
@@ -8222,6 +8360,58 @@
         "type": "String",
         "description": "png",
         "default": "False",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.export": {
+    "description": "Export a Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to be exported"
+      },
+      {
+        "name": "exportedName",
+        "type": "String",
+        "description": "The layer to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the Cube",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported Cube",
         "optional": "True"
       }
     ]
@@ -8672,6 +8862,328 @@
         "description": "Strategy for handling missing pixel values in image boundary processing.",
         "default": "None",
         "optional": "False"
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWRbasic.autoFit": {
+    "description": "Basic GWR calculation with bandwidth auto selection",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+      },
+      {
+        "name": "approach",
+        "type": "String",
+        "description": "approach function: AICc, CV"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "split of the x properties, default: \",\""
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWRbasic.fit": {
+    "description": "Basic GWR calculation with specific bandwidth",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "split of the x properties, default: \",\""
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWRbasic.auto": {
+    "description": "Basic GWR calculation with variable selection and bandwidth auto selection",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+      },
+      {
+        "name": "approach",
+        "type": "String",
+        "description": "approach function: AICc, CV"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "split of the x properties, default: \",\""
+      },
+      {
+        "name": "varSelTh",
+        "type": "Double",
+        "description": "threshold of variable selection, default: 3.0"
+      }
+    ]
+  },
+  "SpatialStats.BasicStatistics.AverageNearestNeighbor": {
+    "description": "Average nearest neighbor stastics for feature",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input for calculation"
+      }
+    ]
+  },
+  "SpatialStats.BasicStatistics.DescriptiveStatistics": {
+    "description": "Descriptive statistics for specific property of feature",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input for calculation"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "the property to extract."
+      },
+      {
+        "name": "histBins",
+        "type": "Int",
+        "description": "number of histogram bin"
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.CorrelationAnalysis.corrMat": {
+    "description": "Correlation matrix for properties",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "The properties to calculate."
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "pearson or spearman method, default: pearson"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "properties split, default: \",\""
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.SpatialAutoCorrelation.globalMoranI": {
+    "description": "Global Moran'I calculator for feature",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to calculate."
+      },
+      {
+        "name": "plot",
+        "type": "Boolean",
+        "description": "whether to plot Moran points or not, default: false"
+      },
+      {
+        "name": "test",
+        "type": "Boolean",
+        "description": "whether to calculate p value, default: false"
+      },
+      {
+        "name": "weightstyle",
+        "type": "String",
+        "description": "neighbor weight type, including: W, B, C, U, default: W"
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.SpatialAutoCorrelation.localMoranI": {
+    "description": "Local Moran'I calculator for feature",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to calculate."
+      },
+      {
+        "name": "adjust",
+        "type": "Boolean",
+        "description": "whether to adjust n, default: false"
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.TemporalAutoCorrelation.ACF": {
+    "description": "Autocorrelation Coefficient",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to calculate"
+      },
+      {
+        "name": "timelag",
+        "type": "Int",
+        "description": "time lag, default:20"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.SpatialLagModel.fit": {
+    "description": "Spatial Lag Model (SLM) for spatial regression",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.SpatialErrorModel.fit": {
+    "description": "Spatial Error Model (SEM) for spatial regression",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.SpatialDurbinModel.fit": {
+    "description": "Spatial Durbin Model (SDM) for spatial regression",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
       }
     ]
   }

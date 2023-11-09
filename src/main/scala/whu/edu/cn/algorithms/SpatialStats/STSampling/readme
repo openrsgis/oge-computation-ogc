@@ -1,0 +1,7 @@
+spatial temporal sampling
+时空抽样
+包括以下模型：
+-随机抽样
+-规则抽样
+-分层抽样
+-三明治抽样

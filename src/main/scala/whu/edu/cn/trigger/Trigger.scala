@@ -23,6 +23,10 @@ import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, cannyEdgeDetection, fakeColorCompose, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.SpatialStats.GWModels
+import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
+import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 
@@ -135,6 +139,8 @@ object Trigger {
             coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
+        case "Service.getCube" =>
+            cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -224,8 +230,31 @@ object Trigger {
         // Coverage
         case "Coverage.export" =>
           Coverage.visualizeBatch(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
-        case "Coverage.rasterAreaSta" =>
-          doubleList += (UUID -> Coverage.rasterAreaSta(coverage = coverageRddList(args("coverage")),ValList = args("valueRange").substring(1, args("valueRange").length - 1).split(",").toList,resolution = args("resolution").toDouble))
+        case "Coverage.area" =>
+          doubleList += (UUID -> Coverage.area(coverage = coverageRddList(args("coverage")),ValList = args("valueRange").substring(1, args("valueRange").length - 1).split(",").toList,resolution = args("resolution").toDouble))
+        case "Coverage.geoDetector" =>
+          stringList += (UUID ->Coverage.geoDetector(depVar_In = coverageRddList(args("depVar_In")),
+            facVar_name_In = args("facVar_name_In"),
+            facVar_In = coverageRddList(args("facVar_In")),
+            norExtent_sta = args("norExtent_sta").toDouble,norExtent_end = args("norExtent_end").toDouble,NaN_value = args("NaN_value").toDouble))
+        case "Coverage.rasterUnion" =>
+          coverageRddList += (UUID -> Coverage.rasterUnion(coverage1 = coverageRddList(args("coverage1")),coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.reclass" =>
+          // 移除外部方括号并使用正则表达式分割字符串
+          val pattern = "\\],\\["
+          val subStrings = args("rules").stripPrefix("[").stripSuffix("]").split(pattern)
+          // 使用 map 函数将每个子字符串解析成列表
+          val rules_res = subStrings.map { subString =>
+            val elements = subString.split(",").map { element =>
+              element.stripPrefix("[").stripSuffix("]").toDouble
+            }
+            elements.toList
+          }.map {
+            case List(a, b, c) => (a, b, c)
+          }.toList
+          coverageRddList += (UUID -> Coverage.reclass(coverage = coverageRddList(args("coverage")),
+            rules = rules_res,
+            NaN_value= args("NaN_value").toDouble))
         case "Coverage.date" =>
           stringList += (UUID -> Coverage.date(coverage = coverageRddList(args("coverage"))))
         case "Coverage.subtract" =>
@@ -930,6 +959,45 @@ object Trigger {
         //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
 
+        //algorithms.SpatialStats
+        case "SpatialStats.GWModels.GWRbasic.autoFit" =>
+          val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean,args("split"))
+          featureRddList += (UUID -> re_gwr._1)
+          stringList += (UUID -> re_gwr._2)
+//          print(re_gwr._2)
+        case "SpatialStats.GWModels.GWRbasic.fit" =>
+          val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean,args("split"))
+          featureRddList += (UUID -> re_gwr._1)
+          stringList += (UUID -> re_gwr._2)
+        case "SpatialStats.GWModels.GWRbasic.auto" =>
+          val re_gwr = GWModels.GWRbasic.auto(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("kernel"), args("approach"), args("adaptive").toBoolean,args("split"),args("varSelTh").toDouble)
+          featureRddList += (UUID -> re_gwr._1)
+          stringList += (UUID -> re_gwr._2)
+        case "SpatialStats.BasicStatistics.AverageNearestNeighbor" =>
+          stringList += (UUID -> AverageNearestNeighbor.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
+        case "SpatialStats.BasicStatistics.DescriptiveStatistics" =>
+          stringList += (UUID -> DescriptiveStatistics.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("histBins").toInt))
+        case "SpatialStats.STCorrelations.CorrelationAnalysis.corrMat" =>
+          stringList += (UUID -> CorrelationAnalysis.corrMat(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("properties"), args("method"), args("split")))
+        case "SpatialStats.STCorrelations.SpatialAutoCorrelation.globalMoranI" =>
+          stringList += (UUID -> SpatialAutoCorrelation.globalMoranI(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("plot").toBoolean, args("test").toBoolean, args("weightstyle")))
+        case "SpatialStats.STCorrelations.SpatialAutoCorrelation.localMoranI" =>
+          featureRddList += (UUID -> SpatialAutoCorrelation.localMoranI(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("adjust").toBoolean))
+        case "SpatialStats.STCorrelations.TemporalAutoCorrelation.ACF" =>
+          stringList += (UUID -> TemporalAutoCorrelation.ACF(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("timelag").toInt))
+        case "SpatialStats.SpatialRegression.SpatialLagModel.fit" =>
+          val re_slm = SpatialLagModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
+          featureRddList += (UUID -> re_slm._1)
+          stringList += (UUID -> re_slm._2)
+        case "SpatialStats.SpatialRegression.SpatialErrorModel.fit" =>
+          val re_sem = SpatialErrorModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
+          featureRddList += (UUID -> re_sem._1)
+          stringList += (UUID -> re_sem._2)
+        case "SpatialStats.SpatialRegression.SpatialDurbinModel.fit" =>
+          val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
+          featureRddList += (UUID -> re_sdm._1)
+          stringList += (UUID -> re_sdm._2)
+
         //Cube
         //        case "Service.getCollections" =>
         //          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
@@ -964,7 +1032,18 @@ object Trigger {
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
+
+        case "Cube.build" => {
+          val coverageString = args("coverageIDList")
+          val productString = args("productIDList")
+          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
+          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
+          }
+        case "Cube.export" =>
+          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
       }
+
 
 
     } catch {
