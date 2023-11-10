@@ -17,7 +17,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.bilateralFilter
+
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.Coverage
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -38,10 +38,7 @@ object CoverageDubug {
     val sc = new SparkContext(conf)
     val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc,"LC81220392015275LGN00", "LC08_L1T")
     println("数据读取结束")
-    val coverage = bilateralFilter(coverage1, 81, 81, 45, "1")
-    println("双边滤波结束")
-    makeTIFF(coverage, "bil3")
-    println("Image saved")
+
     //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_ND·VI-250m_16_days
     //    // LC08_L1TP_124038_20181211_20181226_01_T1
     //    // LE07_L1TP_125039_20130110_20161126_01_T1
