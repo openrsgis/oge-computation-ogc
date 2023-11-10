@@ -17,6 +17,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.bilateralFilter
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.Coverage
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -32,18 +33,26 @@ import scala.collection.mutable
 object CoverageDubug {
   def main(args: Array[String]): Unit = {
     //    val time1: Long = System.currentTimeMillis()
-    //
-    //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days
+    val time1: Long = System.currentTimeMillis()
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+    val sc = new SparkContext(conf)
+    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc,"LC81220392015275LGN00", "LC08_L1T")
+    println("数据读取结束")
+    val coverage = bilateralFilter(coverage1, 81, 81, 45, "1")
+    println("双边滤波结束")
+    makeTIFF(coverage, "bil3")
+    println("Image saved")
+    //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_ND·VI-250m_16_days
     //    // LC08_L1TP_124038_20181211_20181226_01_T1
     //    // LE07_L1TP_125039_20130110_20161126_01_T1
     //
-    loadLandsat8()
+//    loadLandsat8()
     //    val time2: Long = System.currentTimeMillis()
     //    println("Total Time is " + (time2 - time1))
     //
     //
     //    println("_")
-    new File("D:\\cog\\1.txt")
+//    new File("D:\\cog\\1.txt")
   }
 
   //  def ndviLandsat7(): Unit = {
@@ -84,9 +93,7 @@ object CoverageDubug {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
 
-    //    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056",
-    //      "ASTER_GDEM_DEM30",10)
-    //    makeTIFF(coverage1,"dem")
+
     val filePath = "D:\\cog\\out\\dem.tiff"
     val coverage1 = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
     //    var c = Coverage.polynomial(coverage1,List(1.0,2.0))
@@ -95,26 +102,7 @@ object CoverageDubug {
     Trigger.coverageReadFromUploadFile = true
     Coverage.visualizeOnTheFly(sc, coverage1, visParam)
 
-    //    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LC08_L1TP_124039_20180109_20180119_01_T1", "LE07_L1T_C01_T1")
-    //    var coverage2Select: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage2, List("B1", "B2", "B3"))
-    ////    var coverage2Select2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.selectBands(coverage2, List("B4"))
-    //
-    ////    coverage2Select = Coverage.multiplyNum(coverage2Select,1000)
-    ////    coverage2Select = Coverage.addBands(coverage2Select,coverage2Select2)
-    //////    coverage2Select=Coverage.toInt32(coverage2Select)
-    ////    coverage2Select = Coverage.removeZeroFromCoverage(coverage2Select)
-    //    makeTIFF(coverage2Select, "c2")
-    //
-    //
-    //    val coverage3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.signum(coverage1Select)
-    //    makeTIFF(coverage3, "c3")
-    //
-    ////    val coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map()
-    ////    val a: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = coverageCollection + ("LE07_L1TP_125039_20130110_20161126_01_T1" -> coverage1Select)
-    ////    val b: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = a + ("LC08_L1TP_124039_20180109_20180119_01_T1" -> coverage2Select)
-    //    val coverageMosaic: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.cat(coverage1Select,coverage2Select)
-    ////    coverageMosaic = Coverage.removeZeroFromCoverage(coverageMosaic)
-    //    makeTIFF(coverageMosaic, "cMosaic")
+
   }
 
   def loadCoverage(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int = 0): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -122,7 +110,7 @@ object CoverageDubug {
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
     val queryGeometry: Geometry = metaList.head.getGeom
 
-    //    val queryGeometry: Geometry = geotrellis.vector.io.readWktOrWkb("POLYGON((110.45709 30.26141,110.59998 30.26678,110.58066 29.94492,110.4869 29.93994,110.45709 30.26141))")
+
 
     println("bandNum is " + metaList.length)
 
@@ -171,7 +159,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:/cog/out/" + name + ".tiff"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
@@ -179,7 +167,7 @@ object CoverageDubug {
     val tileArray: Array[(SpatialKey, MultibandTile)] = coverage.collect()
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage.metadata.extent)
-    val writePath: String = "D:/cog/out/" + name + ".tiff"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage.metadata.crs).write(writePath)
   }
 
@@ -187,7 +175,7 @@ object CoverageDubug {
     val tileArray: Array[(SpatialKey, MultibandTile)] = coverage.collect()
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage.metadata.extent)
-    val writePath: String = "D:/cog/out/" + name + ".png"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".png"
     stitchedTile.tile.renderPng().write(writePath)
   }
 
@@ -198,7 +186,7 @@ object CoverageDubug {
     val layout = coverage._2.layout
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
     val stitchedTile = Raster(tile.band(0), layout.extent)
-    val writePath: String = "D:/cog/out/" + name + ".png"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".png"
     stitchedTile.tile.renderPng(ColorRamps.BlueToOrange).write(writePath)
   }
 

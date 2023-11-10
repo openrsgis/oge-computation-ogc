@@ -8113,7 +8113,7 @@
   },
   "Coverage.linearTransformation": {
     "description": "Gray-level linear transformations",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
@@ -8134,7 +8134,7 @@
   },
   "Coverage.fakeColorCompose": {
     "description": "Compose single-band photo to color photo",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
@@ -8177,12 +8177,26 @@
         "name": "coverage",
         "type": "Coverage",
         "description": "The coverage to Canny edge detection."
+      },
+        {
+          "name": "lowCoefficient",
+          "type": "Double",
+          "description": "To control the low threshold.",
+          "default": "-1",
+          "optional": "True"
+        },
+      {
+        "name": "highCoefficient",
+        "type": "Double",
+        "description": "To control the high threshold.",
+        "default": "-1",
+        "optional": "True"
       }
     ]
   },
   "Coverage.standardDeviationStretching": {
     "description": "Calculate the standard deviation and perform stretching",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name":"coverage",
@@ -8278,6 +8292,26 @@
         "name": "borderType",
         "type": "String",
         "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.broveyFusion": {
+    "description": "Fusion two images to enhance clarity and keep image's spectral information.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "multispectral",
+        "type": "Coverage",
+        "description": "The image which has more spectral information.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "panchromatic",
+        "type": "Coverage",
+        "description": "The image which is sharper.",
         "default": "None",
         "optional": "False"
       }
