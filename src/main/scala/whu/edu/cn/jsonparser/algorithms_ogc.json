@@ -8250,47 +8250,6 @@
       }
     ]
   },
-  "Coverage.bilateralFilter": {
-    "description": "Applies a bilateral filter to each band of an image using a named bilateral kernel.",
-    "returns": "Coverage",
-    "args": [
-      {
-        "name": "coverage",
-        "type": "Coverage",
-        "description": "The image to be filtered with bilateral filter.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "d",
-        "type": "Int",
-        "description": "The side length of the filter.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "sigmaSpace",
-        "type": "Double",
-        "description": "Spatial weight.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "sigmaColor",
-        "type": "Double",
-        "description": "Value weight.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "borderType",
-        "type": "String",
-        "description": "Strategy for handling missing pixel values in image boundary processing.",
-        "default": "None",
-        "optional": "False"
-      }
-    ]
-  },
   "Coverage.gaussianBlur": {
     "description": "Applies a gaussian filter to each band of an image using a named gaussian kernel.",
     "returns": "Coverage",

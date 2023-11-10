@@ -20,59 +20,9 @@ import scala.util.control.Breaks.{break, breakable}
 
 object algorithms_Image {
   //双边滤波
-  def bilateralFilter(coverage: RDDImage, d: Int, sigmaSpace: Double, sigmaColor: Double, borderType: String): RDDImage = {
-    val radius: Int = d / 2
-    val group: RDDImage = paddingRDD(coverage, radius, borderType)
-    val cellType: CellType = coverage._1.first()._2.cellType
 
-    // 定义双边滤波kernel
-    def bilateral_kernel(x: Double, y: Double, sigmaSpace: Double, sigmaColor: Double): Double = {
-      math.exp(-(x * x) / (2 * sigmaSpace * sigmaSpace)) * math.exp(-(y * y) / (2 * sigmaColor * sigmaColor))
-    }
-
-    //遍历单波段每个像素，对其进行双边滤波
-    def bilateral_single(image: Tile): Tile = {
-      val numRows = image.rows
-      val numCols = image.cols
-      val newImage = Array.ofDim[Double](numRows, numCols)
-      for (i <- radius until numRows - radius; j <- radius until numCols - radius) {
-        var sum = 0.0
-        var weightSum = 0.0
-        for (k <- 0 until d; l <- 0 until d) {
-          val x = math.abs(i - radius + k)
-          val y = math.abs(j - radius + l)
-          val colorDiff = image.getDouble(j, i) - image.getDouble(y, x)
-          val spaceDiff = math.sqrt((x - i) * (x - i) + (y - j) * (y - j))
-          val weight = bilateral_kernel(spaceDiff, colorDiff, sigmaSpace, sigmaColor)
-          sum += weight * image.getDouble(y, x)
-          weightSum += weight
-
-        }
-        newImage(i)(j) = sum / weightSum
-
-      }
-      DoubleArrayTile(newImage.flatten, numCols, numRows)
-    }
-
-    // 遍历延宽像素后的瓦片
-    val bilateralFilterRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = group._1.map(image => {
-      val numRows = image._2.rows
-      val numCols = image._2.cols
-
-      //对每个波段进行双边滤波处理
-      val bandCount: Int = image._2.bandCount
-      val band_ArrayTile = Array.ofDim[Tile](bandCount)
-      for (bandIndex <- 0 until bandCount) {
-        val tile: Tile = image._2.band(bandIndex)
-        band_ArrayTile(bandIndex) = bilateral_single(tile).convert(cellType)
-      }
-      //组合各波段的运算结果
-      (image._1, MultibandTile(band_ArrayTile.toList).crop(radius, radius, numCols - radius - 1, numRows - radius - 1))
-    })
-    (bilateralFilterRDD, coverage._2)
-  }
   //高斯滤波
-  def gaussianBlur(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ksize: List[Int], sigmaX: Double, sigmaY: Double, borderType: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def gaussianBlur(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ksize: List[Int], sigmaX: Double, sigmaY: Double, borderType: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     //ksize：高斯核的大小，正奇数；sigmaX sigmaY：X和Y方向上的方差
     // 构建高斯核矩阵
     var kernel = Array.ofDim[Double](ksize(0), ksize(1))
@@ -88,7 +38,7 @@ object algorithms_Image {
     //    val nnn = coverage._1.map(t=>{
     //      println(t._1.measurementName) //为什么这里不能打印，后面map中就可以打印，给我重定向到哪儿去了
     //    })
-    val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(coverage, radius)
+    val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(coverage, radius,borderType)
     val cellType: CellType = coverage._1.first()._2.cellType
     println(cellType)
 
