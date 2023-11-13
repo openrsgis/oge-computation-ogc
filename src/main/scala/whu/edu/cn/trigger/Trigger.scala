@@ -1157,25 +1157,22 @@ object Trigger {
 
 
     layerName = jsonObject.getString("layerName")
-    val map: JSONObject = jsonObject.getJSONObject("map")
-    level = map.getString("level").toInt
-    val spatialRange: Array[Double] = map.getString("spatialRange")
-      .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
-    println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
+    try{
+      val map: JSONObject = jsonObject.getJSONObject("map")
+      level = map.getString("level").toInt
+      val spatialRange: Array[Double] = map.getString("spatialRange")
+        .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
+      println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
 
-    windowExtent = Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
-    println("WindowExtent",windowExtent.xmin,windowExtent.ymin,windowExtent.xmax,windowExtent.ymax)
+      windowExtent = Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
+      println("WindowExtent", windowExtent.xmin, windowExtent.ymin, windowExtent.xmax, windowExtent.ymax)
+    }catch {
+      case e:Exception=>
+        level = 11
+        windowExtent = null
+    }
+
     dagMd5 = Others.md5HashPassword(curWorkTaskJson)
-    val key: String = dagMd5 + ":solvedTile:" + level
-
-
-    val xMinOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmin, level)
-    val xMaxOfTile: Int = ZCurveUtil.lon2Tile(windowExtent.xmax, level)
-    val yMinOfTile: Int = ZCurveUtil.lat2Tile(windowExtent.ymax, level)
-    val yMaxOfTile: Int = ZCurveUtil.lat2Tile(windowExtent.ymin, level)
-
-    System.out.println("xMinOfTile - xMaxOfTile: " + xMinOfTile + " - " + xMaxOfTile)
-    System.out.println("yMinOfTile - yMaxOfTile: " + yMinOfTile + " - " + yMaxOfTile)
 
 
     try {
@@ -1202,13 +1199,13 @@ object Trigger {
 //      }
     }finally {
       // 处理redis异常情况
-      if(zIndexStrArray.isEmpty){
-        zIndexStrArray.clear()
-        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
-          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-          zIndexStrArray.append(zIndexStr)
-        }
-      }
+//      if(zIndexStrArray.isEmpty){
+//        zIndexStrArray.clear()
+//        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
+//          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+//          zIndexStrArray.append(zIndexStr)
+//        }
+//      }
 
     }
 
@@ -1247,7 +1244,7 @@ object Trigger {
         outJsonObject.put("workID", Trigger.dagId)
         outJsonObject.put("json", errorJson)
         //
-//        println("Error json = " + outJsonObject)
+        println("Error json = " + outJsonObject)
         sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")

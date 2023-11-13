@@ -53,7 +53,7 @@ object Coverage {
   def load(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val time1 = System.currentTimeMillis()
 //    println("WindowExtent",windowExtent.xmin,windowExtent.ymin,windowExtent.xmax,windowExtent.ymax)
-    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+
 
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
     if (metaList.isEmpty) {
@@ -93,6 +93,9 @@ object Coverage {
 
     val tileNum: Int = tileRDDFlat.count().toInt
     println("tileNum = " + tileNum)
+    if(tileNum <= 0 ){
+      throw new Exception("There are no tiles within the visible range!")
+    }
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
@@ -644,6 +647,9 @@ object Coverage {
 
   def divideNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                 i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    if(i == 0){
+      throw new IllegalArgumentException("The dividend cannot be 0.")
+    }
     i match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Divide(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Divide(tile, x))
@@ -3291,7 +3297,7 @@ object Coverage {
     sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 
     println("outputJSON: ", outJsonObject.toJSONString)
-    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+
     try{
 //      val jedis: Jedis = new JedisUtil().getJedis
 //      zIndexStrArray.foreach(zIndexStr => {
