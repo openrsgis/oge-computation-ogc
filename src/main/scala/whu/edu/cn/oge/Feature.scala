@@ -1096,7 +1096,7 @@ object Feature {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
     sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-    println(outJsonObject.toJSONString)
+//    println(outJsonObject.toJSONString)
   }
 
 

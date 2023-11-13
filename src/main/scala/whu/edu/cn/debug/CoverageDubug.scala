@@ -33,7 +33,9 @@ import scala.collection.mutable.ArrayBuffer
 
 object CoverageDubug {
   def main(args: Array[String]): Unit = {
-    test()
+    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+    val sc = new SparkContext(conf)
+    test1(sc)
     //    val time1: Long = System.currentTimeMillis()
     //
     //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days
@@ -89,7 +91,7 @@ object CoverageDubug {
 //    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056",
 //      "ASTER_GDEM_DEM30", 10)
 //    makeTIFF(coverage1, "dem")
-    val coverageCollection1 = CoverageCollection.load(sc,"ASTER_GDEM_DEM30",null,ArrayBuffer.empty[String],"2000-01-01 00:00:00","2000-01-01 00:00:00",extent = Extent(116.00, 31.01, 120, 35),level = 7)
+    val coverageCollection1 = CoverageCollection.load(sc,"ASTER_GDEM_DEM30",null,ArrayBuffer.empty[String],"2000-01-01 00:00:00","2000-01-01 00:00:00",extent = Extent(108.5, 18.1, 111, 20.1),level = 7)
     val coverage1 = CoverageCollection.mosaic(coverageCollection1)
     println(coverageCollection1.size)
 //    coverageCollection1.foreach(coverage =>{
@@ -99,17 +101,18 @@ object CoverageDubug {
     makeTIFF(coverage1,"dem")
     println("Finish")
   }
-  def test1():Unit={
-    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
-    val sc = new SparkContext(conf)
+  def test1(implicit sc: SparkContext):Unit={
 
-//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LC08_L1TP_124040_20180226_20180308_01_T1",     "LC08_L1TP_C01_T1", 7)
-    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N31E117","ASTER_GDEM_DEM30", 10)
+    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N28E056",     "ASTER_GDEM_DEM30", 7)
+
+//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "T49REK_20231004T030551","S2A_MSIL1C", 10)
 //    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LE07_L1TP_124039_20130612_20161124_01_T1","LE07_L1TP_C01_T1", 10)
 //    val coverage2 = Coverage.toFloat(coverage1)
 //    val res = Coverage.normalizedDifference(coverage2,List("B3","B5"))
 //    println(res._1.first()._2.cellType)
-    makeTIFF(coverage1, "ndwi")
+//    val coverage = Coverage.selectBands(coverage1,List("B01"))
+    makeTIFF(coverage1,"dem1")
+
 //    makeTIFF(coverage2, "lc07")
 
 //    val coverage = Coverage.add(coverage1, coverage2)

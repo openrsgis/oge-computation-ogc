@@ -34,6 +34,19 @@ object CoverageUtil {
     //      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
     //    }
 
+    val measurementResoMap: Map[String, Double] = tileRDDReP.map(tile => {
+      Map(tile.getMeasurement -> tile.getResolutionCol)
+    }).collect().flatten.toMap
+    val resoMeasurementMap = measurementResoMap.groupBy(_._2).map {
+      case (value, pairs) =>
+        value -> pairs.keys.toList
+    }
+    val resoMin = resoMeasurementMap.keys.min
+    //    if (resoMeasurementMap.size != 1) {
+    //      //存在不同分辨率的波段,先根据波段名，组成多个rdd，再根据波段及分辨率进行重投影
+    //      tileRdd = tileRdd.map()
+    //    }
+    //    else
 
     val firstTile: RawTile = tileRDDReP.first()
     val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)

@@ -36,7 +36,7 @@ GcConf:
 
 Others:
   jsonAlgorithms: "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json" # 存储json解析文件地址
-  tempFilePath: "/mnt/storage/temp/" # 各类临时文件的地址
+  tempFilePath: "/mnt/ogeStorage/temp/" # 各类临时文件的地址
   tmsPath: "http://oge.whu.edu.cn/api/oge-tms-png/" # tms服务url
-  ontheFlyStorage: "/mnt/storage/on-the-fly" # tms瓦片存储地址
-  jsonSavePath: "/mnt/storage/algorithmData/" # geojson临时存储地址
+  ontheFlyStorage: "/mnt/ogeStorage/on-the-fly" # tms瓦片存储地址
+  jsonSavePath: "/mnt/ogeStorage/algorithmData/" # geojson临时存储地址
