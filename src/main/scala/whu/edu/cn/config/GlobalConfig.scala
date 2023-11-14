@@ -77,8 +77,8 @@ object GlobalConfig {
 
   object MinioConf {
     // MinIO 基础配置
-    final val MINIO_ENDPOINT: String = "http://125.220.153.23:9006"
-    final val MINIO_ACCESS_KEY: String = "rssample"
+    final val MINIO_ENDPOINT: String = "http://10.101.240.20:9006" // "http://125.220.153.23:9006"
+    final val MINIO_ACCESS_KEY: String = "oge"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "oge"
     final val MINIO_HEAD_SIZE: Int = 5000000
@@ -87,7 +87,7 @@ object GlobalConfig {
 
   object PostgreSqlConf {
     // PostgreSQL 基础配置
-    var POSTGRESQL_URL: String = "jdbc:postgresql://125.220.153.23:30865/oge" //"jdbc:postgresql://10.101.240.21:30865/oge"
+    var POSTGRESQL_URL: String = "jdbc:postgresql://125.220.153.23:30865/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
     var POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
     var POSTGRESQL_USER: String = "oge"
     var POSTGRESQL_PWD: String = "ypfamily608"
@@ -115,5 +115,6 @@ object GlobalConfig {
     final var tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
     final var ontheFlyStorage = "/home/ogeStorage/on-the-fly" //tms瓦片存储地址
     final var jsonSavePath = "/home/ogeStorage/algorithmData/" //geojson临时存储地址
+    var platform = "local"
   }
 }
