@@ -22,7 +22,7 @@ import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{broveyFusion,cannyEdgeDetection, fakeColorCompose, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter,reduction,broveyFusion,cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -269,14 +269,18 @@ object Trigger {
           coverageRddList += (UUID -> cannyEdgeDetection(coverage = coverageRddList(args("coverage")),lowCoefficient=args("lowCoefficient").toDouble,highCoefficient=args("highCoefficient").toDouble))
         case "Coverage.histogramEqualization" =>
           coverageRddList += (UUID -> histogramEqualization(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.reduction" =>
+          coverageRddList += (UUID -> reduction(coverage = coverageRddList(args("coverage")),option = args("option").toInt))
         case "Coverage.broveyFusion" =>
           coverageRddList += (UUID -> broveyFusion(multispectral = coverageRddList(args("multispectral")),panchromatic = coverageRddList(args("panchromatic"))))
         case "Coverage.standardDeviationStretching" =>
           coverageRddList += (UUID -> standardDeviationStretching(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.bilateralFilter" =>
+          coverageRddList += (UUID -> bilateralFilter(coverage = coverageRddList(args("coverage")),d=args("d").toInt,sigmaSpace = args("sigmaSpace").toDouble,sigmaColor = args("sigmaColor").toDouble,borderType = args("borderType").toString))
         case "Coverage.gaussianBlur" =>
           coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")), ksize = args("ksize").stripPrefix("List(").stripSuffix(")").split(",").map(_.trim.toInt).toList, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
-        case "Coverage.fakeColorCompose" =>
-          coverageRddList += (UUID -> fakeColorCompose(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
+        case "Coverage.falseColorComposite" =>
+          coverageRddList += (UUID -> falseColorComposite(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
         case "Coverage.linearTransformation" =>
           coverageRddList += (UUID -> linearTransformation(coverage = coverageRddList(args("coverage")), k = args("k").toDouble, b = args("b").toInt))
         case "Coverage.atan" =>

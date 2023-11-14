@@ -17,7 +17,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-
+import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.Coverage
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -26,6 +26,7 @@ import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.makeCoverageRDD
 import whu.edu.cn.util.{MinIOUtil, RDDTransformerUtil}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.broveyFusion
 
 import java.io.File
 import scala.collection.mutable
@@ -36,20 +37,15 @@ object CoverageDubug {
     val time1: Long = System.currentTimeMillis()
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
-    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc,"LC81220392015275LGN00", "LC08_L1T")
-    println("数据读取结束")
+    val msi: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc,"D:\\data\\code_data\\JPG_data\\cog\\out\\Cug_test_msi.tiff")
+    val pan: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, "D:\\data\\code_data\\JPG_data\\cog\\out\\Cug_test_pan.tiff")
+    println("Data loaded")
+    val outcome=broveyFusion(msi,pan)
+    println("Data processed")
+    saveRasterRDDToTif(outcome,"D:\\data\\code_data\\JPG_data\\cog\\out\\broveyOut.tiff")
+    println("Data saved")
 
-    //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_ND·VI-250m_16_days
-    //    // LC08_L1TP_124038_20181211_20181226_01_T1
-    //    // LE07_L1TP_125039_20130110_20161126_01_T1
-    //
-//    loadLandsat8()
-    //    val time2: Long = System.currentTimeMillis()
-    //    println("Total Time is " + (time2 - time1))
-    //
-    //
-    //    println("_")
-//    new File("D:\\cog\\1.txt")
+
   }
 
   //  def ndviLandsat7(): Unit = {

@@ -5,13 +5,14 @@ import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellTyp
 import geotrellis.spark.ContextRDD.tupleToContextRDD
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, globalNormalizeDouble,findTotalPixel}
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalizeDouble}
 import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.paddingRDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.util.CoverageUtil.checkProjResoExtent
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 //import whu.edu.cn.geocube.core.entity.SpaceTimeBandKey
 
 import scala.collection.mutable.ListBuffer
@@ -91,6 +92,115 @@ object algorithms_Image {
     println(GaussianBlurRDD.first()._2.cellType)
     (GaussianBlurRDD, coverage._2)
   }
+
+  def reduction(coverage: RDDImage, option: Int): RDDImage = {
+    var outcome: RDDImage = coverage
+    option match {
+      case 1 => outcome = reductionAverage(coverage)
+      case 2 => outcome = reductionAll(coverage)
+      case 3 => outcome = reductionMax(coverage)
+      case 4 => outcome = reductionMin(coverage)
+      case _ => outcome = coverage
+    }
+
+    def reductionAverage(coverage: RDDImage): RDDImage = {
+      val statute = coverage._1.map(t => {
+        val bandCount: Int = t._2.bandCount
+        val tile: Tile = t._2.band(0)
+        val cols = tile.cols
+        val rows = tile.rows
+        val result = Array.ofDim[IntArrayTile](bandCount).toBuffer
+        val statuteImage: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
+        for (i <- 0 until cols; j <- 0 until rows) {
+          var pixelList: Double = 0.0
+          for (bandIndex <- 0 until bandCount) {
+            val tile: Tile = t._2.band(bandIndex)
+            val value = tile.getDouble(j, i)
+            pixelList = pixelList + value
+          }
+          statuteImage.setDouble(j, i, pixelList / bandCount)
+        }
+        (t._1, MultibandTile(statuteImage))
+      })
+      (statute, coverage._2)
+    }
+
+
+    def reductionAll(coverage: RDDImage): RDDImage = {
+      val statute = coverage._1.map(t => {
+        val bandCount: Int = t._2.bandCount
+        val tile: Tile = t._2.band(0)
+        val cols = tile.cols
+        val rows = tile.rows
+        val result = Array.ofDim[IntArrayTile](bandCount).toBuffer
+        val statuteImage: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
+        for (i <- 0 until cols; j <- 0 until rows) {
+          var pixelList: Double = 0.0
+          for (bandIndex <- 0 until bandCount) {
+            val tile: Tile = t._2.band(bandIndex)
+            val value = tile.getDouble(j, i)
+            pixelList = pixelList + value
+          }
+          statuteImage.setDouble(j, i, pixelList)
+        }
+        (t._1, MultibandTile(statuteImage))
+      })
+      (statute, coverage._2)
+    }
+
+    def reductionMax(coverage: RDDImage): RDDImage = {
+      val statute = coverage._1.map(t => {
+        val bandCount: Int = t._2.bandCount
+        val tile: Tile = t._2.band(0)
+        val cols = tile.cols
+        val rows = tile.rows
+        val result = Array.ofDim[IntArrayTile](bandCount).toBuffer
+        val statuteImage: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
+        for (i <- 0 until cols; j <- 0 until rows) {
+          var pixelList: Double = 0.0
+          var arrayBuffer = new ArrayBuffer[Double](bandCount)
+          for (bandIndex <- 0 until bandCount) {
+            val tile: Tile = t._2.band(bandIndex)
+            val value = tile.getDouble(j, i)
+            arrayBuffer += value
+          }
+          val maxValue = arrayBuffer.max
+          statuteImage.setDouble(j, i, maxValue)
+        }
+        (t._1, MultibandTile(statuteImage))
+      })
+      (statute, coverage._2)
+    }
+
+
+    def reductionMin(coverage: RDDImage): RDDImage = {
+      val statute = coverage._1.map(t => {
+        val bandCount: Int = t._2.bandCount
+        val tile: Tile = t._2.band(0)
+        val cols = tile.cols
+        val rows = tile.rows
+        val result = Array.ofDim[IntArrayTile](bandCount).toBuffer
+        val statuteImage: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
+        for (i <- 0 until cols; j <- 0 until rows) {
+          var pixelList: Double = 0.0
+          var arrayBuffer = new ArrayBuffer[Double](bandCount)
+          for (bandIndex <- 0 until bandCount) {
+            val tile: Tile = t._2.band(bandIndex)
+            val value = tile.getDouble(j, i)
+            arrayBuffer += value
+          }
+          val minValue = arrayBuffer.min
+          statuteImage.setDouble(j, i, minValue)
+        }
+        (t._1, MultibandTile(statuteImage))
+      })
+      (statute, coverage._2)
+    }
+
+    outcome
+
+  }
+
 
   def broveyFusion(multispectral: RDDImage, panchromatic: RDDImage): RDDImage = {
     if (multispectral._1.first()._2.bandCount < 3 || panchromatic._1.first()._2.bandCount < 1) {
@@ -692,7 +802,7 @@ object algorithms_Image {
     (newImage, coverage._2)
   }
     //假彩色合成
-  def fakeColorCompose (coverage:RDDImage,BandRed:Int,BandBlue:Int,BandGreen:Int):RDDImage=
+  def falseColorComposite (coverage:RDDImage,BandRed:Int,BandBlue:Int,BandGreen:Int):RDDImage=
   {
     def Strench2ProperScale(RawTile: IntArrayTile, MinPixel: Int, MaxPixel: Int): IntArrayTile = {
       val cols = RawTile.cols
@@ -750,6 +860,71 @@ object algorithms_Image {
     (Changed_Image,coverage._2)
   }
    //标准差拉伸
+   def bilateralFilter(coverage: RDDImage, d: Int, sigmaSpace: Double, sigmaColor: Double, borderType: String): RDDImage = {
+     val radius: Int = d / 2
+     val group: RDDImage = paddingRDD(coverage, radius, borderType)
+     val cellType: CellType = coverage._1.first()._2.cellType
+
+     // 定义双边滤波kernel
+     def bilateral_kernel(x: Double, y: Double, sigmaSpace: Double, sigmaColor: Double): Double = {
+       math.exp(-(x * x) / (2 * sigmaSpace * sigmaSpace)) * math.exp(-(y * y) / (2 * sigmaColor * sigmaColor))
+     }
+
+     //遍历单波段每个像素，对其进行双边滤波
+     def bilateral_single(image: Tile): Tile = {
+       val numRows = image.rows
+       val numCols = image.cols
+       val newImage = Array.ofDim[Double](numRows, numCols)
+       for (i <- radius until numRows - radius; j <- radius until numCols - radius) {
+         breakable {
+           val centerValue = image.getDouble(j, i)
+           if (isNoData(centerValue)) {
+             newImage(i)(j) = Double.NaN
+             break
+           }
+           var sum = 0.0
+           var weightSum = 0.0
+           for (k <- 0 until d; l <- 0 until d) {
+             breakable {
+               val x = math.abs(i - radius + k)
+               val y = math.abs(j - radius + l)
+               val neighborValue = image.getDouble(y, x)
+               if (isNoData(neighborValue)) {
+                 break
+               }
+               val colorDiff = image.getDouble(j, i) - image.getDouble(y, x)
+               val spaceDiff = math.sqrt((x - i) * (x - i) + (y - j) * (y - j))
+               val weight = bilateral_kernel(spaceDiff, colorDiff, sigmaSpace, sigmaColor)
+
+               sum += weight * neighborValue
+               weightSum += weight
+             }
+           }
+           newImage(i)(j) = sum / weightSum
+         }
+       }
+       DoubleArrayTile(newImage.flatten, numCols, numRows)
+
+     }
+
+     // 遍历延宽像素后的瓦片
+     val bilateralFilterRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = group._1.map(image => {
+       val numRows = image._2.rows
+       val numCols = image._2.cols
+
+       //对每个波段进行双边滤波处理
+       val bandCount: Int = image._2.bandCount
+       val band_ArrayTile = Array.ofDim[Tile](bandCount)
+       for (bandIndex <- 0 until bandCount) {
+         val tile: Tile = image._2.band(bandIndex)
+         band_ArrayTile(bandIndex) = bilateral_single(tile).convert(cellType)
+       }
+       //组合各波段的运算结果
+       (image._1, MultibandTile(band_ArrayTile.toList).crop(radius, radius, numCols - radius - 1, numRows - radius - 1))
+     })
+     (bilateralFilterRDD, coverage._2)
+   }
+
   def standardDeviationStretching(coverage: RDDImage)
   :RDDImage = {
 
