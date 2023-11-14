@@ -2,6 +2,7 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -3375,14 +3376,10 @@ object Coverage {
     val client = BosUtil.getClient
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-    val bosObject = client.getObject("oge-user",path)
-    val inputStream = bosObject.getObjectContent
 
-    val outputPath = Paths.get(filePath)
+    val getObjectRequest = new GetObjectRequest("oge-user",path)
+    val bosObject = client.getObject(getObjectRequest,new File(tempPath,s"${dagId}.tiff"))
 
-
-    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
-    inputStream.close()
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
