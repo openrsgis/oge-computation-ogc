@@ -7,7 +7,7 @@ import geotrellis.vector.reproject.Reproject
 import io.minio.{GetObjectArgs, MinioClient}
 import org.locationtech.jts.geom.{Envelope, Geometry}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile}
-import whu.edu.cn.util.GlobalConstantUtil.MINIO_HEAD_SIZE
+import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 
 import java.io.{ByteArrayOutputStream, InputStream}
 import scala.collection.mutable
@@ -52,7 +52,7 @@ object COGUtil {
    * @param bandCounts    多波段
    * @return 后端瓦片
    */
-  def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
+  def tileQuery(minioClient: MinioClient, level: Int, coverageMetadata: CoverageMetadata, windowsExtent: Extent,queryGeometry:Geometry, bandCounts: Int*): mutable.ArrayBuffer[RawTile] = {
     tmsLevel = level
     var bandCount = 1
     if (bandCounts.length > 1) throw new RuntimeException("bandCount 参数最多传一个")
@@ -84,7 +84,8 @@ object COGUtil {
 
     parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
 
-    getTiles(level, coverageMetadata, queryGeometry, tileOffsets, cell, geoTrans, tileByteCounts, bandCount)
+    getTiles(level, coverageMetadata,  tileOffsets, cell, geoTrans, tileByteCounts, bandCount,windowsExtent,queryGeometry)
+
   }
 
   /**
@@ -122,7 +123,8 @@ object COGUtil {
    * @param productName
    * @return
    */
-  def getTiles(level: Int, coverageMetadata: CoverageMetadata, queryGeometry: Geometry, tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], cell: mutable.ArrayBuffer[Double], geoTrans: mutable.ArrayBuffer[Double], tileByteCounts: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], bandCount: Int): mutable.ArrayBuffer[RawTile] = {
+  def getTiles(level: Int, coverageMetadata: CoverageMetadata, tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], cell: mutable.ArrayBuffer[Double], geoTrans: mutable.ArrayBuffer[Double], tileByteCounts: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]], bandCount: Int, windowsExtent: Extent,queryGeometry:Geometry): mutable.ArrayBuffer[RawTile] = {
+    val time1 = System.currentTimeMillis()
     var tileLevel: Int = 0
     var resolutionTMS: Double = .0
     // 地图 zoom 为0时的分辨率，以下按zoom递增
@@ -149,21 +151,21 @@ object COGUtil {
       }
     }
 
+
+    // 使用窗口范围的全局变量
+
+    val visualExtent = Reproject(windowsExtent, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
     val queryEnv: Envelope = queryGeometry.getEnvelopeInternal
 
     val queryMbr: Extent = Reproject(queryEnv, CRS.fromName("EPSG:4326"), coverageMetadata.getCrs)
+
+    //
 
     // 将传入的范围改为数据所在坐标系下，方便两个范围进行相交
     // 传入的范围始终是 4326 坐标系下的
     val queryMbrReproj: Extent = Extent(queryMbr.xmin, queryMbr.ymin, queryMbr.xmax, queryMbr.ymax)
 
     extent = queryMbrReproj
-    val pMin = new Array[Double](2)
-    val pMax = new Array[Double](2)
-    pMin(0) = queryMbrReproj.xmin
-    pMin(1) = queryMbrReproj.ymin
-    pMax(0) = queryMbrReproj.xmax
-    pMax(1) = queryMbrReproj.ymax
 
     // 图像范围
     // 东西方向空间分辨率  --->像素宽度
@@ -185,10 +187,10 @@ object COGUtil {
     var pRight: Int = 0
     var pLower: Int = 0
     var pUpper: Int = 0
-    pLeft = ((pMin(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-    pRight = ((pMax(0) - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
-    pLower = ((yMax - pMax(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
-    pUpper = ((yMax - pMin(1)) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
+    pLeft = ((queryMbrReproj.xmin - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
+    pRight = ((queryMbrReproj.xmax - xMin) / (256 * wReso * Math.pow(2, tileLevel).toInt)).toInt
+    pLower = ((yMax - queryMbrReproj.ymax) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
+    pUpper = ((yMax - queryMbrReproj.ymin) / (256 * hReso * Math.pow(2, tileLevel).toInt)).toInt
     var pCoordinate: Array[Int] = null
     var srcSize: Array[Double] = null
     var pRange: Array[Double] = null
@@ -196,13 +198,21 @@ object COGUtil {
     pCoordinate = Array[Int](pLower, pUpper, pLeft, pRight)
     srcSize = Array[Double](wReso, hReso)
     pRange = Array[Double](xMin, yMax)
-    for (i <- Math.max(pCoordinate(0), 0) to (if (pCoordinate(1) >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1
-    else pCoordinate(1))) {
-      for (j <- Math.max(pCoordinate(2), 0) to (if (pCoordinate(3) >= tileOffsets(tileLevel)(i).length) tileOffsets(tileLevel)(i).length - 1
-      else pCoordinate(3))) {
+//    val time2 = System.currentTimeMillis()
+    val i_max = if (pUpper >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1 else pUpper
+    val s = coverageMetadata.measurement
+    s
+    val r = cell(1)
+    r
+
+    for (i <- Math.max(pLower, 0) to (if (pUpper >= tileOffsets(tileLevel).length / bandCount) tileOffsets(tileLevel).length / bandCount - 1
+    else pUpper)) {
+      for (j <- Math.max(pLeft, 0) to (if (pRight >= tileOffsets(tileLevel)(i).length) tileOffsets(tileLevel)(i).length - 1
+      else pRight)) {
         for (k <- 0 until bandCount) {
+//          val t1 = System.currentTimeMillis()
           val extent = new Extent(j * (256 * srcSize(0) * Math.pow(2, tileLevel)) + pRange(0), (i + 1) * (256 * -srcSize(1) * Math.pow(2, tileLevel)) + pRange(1), (j + 1) * (256 * srcSize(0) * Math.pow(2, tileLevel)) + pRange(0), i * (256 * -srcSize(1) * Math.pow(2, tileLevel)) + pRange(1))
-          if (extent.intersects(queryMbrReproj)) {
+          if (extent.intersects(visualExtent)) {
             val t = new RawTile
             val kPlus: Int = tileOffsets(tileLevel).length / bandCount
             t.setOffset(tileOffsets(tileLevel)(i + k * kPlus)(j))
@@ -229,9 +239,14 @@ object COGUtil {
             t.setProduct(coverageMetadata.getProduct)
             tiles.append(t)
           }
+//          println(k,System.currentTimeMillis()-t1)
         }
       }
     }
+    println(coverageMetadata.measurement,tiles.size,tileLevel)
+    val time3 = System.currentTimeMillis()
+//    println("t3-t1",time3-time1)
+//    println("t2-t1",time2-time1)
     tiles
   }
 

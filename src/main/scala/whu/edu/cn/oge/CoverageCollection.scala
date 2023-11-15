@@ -32,30 +32,30 @@ object CoverageCollection {
    * @param crs             crs of the images to query
    * @return ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
-  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
-    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
-
-    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
-      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
-      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
-      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
-      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
-      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
-
-      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
-      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
-      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
-      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
-      geometry
-    }).reduce((a, b) => {
-      a.union(b)
-    })
-    var union: Geometry = unionTileExtent
-    if (extent != null) {
-      union = unionTileExtent.intersection(extent)
-    }
-
+  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
+//    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
+//
+//    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
+//    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
+//      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+//      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+//      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+//      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+//      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+//
+//      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+//      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+//      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+//      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
+//      geometry
+//    }).reduce((a, b) => {
+//      a.union(b)
+//    })
+//    var union: Geometry = unionTileExtent
+//    if (extent != null) {
+//      union = unionTileExtent.intersection(extent)
+//    }
+    val union = extent
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
     val rawTileRdd: Map[String, RDD[RawTile]] = metaListGrouped.map(t => {
@@ -67,7 +67,7 @@ object CoverageCollection {
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
             val minIOUtil = MinIOUtil
             val client: MinioClient = minIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union)
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, Extent(union.getEnvelopeInternal),t.getGeom)
 //            minIOUtil.releaseMinioClient(client)
             tiles
           }

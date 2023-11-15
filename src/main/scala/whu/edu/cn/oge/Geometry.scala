@@ -1,10 +1,10 @@
 package whu.edu.cn.oge
 
 import java.io.{StringReader, StringWriter}
-
 import org.geotools.geojson.geom.GeometryJSON
 import org.geotools.geometry.jts.JTS
 import org.geotools.referencing.CRS
+import org.json.JSONObject
 import org.locationtech.jts.geom._
 
 object Geometry {
@@ -143,8 +143,10 @@ object Geometry {
    * @param crs the crs of the geometry
    * @return
    */
-  def geometry(gjson:String,crs:String="EPSG:4326"):Geometry={
-    val geom=getGeomFromCoors(gjson,"",isGeoJson = true)
+  def geometry(gjson:com.alibaba.fastjson.JSONObject, crs:String="EPSG:4326"):Geometry={
+    val coors=gjson.getJSONObject("geometry").getJSONArray("coordinates")
+    val geomtype=gjson.getJSONObject("geometry").get("type")
+    val geom=getGeomFromCoors(coors.toString,geomtype.toString,isGeoJson = false)
     val srid=crs.split(":")(1).toInt
     geom.setSRID(srid)
     geom
@@ -448,7 +450,7 @@ object Geometry {
    * acoording to coordinates and geomType ,build the correct geojson
    * and then, get Geometry from geojson
    *
-   * @param coors the coordinate
+   * @param coors the coordinate    这里的coors传的是gjson？
    * @param geomType  Geometry Type
    * @param isGeoJson if true ,coors is a geojson.if false coors is a array of coordinates
    *             * @return

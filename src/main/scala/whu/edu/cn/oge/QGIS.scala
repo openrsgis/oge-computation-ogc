@@ -1155,20 +1155,22 @@ object QGIS {
    */
   def nativeAngleToNearest(implicit sc: SparkContext,
                            input: RDD[(String, (Geometry, Map[String, Any]))],
-                           referenceLayer:String,
+                           referenceLayer: RDD[(String, (Geometry, Map[String, Any]))],
                            maxDistance: Double,
                            fieldName:String="rotation",
                            applySymbology: String="True")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + ".shp"
+    val outputShpPath1 = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + ".shp"
+    val outputShpPath2 = "/mnt/storage/algorithmData/referenceLayer_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath)
+    saveFeatureRDDToShp(input, outputShpPath1)
+    saveFeatureRDDToShp(referenceLayer, outputShpPath2)
 
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_angletonearest.py --input "$outputShpPath" --max-distance $maxDistance --field-name $fieldName --apply-symbology $applySymbology --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_angletonearest.py --input "$outputShpPath1" --max-distance $maxDistance --field-name "$fieldName" --apply-symbology "$applySymbology"  --reference-layer "$outputShpPath2" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1502,7 +1504,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --startWidth $startWidth --endWidth $endWidth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --start-width $startWidth --end-width $endWidth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1544,7 +1546,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_wedgebuffers.py --input "$outputShpPath" --innerRadius $innerRadius --outerRadius $outerRadius --width $width --azimuth $azimuth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_wedgebuffers.py --input "$outputShpPath" --inner-radius $innerRadius --outer-radius $outerRadius --width $width --azimuth $azimuth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1584,7 +1586,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_concavehull.py --input "$outputShpPath" --noMultigeometry "$noMultigeometry" --holes "$holes" --alpha $alpha --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_concavehull.py --input "$outputShpPath" --no-multigeometry "$noMultigeometry" --holes "$holes" --alpha $alpha --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1928,7 +1930,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra $extra --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2009,7 +2011,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra $extra --metric $metricInput --nodata $nodata --angle $angle --z-field $zField --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --metric $metricInput --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2281,7 +2283,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra $extra --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field $zField --data-type $dataTypeInput --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra "$extra" --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2711,38 +2713,32 @@ object QGIS {
    *
    * @param sc             Alias object for SparkContext
    * @param input          The input raster
+   * @param mask           Vector mask for clipping the raster
    * @param cropToCutLine  Applies the vector layer extent to the output raster if checked.
    * @param targetExtent   Extent of the output file to be created
    * @param setResolution  Shall the output resolution (cell size) be specified
    * @param extra          Add extra GDAL command line options
    * @param targetCrs      Set the coordinate reference to use for the mask layer
-   * @param xResolution    The width of the cells in the output raster
    * @param keepResolution The resolution of the output raster will not be changed
    * @param alphaBand      Creates an alpha band for the result. The alpha band then includes the transparency values of the pixels.
    * @param options        For adding one or more creation options that control the raster to be created
-   * @param mask           Vector mask for clipping the raster
    * @param multithreading Two threads will be used to process chunks of image and perform input/output operation simultaneously. Note that computation is not multithreaded itself.
-   * @param nodata         Defines a value that should be inserted for the nodata values in the output raster
-   * @param yResolution    The height of the cells in the output raster
    * @param dataType       Defines the format of the output raster file.
    * @param sourceCrs      Set the coordinate reference to use for the input raster
    * @return Output raster layer clipped by the vector layer
    */
   def gdalClipRasterByMaskLayer(implicit sc: SparkContext,
                                 input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                mask: RDD[(String, (Geometry, Map[String, Any]))],
                                 cropToCutLine: String = "True",
                                 targetExtent: String = "",
                                 setResolution: String = "False",
                                 extra: String = "",
                                 targetCrs: String = "",
-                                xResolution: Double ,
                                 keepResolution: String = "False",
                                 alphaBand: String = "False",
                                 options: String = "",
-                                mask: String = "",
                                 multithreading: String = "False",
-                                nodata: Double,
-                                yResolution: Double,
                                 dataType: String = "0",
                                 sourceCrs: String = "")
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -2750,8 +2746,10 @@ object QGIS {
     val time = System.currentTimeMillis()
 
     val outputTiffPath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + ".tif"
+    val maskPath = "/mnt/storage/algorithmData/gdalClipMaskLayer_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
+    saveFeatureRDDToShp(mask, maskPath)
 
 
     val dataTypeInput: String = Map(
@@ -2772,7 +2770,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs" --x-resolution $xResolution --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$mask" --multithreading $multithreading --nodata $nodata --y-resolution $yResolution --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs"  --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$maskPath" --multithreading $multithreading  --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2846,7 +2844,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3097,7 +3095,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_dissolve.py --input "$outputShpPath" --explode-collections $explodeCollections --field $field --compute-area $computeArea --keep-attributes $keepAttributes --compute-statistics $computeStatistics --count-features $countFeatures --statistics-attribute $statisticsAttribute --options $options --geometry $geometry --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_dissolve.py --input "$outputShpPath" --explode-collections $explodeCollections --field "$field" --compute-area $computeArea --keep-attributes $keepAttributes --compute-statistics $computeStatistics --count-features $countFeatures --statistics-attribute "$statisticsAttribute" --options "$options" --geometry $geometry --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3133,7 +3131,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath" --extent $extent --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath" --extent "$extent" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3156,21 +3154,23 @@ object QGIS {
    */
   def gdalClipVectorByPolygon(implicit sc: SparkContext,
                               input: RDD[(String, (Geometry, Map[String, Any]))],
-                              mask: String = "",
+                              mask: RDD[(String, (Geometry, Map[String, Any]))],
                               options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
+    val outputShpPath1 = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
+    val outputShpPath2 = "/mnt/storage/algorithmData/mask_" + time + ".shp"
     val writePath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputShpPath)
+    saveFeatureRDDToShp(input, outputShpPath1)
+    saveFeatureRDDToShp(mask, outputShpPath2)
 
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbypolygon.py --input "$outputShpPath" --mask $mask --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbypolygon.py --input "$outputShpPath1" --mask "$outputShpPath2" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3207,7 +3207,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_offsetcurve.py --input "$outputShpPath" --distance $distance --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_offsetcurve.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3245,7 +3245,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_pointsalonglines.py --input "$outputShpPath" --distance $distance --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_pointsalonglines.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3291,7 +3291,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_buffervectors.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field $field --dissolve $dissolve --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_buffervectors.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
 
       println(s"st = $st")
@@ -3342,7 +3342,7 @@ object QGIS {
     try {
       versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
       val st =
-        raw"""conda activate qgis;d /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explodecollections $explodeCollections --field $field --bufferSide $bufferSideInput --dissolve $dissolve --geometry $geometry --options $options --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --buffer-side $bufferSideInput --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")

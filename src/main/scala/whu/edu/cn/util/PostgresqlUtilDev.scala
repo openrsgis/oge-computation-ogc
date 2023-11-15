@@ -1,6 +1,6 @@
 package whu.edu.cn.util
 
-import whu.edu.cn.util.GlobalConstantUtil._
+import whu.edu.cn.config.GlobalConfig.PostgreSqlConf.{POSTGRESQL_MAX_RETRIES, POSTGRESQL_PWD, POSTGRESQL_RETRY_DELAY, POSTGRESQL_URL, POSTGRESQL_USER}
 
 import java.sql.{Connection, DriverManager, PreparedStatement, ResultSet}
 import scala.collection.mutable
@@ -79,6 +79,11 @@ object PostgresqlUtilDev {
     val limitList = new ArrayBuffer[String]()
     range.zipWithIndex.foreach {
       case ((key, operator, value), i) =>
+        if (value == null || value.isEmpty) {
+          throw new IllegalArgumentException(
+            "limitList have empty value!"
+          )
+        }
         if (i == 0) {
           sql ++= key + " " + operator + " ?"
           limitList.append(value)

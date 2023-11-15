@@ -1,4 +1,125 @@
 {
+  "Service.printNumber": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "Number",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Coverage.geoDetector": {
+    "description": "Calculate to what extent a certain factor X explains the spatial variation of attribute Y.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "depVar_In",
+        "type": "Coverage",
+        "description": "dependent variable input raster"
+      },
+      {
+        "name": "facVar_name_In",
+        "type": "String",
+        "description": "Impact factor variable input raster name"
+      },
+      {
+        "name": "facVar_In",
+        "type": "Coverage",
+        "description": "Impact factor variable input raster"
+      },
+      {
+        "name": "norExtent_sta",
+        "type": "Double",
+        "description": "Starting value of normal range of dependent variable"
+      },
+      {
+        "name": "norExtent_end",
+        "type": "Double",
+        "description": "Ending value of normal range of dependent variable"
+      },
+      {
+        "name": "NaN_value",
+        "type": "Double",
+        "description": "Nan value of dependent variable input raster"
+      }
+    ]
+  },
+  "Coverage.reclass": {
+    "description": "Reclassify the raster based on specified rules.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Input raster to reclass"
+      },
+      {
+        "name": "rules",
+        "type": "List<(Double,Double,Double)>",
+        "description": "rules of reclass"
+      },
+      {
+        "name": "NaN_value",
+        "type": "Double",
+        "description": "Nan value of input raster"
+      }
+    ]
+  },
+  "Coverage.rasterUnion": {
+    "description": "use a raster to clip another raster",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "clip raster providing extent"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "Input raster to clip"
+      }
+    ]
+  },
+  "Service.printString": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "String",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Service.printList": {
+    "description": "Print the Number or List or String to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "List<String>",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
   "FeatureCollection.filter": {
     "description": "Applies a filter to a given collection.",
     "returns": "FeatureCollection",
@@ -258,6 +379,36 @@
         "name": "featureId",
         "type": "String",
         "description": "The id of target feature."
+      },
+      {
+        "name": "dataTime",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getCube": {
+    "description": "Getting resource Cube of certain Name",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "CubeName",
+        "type": "String",
+        "description": "The Name of target collection."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent used for deleting.",
+        "default": "null",
+        "optional": "True"
       },
       {
         "name": "dataTime",
@@ -706,6 +857,27 @@
       }
     ]
   },
+  "Coverage.area": {
+    "description": "Get the area of a raster with given pixel value range.",
+    "returns": "Double",
+    "args": [
+      {
+        "name": "raster",
+        "type": "Coverage",
+        "description": "The Coverage as the input data "
+      },
+      {
+        "name": "valueRange",
+        "type": "List<String>",
+        "description": "The range of raster value for statistically "
+      },
+      {
+        "name": "resolution",
+        "type": "Double",
+        "description": "Defines the resolution of area statistic "
+      }
+    ]
+  },
   "Coverage.rangeSet": {
     "description": "Get the range set of a coverage.",
     "returns": "Dictionary",
@@ -1119,7 +1291,7 @@
       },
       {
         "name": "threshold",
-        "type": "Int",
+        "type": "Double",
         "description": "threshold"
       }
     ]
@@ -1142,6 +1314,17 @@
       }
     ]
   },
+  "Coverage.bandNames": {
+    "description": "Get all bands names from a coverage.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to operate."
+      }
+    ]
+  },
   "Coverage.selectBands": {
     "description": "",
     "returns": "Coverage",
@@ -1155,6 +1338,17 @@
         "name": "bands",
         "type": "List<String>",
         "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Coverage.bandNum": {
+    "description": "Get the count of the coverage.",
+    "returns": "Integer",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage."
       }
     ]
   },
@@ -2006,7 +2200,7 @@
       },
       {
         "name": "referenceLayer",
-        "type": "String",
+        "type": "Feature",
         "description": "Layer to find the closest feature from for rotation calculation",
         "optional": "True",
         "default": ""
@@ -2227,7 +2421,7 @@
       }
     ]
   },
-  "Feature.taperedBufferByQIS": {
+  "Feature.taperedBufferByQGIS": {
     "description": "Creates tapered buffer along line geometries, using a specified start and end buffer diameter.",
     "returns": "Feature",
     "args": [
@@ -2259,7 +2453,7 @@
       }
     ]
   },
-  "Feature.wedgeBuffersByQIS": {
+  "Feature.wedgeBuffersByQGIS": {
     "description": "Creates wedge shaped buffers from input points.",
     "returns": "Feature",
     "args": [
@@ -2298,7 +2492,7 @@
       }
     ]
   },
-  "Feature.concaveHullByQIS": {
+  "Feature.concaveHullByQGIS": {
     "description": "Computes the concave hull of the features in an input point layer.",
     "returns": "Feature",
     "args": [
@@ -2330,7 +2524,7 @@
       }
     ]
   },
-  "Feature.delaunayTriangulationByQIS": {
+  "Feature.delaunayTriangulationByQGIS": {
     "description": "Creates a polygon layer with the Delaunay triangulation corresponding to the input point layer.",
     "returns": "Feature",
     "args": [
@@ -2341,7 +2535,7 @@
       }
     ]
   },
-  "Feature.voronoiPolygonsByQIS": {
+  "Feature.voronoiPolygonsByQGIS": {
     "description": "Takes a point layer and generates a polygon layer containing the Voronoi polygons corresponding to those input points.",
     "returns": "Feature",
     "args": [
@@ -3492,6 +3686,11 @@
         "description": "Input Elevation raster layer"
       },
       {
+        "name": "mask",
+        "type": "Feature",
+        "description": "Vector mask for clipping the raster."
+      },
+      {
         "name": "cropToCutLine",
         "type": "String",
         "description": "Applies the vector layer extent to the output raster if checked.",
@@ -3528,11 +3727,6 @@
 
       },
       {
-        "name": "xResolution",
-        "type": "Double",
-        "description": "The width of the cells in the output raster."
-      },
-      {
         "name": "keepResolution",
         "type": "String",
         "description": "The resolution of the output raster will not be changed.",
@@ -3554,28 +3748,11 @@
         "default": ""
       },
       {
-        "name": "mask",
-        "type": "String",
-        "description": "Vector mask for clipping the raster.",
-        "optional": "True",
-        "default":""
-      },
-      {
         "name": "multithreading",
         "type": "String",
         "description": "Two threads will be used to process chunks of image and perform input/output operation simultaneously. Note that computation is not multithreaded itself.",
         "optional": "True",
         "default": "False"
-      },
-      {
-        "name": "nodata",
-        "type": "Double",
-        "description": "Defines a value that should be inserted for the nodata values in the output raster."
-      },
-      {
-        "name": "yResolution",
-        "type": "Double",
-        "description": "The height of the cells in the output raster."
       },
       {
         "name": "dataType",
@@ -3633,7 +3810,7 @@
       }
     ]
   },
-  "Feature.rasterizeOverByGDAL": {
+  "Coverage.rasterizeOverByGDAL": {
     "description": "Overwrites a raster layer with values from a vector layer. New values are assigned based on the attribute value of the overlapping vector feature.",
     "returns": "Coverage",
     "args": [
@@ -3866,7 +4043,7 @@
       }
     ]
   },
-  "Feature.assignProjectionByGDAL": {
+  "Coverage.assignProjectionByGDAL": {
     "description": "Clips any OGR-supported vector file to a given extent.",
     "returns": "Feature",
     "args": [
@@ -3994,7 +4171,7 @@
       },
       {
         "name": "mask",
-        "type": "String",
+        "type": "Feature",
         "description": "Layer to be used as clipping extent for the input vector layer.",
         "optional": "True",
         "default": ""
@@ -4366,6 +4543,222 @@
       }
     ]
   },
+  "Coverage.resampStatsByGrass": {
+    "description": "Resamples raster map layers to a coarser grid using aggregation",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Aggregation method",
+        "optional": "True",
+        "default": "average"
+      },
+      {
+        "name": "quantile",
+        "type": "String",
+        "description": "Quantile to calculate for method=quantile Options: 0.0-1.0 ",
+        "optional": "True",
+        "default": "0.5"
+      }
+    ]
+  },
+  "Coverage.resampInterpByGrass": {
+    "description": "Resamples raster map to a finer grid using interpolation",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Sampling interpolation method Options: nearest, bilinear, bicubic, lanczos",
+        "optional": "True",
+        "default": "bilinear"
+      }
+    ]
+  },
+  "Coverage.resampBsplineByGrass": {
+    "description": "Performs bilinear or bicubic spline interpolation with Tykhonov regularization.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Spline interpolation algorithm Options: bilinear, bicubic",
+        "optional": "True",
+        "default": "bicubic"
+      }
+    ]
+  },
+  "Coverage.resampFilterByGrass": {
+    "description": "Resamples raster map layers using an analytic kernel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      },
+      {
+        "name": "filter",
+        "type": "String",
+        "description": "Filter kernel(s) Options: box, bartlett, gauss, normal, hermite, sinc, lanczos1, lanczos2, lanczos3, hann, hamming, blackman"
+      },
+      {
+        "name": "radius",
+        "type": "String",
+        "description": "Filter radius"
+      }
+    ]
+  },
+  "Coverage.resampleByGrass": {
+    "description": "GRASS raster map layer data resampling capability. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "res",
+        "type": "String",
+        "description": "New resolution ratio after resampling"
+      }
+    ]
+  },
+  "Coverage.textureByGrass": {
+    "description": " Generate images with textural features from a raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "String",
+        "description": "The size of moving window (odd and >= 3)",
+        "optional": "True",
+        "default": "3"
+      },
+      {
+        "name": "distance",
+        "type": "String",
+        "description": "The distance between two samples (>= 1) The distance must be smaller than the size of the moving window",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Textural measurement method Options: asm, contrast, corr, var, idm, sa, sv, se, entr, dv, de, moc1, moc2 "
+      }
+    ]
+  },
+  "Coverage.viewshedByGrass": {
+    "description": " Computes the viewshed of a point on an elevation raster map.                       Default format: NULL (invisible), vertical angle wrt viewpoint (visible). ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "coordinates",
+        "type": "String",
+        "description": "Coordinates of viewing position"
+      },
+      {
+        "name": "observer_elevation",
+        "type": "String",
+        "description": "Viewing elevation above the ground ",
+        "optional": "True",
+        "default": "1.75"
+      },
+      {
+        "name": "target_elevation",
+        "type": "String",
+        "description": "Offset for target elevation above the ground",
+        "optional": "True",
+        "default": "0.0"
+      },
+      {
+        "name": "max_distance",
+        "type": "String",
+        "description": "Maximum visibility radius. By default infinity (-1) ",
+        "optional": "True",
+        "default": "-1"
+      },
+      {
+        "name": "refraction_coeff",
+        "type": "String",
+        "description": "Refraction coefficient Options: 0.0-1.0 ",
+        "optional": "True",
+        "default": "0.14286"
+      }
+    ]
+  },
+  "Coverage.shadeByGrass": {
+    "description": "Drapes a color raster over an shaded relief or aspect map. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "shade",
+        "type": "Coverage",
+        "description": "Name of shaded relief or aspect raster map "
+      },
+      {
+        "name": "color",
+        "type": "Coverage",
+        "description": "Name of raster to drape over relief raster map Typically, this raster is elevation or other colorful raster"
+      },
+      {
+        "name": "brighten",
+        "type": "String",
+        "description": "Percent to brighten Options: -99-99 ",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+
   "Coverage.surfIdwByGrass": {
     "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
     "returns": "Coverage",
@@ -4507,6 +4900,113 @@
         "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
         "optional": "True",
         "default": "6"
+      }
+    ]
+  },
+  "Coverage.reclassByGrass": {
+    "description": "Reclassify raster map based on category values.Creates a new raster map whose category values are based upon a reclassification of the categories in an existing raster map. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster map to be reclassified"
+      },
+      {
+        "name": "rules",
+        "type": "Coverage",
+        "description": "File containing reclass rules '-' for standard input"
+      }
+    ]
+  },
+  "Coverage.reportByGrass": {
+    "description": " Reports statistics for raster maps. ",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description": "Name of raster map to report on"
+      }
+    ]
+  },
+  "Coverage.supportStatsByGrass": {
+    "description": "Update raster map statistics",
+    "returns": "String",
+    "args": [
+      {
+        "name": "map",
+        "type": "Coverage",
+        "description": "Name of raster map"
+      }
+    ]
+  },
+  "Coverage.outDdalByGrass": {
+    "description": " Exports GRASS raster maps into GDAL supported formats. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster map (or group) to export "
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "Raster data format to write (case sensitive, see also -l flag) Options: VRT, GTiff, COG, NITF, HFA, ELAS, AAIGrid, DTED, PNG, JPEG, MEM, GIF, XPM, BMP, PCIDSK, PCRaster, ILWIS, SGI, SRTMHGT, Leveller, Terragen, netCDF, HDF4Image, ISIS3, ISIS2, PDS4, VICAR, ERS, ECW, JP2ECW, JP2OpenJPEG, FIT, GRIB, RMF, WMS, RST, GSAG, GSBG, GS7BG, R, KMLSUPEROVERLAY, WEBP, PDF, Rasterlite, MBTiles, CALS, WMTS, MRF, PNM, PAux, MFF, MFF2, BT, LAN, LCP, GTX, NTv2, CTable2, KRO, ROI_PAC, RRASTER, BYN, ARG, USGSDEM, NWT_GRD, ADRG, BLX, PostGISRaster, SAGA, XYZ, HF2, ZMap, SIGDEM, GPKG, NGW, ENVI, EHdr, ISCE, Zarr ",
+        "optional": "True",
+        "default": "GTiff"
+      }
+    ]
+  },
+  "Coverage.outBinByGrass": {
+    "description": " Exports a GRASS raster to a binary array.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "nu_ll",
+        "type": "String",
+        "description": "Value to write out for null ",
+        "optional": "True",
+        "default": "0"
+      },
+      {
+        "name": "bytes",
+        "type": "String",
+        "description": "Number of bytes per cell Options: 1, 2, 4, 8 "
+      },
+      {
+        "name": "order",
+        "type": "String",
+        "description": "Output byte order \nOptions: big, little, native, swap ",
+        "optional": "True",
+        "default": "native"
+      }
+    ]
+  },
+  "Coverage.inGdalByGrass": {
+    "description": " Imports raster data into a GRASS raster map using GDAL library. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of raster file to be imported "
+      },
+      {
+        "name": "band",
+        "type": "String",
+        "description": "Band(s) to select (default is all bands) "
+      },
+      {
+        "name": "location",
+        "type": "String",
+        "description": "Name for new location to create "
       }
     ]
   },
@@ -6322,14 +6822,9 @@
     "returns": "Feature",
     "args": [
       {
-        "name": "gjson",
+        "name": "coors",
         "type": "String",
         "description": "geojson"
-      },
-      {
-        "name": "properties",
-        "type": "String",
-        "description": "Properties"
       },
       {
         "name": "crs",
@@ -6427,7 +6922,7 @@
   },
   "Feature.coordinates": {
     "description": "compute coordinates",
-    "returns": "List[Array[Coordinate]]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6454,7 +6949,7 @@
   },
   "Feature.isUnbounded": {
     "description": "judge a geometry is unbounded",
-    "returns": "List[Boolean]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6465,7 +6960,7 @@
   },
   "Feature.getType": {
     "description": "Returns the GeoJSON type of the geometry",
-    "returns": "List[String]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6476,7 +6971,7 @@
   },
   "Feature.projection": {
     "description": "Returns the projection of the geometry.",
-    "returns": "List[Int]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6487,7 +6982,7 @@
   },
   "Feature.toGeoJSONString": {
     "description": "Returns a GeoJSON string representation of the geometry.",
-    "returns": "List[String]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6498,7 +6993,7 @@
   },
   "Feature.length": {
     "description": "compute length",
-    "returns": "List[Double]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -6530,7 +7025,7 @@
   },
   "Feature.contains": {
     "description": "Returns true iff one geometry contains the other.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6551,7 +7046,7 @@
   },
   "Feature.containedIn": {
     "description": "Returns true iff one geometry is contained in the other.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6572,7 +7067,7 @@
   },
   "Feature.disjoint": {
     "description": "Returns true iff the geometries are disjoint.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6593,7 +7088,7 @@
   },
   "Feature.distance": {
     "description": "Returns the minimum distance between two geometries.",
-    "returns": "Double",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -6656,7 +7151,7 @@
   },
   "Feature.intersects": {
     "description": "Returns true iff the geometries intersect.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7739,6 +8234,41 @@
       }
     ]
   },
+  "Cube.build": {
+    "description": "Building Cube from coverage id",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productIDList",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "coverageIDList",
+        "type": "String",
+        "description": "The id of target coverage."
+      },
+      {
+        "name": "subset",
+        "type": "List<Float>",
+        "description": "The subset of target coverage.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Get the bands.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Cube.band": {
     "description": "Select a new cube by band name",
     "returns": "Cube",
@@ -7830,6 +8360,58 @@
         "type": "String",
         "description": "png",
         "default": "False",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.export": {
+    "description": "Export a Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to be exported"
+      },
+      {
+        "name": "exportedName",
+        "type": "String",
+        "description": "The layer to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the Cube",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported Cube",
         "optional": "True"
       }
     ]
@@ -8334,6 +8916,328 @@
         "description": "111",
         "default": "None",
         "optional": "False"
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWRbasic.autoFit": {
+    "description": "Basic GWR calculation with bandwidth auto selection",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+      },
+      {
+        "name": "approach",
+        "type": "String",
+        "description": "approach function: AICc, CV"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "split of the x properties, default: \",\""
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWRbasic.fit": {
+    "description": "Basic GWR calculation with specific bandwidth",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "split of the x properties, default: \",\""
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWRbasic.auto": {
+    "description": "Basic GWR calculation with variable selection and bandwidth auto selection",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+      },
+      {
+        "name": "approach",
+        "type": "String",
+        "description": "approach function: AICc, CV"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "split of the x properties, default: \",\""
+      },
+      {
+        "name": "varSelTh",
+        "type": "Double",
+        "description": "threshold of variable selection, default: 3.0"
+      }
+    ]
+  },
+  "SpatialStats.BasicStatistics.AverageNearestNeighbor": {
+    "description": "Average nearest neighbor stastics for feature",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input for calculation"
+      }
+    ]
+  },
+  "SpatialStats.BasicStatistics.DescriptiveStatistics": {
+    "description": "Descriptive statistics for specific property of feature",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input for calculation"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "the property to extract."
+      },
+      {
+        "name": "histBins",
+        "type": "Int",
+        "description": "number of histogram bin"
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.CorrelationAnalysis.corrMat": {
+    "description": "Correlation matrix for properties",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "properties",
+        "type": "String",
+        "description": "The properties to calculate."
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "pearson or spearman method, default: pearson"
+      },
+      {
+        "name": "split",
+        "type": "String",
+        "description": "properties split, default: \",\""
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.SpatialAutoCorrelation.globalMoranI": {
+    "description": "Global Moran'I calculator for feature",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to calculate."
+      },
+      {
+        "name": "plot",
+        "type": "Boolean",
+        "description": "whether to plot Moran points or not, default: false"
+      },
+      {
+        "name": "test",
+        "type": "Boolean",
+        "description": "whether to calculate p value, default: false"
+      },
+      {
+        "name": "weightstyle",
+        "type": "String",
+        "description": "neighbor weight type, including: W, B, C, U, default: W"
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.SpatialAutoCorrelation.localMoranI": {
+    "description": "Local Moran'I calculator for feature",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to calculate."
+      },
+      {
+        "name": "adjust",
+        "type": "Boolean",
+        "description": "whether to adjust n, default: false"
+      }
+    ]
+  },
+  "SpatialStats.STCorrelations.TemporalAutoCorrelation.ACF": {
+    "description": "Autocorrelation Coefficient",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature"
+      },
+      {
+        "name": "property",
+        "type": "String",
+        "description": "The property to calculate"
+      },
+      {
+        "name": "timelag",
+        "type": "Int",
+        "description": "time lag, default:20"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.SpatialLagModel.fit": {
+    "description": "Spatial Lag Model (SLM) for spatial regression",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.SpatialErrorModel.fit": {
+    "description": "Spatial Error Model (SEM) for spatial regression",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.SpatialDurbinModel.fit": {
+    "description": "Spatial Durbin Model (SDM) for spatial regression",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
       }
     ]
   }

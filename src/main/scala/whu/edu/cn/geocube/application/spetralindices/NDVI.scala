@@ -7,17 +7,18 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.ColorRamp
 import geotrellis.spark._
+
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
-
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 
 import sys.process._
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.{DistributedQueryRasterTiles, QueryRasterTiles}
-import whu.edu.cn.geocube.util.{GcConstant, TileUtil}
+import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.view.Info
 
 
@@ -33,21 +34,20 @@ object NDVI {
    * Use (RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]) as input.
    *
    * @param tileLayerRddWithMeta a rdd of queried tiles
-   * @param threshold NDVI threshold
-   *
+   * @param threshold            NDVI threshold
    * @return results Info containing thematic ndvi product path, time, product type and vegetation-cover area.
    */
-  def ndvi(tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+  def ndvi(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
            threshold: Double): Array[Info] = {
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is submitted")
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is running ...")
     val analysisBegin = System.currentTimeMillis()
 
-    val tranTileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
+    val tranTileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
     val latiRad = (tileLayerRddWithMeta._2.tileLayerMetadata.extent.ymin + tileLayerRddWithMeta._2.tileLayerMetadata.extent.ymax) / 2 * Math.PI / 180
 
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
     val srcMetadata = tranTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -65,15 +65,15 @@ object NDVI {
       }
 
     //group by TemporalKey to get a extent-series RDD, i.e. RDD[(time, Iterable[(SpaceTimeKey,Tile)])]
-    val temporalGroupRdd:RDD[(Long, Iterable[(SpaceTimeKey,Tile)])] = NDVIRdd.groupBy(_._1.instant)
+    val temporalGroupRdd: RDD[(Long, Iterable[(SpaceTimeKey, Tile)])] = NDVIRdd.groupBy(_._1.instant)
 
-    val results:RDD[Info] = temporalGroupRdd.map{x =>
+    val results: RDD[Info] = temporalGroupRdd.map { x =>
       //stitch extent-series tiles of each time instant to pngs
       val metadata = srcMetadata
       val layout = metadata.layout
       val crs = metadata.crs
       val instant = x._1
-      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele=>(ele._1.spatialKey, ele._2))
+      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spatialKey, ele._2))
       val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
 
       var accum = 0.0
@@ -96,7 +96,7 @@ object NDVI {
         0x9EBD4DFF,
         0x569543FF
       )
-      val outputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/"//"/home/geocube/environment_test/geocube_core_jar/"
+      val outputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/" //"/home/geocube/environment_test/geocube_core_jar/"
       val uuid = UUID.randomUUID
       stitched.tile.renderPng(colorRamp).write(outputDir + uuid + "_ndvi_" + instant + ".png")
 
@@ -109,7 +109,7 @@ object NDVI {
       Seq("/home/geocube/qgis/run.sh", "-t", "NDVI", "-r", s"$outputTiffPath", "-o", s"$outputThematicPngPath") ! ProcessLogger(stdout append _, stderr append _)
 
       new Info(outputThematicPngPath, instant, "NDVI Analysis", accum / 255 / 1024 / 1024 * 110.947 * 110.947 * Math.cos(latiRad))
-  }
+    }
     val ret = results.collect()
     val analysisEnd = System.currentTimeMillis()
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Time cost: " + (analysisEnd - analysisBegin) + " ms")
@@ -121,25 +121,24 @@ object NDVI {
    *
    * Use (Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]) as input.
    *
-   * @param sc a SparkContext
+   * @param sc                     a SparkContext
    * @param tileLayerArrayWithMeta an array of queried tiles
-   * @param threshold NDVI threshold
-   *
+   * @param threshold              NDVI threshold
    * @return results info containing thematic ndvi product path, time, product type and vegetation-cover area.
    */
-  def ndvi(implicit sc:SparkContext,
-           tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+  def ndvi(implicit sc: SparkContext,
+           tileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
            threshold: Double): Array[Info] = {
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is submitted")
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is running ...")
     val analysisBegin = System.currentTimeMillis()
 
     //transform tile array to tile rdd
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
     val latiRad = (tileLayerArrayWithMeta._2.tileLayerMetadata.extent.ymin + tileLayerArrayWithMeta._2.tileLayerMetadata.extent.ymax) / 2 * Math.PI / 180
 
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -157,15 +156,15 @@ object NDVI {
       }
 
     //group by TemporalKey to get a extent-series RDD, i.e. RDD[(time, Iterable[(SpaceTimeKey,Tile)])]
-    val temporalGroupRdd:RDD[(Long, Iterable[(SpaceTimeKey,Tile)])] = NDVIRdd.groupBy(_._1.instant)
+    val temporalGroupRdd: RDD[(Long, Iterable[(SpaceTimeKey, Tile)])] = NDVIRdd.groupBy(_._1.instant)
 
-    val results:RDD[Info] = temporalGroupRdd.map{x =>
+    val results: RDD[Info] = temporalGroupRdd.map { x =>
       //stitch extent-series tiles of each time instant to pngs
       val metadata = srcMetadata
       val layout = metadata.layout
       val crs = metadata.crs
       val instant = x._1
-      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele=>(ele._1.spatialKey, ele._2))
+      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spatialKey, ele._2))
       val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
 
       var accum = 0.0
@@ -188,7 +187,7 @@ object NDVI {
         0x9EBD4DFF,
         0x569543FF
       )
-      val outputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/"//"/home/geocube/environment_test/geocube_core_jar/"
+      val outputDir = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/" //"/home/geocube/environment_test/geocube_core_jar/"
       val uuid = UUID.randomUUID
       stitched.tile.renderPng(colorRamp).write(outputDir + uuid + "_ndvi_" + instant + ".png")
 
@@ -214,24 +213,23 @@ object NDVI {
    * Use (RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]) as input.
    *
    * @param tileLayerRddWithMeta a rdd of queried tiles
-   * @param threshold NDVI threshold
+   * @param threshold            NDVI threshold
    * @param outputDir
-   *
    * @return
    */
-  def ndvi(tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+  def ndvi(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
            threshold: Double,
            outputDir: String): Unit = {
     println("Task is running ...")
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
-    for(i <- 0 until outputDirArray.length - 1)
+    for (i <- 0 until outputDirArray.length - 1)
       sessionDir.append(outputDirArray(i) + "/")
 
-    val tranTileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
+    val tranTileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
 
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
     val srcMetadata = tranTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -249,14 +247,14 @@ object NDVI {
       }
 
     //group by TemporalKey to get a extent-series RDD, i.e. RDD[(time, Iterable[(SpaceTimeKey,Tile)])]
-    val temporalGroupRdd:RDD[(Long, Iterable[(SpaceTimeKey,Tile)])] = NDVIRdd.groupBy(_._1.instant)
+    val temporalGroupRdd: RDD[(Long, Iterable[(SpaceTimeKey, Tile)])] = NDVIRdd.groupBy(_._1.instant)
 
     //stitch extent-series tiles of each time instant to pngs
-    temporalGroupRdd.foreach{x =>
+    temporalGroupRdd.foreach { x =>
       val metadata = srcMetadata
       val layout = metadata.layout
       val instant = x._1
-      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele=>(ele._1.spatialKey, ele._2))
+      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spatialKey, ele._2))
       val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
 
       val sdf = new SimpleDateFormat("yyyy_MM_dd")
@@ -289,10 +287,8 @@ object NDVI {
       val scpPngCommand = "scp " + outputPath + " geocube@gisweb1:" + outputDir
 
       val outputMetaPath = executorOutputDir + "NDVI_" + instantRet + ".json"
-      val objectMapper =new ObjectMapper()
+      val objectMapper = new ObjectMapper()
       val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
       node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("time", instantRet)
@@ -311,28 +307,27 @@ object NDVI {
    *
    * Use (Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]) as input.
    *
-   * @param sc a SparkContext
+   * @param sc                     a SparkContext
    * @param tileLayerArrayWithMeta an array of queried tiles
-   * @param threshold NDVI threshold
+   * @param threshold              NDVI threshold
    * @param outputDir
-   *
    * @return
    */
-  def ndvi(implicit sc:SparkContext,
-                   tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
-                   threshold: Double,
-                   outputDir: String): Unit = {
+  def ndvi(implicit sc: SparkContext,
+           tileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
+           threshold: Double,
+           outputDir: String): Unit = {
     println("Task is running ...")
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
-    for(i <- 0 until outputDirArray.length - 1)
+    for (i <- 0 until outputDirArray.length - 1)
       sessionDir.append(outputDirArray(i) + "/")
 
     //transform tile array to tile rdd
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
 
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -350,15 +345,15 @@ object NDVI {
       }
 
     //group by TemporalKey to get a extent-series RDD, i.e. RDD[(time, Iterable[(SpaceTimeKey,Tile)])]
-    val temporalGroupRdd:RDD[(Long, Iterable[(SpaceTimeKey,Tile)])] = NDVIRdd.groupBy(_._1.instant)
+    val temporalGroupRdd: RDD[(Long, Iterable[(SpaceTimeKey, Tile)])] = NDVIRdd.groupBy(_._1.instant)
 
     //stitch extent-series tiles of each time instant to pngs
-    temporalGroupRdd.foreach{x =>
+    temporalGroupRdd.foreach { x =>
       val metadata = srcMetadata
       val layout = metadata.layout
       val crs = metadata.crs
       val instant = x._1
-      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele=>(ele._1.spatialKey, ele._2))
+      val tileLayerArray: Array[(SpatialKey, Tile)] = x._2.toArray.map(ele => (ele._1.spatialKey, ele._2))
       val stitched: Raster[Tile] = TileUtil.stitch(tileLayerArray, layout)
 
       val sdf = new SimpleDateFormat("yyyy_MM_dd")
@@ -391,10 +386,8 @@ object NDVI {
       val scpPngCommand = "scp " + outputPath + " geocube@gisweb1:" + outputDir
 
       val outputMetaPath = executorOutputDir + "NDVI_" + instantRet + ".json"
-      val objectMapper =new ObjectMapper()
+      val objectMapper = new ObjectMapper()
       val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
       node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("time", instantRet)
@@ -415,7 +408,6 @@ object NDVI {
    * @param redBandTile Red band Tile
    * @param nirBandTile Nir band Tile
    * @param threshold
-   *
    * @return a ndvi tile of DoubleConstantNoDataCellType
    */
   def ndviTile(redBandTile: Tile, nirBandTile: Tile, threshold: Double): Tile = {
@@ -427,10 +419,10 @@ object NDVI {
 
     //calculate ndvi tile
     val ndviTile = Divide(
-      Subtract( doubleNirBandTile, doubleRedBandTile ),
-      Add( doubleNirBandTile, doubleRedBandTile) )
+      Subtract(doubleNirBandTile, doubleRedBandTile),
+      Add(doubleNirBandTile, doubleRedBandTile))
 
-    ndviTile.mapDouble(pixel=>{
+    ndviTile.mapDouble(pixel => {
       if (pixel > threshold) 255.0
       else if (pixel >= -1) 0.0
       else Double.NaN
@@ -485,7 +477,7 @@ object NDVI {
     val startTime = args(3) + " 00:00:00.000"
     val endTime = args(4) + " 00:00:00.000"
     val outputDir = args(5)
-    println("rasterProductName: " + rasterProductNames.foreach(x=>print(x + "|")))
+    println("rasterProductName: " + rasterProductNames.foreach(x => print(x + "|")))
     println("extent: " + (extent(0), extent(1), extent(2), extent(3)))
     println("time: " + (startTime, endTime))
 
@@ -505,7 +497,7 @@ object NDVI {
     queryParams.setTime(startTime, endTime)
     queryParams.setMeasurements(Array("Red", "Near-Infrared")) //该条件为NDVI分析固定条件
     //queryParams.setLevel("4000") //default 4000 in this version
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) = DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
     val queryEnd = System.currentTimeMillis()
     //ndvi
     val analysisBegin = System.currentTimeMillis()

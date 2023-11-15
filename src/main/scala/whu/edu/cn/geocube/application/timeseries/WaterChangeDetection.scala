@@ -6,12 +6,13 @@ import geotrellis.raster._
 import geotrellis.spark.{TileLayerRDD, _}
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.render.{ColorRamp, Exact, GreaterThanOrEqualTo, RGB}
+
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, UUID}
-
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot, localHtmlRoot}
 
 import scala.collection.mutable.ArrayBuffer
 import sys.process._
@@ -20,13 +21,12 @@ import whu.edu.cn.geocube.core.cube.raster.RasterRDD
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.{DistributedQueryRasterTiles, QueryRasterTiles}
 import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
-import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.geocube.view.Info
 
 /**
  * Detect water change between two instants
  */
-object WaterChangeDetection{
+object WaterChangeDetection {
   /**
    * Detect water change between two instants,
    * used in Jupyter Notebook.
@@ -36,14 +36,13 @@ object WaterChangeDetection{
    * tiles of two instants.
    *
    * @param tileLayerRddWithMeta a rdd of raster tiles
-   *
    * @return results info
    */
-  def waterChangeDetection(tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
+  def waterChangeDetection(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
     println("Task is running ...")
-    val tranTileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
+    val tranTileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
     val srcMetadata = tranTileLayerRddWithMeta._2.tileLayerMetadata
     val results = new ArrayBuffer[Info]()
 
@@ -55,9 +54,9 @@ object WaterChangeDetection{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -114,11 +113,11 @@ object WaterChangeDetection{
           strict = false
         )
       )
-    stitched.tile.renderPng(colorMap).write(GcConstant.localHtmlRoot + uuid + "_water_change.png")
+    stitched.tile.renderPng(colorMap).write(localHtmlRoot + uuid + "_water_change.png")
 
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_water_change.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_water_change.TIF"
     GeoTiff(stitched, srcMetadata.crs).write(outputTiffPath)
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_water_change_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_water_change_thematic.png"
     val stdout = new StringBuilder
     val stderr = new StringBuilder
     Seq("/home/geocube/qgis/run.sh", "-t", "Water_change", "-r", s"$outputTiffPath", "-o", s"$outputThematicPngPath") ! ProcessLogger(stdout append _, stderr append _)
@@ -135,19 +134,18 @@ object WaterChangeDetection{
    * which contains Green and Near-Infrared band
    * tiles of two instants.
    *
-   * @param sc a SparkContext
+   * @param sc                     a SparkContext
    * @param tileLayerArrayWithMeta an array of raster tiles
-   *
    * @return results info
    */
-  def waterChangeDetection(implicit sc:SparkContext, tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)], RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
+  def waterChangeDetection(implicit sc: SparkContext, tileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): Array[Info] = {
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Task is submitted")
     println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- Task is running ...")
     val analysisBegin = System.currentTimeMillis()
 
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
     val results = new ArrayBuffer[Info]()
 
@@ -159,9 +157,9 @@ object WaterChangeDetection{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -219,11 +217,11 @@ object WaterChangeDetection{
           strict = false
         )
       )
-    stitched.tile.renderPng(colorMap).write(GcConstant.localHtmlRoot + uuid + "_water_change.png")
+    stitched.tile.renderPng(colorMap).write(localHtmlRoot + uuid + "_water_change.png")
 
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_water_change.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_water_change.TIF"
     GeoTiff(stitched, srcMetadata.crs).write(outputTiffPath)
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_water_change_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_water_change_thematic.png"
     val stdout = new StringBuilder
     val stderr = new StringBuilder
     Seq("/home/geocube/qgis/run.sh", "-t", "Water_change", "-r", s"$outputTiffPath", "-o", s"$outputThematicPngPath") ! ProcessLogger(stdout append _, stderr append _)
@@ -247,17 +245,17 @@ object WaterChangeDetection{
    * @param tileLayerRddWithMeta a rdd of raster tiles
    * @param outputDir
    */
-  def waterChangeDetection(tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+  def waterChangeDetection(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
                            outputDir: String): Unit = {
     println("Task is running ...")
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
-    for(i <- 0 until outputDirArray.length - 1)
+    for (i <- 0 until outputDirArray.length - 1)
       sessionDir.append(outputDirArray(i) + "/")
 
-    val tranTileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (tileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
+    val tranTileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (tileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2))), tileLayerRddWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tranTileLayerRddWithMeta._1
     val srcMetadata = tranTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -268,9 +266,9 @@ object WaterChangeDetection{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -340,10 +338,8 @@ object WaterChangeDetection{
     stitched.tile.renderPng(colorMap).write(outputPath)
 
     val outputMetaPath = executorOutputDir + "WaterChangeDetection.json"
-    val objectMapper =new ObjectMapper()
+    val objectMapper = new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -361,22 +357,22 @@ object WaterChangeDetection{
    * which contains Green and Near-Infrared band
    * tiles of two instants.
    *
-   * @param sc a SparkContext
+   * @param sc                     a SparkContext
    * @param tileLayerArrayWithMeta an array of raster tiles
    * @param outputDir
    */
   def waterChangeDetection(implicit sc: SparkContext,
-                           tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey]),
+                           tileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
                            outputDir: String): Unit = {
     println("Task is running ...")
     val outputDirArray = outputDir.split("/")
     val sessionDir = new StringBuffer()
-    for(i <- 0 until outputDirArray.length - 1)
+    for (i <- 0 until outputDirArray.length - 1)
       sessionDir.append(outputDirArray(i) + "/")
 
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(tileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
-    val spatialTemporalBandRdd:RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeKey, (String, Tile))], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(tileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, (x._1.measurementName, x._2)))), tileLayerArrayWithMeta._2)
+    val spatialTemporalBandRdd: RDD[(SpaceTimeKey, (String, Tile))] = tileLayerRddWithMeta._1
     val srcMetadata = tileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpaceTimeKey to get a band-series RDD, i.e., RDD[(SpaceTimeKey, Iterable((bandname, Tile)))],
@@ -387,9 +383,9 @@ object WaterChangeDetection{
         val spaceTimeKey = x._1
         val bandTileMap = x._2.toMap
         val (greenBandTile, nirBandTile) = (bandTileMap.get("Green"), bandTileMap.get("Near-Infrared"))
-        if(greenBandTile == None || nirBandTile == None)
+        if (greenBandTile == None || nirBandTile == None)
           throw new RuntimeException("There is no Green band or Nir band")
-        val ndwi:Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
+        val ndwi: Tile = NDWI.ndwiTile(greenBandTile.get, nirBandTile.get, 0.01)
         (spaceTimeKey, ndwi)
       }
 
@@ -459,10 +455,9 @@ object WaterChangeDetection{
     stitched.tile.renderPng(colorMap).write(outputPath)
 
     val outputMetaPath = executorOutputDir + "WaterChangeDetection.json"
-    val objectMapper =new ObjectMapper()
+    val objectMapper = new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
+
     node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
     node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
     node.put("extent", extentRet.xmin + "," + extentRet.ymin + "," + extentRet.xmax + "," + extentRet.ymax)
@@ -475,15 +470,14 @@ object WaterChangeDetection{
    * Using RasterRDD as input, which contains ndwi tiles of two instants.
    *
    * @param ndwiRasterRdd a RasterRdd of ndwi tiles
-   *
    * @return a rdd of water change detection result
    */
-  def waterChangeDetectionUsingNDWIProduct(ndwiRasterRdd:RasterRDD): TileLayerRDD[SpatialKey] = {
+  def waterChangeDetectionUsingNDWIProduct(ndwiRasterRdd: RasterRDD): TileLayerRDD[SpatialKey] = {
     //println("Task is running ...")
-    val ndwiTileLayerRddWithMeta:(RDD[(SpaceTimeKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (ndwiRasterRdd.map(x=>(x._1.spaceTimeKey, x._2)), ndwiRasterRdd.rasterTileLayerMetadata)
+    val ndwiTileLayerRddWithMeta: (RDD[(SpaceTimeKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (ndwiRasterRdd.map(x => (x._1.spaceTimeKey, x._2)), ndwiRasterRdd.rasterTileLayerMetadata)
 
-    val NDWIRdd:RDD[(SpaceTimeKey, Tile)] = ndwiTileLayerRddWithMeta._1
+    val NDWIRdd: RDD[(SpaceTimeKey, Tile)] = ndwiTileLayerRddWithMeta._1
     val srcMetadata: TileLayerMetadata[SpaceTimeKey] = ndwiTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpatialKey to get a time-series RDD, i.e. RDD[(SpatialKey, Iterable[(SpaceTimeKey,Tile)])],
@@ -532,15 +526,14 @@ object WaterChangeDetection{
    * which contains ndwi tiles of two instants.
    *
    * @param ndwiTileLayerRddWithMeta a rdd of ndwi tiles
-   *
    * @return a rdd of water change detection result
    */
-  def waterChangeDetectionUsingNDWIProduct(ndwiTileLayerRddWithMeta:(RDD[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey])): TileLayerRDD[SpatialKey] = {
+  def waterChangeDetectionUsingNDWIProduct(ndwiTileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): TileLayerRDD[SpatialKey] = {
     println("Task is running ...")
-    val tranNdwiTileLayerRddWithMeta:(RDD[(SpaceTimeKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (ndwiTileLayerRddWithMeta._1.map(x=>(x._1.spaceTimeKey, x._2)), ndwiTileLayerRddWithMeta._2)
+    val tranNdwiTileLayerRddWithMeta: (RDD[(SpaceTimeKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (ndwiTileLayerRddWithMeta._1.map(x => (x._1.spaceTimeKey, x._2)), ndwiTileLayerRddWithMeta._2)
 
-    val NDWIRdd:RDD[(SpaceTimeKey, Tile)] = tranNdwiTileLayerRddWithMeta._1
+    val NDWIRdd: RDD[(SpaceTimeKey, Tile)] = tranNdwiTileLayerRddWithMeta._1
     val srcMetadata: TileLayerMetadata[SpaceTimeKey] = tranNdwiTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpatialKey to get a time-series RDD, i.e. RDD[(SpatialKey, Iterable[(SpaceTimeKey,Tile)])],
@@ -583,24 +576,23 @@ object WaterChangeDetection{
   }
 
 
-
   /**
    * Detect water change between two instants.
    *
    * Using Array[(SpaceTimeBandKey,Tile)] as input,
    * which contains ndwi tiles of two instants.
    *
-   * @param sc A SparkContext
+   * @param sc                         A SparkContext
    * @param ndwiTileLayerArrayWithMeta an array of raster tiles
    *
    */
-  def waterChangeDetectionUsingNDWIProduct(implicit sc:SparkContext,
-                                           ndwiTileLayerArrayWithMeta:(Array[(SpaceTimeBandKey,Tile)],RasterTileLayerMetadata[SpaceTimeKey])): TileLayerRDD[SpatialKey] = {
+  def waterChangeDetectionUsingNDWIProduct(implicit sc: SparkContext,
+                                           ndwiTileLayerArrayWithMeta: (Array[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey])): TileLayerRDD[SpatialKey] = {
     //println("Task is running ...")
-    val ndwiTileLayerRddWithMeta:(RDD[(SpaceTimeKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
-      (sc.parallelize(ndwiTileLayerArrayWithMeta._1.map(x=>(x._1.spaceTimeKey, x._2))), ndwiTileLayerArrayWithMeta._2)
+    val ndwiTileLayerRddWithMeta: (RDD[(SpaceTimeKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) =
+      (sc.parallelize(ndwiTileLayerArrayWithMeta._1.map(x => (x._1.spaceTimeKey, x._2))), ndwiTileLayerArrayWithMeta._2)
 
-    val NDWIRdd:RDD[(SpaceTimeKey, Tile)] = ndwiTileLayerRddWithMeta._1
+    val NDWIRdd: RDD[(SpaceTimeKey, Tile)] = ndwiTileLayerRddWithMeta._1
     val srcMetadata: TileLayerMetadata[SpaceTimeKey] = ndwiTileLayerRddWithMeta._2.tileLayerMetadata
 
     //group by SpatialKey to get a time-series RDD, i.e. RDD[(SpatialKey, Iterable[(SpaceTimeKey,Tile)])],
@@ -642,7 +634,7 @@ object WaterChangeDetection{
     resultsRdd
   }
 
-  def main(args:Array[String]):Unit = {
+  def main(args: Array[String]): Unit = {
     /**
      * Using raster tile array as input
      */
@@ -706,7 +698,7 @@ object WaterChangeDetection{
     val previousTime = args(3) + " 00:00:00.000"
     val nextTime = args(4) + " 00:00:00.000"
     val outputDir = args(5)
-    println("rasterProductName: " + rasterProductNames.foreach(x=>print(x + "|")))
+    println("rasterProductName: " + rasterProductNames.foreach(x => print(x + "|")))
     println("extent: " + (extent(0), extent(1), extent(2), extent(3)))
     println("time: " + (previousTime, nextTime))
 
@@ -741,7 +733,7 @@ object WaterChangeDetection{
     queryParams.setNextTime(nextStart, nextEnd)
     queryParams.setMeasurements(Array("Green", "Near-Infrared"))
     //queryParams.setLevel("4000") //default 4000 in this version
-    val tileLayerRddWithMeta:(RDD[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) = DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
+    val tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = DistributedQueryRasterTiles.getRasterTileRDD(sc, queryParams)
     val queryEnd = System.currentTimeMillis()
 
     //water change detection
