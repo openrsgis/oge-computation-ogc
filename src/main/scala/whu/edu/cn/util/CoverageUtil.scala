@@ -101,7 +101,7 @@ object CoverageUtil {
           //替换metadata，并reproject
           coverage_to_be_rejected = Coverage.reproject((coverage_to_be_rejected._1,tileLayerMetadata_r),crs,resoMin)
           //添加进coverage_not_reproject
-          coverage_not_reproject._1.union(coverage_to_be_rejected._1)
+          coverage_not_reproject = (addBandstoRDD(coverage_not_reproject,coverage_to_be_rejected),tileLayerMetadata)
         }
       }
       coverage = coverage_not_reproject
@@ -114,6 +114,16 @@ object CoverageUtil {
       coverage = toInt16(coverage)
 
     removeZeroFromCoverage(coverage)
+  }
+
+  def addBandstoRDD(coverage1:RDD[(SpaceTimeBandKey, MultibandTile)],coverage2:RDD[(SpaceTimeBandKey, MultibandTile)]):RDD[(SpaceTimeBandKey, MultibandTile)]={
+    val c2 = coverage2.collect().map( t=>{
+      (t._1.spaceTimeKey.spatialKey,(t._1.measurementName,t._2))
+    }).toMap
+    coverage1.map(c=>{
+      val res = c2(c._1.spaceTimeKey.spatialKey)
+      (SpaceTimeBandKey(c._1.spaceTimeKey,c._1.measurementName.union(res._1)),MultibandTile(c._2.bands.union(res._2.bands)))
+    })
   }
 
   def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
