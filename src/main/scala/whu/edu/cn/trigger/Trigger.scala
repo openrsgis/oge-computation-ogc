@@ -1,5 +1,12 @@
 package whu.edu.cn.trigger
 
+
+import whu.edu.cn.algorithms.SpatialStats.GWModels
+import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
+import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
+import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
