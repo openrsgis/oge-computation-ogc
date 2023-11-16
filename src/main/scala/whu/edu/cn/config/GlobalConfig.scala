@@ -62,7 +62,7 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://125.220.153.22:8085/oge-dag-22"
+    var DAG_ROOT_URL: String = "http://10.101.240.21:8085/oge-dag-22" //"http://125.220.153.22:8085/oge-dag-22"
 
   }
 
@@ -87,7 +87,7 @@ object GlobalConfig {
 
   object PostgreSqlConf {
     // PostgreSQL 基础配置
-    var POSTGRESQL_URL: String = "jdbc:postgresql://125.220.153.23:30865/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
+    var POSTGRESQL_URL: String = "jdbc:postgresql://10.101.240.21:30865/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
     var POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
     var POSTGRESQL_USER: String = "oge"
     var POSTGRESQL_PWD: String = "ypfamily608"
