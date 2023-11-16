@@ -113,7 +113,7 @@ object GlobalConfig {
     final var jsonAlgorithms = "/home/ogecal0/storages/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/home/ogecal0/storages/temp/" //各类临时文件的地址
     final var tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
-    final var ontheFlyStorage = "/home/ogecal0/storages/on-the-fly" //tms瓦片存储地址
+    final var ontheFlyStorage = "/home/ogecal0/storages/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/home/ogecal0/storages/algorithmData/" //geojson临时存储地址
     var platform = "local"
   }
