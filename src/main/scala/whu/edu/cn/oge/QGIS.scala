@@ -12,7 +12,7 @@ import whu.edu.cn.trigger.Trigger.{dagId, runMain, workTaskJson}
 import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
 import whu.edu.cn.oge.Feature._
-
+import whu.edu.cn.config.GlobalConfig
 import scala.collection.mutable
 import scala.collection.mutable.Map
 
@@ -23,7 +23,12 @@ object QGIS {
       .setAppName("query")
     val sc = new SparkContext(conf)
   }
-
+  val algorithmData = GlobalConfig.QGISConf.QGIS_DATA
+  val algorithmCode= GlobalConfig.QGISConf.QGIS_ALGORITHMCODE
+  val host = GlobalConfig.QGISConf.QGIS_HOST
+  val userName = GlobalConfig.QGISConf.QGIS_USERNAME
+  val password = GlobalConfig.QGISConf.QGIS_PASSWORD
+  val port = GlobalConfig.QGISConf.QGIS_PORT
 
   /**
    *
@@ -41,15 +46,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeAspect_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/nativeAspect_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"nativeAspect_" + time + ".tif"
+    val writePath = algorithmData+"nativeAspect_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_aspect.py --input "$outputTiffPath" --z-factor $zFactor --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_aspect.py --input "$outputTiffPath" --z-factor $zFactor --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -80,15 +85,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeSlope_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/nativeSlope_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"nativeSlope_" + time + ".tif"
+    val writePath = algorithmData+"nativeSlope_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_slope.py --input "$outputTiffPath" --z-factor "$zFactor" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_slope.py --input "$outputTiffPath" --z-factor "$zFactor" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -121,17 +126,17 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeRescaleRaster_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/nativeRescaleRaster_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"nativeRescaleRaster_" + time + ".tif"
+    val writePath = algorithmData+"nativeRescaleRaster_" + time + "_out.tif"
 
 
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_rescaleraster.py --input "$outputTiffPath" --minimum $minimum --maximum $maximum --band $band --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rescaleraster.py --input "$outputTiffPath" --minimum $minimum --maximum $maximum --band $band --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -159,15 +164,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeRuggednessIndex_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/nativeRuggednessIndex_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"nativeRuggednessIndex_" + time + ".tif"
+    val writePath = algorithmData+"nativeRuggednessIndex_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_ruggednessindex.py --input "$outputTiffPath" --z-factor $zFactor --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_ruggednessindex.py --input "$outputTiffPath" --z-factor $zFactor --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -197,15 +202,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeProjectPoints_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeProjectPoints_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeProjectPoints_" + time + ".shp"
+    val writePath = algorithmData+"nativeProjectPoints_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_projectpointcartesian.py --input "$outputTiffPath" --distance $distance --bearing $bearing --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_projectpointcartesian.py --input "$outputTiffPath" --distance $distance --bearing $bearing --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -238,15 +243,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeAddField_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeAddField_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeAddField_" + time + ".shp"
+    val writePath = algorithmData+"nativeAddField_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_addfieldtoattributestable.py --input "$outputTiffPath" --field-type "$fieldType" --field-precision $fieldPrecision --field-name "$fieldName" --field-length $fieldLength --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_addfieldtoattributestable.py --input "$outputTiffPath" --field-type "$fieldType" --field-precision $fieldPrecision --field-name "$fieldName" --field-length $fieldLength --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -276,15 +281,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeAddXYField_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeAddXYField_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeAddXYField_" + time + ".shp"
+    val writePath = algorithmData+"nativeAddXYField_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_addxyfields.py --input "$outputTiffPath" --crs "$crs" --prefix "$prefix" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_addxyfields.py --input "$outputTiffPath" --crs "$crs" --prefix "$prefix" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -328,15 +333,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeAffineTransform_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeAffineTransform_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeAffineTransform_" + time + ".shp"
+    val writePath = algorithmData+"nativeAffineTransform_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_affinetransform.py --input "$outputTiffPath" --scale-x $scaleX --scale-y $scaleY --scale-z $scaleY --rotation-z $rotationZ --scale-m $scaleM --delta-m $deltaM --delta-x $deltaX --delta-y $deltaY --delta-z $deltaZ --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_affinetransform.py --input "$outputTiffPath" --scale-x $scaleX --scale-y $scaleY --scale-z $scaleY --rotation-z $rotationZ --scale-m $scaleM --delta-m $deltaM --delta-x $deltaX --delta-y $deltaY --delta-z $deltaZ --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -362,15 +367,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeAntimeridianSplit_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeAntimeridianSplit_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeAntimeridianSplit_" + time + ".shp"
+    val writePath = algorithmData+"nativeAntimeridianSplit_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_antimeridiansplit.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_antimeridiansplit.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -405,15 +410,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeArrayOffsetLines_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeArrayOffsetLines_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeArrayOffsetLines_" + time + ".shp"
+    val writePath = algorithmData+"nativeArrayOffsetLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_arrayoffsetlines.py --input "$outputTiffPath" --segments $segments --join-style "$joinStyle" --offset $offset --count $count --miter-limit $miterLimit --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_arrayoffsetlines.py --input "$outputTiffPath" --segments $segments --join-style "$joinStyle" --offset $offset --count $count --miter-limit $miterLimit --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -449,15 +454,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeTranslatedFeatures_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeTranslatedFeatures_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeTranslatedFeatures_" + time + ".shp"
+    val writePath = algorithmData+"nativeTranslatedFeatures_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_arraytranslatedfeatures.py --input "$outputTiffPath" --count $count --delta-m $deltaM --delta-x $deltaX --delta-y $deltaY --delta-z $deltaZ --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_arraytranslatedfeatures.py --input "$outputTiffPath" --count $count --delta-m $deltaM --delta-x $deltaX --delta-y $deltaY --delta-z $deltaZ --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -486,15 +491,15 @@ object QGIS {
                              crs: String = "EPSG:4326 - WGS84")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeAssignProjection_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeAssignProjection_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeAssignProjection_" + time + ".shp"
+    val writePath = algorithmData+"nativeAssignProjection_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_assignprojection.py --input "$outputShpPath" --crs "$crs" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_assignprojection.py --input "$outputShpPath" --crs "$crs" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -527,15 +532,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeOffsetLine_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeOffsetLine_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeOffsetLine_" + time + ".shp"
+    val writePath = algorithmData+"nativeOffsetLine_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_offsetline.py --input "$outputTiffPath" --segments $segments --join-style "$joinStyle" --distance $distance --miter-limit $miterLimit --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_offsetline.py --input "$outputTiffPath" --segments $segments --join-style "$joinStyle" --distance $distance --miter-limit $miterLimit --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -567,15 +572,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativePointsAlongLines_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativePointsAlongLines_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativePointsAlongLines_" + time + ".shp"
+    val writePath = algorithmData+"nativePointsAlongLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_pointsalonglines.py --input "$outputTiffPath" --start-offset $startOffset --distance $distance --end-offset $endOffset --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_pointsalonglines.py --input "$outputTiffPath" --start-offset $startOffset --distance $distance --end-offset $endOffset --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -603,15 +608,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativePolygonize_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativePolygonize_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativePolygonize_" + time + ".shp"
+    val writePath = algorithmData+"nativePolygonize_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_polygonize.py --input "$outputTiffPath" --keep-fields "$keepFields" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_polygonize.py --input "$outputTiffPath" --keep-fields "$keepFields" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -637,15 +642,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativePolygonsToLines_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativePolygonsToLines_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativePolygonsToLines_" + time + ".shp"
+    val writePath = algorithmData+"nativePolygonsToLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_polygonstolines.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_polygonstolines.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -681,15 +686,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeRandomPointsInPolygons_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeRandomPointsInPolygons_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeRandomPointsInPolygons_" + time + ".shp"
+    val writePath = algorithmData+"nativeRandomPointsInPolygons_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_randompointsinpolygons.py --input "$outputTiffPath" --min-distance $minDistance --include-polygon-attributes "$includePolygonAttributes" --max-tries-per-point $maxTriesPerPoint --points-number $pointsNumber --min-distance-global $minDistanceGlobal --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_randompointsinpolygons.py --input "$outputTiffPath" --min-distance $minDistance --include-polygon-attributes "$includePolygonAttributes" --max-tries-per-point $maxTriesPerPoint --points-number $pointsNumber --min-distance-global $minDistanceGlobal --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -725,15 +730,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeRandomPointsOnLines_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeRandomPointsOnLines_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeRandomPointsOnLines_" + time + ".shp"
+    val writePath = algorithmData+"nativeRandomPointsOnLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_randompointsonlines.py --input "$outputTiffPath" --min-distance $minDistance --include-line-attributes "$includeLineAttributes" --max-tries-per-point $maxTriesPerPoint --points-number $pointsNumber --min-distance-global $minDistanceGlobal --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_randompointsonlines.py --input "$outputTiffPath" --min-distance $minDistance --include-line-attributes "$includeLineAttributes" --max-tries-per-point $maxTriesPerPoint --points-number $pointsNumber --min-distance-global $minDistanceGlobal --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -763,15 +768,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeRotateFeatures_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeRotateFeatures_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeRotateFeatures_" + time + ".shp"
+    val writePath = algorithmData+"nativeRotateFeatures_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_rotatefeatures.py --input "$outputTiffPath" --anchor "$anchor" --angle $angle --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rotatefeatures.py --input "$outputTiffPath" --anchor "$anchor" --angle $angle --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -801,15 +806,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeSimplify_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeSimplify_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeSimplify_" + time + ".shp"
+    val writePath = algorithmData+"nativeSimplify_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_simplifygeometries.py --input "$outputTiffPath" --method "$method" --tolerance $tolerance --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_simplifygeometries.py --input "$outputTiffPath" --method "$method" --tolerance $tolerance --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -841,15 +846,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeSmooth_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeSmooth_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeSmooth_" + time + ".shp"
+    val writePath = algorithmData+"nativeSmooth_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_smoothgeometry.py --input "$outputTiffPath" --max-angle $maxAngle --iterations $iterations --offset $offset --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_smoothgeometry.py --input "$outputTiffPath" --max-angle $maxAngle --iterations $iterations --offset $offset --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -875,15 +880,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeSwapXY_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeSwapXY_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeSwapXY_" + time + ".shp"
+    val writePath = algorithmData+"nativeSwapXY_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_swapxy.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_swapxy.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -915,15 +920,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/nativeTransect_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeTransect_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"nativeTransect_" + time + ".shp"
+    val writePath = algorithmData+"nativeTransect_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_transect.py --input "$outputTiffPath" --side "$side" --length $length --angle $angle --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_transect.py --input "$outputTiffPath" --side "$side" --length $length --angle $angle --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -956,14 +961,14 @@ object QGIS {
                               delta_m:Double=0.0):
   RDD[(String, (Geometry, Map[String, Any]))]={
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeTranslateGeometry_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeTranslateGeometry_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeTranslateGeometry_" + time + ".shp"
+    val writePath = algorithmData+"nativeTranslateGeometry_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_translategeometry.py --input "$outputShpPath" --delta-x $delta_x --delta-y $delta_y --delta-z $delta_z --delta-m $delta_m --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_translategeometry.py --input "$outputShpPath" --delta-x $delta_x --delta-y $delta_y --delta-z $delta_z --delta-m $delta_m --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -988,14 +993,14 @@ object QGIS {
                                 geometryType :String="0"):
   RDD[(String, (Geometry, Map[String, Any]))]={
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeConvertGeometryType_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeConvertGeometryType_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeConvertGeometryType_" + time + ".shp"
+    val writePath = algorithmData+"nativeConvertGeometryType_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_convertgeometrytype.py --input "$outputShpPath" --type $geometryType --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_convertgeometrytype.py --input "$outputShpPath" --type $geometryType --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1018,14 +1023,14 @@ object QGIS {
                             input:RDD[(String,(Geometry,Map[String,Any]))])
   :RDD[(String,(Geometry,Map[String,Any]))]={
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeLinesToPolygons_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeLinesToPolygons_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeLinesToPolygons_" + time + ".shp"
+    val writePath = algorithmData+"nativeLinesToPolygons_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_linestopolygons.py --input "$outputShpPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_linestopolygons.py --input "$outputShpPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1054,14 +1059,14 @@ object QGIS {
                                horizontal:String="False")
   :RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativePointsDisplacement_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativePointsDisplacement_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativePointsDisplacement_" + time + ".shp"
+    val writePath = algorithmData+"nativePointsDisplacement_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_pointsdisplacement.py --input "$outputShpPath" --proximity $proximity --distance $distance --horizontal $horizontal --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_pointsdisplacement.py --input "$outputShpPath" --proximity $proximity --distance $distance --horizontal $horizontal --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1088,14 +1093,14 @@ object QGIS {
                                   minDistance: Double=0.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativaRandomPointsAlongLine_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativaRandomPointsAlongLine_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativaRandomPointsAlongLine_" + time + ".shp"
+    val writePath = algorithmData+"nativaRandomPointsAlongLine_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_randompointsalongline.py --input "$outputShpPath" --points-number $pointsNumber --min-distance $minDistance --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_randompointsalongline.py --input "$outputShpPath" --points-number $pointsNumber --min-distance $minDistance --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1122,14 +1127,14 @@ object QGIS {
                                       minDistance: Double=0.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeRandomPointsInLayerBounds_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeRandomPointsInLayerBounds_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeRandomPointsInLayerBounds_" + time + ".shp"
+    val writePath = algorithmData+"nativeRandomPointsInLayerBounds_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_randompointsinlayerbounds.py --input "$outputShpPath" --points-number $pointsNumber --min-distance $minDistance --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_randompointsinlayerbounds.py --input "$outputShpPath" --points-number $pointsNumber --min-distance $minDistance --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1161,16 +1166,16 @@ object QGIS {
                            applySymbology: String="True")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath1 = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + ".shp"
-    val outputShpPath2 = "/mnt/storage/algorithmData/referenceLayer_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeAngleToNearest_" + time + "_out.shp"
+    val outputShpPath1 = algorithmData+"nativeAngleToNearest_" + time + ".shp"
+    val outputShpPath2 = algorithmData+"referenceLayer_" + time + ".shp"
+    val writePath = algorithmData+"nativeAngleToNearest_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath1)
     saveFeatureRDDToShp(referenceLayer, outputShpPath2)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_angletonearest.py --input "$outputShpPath1" --max-distance $maxDistance --field-name "$fieldName" --apply-symbology "$applySymbology"  --reference-layer "$outputShpPath2" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_angletonearest.py --input "$outputShpPath1" --max-distance $maxDistance --field-name "$fieldName" --apply-symbology "$applySymbology"  --reference-layer "$outputShpPath2" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1193,14 +1198,14 @@ object QGIS {
                      input: RDD[(String, (Geometry, Map[String, Any]))])
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeBoundary_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeBoundary_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeBoundary_" + time + ".shp"
+    val writePath = algorithmData+"nativeBoundary_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_boundary.py --input "$outputShpPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_boundary.py --input "$outputShpPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1225,14 +1230,14 @@ object QGIS {
                                 segments: Int=72)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeMiniEnclosingCircle_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeMiniEnclosingCircle_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeMiniEnclosingCircle_" + time + ".shp"
+    val writePath = algorithmData+"nativeMiniEnclosingCircle_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_minimumenclosingcircle.py --input "$outputShpPath" --segments $segments --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_minimumenclosingcircle.py --input "$outputShpPath" --segments $segments --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1259,14 +1264,14 @@ object QGIS {
                                     distance: Double=1.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeMultiRingConstantBuffer_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeMultiRingConstantBuffer_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeMultiRingConstantBuffer_" + time + ".shp"
+    val writePath = algorithmData+"nativeMultiRingConstantBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_multiringconstantbuffer.py --input "$outputShpPath" --rings $rings --distance $distance --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_multiringconstantbuffer.py --input "$outputShpPath" --rings $rings --distance $distance --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1289,14 +1294,14 @@ object QGIS {
                                        input: RDD[(String, (Geometry, Map[String, Any]))])
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativeOrientedMinimumBoundingBox_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeOrientedMinimumBoundingBox_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeOrientedMinimumBoundingBox_" + time + ".shp"
+    val writePath = algorithmData+"nativeOrientedMinimumBoundingBox_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_orientedminimumboundingbox.py --input "$outputShpPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_orientedminimumboundingbox.py --input "$outputShpPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1322,14 +1327,14 @@ object QGIS {
                            allParts: String)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativePointOnSurface_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativePointOnSurface_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativePointOnSurface_" + time + ".shp"
+    val writePath = algorithmData+"nativePointOnSurface_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_pointonsurface.py --input "$outputShpPath" --all-parts $allParts --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_pointonsurface.py --input "$outputShpPath" --all-parts $allParts --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1354,14 +1359,14 @@ object QGIS {
                                   tolerance: Double=1.0)
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/nativePoleOfInaccessibility_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativePoleOfInaccessibility_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativePoleOfInaccessibility_" + time + ".shp"
+    val writePath = algorithmData+"nativePoleOfInaccessibility_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_poleofinaccessibility.py --input "$outputShpPath" --tolerance $tolerance --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_poleofinaccessibility.py --input "$outputShpPath" --tolerance $tolerance --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1397,8 +1402,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/nativeRectangelsOvalsDiamonds_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeRectangelsOvalsDiamonds_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeRectangelsOvalsDiamonds_" + time + ".shp"
+    val writePath = algorithmData+"nativeRectangelsOvalsDiamonds_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val shapeInput: String = Map(
@@ -1408,9 +1413,9 @@ object QGIS {
     ).getOrElse(shape, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_rectanglesovalsdiamonds.py --input "$outputShpPath" --rotation $rotation --shape "$shapeInput" --segments $segments --width $width --height $height --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rectanglesovalsdiamonds.py --input "$outputShpPath" --rotation $rotation --shape "$shapeInput" --segments $segments --width $width --height $height --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1446,8 +1451,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/nativeSingleSidedBuffer_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeSingleSidedBuffer_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeSingleSidedBuffer_" + time + ".shp"
+    val writePath = algorithmData+"nativeSingleSidedBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val sideInput: String = Map(
@@ -1462,9 +1467,9 @@ object QGIS {
     ).getOrElse(joinStyle, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_singlesidedbuffer.py --input "$outputShpPath" --side "$sideInput" --distance $distance --segments $segments --join-style "$joinStyleInput" --miter-limit $miterLimit --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_singlesidedbuffer.py --input "$outputShpPath" --side "$sideInput" --distance $distance --segments $segments --join-style "$joinStyleInput" --miter-limit $miterLimit --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1496,15 +1501,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/nativeTaperedBuffer_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeTaperedBuffer_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeTaperedBuffer_" + time + ".shp"
+    val writePath = algorithmData+"nativeTaperedBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --start-width $startWidth --end-width $endWidth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_taperedbuffer.py --input "$outputShpPath" --segments $segments --start-width $startWidth --end-width $endWidth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1538,15 +1543,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/nativeWedgeBuffers_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/nativeWedgeBuffers_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"nativeWedgeBuffers_" + time + ".shp"
+    val writePath = algorithmData+"nativeWedgeBuffers_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/native_wedgebuffers.py --input "$outputShpPath" --inner-radius $innerRadius --outer-radius $outerRadius --width $width --azimuth $azimuth --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_wedgebuffers.py --input "$outputShpPath" --inner-radius $innerRadius --outer-radius $outerRadius --width $width --azimuth $azimuth --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1578,15 +1583,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/qgisConcaveHull_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/qgisConcaveHull_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"qgisConcaveHull_" + time + ".shp"
+    val writePath = algorithmData+"qgisConcaveHull_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_concavehull.py --input "$outputShpPath" --no-multigeometry "$noMultigeometry" --holes "$holes" --alpha $alpha --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_concavehull.py --input "$outputShpPath" --no-multigeometry "$noMultigeometry" --holes "$holes" --alpha $alpha --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1612,15 +1617,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/qgisDelaunayTriangulation_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/qgisDelaunayTriangulation_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"qgisDelaunayTriangulation_" + time + ".shp"
+    val writePath = algorithmData+"qgisDelaunayTriangulation_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_delaunaytriangulation.py --input "$outputShpPath" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_delaunaytriangulation.py --input "$outputShpPath" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1648,15 +1653,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/qgisVoronoiPolygons_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/qgisVoronoiPolygons_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"qgisVoronoiPolygons_" + time + ".shp"
+    val writePath = algorithmData+"qgisVoronoiPolygons_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/qgis_voronoipolygons.py --input "$outputShpPath" --buffer $buffer --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/qgis_voronoipolygons.py --input "$outputShpPath" --buffer $buffer --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1695,16 +1700,16 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalAspect_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalAspectlzy_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalAspect_" + time + ".tif"
+    val writePath = algorithmData+"gdalAspectlzy_" + time + "_out.tif"
 
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_aspect.py --input "$outputTiffPath" --band $band --trig-angle "$trigAngle" --zero-flat "$zeroFlat" --compute-edges "$computeEdges" --zevenbergen "$zevenbergen" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_aspect.py --input "$outputTiffPath" --band $band --trig-angle "$trigAngle" --zero-flat "$zeroFlat" --compute-edges "$computeEdges" --zevenbergen "$zevenbergen" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1749,14 +1754,14 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalContour_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalContour_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"gdalContour_" + time + ".tif"
+    val writePath = algorithmData+"gdalContour_" + time + "_out.shp"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour.py --input "$outputTiffPath" --interval $interval --ignore-nodata "$ignoreNodata" --extra "$extra" --create-3d "$create3D" --nodata "$nodata" --offset $offset --band $band --field-name "$fieldName" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_contour.py --input "$outputTiffPath" --interval $interval --ignore-nodata "$ignoreNodata" --extra "$extra" --create-3d "$create3D" --nodata "$nodata" --offset $offset --band $band --field-name "$fieldName" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1803,14 +1808,14 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalContourPolygon_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalContourPolygon_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"gdalContourPolygon_" + time + ".tif"
+    val writePath = algorithmData+"gdalContourPolygon_" + time + "_out.shp"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_contour_polygon.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra "$extra" --create-3d $create3D --nodata "$nodata" --offset $offset --band $band --field-name-max $fieldNameMax --field-name-min $fieldNameMin --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_contour_polygon.py --input "$outputTiffPath" --interval $interval --ignore-nodata $ignoreNodata --extra "$extra" --create-3d $create3D --nodata "$nodata" --offset $offset --band $band --field-name-max $fieldNameMax --field-name-min $fieldNameMin --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1855,15 +1860,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalFillNodata_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalFillNodata_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalFillNodata_" + time + ".tif"
+    val writePath = algorithmData+"gdalFillNodata_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_fillnodata.py --input "$outputTiffPath" --distance $distance --iterations $iterations --extra "$extra" --mask-layer "$maskLayer" --no-mask $noMask --band $band --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_fillnodata.py --input "$outputTiffPath" --distance $distance --iterations $iterations --extra "$extra" --mask-layer "$maskLayer" --no-mask $noMask --band $band --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1907,8 +1912,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalGridAverage_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalGridAverage_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalGridAverage_" + time + ".shp"
+    val writePath = algorithmData+"gdalGridAverage_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -1928,9 +1933,9 @@ object QGIS {
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_gridaverage.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1978,8 +1983,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalGridDataMetrics_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalGridDataMetrics_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalGridDataMetrics_" + time + ".shp"
+    val writePath = algorithmData+"gdalGridDataMetrics_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -2009,9 +2014,9 @@ object QGIS {
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --metric $metricInput --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_griddatametrics.py --input "$outputShpPath" --min-points $minPoints --extra "$extra" --metric $metricInput --nodata $nodata --angle $angle --z-field "$zField" --data-type $dataTypeInput --radius-2 $radius2 --radius-1 $radius1 --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2061,8 +2066,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalGridInverseDistance_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalGridInverseDistance_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalGridInverseDistance_" + time + ".shp"
+    val writePath = algorithmData+"gdalGridInverseDistance_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -2082,9 +2087,9 @@ object QGIS {
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistance.py --input "$outputShpPath" --extra "$extra" --power $power --angle $angle --radius-2 $radius2 --radius-1 $radius1 --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field "$zField" --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_gridinversedistance.py --input "$outputShpPath" --extra "$extra" --power $power --angle $angle --radius-2 $radius2 --radius-1 $radius1 --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field "$zField" --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2131,8 +2136,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalGridInverseDistanceNearestNeighbor_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalGridInverseDistanceNearestNeighbor_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalGridInverseDistanceNearestNeighbor_" + time + ".shp"
+    val writePath = algorithmData+"gdalGridInverseDistanceNearestNeighbor_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -2152,9 +2157,9 @@ object QGIS {
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridinversedistancenearestneighbor.py --input "$outputShpPath" --extra "$extra" --power $power --radius $radius --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_gridinversedistancenearestneighbor.py --input "$outputShpPath" --extra "$extra" --power $power --radius $radius --smoothing $smoothing --max-points $maxPoints --min-points $minPoints --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2196,8 +2201,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalGridLinear_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalGridLinear_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalGridLinear_" + time + ".shp"
+    val writePath = algorithmData+"gdalGridLinear_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val dataTypeInput: String = Map(
@@ -2215,9 +2220,9 @@ object QGIS {
     ).getOrElse(dataType, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridlinear.py --input "$outputShpPath" --extra "$extra" --radius $radius --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_gridlinear.py --input "$outputShpPath" --extra "$extra" --radius $radius --nodata $nodata --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2262,8 +2267,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalGridNearestNeighbor_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalGridNearestNeighbor_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalGridNearestNeighbor_" + time + ".shp"
+    val writePath = algorithmData+"gdalGridNearestNeighbor_" + time + "_out.tif"
     saveFeatureRDDToShp(input, outputShpPath)
 
     val dataTypeInput: String = Map(
@@ -2281,9 +2286,9 @@ object QGIS {
     ).getOrElse(dataType, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra "$extra" --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_gridnearestneighbor.py --input "$outputShpPath" --extra "$extra" --nodata $nodata --angle $angle --radius-1 $radius1 --radius-2 $radius2 --z-field "$zField" --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2333,15 +2338,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalHillShade_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalHillShade_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalHillShade_" + time + ".tif"
+    val writePath = algorithmData+"gdalHillShade_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_hillshade.py --input "$outputTiffPath" --combined $combined --compute-edges $computeEdges --extra "$extra" --band $band --altitude $altitude --zevenbergen $zevenbergenThorne --z-factor $zFactor --multidirectional $multidirectional --scale $scale --azimuth $azimuth --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_hillshade.py --input "$outputTiffPath" --combined $combined --compute-edges $computeEdges --extra "$extra" --band $band --altitude $altitude --zevenbergen $zevenbergenThorne --z-factor $zFactor --multidirectional $multidirectional --scale $scale --azimuth $azimuth --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2375,15 +2380,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalNearBlack_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalNearBlack_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalNearBlack_" + time + ".tif"
+    val writePath = algorithmData+"gdalNearBlack_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_nearblack.py --input "$outputTiffPath" --white $white --extra "$extra" --near $near --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_nearblack.py --input "$outputTiffPath" --white $white --extra "$extra" --near $near --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2428,8 +2433,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalProximity_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalProximity_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalProximity_" + time + ".tif"
+    val writePath = algorithmData+"gdalProximity_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2453,9 +2458,9 @@ object QGIS {
     ).getOrElse(dataType, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_proximity.py --input "$outputTiffPath" --extra "$extra" --nodata $nodata --values "$values" --band $band --max-distance $maxDistance --replace $replace --units $unitsInput --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_proximity.py --input "$outputTiffPath" --extra "$extra" --nodata $nodata --values "$values" --band $band --max-distance $maxDistance --replace $replace --units $unitsInput --data-type $dataTypeInput --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2491,15 +2496,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalRoughness_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalRoughness_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalRoughness_" + time + ".tif"
+    val writePath = algorithmData+"gdalRoughness_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_roughness.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_roughness.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2542,15 +2547,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalSlope_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalSlope_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalSlope_" + time + ".tif"
+    val writePath = algorithmData+"gdalSlope_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_slope.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --as-percent $asPercent --extra "$extra" --scale $scale --zevenbergen $zevenbergen --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_slope.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --as-percent $asPercent --extra "$extra" --scale $scale --zevenbergen $zevenbergen --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2585,15 +2590,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalTpiTopographicPositionIndex_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalTpiTopographicPositionIndex_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalTpiTopographicPositionIndex_" + time + ".tif"
+    val writePath = algorithmData+"gdalTpiTopographicPositionIndex_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_tpitopographicpositionindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_tpitopographicpositionindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2627,15 +2632,15 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalTriTerrainRuggednessIndex_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalTriTerrainRuggednessIndex_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalTriTerrainRuggednessIndex_" + time + ".tif"
+    val writePath = algorithmData+"gdalTriTerrainRuggednessIndex_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_triterrainruggednessindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_triterrainruggednessindex.py --input "$outputTiffPath" --band $band --compute-edges $computeEdges --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2672,8 +2677,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalClipRasterByExtent_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalClipRasterByExtent_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalClipRasterByExtent_" + time + ".tif"
+    val writePath = algorithmData+"gdalClipRasterByExtent_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2694,9 +2699,9 @@ object QGIS {
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbyextent.py --input "$outputTiffPath" --projwin "$projwin" --extra "$extra" --nodata $nodata --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_cliprasterbyextent.py --input "$outputTiffPath" --projwin "$projwin" --extra "$extra" --nodata $nodata --data-type "$dataTypeInput" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2745,9 +2750,9 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + ".tif"
-    val maskPath = "/mnt/storage/algorithmData/gdalClipMaskLayer_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalClipRasterByMaskLayer_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalClipRasterByMaskLayer_" + time + ".tif"
+    val maskPath = algorithmData+"gdalClipMaskLayer_" + time + ".shp"
+    val writePath = algorithmData+"gdalClipRasterByMaskLayer_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
     saveFeatureRDDToShp(mask, maskPath)
 
@@ -2768,9 +2773,9 @@ object QGIS {
     ).getOrElse(dataType, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs"  --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$maskPath" --multithreading $multithreading  --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_cliprasterbymasklayer.py --input "$outputTiffPath" --crop-to-cutline $cropToCutLine --target-extent "$targetExtent" --set-resolution $setResolution --extra "$extra" --target-crs "$targetCrs"  --keep-resolution $keepResolution --alpha-band $alphaBand --options "$options" --mask "$maskPath" --multithreading $multithreading  --data-type "$dataTypeInput" --source-crs "$sourceCrs" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2793,14 +2798,14 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalPolygonize_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalPolygonize_" + time + "_out.shp"
+    val outputTiffPath = algorithmData+"gdalPolygonize_" + time + ".tif"
+    val writePath = algorithmData+"gdalPolygonize_" + time + "_out.shp"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_polygonize.py --input "$outputTiffPath" --extra "$extra" --field $field --band $band --eight-connectedness $eightConnectedness --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_polygonize.py --input "$outputTiffPath" --extra "$extra" --field $field --band $band --eight-connectedness $eightConnectedness --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2833,18 +2838,18 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalRasterizeOver_" + time + ".shp"
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalRasterizeOver_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalRasterizeOver_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalRasterizeOver_" + time + ".shp"
+    val outputTiffPath = algorithmData+"gdalRasterizeOver_" + time + ".tif"
+    val writePath = algorithmData+"gdalRasterizeOver_" + time + "_out.tif"
 
     saveFeatureRDDToShp(input, outputShpPath)
     saveRasterRDDToTif(inputRaster, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2878,17 +2883,17 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalRasterizeOverFixedValue_" + time + ".shp"
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalRasterizeOverFixedValue_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalRasterizeOverFixedValue_" + time + "_out.tif"
+    val outputShpPath = algorithmData+"gdalRasterizeOverFixedValue_" + time + ".shp"
+    val outputTiffPath = algorithmData+"gdalRasterizeOverFixedValue_" + time + ".tif"
+    val writePath = algorithmData+"gdalRasterizeOverFixedValue_" + time + "_out.tif"
 
     saveFeatureRDDToShp(input, outputShpPath)
     saveRasterRDDToTif(inputRaster, outputTiffPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rasterize_over_fixed_value.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra "$extra" --add $add --burn $burn --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over_fixed_value.py --input "$outputShpPath" --inputraster "$outputTiffPath" --extra "$extra" --add $add --burn $burn --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2919,14 +2924,14 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalRgbToPct_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalRgbToPct_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalRgbToPct_" + time + ".tif"
+    val writePath = algorithmData+"gdalRgbToPct_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_rgbtopct.py --input "$outputTiffPath" --ncolors $ncolors --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rgbtopct.py --input "$outputTiffPath" --ncolors $ncolors --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2965,8 +2970,8 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalTranslate_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalTranslate_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalTranslate_" + time + ".tif"
+    val writePath = algorithmData+"gdalTranslate_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
@@ -2986,9 +2991,9 @@ object QGIS {
     ).getOrElse(dataType, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_translate.py --input "$outputTiffPath" --extra "$extra" --target-crs "$targetCrs" --nodata $nodata --data-type $dataTypeInput --copy-subdatasets $copySubdatasets --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_translate.py --input "$outputTiffPath" --extra "$extra" --target-crs "$targetCrs" --nodata $nodata --data-type $dataTypeInput --copy-subdatasets $copySubdatasets --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3037,14 +3042,14 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalWarp_" + time + ".tif"
-    val writePath = "/mnt/storage/algorithmData/gdalWarp_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"gdalWarp_" + time + ".tif"
+    val writePath = algorithmData+"gdalWarp_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_warpreproject.py --input "$outputTiffPath"  --target-crs "$targetCrs" --resampling "$resampling" --nodata $noData  --options "$options" --data-type "$dataType"   --multithreading "$multiThreading"  --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_warpreproject.py --input "$outputTiffPath"  --target-crs "$targetCrs" --resampling "$resampling" --nodata $noData  --options "$options" --data-type "$dataType"   --multithreading "$multiThreading"  --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3088,14 +3093,14 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalDissolve_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalDissolve_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"gdalDissolve_" + time + ".shp"
+    val writePath = algorithmData+"gdalDissolve_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_dissolve.py --input "$outputShpPath" --explode-collections $explodeCollections --field "$field" --compute-area $computeArea --keep-attributes $keepAttributes --compute-statistics $computeStatistics --count-features $countFeatures --statistics-attribute "$statisticsAttribute" --options "$options" --geometry $geometry --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_dissolve.py --input "$outputShpPath" --explode-collections $explodeCollections --field "$field" --compute-area $computeArea --keep-attributes $keepAttributes --compute-statistics $computeStatistics --count-features $countFeatures --statistics-attribute "$statisticsAttribute" --options "$options" --geometry $geometry --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3124,14 +3129,14 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalClipVectorByExtent_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"gdalClipVectorByExtent_" + time + ".shp"
+    val writePath = algorithmData+"gdalClipVectorByExtent_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath" --extent "$extent" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_clipvectorbyextent.py --input "$outputShpPath" --extent "$extent" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3161,16 +3166,16 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath1 = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + ".shp"
-    val outputShpPath2 = "/mnt/storage/algorithmData/mask_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalClipVectorByPolygon_" + time + "_out.shp"
+    val outputShpPath1 = algorithmData+"gdalClipVectorByPolygon_" + time + ".shp"
+    val outputShpPath2 = algorithmData+"mask_" + time + ".shp"
+    val writePath = algorithmData+"gdalClipVectorByPolygon_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath1)
     saveFeatureRDDToShp(mask, outputShpPath2)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_clipvectorbypolygon.py --input "$outputShpPath1" --mask "$outputShpPath2" --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_clipvectorbypolygon.py --input "$outputShpPath1" --mask "$outputShpPath2" --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3199,15 +3204,15 @@ object QGIS {
                       options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/gdalOffsetCurve_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalOffsetCurve_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"gdalOffsetCurve_" + time + ".shp"
+    val writePath = algorithmData+"gdalOffsetCurve_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_offsetcurve.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_offsetcurve.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3237,15 +3242,15 @@ object QGIS {
                            options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/gdalPointsAlongLines_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalPointsAlongLines_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"gdalPointsAlongLines_" + time + ".shp"
+    val writePath = algorithmData+"gdalPointsAlongLines_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_pointsalonglines.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_pointsalonglines.py --input "$outputShpPath" --distance $distance --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3284,14 +3289,14 @@ object QGIS {
     val time = System.currentTimeMillis()
 
 
-    val outputShpPath = "/mnt/storage/algorithmData/gdalBufferVectors_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalBufferVectors_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"gdalBufferVectors_" + time + ".shp"
+    val writePath = algorithmData+"gdalBufferVectors_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_buffervectors.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_buffervectors.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
 
       println(s"st = $st")
@@ -3329,8 +3334,8 @@ object QGIS {
                         options: String = "")
   : RDD[(String, (Geometry, Map[String, Any]))] = {
     val time = System.currentTimeMillis()
-    val outputShpPath = "/mnt/storage/algorithmData/gdalOneSideBuffer_" + time + ".shp"
-    val writePath = "/mnt/storage/algorithmData/gdalOneSideBuffer_" + time + "_out.shp"
+    val outputShpPath = algorithmData+"gdalOneSideBuffer_" + time + ".shp"
+    val writePath = algorithmData+"gdalOneSideBuffer_" + time + "_out.shp"
     saveFeatureRDDToShp(input, outputShpPath)
 
 
@@ -3340,9 +3345,9 @@ object QGIS {
     ).getOrElse(bufferSide, "0")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --buffer-side $bufferSideInput --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explode-collections $explodeCollections --field "$field" --buffer-side $bufferSideInput --dissolve $dissolve --geometry $geometry --options "$options" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3370,14 +3375,14 @@ object QGIS {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = "/mnt/storage/algorithmData/gdalAssignProjection_" + time + ".tif"
+    val outputTiffPath = algorithmData+"gdalAssignProjection_" + time + ".tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;cd /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_assignprojection.py --input "$outputTiffPath" --crs "$crs"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_assignprojection.py --input "$outputTiffPath" --crs "$crs"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
