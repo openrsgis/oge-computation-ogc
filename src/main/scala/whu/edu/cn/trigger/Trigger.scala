@@ -598,6 +598,14 @@ object Trigger {
           featureRddList += (UUID -> QGIS.gdalBufferVectors(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
         case "Feature.oneSideBufferByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalOneSideBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), bufferSide = args("bufferSide"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
+        case "Coverage.calNDVI" =>
+          coverageRddList += (UUID -> QGIS.calNDVI(sc, coverageRddList(args("input"))))
+        case "Coverage.calLSWI" =>
+          coverageRddList += (UUID -> QGIS.calLSWI(sc, coverageRddList(args("input"))))
+        case "Coverage.energyUtilisation" =>
+          stringList += (UUID -> QGIS.energyUtilisation(args("extend")))
+        case "Coverage.calNPP" =>
+          coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),args("energyPara")))
 
         //    GRASS
         case "Coverage.neighborsByGrass" =>
@@ -1033,15 +1041,15 @@ object Trigger {
           Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
 
-        case "Cube.build" => {
-          val coverageString = args("coverageIDList")
-          val productString = args("productIDList")
-          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
-          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
-          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
-          }
-        case "Cube.export" =>
-          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
+//        case "Cube.build" => {
+//          val coverageString = args("coverageIDList")
+//          val productString = args("productIDList")
+//          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
+//          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
+//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
+//          }
+//        case "Cube.export" =>
+//          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
       }
 
 
