@@ -1046,14 +1046,14 @@ object Trigger {
         }
 
         case "Cube.build" => {
-          val coverageString = args("coverageIDList")
-          val productString = args("productIDList")
-          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
-          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
-          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
+//          val coverageString = args("coverageIDList")
+//          val productString = args("productIDList")
+//          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
+//          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
+//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
           }
         case "Cube.export" =>
-          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
+//          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
       }
 
 
