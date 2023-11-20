@@ -60,6 +60,18 @@ object GlobalConfig {
     }
   }
 
+  object QGISConf {
+    // PostgreSQL 基础配置
+    var QGIS_DATA: String = "/home/ogeStorage/algorithmData/"
+    var QGIS_ALGORITHMCODE: String = "cd /home/geocube/oge/oge-server/dag-boot/qgis;"
+    var QGIS_HOST: String = "10.101.240.10"
+    var QGIS_USERNAME: String = "root"
+    var QGIS_PASSWORD: String = "ypfamily"
+    var QGIS_PORT: Int = 22
+    var QGIS_PYTHON: String = "/home/ogeStorage/miniconda3/bin/python"
+    var QGIS_RS: String = "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
+  }
+
   object DagBootConf {
     // dag-boot 服务根路径
     var DAG_ROOT_URL: String = "http://125.220.153.22:8085/oge-dag-22" //"http://125.220.153.22:8085/oge-dag-22"
