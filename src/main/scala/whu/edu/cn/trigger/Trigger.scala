@@ -30,6 +30,8 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{SpatialDurbinModel,
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 
+import scala.collection.mutable.ArrayBuffer
+
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -1036,12 +1038,14 @@ object Trigger {
         case "Cube.build" => {
           val coverageString = args("coverageIDList")
           val productString = args("productIDList")
-          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
-          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
-          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
+          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").asInstanceOf[ArrayBuffer[String]]
+          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").asInstanceOf[ArrayBuffer[String]]
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
+            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
+            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
           }
         case "Cube.export" =>
-          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
+          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
       }
 
 
