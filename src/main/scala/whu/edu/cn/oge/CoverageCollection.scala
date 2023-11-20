@@ -13,7 +13,7 @@ import whu.edu.cn.entity._
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil, ZCurveUtil}
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, ZCurveUtil}
 
 import java.time.LocalDateTime
 import scala.collection.mutable
@@ -65,8 +65,8 @@ object CoverageCollection {
         .map(t => {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val bosUtil = new BosClientUtil()
-            val client: BosClient = bosUtil.getClient
+
+            val client: BosClient = BosClientUtil_scala.getClient
 
             val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, Extent(union.getEnvelopeInternal),t.getGeom)
             tiles
@@ -84,8 +84,8 @@ object CoverageCollection {
       val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
       (t._1, tileRDDRePar.mapPartitions(par => {
 
-        val bosUtil = new BosClientUtil()
-        val client: BosClient = bosUtil.getClient
+
+        val client: BosClient = BosClientUtil_scala.getClient
         par.map(t=>{
           BosCOGUtil.getTileBuf(client,t)
         })

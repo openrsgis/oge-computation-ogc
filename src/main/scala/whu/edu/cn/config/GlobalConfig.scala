@@ -62,7 +62,7 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://125.220.153.22:8085/oge-dag-22"
+    var DAG_ROOT_URL: String = "http://192.168.32.5:8085/oge-dag-22"
 
   }
 
@@ -81,13 +81,13 @@ object GlobalConfig {
     final val MINIO_ACCESS_KEY: String = "oge"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "oge"
-    final val MINIO_HEAD_SIZE: Int = 5000000
+    final val MINIO_HEAD_SIZE: Int = 500000
     final val MINIO_MAX_CONNECTIONS: Int = 10000
   }
 
   object PostgreSqlConf {
     // PostgreSQL 基础配置
-    var POSTGRESQL_URL: String = "jdbc:postgresql://125.220.153.23:30865/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
+    var POSTGRESQL_URL: String = "jdbc:postgresql://120.48.44.57:3306/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
     var POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
     var POSTGRESQL_USER: String = "oge"
     var POSTGRESQL_PWD: String = "ypfamily608"
@@ -110,11 +110,12 @@ object GlobalConfig {
   }
 
   object Others {
-    final var jsonAlgorithms = "/home/ogeStorage/algorithms_ogc.json" //存储json解析文件地址
-    final var tempFilePath = "/home/ogeStorage/temp/" //各类临时文件的地址
-    final var tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
-    final var ontheFlyStorage = "/home/ogeStorage/on-the-fly" //tms瓦片存储地址
-    final var jsonSavePath = "/home/ogeStorage/algorithmData/" //geojson临时存储地址
+    final var jsonAlgorithms = "/root/storage/algorithms_ogc.json" //存储json解析文件地址
+    final var tempFilePath = "/root/storage/temp/" //各类临时文件的地址
+    final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
+    final var ontheFlyStorage = "/root/storage/on-the-fly/" //tms瓦片存储地址
+    final var jsonSavePath = "/root/storage/algorithmData/" //geojson临时存储地址
+    final var bucketName = "ogebos"
     var platform = "local"
   }
 }

@@ -8,6 +8,7 @@ import geotrellis.vector.Extent
 import geotrellis.vector.reproject.Reproject
 import io.minio.{GetObjectArgs, MinioClient}
 import org.locationtech.jts.geom.{Envelope, Geometry}
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.{CoverageMetadata, RawTile}
 import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 
@@ -447,7 +448,7 @@ object BosCOGUtil{
     val cell: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]] = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]]
 
-    val getObjectRequest : GetObjectRequest = new GetObjectRequest("oge",coverageMetadata.getPath)
+    val getObjectRequest : GetObjectRequest = new GetObjectRequest("ogebos",coverageMetadata.getPath)
     getObjectRequest.setRange(0,MINIO_HEAD_SIZE)
     val bucketObject = client.getObject(getObjectRequest)
     val inputStream: InputStream = bucketObject.getObjectContent()
@@ -479,7 +480,7 @@ object BosCOGUtil{
    * @return
    */
   def getTileBuf(client: BosClient, tile: RawTile): RawTile = {
-    val getObjectRequest: GetObjectRequest = new GetObjectRequest("oge", tile.getPath)
+    val getObjectRequest: GetObjectRequest = new GetObjectRequest(GlobalConfig.Others.bucketName, tile.getPath)
     getObjectRequest.setRange(tile.getOffset, tile.getOffset + tile.getByteCount)
     val bucketObject = client.getObject(getObjectRequest)
     val inputStream: InputStream = bucketObject.getObjectContent()

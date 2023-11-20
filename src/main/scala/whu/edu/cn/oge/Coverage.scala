@@ -46,7 +46,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil, Cbrt, CoverageOverloadUtil, Entropy, Mod, RemapWithDefaultValue, RemapWithoutDefaultValue}
+import whu.edu.cn.util.{BosCOGUtil, Cbrt, CoverageOverloadUtil, Entropy, Mod, RemapWithDefaultValue, RemapWithoutDefaultValue, BosClientUtil_scala}
 
 import java.io.File
 
@@ -79,8 +79,7 @@ object Coverage {
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val bosUtil = new BosClientUtil()
-        val client: BosClient = bosUtil.getClient
+        val client: BosClient = BosClientUtil_scala.getClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
@@ -104,8 +103,8 @@ object Coverage {
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
-      val bosUtil = new BosClientUtil()
-      val client: BosClient = bosUtil.getClient
+
+      val client: BosClient = BosClientUtil_scala.getClient
       par.map(t => {
         BosCOGUtil.getTileBuf(client, t)
       })
@@ -3354,8 +3353,8 @@ object Coverage {
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
     val file :File = new File(saveFilePath)
-    val BosUtil = new BosClientUtil
-    val client: BosClient = BosUtil.getClient
+
+    val client: BosClient = BosClientUtil_scala.getClient
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.putObject("oge-user",path,file)
 //    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
@@ -3372,8 +3371,8 @@ object Coverage {
     } else {
       path = s"$userID/$coverageId.tiff"
     }
-    val BosUtil = new BosClientUtil
-    val client = BosUtil.getClient
+
+    val client = BosClientUtil_scala.getClient
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
 

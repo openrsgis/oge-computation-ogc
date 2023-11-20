@@ -1,5 +1,8 @@
 package whu.edu.cn.debug
 
+import com.baidubce.auth.DefaultBceCredentials
+import com.baidubce.services.bos.model.GetObjectRequest
+import com.baidubce.services.bos.{BosClient, BosClientConfiguration}
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -24,7 +27,7 @@ import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, makeCoverageRDD}
-import whu.edu.cn.util.{CoverageCollectionUtil, MinIOUtil, RDDTransformerUtil}
+import whu.edu.cn.util.{CoverageCollectionUtil, MinIOUtil, RDDTransformerUtil,BosClientUtil_scala}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 
 import java.io.File
@@ -103,9 +106,9 @@ object CoverageDubug {
   }
   def test1(implicit sc: SparkContext):Unit={
 
-    var coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N28E056","ASTER_GDEM_DEM30", 7)
-    var coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N28E056","ASTER_GDEM_DEM30", 10)
-    val (coverage1r,coverage2r) = checkProjResoExtent(coverage1, coverage2)
+    var coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "n000e009","ALOS_PALSAR_DEM12.5", 7)
+//    var coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N28E056","ASTER_GDEM_DEM30", 10)
+//    val (coverage1r,coverage2r) = checkProjResoExtent(coverage1, coverage2)
 
 //    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "T49REK_20231004T030551","S2A_MSIL1C", 10)
 //    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LE07_L1TP_124039_20130612_20161124_01_T1","LE07_L1TP_C01_T1", 10)
@@ -113,8 +116,8 @@ object CoverageDubug {
 //    val res = Coverage.normalizedDifference(coverage2,List("B3","B5"))
 //    println(res._1.first()._2.cellType)
 //    val coverage = Coverage.selectBands(coverage1,List("B01"))
-    makeTIFF(coverage1r,"dem1")
-    makeTIFF(coverage2r,"dem2")
+    makeTIFF(coverage1,"dem1")
+//    makeTIFF(coverage2r,"dem2")
 
 //    makeTIFF(coverage2, "lc07")
 
