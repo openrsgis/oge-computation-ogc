@@ -61,19 +61,19 @@ object GrassUtil {
 //  _out后缀为服务器绝对路径，不带的为docker绝对路径
   //保存sh file的文件目录
   final val shFilePath="grass_sh/"
-  final val shFilePath_out="/mnt/storage/grass/grass_sh/"
+  final val shFilePath_out="/home/ogeStorage/grass/grass_sh/"
 
 
   //保存输入输出tif文件的位置
   final val tifFilePath="grassdata/"    //docker下相对路径
-  final val tifFilePath_out="/mnt/storage/grass/grassdata/"     //绝对路径
+  final val tifFilePath_out="/home/ogeStorage/grass/grassdata/"     //绝对路径
   //grass7.8版本的启动脚本
   final val grassRoot="grass"
 
 
   //grass数据库的根目录
   final val grassdataPath="grassdataroot/"
-  final val grassdataPath_out="/mnt/storage/grass/grassdataroot/"
+  final val grassdataPath_out="/home/ogeStorage/grass/grassdataroot/"
 
 
 
@@ -81,9 +81,9 @@ object GrassUtil {
   final val mapset="mapset1"
 
 //  json文件的绝对路径
-  final val grassConf:String="/mnt/storage/grass/grassConf.json"
-
-  final val grassLocation:String="/mnt/storage/grass/grassLocation.json"
+//  final val grassConf:String="/mnt/storage/grass/grassConf.json"
+//
+//  final val grassLocation:String="/mnt/storage/grass/grassLocation.json"
 
 
   /**
@@ -123,8 +123,8 @@ object GrassUtil {
 
   def createStartSh_docker(filePath:String,startSh_path:String): String={
     var command:List[String] =List.empty
-    command = command:+ "docker start bc1b4cb0a9db"
-    command = command:+ "docker exec  bc1b4cb0a9db /bin/bash /grass/"+startSh_path
+    command = command:+ "docker start 17017d47a113 "
+    command = command:+ "docker exec 17017d47a113  /bin/bash /grass/"+startSh_path
     val name="enterdocker"+System.currentTimeMillis()+".sh"
     val out:BufferedWriter=new BufferedWriter(new FileWriter(filePath+name))
     out.write("#!/bin/bash"+"\n")
