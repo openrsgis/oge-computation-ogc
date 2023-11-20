@@ -108,7 +108,17 @@ object GlobalConfig {
     final val cloudShadowValueLs8: Array[Int] = Array(2976, 2980, 2984, 2988, 3008, 3012, 3016, 3020, 7072, 7076,
       7080, 7084, 7104, 7108, 7112, 7116)
   }
-
+  object QGISConf {
+    // PostgreSQL 基础配置
+    var QGIS_DATA: String = "/home/ogeStorage/algorithmData/"
+    var QGIS_ALGORITHMCODE: String = "cd /home/geocube/oge/oge-server/dag-boot/qgis;"
+    var QGIS_HOST: String = "10.101.240.10"
+    var QGIS_USERNAME: String = "root"
+    var QGIS_PASSWORD: String = "ypfamily"
+    var QGIS_PORT: Int = 22
+    var QGIS_PYTHON: String = "/home/ogeStorage/miniconda3/bin/python"
+    var QGIS_RS: String = "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
+  }
   object Others {
     final var jsonAlgorithms = "/home/ogeStorage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/home/ogeStorage/temp/" //各类临时文件的地址
