@@ -8254,31 +8254,6 @@
         "description": "The id of target coverage."
       },
       {
-        "name": "gridDimX",
-        "type": "String",
-        "description": "The grid column counts of the cube."
-      },
-      {
-        "name": "gridDimY",
-        "type": "String",
-        "description": "The grid row counts of the cube."
-      },
-      {
-        "name": "extent",
-        "type": "String",
-        "description": "The extent of the cube."
-      },
-      {
-        "name": "startTime",
-        "type": "String",
-        "description": "The start time of the cube."
-      },
-      {
-        "name": "endTime",
-        "type": "String",
-        "description": "The end time of the cube."
-      },
-      {
         "name": "subset",
         "type": "List<Float>",
         "description": "The subset of target coverage.",
@@ -8397,6 +8372,11 @@
         "name": "cube",
         "type": "Cube",
         "description": "The cube to be exported"
+      },
+      {
+        "name": "exportedName",
+        "type": "String",
+        "description": "The layer to be exported"
       },
       {
         "name": "description",
@@ -9260,5 +9240,48 @@
         "description": "independent variable properties"
       }
     ]
+  },
+  "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
+    "description": "image geometric correction",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "inputFileArr",
+        "type": "Array[String]",
+        "description": "array of image paths to be geometrically corrected"
+      },
+      {
+        "name": "outPutDir",
+        "type": "String",
+        "description": "output file name of geometric correction results"
+      },
+      {
+        "name": "outputSuf",
+        "type": "Boolean",
+        "description": "add a suffix after the geometric correction result"
+      }
+    ]
+  },
+  "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic": {
+    "description": "image split mosaic",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "siFileArr",
+        "type": "Array[String]",
+        "description": "array of image paths to be mosaiced"
+      },
+      {
+        "name": "diFile",
+        "type": "String",
+        "description": "output file name of mosaic results"
+      },
+      {
+        "name": "diFileDim",
+        "type": "Int",
+        "description": "dimension of output mosaic result block"
+      }
+    ]
   }
+
 }
