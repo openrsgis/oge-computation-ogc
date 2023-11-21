@@ -8689,38 +8689,38 @@
       {
         "name": "k",
         "type": "Double",
-        "description": "The  coefficient to make gray-level linear transformations"
+        "description": "The coefficient to make gray-level linear transformations"
       },
       {
         "name": "b",
         "type": "Int",
-        "description": "The  constant to add in gray-level linear transformations"
+        "description": "The constant to add in gray-level linear transformations"
       }
     ]
   },
-  "Coverage.fakeColorCompose": {
-    "description": "Compose single-band photo to color photo",
+  "Coverage.falseColorComposite": {
+    "description": "Composite single-band photo and color photo",
     "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The Coverage to make FakeColorCompose"
+        "description": "The Coverage to make FalseColorComposite"
       },
       {
         "name": "BandRed",
         "type": "Int",
-        "description": "Chose one band as red band the number stands for bandindex"
+        "description": "Chose one band as red band, the number stands for bandindex"
       },
       {
         "name": "BandGreen",
         "type": "Int",
-        "description": "Chose one band as green band the number stands for bandindex"
+        "description": "Chose one band as green band, the number stands for bandindex"
       },
       {
         "name": "BandBlue",
         "type": "Int",
-        "description": "Chose one band as Blue band the number stands for bandindex"
+        "description": "Chose one band as Blue band, the number stands for bandindex"
       }
     ]
   },
@@ -8743,68 +8743,41 @@
         "name": "coverage",
         "type": "Coverage",
         "description": "The coverage to Canny edge detection."
+      },
+      {
+        "name": "lowCoefficient",
+        "type": "Double",
+        "description": "The constant to control the low threshold.",
+        "default": "-1",
+        "optional": "True"
+      },
+      {
+        "name": "highCoefficient",
+        "type": "Double",
+        "description": "The constant to control the high threshold.",
+        "default": "-1",
+        "optional": "True"
       }
     ]
   },
   "Coverage.standardDeviationStretching": {
-    "description": "Calculate the standard deviation and perform stretching",
+    "description": "Stretch the image by the standard deviation calculated early",
     "returns": "Coverage",
     "args": [
       {
         "name":"coverage",
         "type":"Coverage",
-        "description":"Each band of coverage is stretched based on standard deviation."}
+        "description":"The coverage to be stretched based on standard deviation."}
     ]
   },
   "Coverage.histogramEqualization": {
-    "description": "Return the new image with equalized histogram.",
+    "description": "Return the new image based on equalized histogram.",
     "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The image to be histogram equalized."
-      }
-    ]
-  },
-  "Coverage.bilateralFilter": {
-    "description": "Applies a bilateral filter to each band of an image using a named bilateral kernel.",
-    "returns": "Coverage",
-    "args": [
-      {
-        "name": "coverage",
-        "type": "Coverage",
-        "description": "The image to be filtered with bilateral filter.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "d",
-        "type": "Int",
-        "description": "The side length of the filter.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "sigmaSpace",
-        "type": "Double",
-        "description": "Spatial weight.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "sigmaColor",
-        "type": "Double",
-        "description": "Value weight.",
-        "default": "None",
-        "optional": "False"
-      },
-      {
-        "name": "borderType",
-        "type": "String",
-        "description": "Strategy for handling missing pixel values in image boundary processing.",
-        "default": "None",
-        "optional": "False"
+        "description": "The coverage to be histogram equalized."
       }
     ]
   },
@@ -8815,7 +8788,7 @@
       {
         "name": "coverage",
         "type": "Coverage",
-        "description": "The image to be filtered with gaussian filter.",
+        "description": "The coverage to be filtered with gaussian filter.",
         "default": "None",
         "optional": "False"
       },
@@ -8829,21 +8802,102 @@
       {
         "name": "sigmaX",
         "type": "Double",
-        "description": "Standard deviation of the gaussian distribution in the x-direction.",
+        "description": "The standard deviation of the gaussian distribution in the x-direction.",
         "default": "None",
         "optional": "False"
       },
       {
         "name": "sigmaY",
         "type": "Double",
-        "description": "Standard deviation of the gaussian distribution in the y-direction.",
+        "description": "The standard deviation of the gaussian distribution in the y-direction.",
         "default": "None",
         "optional": "False"
       },
       {
         "name": "borderType",
         "type": "String",
-        "description": "Strategy for handling missing pixel values in image boundary processing.",
+        "description": "Flag for handling missing pixel values in image boundary processing.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.reduction": {
+    "description": "To transform multi-band photo to single-band photo.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be transformed.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "option",
+        "type": "Int",
+        "description": "The flag indicating the way of reduction.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.broveyFusion": {
+    "description": "Fusion two images to enhance clarity and keep image's spectral information.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "multispectral",
+        "type": "Coverage",
+        "description": "The coverage containing more spectral information.",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "panchromatic",
+        "type": "Coverage",
+        "description": "The coverage containing sharper resolution.",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.bilateralFilter": {
+    "description": "A function to remove the image noise and keep the edge distinct",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "d",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaSpace",
+        "type": "Double",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "sigmaColor",
+        "type": "Double",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "111",
         "default": "None",
         "optional": "False"
       }
