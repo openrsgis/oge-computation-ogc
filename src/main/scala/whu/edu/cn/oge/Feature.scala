@@ -555,7 +555,7 @@ object Feature {
 
     versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
 
-    val st = s"scp $outputVectorPath root@10.101.240.20:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
+    val st = s"scp $outputVectorPath root@120.48.147.38:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
     //本地测试使用代码
 //      val exitCode: Int = st.!
