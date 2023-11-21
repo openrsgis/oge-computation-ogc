@@ -33,11 +33,12 @@ import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.windowExtent
+import whu.edu.cn.trigger.Trigger.{layerName, windowExtent}
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
@@ -46,9 +47,10 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{BosCOGUtil, Cbrt, CoverageOverloadUtil, Entropy, Mod, RemapWithDefaultValue, RemapWithoutDefaultValue, BosClientUtil_scala}
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
 import java.io.File
+import sys.process._
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -3284,6 +3286,12 @@ object Coverage {
       }
     }
 
+    // 传到master-1的路径下
+    val path = GlobalConfig.Others.ontheFlyStorage+ Trigger.dagId
+    val st = s"scp -r $path root@master-6492c86-1:/root/storage/on-the-fly"
+
+    st.run
+    println(s"st = $st")
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
