@@ -813,50 +813,47 @@ object Cube {
 
   // 为rawTile进行处理
   def genCubeRDD(implicit sc: SparkContext, rdd: RDD[RawTile], meta: TileLayerMetadata[SpaceTimeKey]): ArrayBuffer[(SpaceTimeBandKey, Tile)] = {
-    val rddExtentInfo: (Double, Double, Double, Double) = rdd.map(t => {
+    val mbr: (Double, Double, Double, Double) = rdd.map(t => {
       (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
     })
 
-    println(rddExtentInfo)
-    val rddExtent: Extent = Extent(rddExtentInfo._1, rddExtentInfo._2, rddExtentInfo._3, rddExtentInfo._4)
+    val rddExtent: Extent = Extent(mbr._1, mbr._2, mbr._3, mbr._4)
     val extent = meta.extent
-    val gridHeight = (extent.ymax - extent.ymin) / meta.tileLayout.layoutRows.toDouble
-    val gridWidth = (extent.xmax - extent.xmin) / meta.tileLayout.layoutCols.toDouble
-    val reso: Double = meta.cellSize.resolution
-    val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
-    val tileArray: ArrayBuffer[(Tile, String, Long, SpatialKey)] = rdd.map { tile =>
-      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      val timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-      (Tile, tile.getCoverageId, timeKey, tile.getSpatialKey)
-    }.collect().to[ArrayBuffer]
-    val colRowIntersect: ArrayBuffer[(Int, Int)] = ArrayBuffer[(Int, Int)]()
+    val gridDimX = meta.tileLayout.layoutRows
+    val gridDimY = meta.tileLayout.layoutCols
+    val gridSizeX = (extent.xmax - extent.xmin) / gridDimY.toDouble
+    val gridSizeY = (extent.ymax - extent.ymin) / gridDimX.toDouble
 
-    for (col <- 0 until meta.tileLayout.layoutCols) {
-      for (row <- 0 until meta.tileLayout.layoutRows) {
-        val minX = extent.xmin + col * gridWidth
-        val minY = extent.ymin + row * gridHeight
-        val tempExtent = Extent(minX, minY, minX + gridWidth, minY + gridHeight)
-        if (rddExtent.intersects(tempExtent)) {
-          colRowIntersect.append((col, row))
-        }
-      }
-    }
-    println("获得瓦片长度： ", tileArray.length)
-    val tileInfoArray = tileArray.map(t => (t._4, t._1))
+    val _xmin: Int = (math.floor((mbr._1 - extent.xmin) / gridSizeX) max 0).toInt
+    val _xmax: Int = (math.ceil((mbr._3 - extent.xmin) / gridSizeX) min gridDimX).toInt
+    val _ymin: Int = (math.floor((mbr._2 - extent.ymin) / gridSizeY) max 0).toInt
+    val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
+
+    val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
+    var coverageId: String = ""
+    var timeKey: Long = 0L
+    val tileArray: ArrayBuffer[(Tile, SpatialKey)] = rdd.map { tile =>
+      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+      coverageId = tile.getCoverageId
+      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+      (Tile, tile.getSpatialKey)
+    }.collect().to[ArrayBuffer]
+    val tileInfoArray = tileArray.map(t => (t._2, t._1))
     val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileInfoArray)
-    colRowIntersect.foreach { case (col, row) =>
-      val minX = extent.xmin + col * gridWidth
-      val minY = extent.ymin + row * gridHeight
-      val tempExtent = Extent(minX, minY, minX + gridWidth, minY + gridHeight)
-      val coverageId = tileArray.head._2
-      val timeKey = tileArray.head._3
-      val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, row, timeKey)
-      val intersectTile: Tile = totalTile.mask(tempExtent, extent)
-      val bandKey = SpaceTimeBandKey(spaceTimeKey, coverageId, null)
-      removeZeroFromTile(intersectTile)
-      result.append((bandKey, intersectTile))
+    val ld = meta.layout
+
+    for (col <- _xmin until _xmax; row <- _ymin until _ymax) {
+      val geotrellis_j = (gridDimY - 1 - row)
+      val tempExtent = ld.mapTransform(SpatialKey(col, geotrellis_j))
+      if (tempExtent.intersects(rddExtent)) {
+        val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
+        val intersectTile: Tile = totalTile.crop(rddExtent, tempExtent)
+        val bandKey = SpaceTimeBandKey(spaceTimeKey, coverageId, null)
+        removeZeroFromTile(intersectTile)
+        result.append((bandKey, intersectTile))
+      }
     }
     result
   }
