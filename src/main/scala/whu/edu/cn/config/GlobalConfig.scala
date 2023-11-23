@@ -81,7 +81,7 @@ object GlobalConfig {
     final val MINIO_ACCESS_KEY: String = "oge"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "oge"
-    final val MINIO_HEAD_SIZE: Int = 500000
+    final val MINIO_HEAD_SIZE: Int = 5000000
     final val MINIO_MAX_CONNECTIONS: Int = 10000
   }
 
@@ -111,10 +111,10 @@ object GlobalConfig {
 
   object Others {
     final var jsonAlgorithms = "/root/storage/algorithms_ogc.json" //存储json解析文件地址
-    final var tempFilePath = "/root/storage/temp/" //各类临时文件的地址
+    final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
-    final var ontheFlyStorage = "/root/storage/on-the-fly/" //tms瓦片存储地址
-    final var jsonSavePath = "/root/storage/algorithmData/" //geojson临时存储地址
+    final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
+    final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "local"
   }

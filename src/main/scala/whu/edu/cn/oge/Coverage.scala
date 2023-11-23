@@ -3286,12 +3286,12 @@ object Coverage {
       }
     }
 
-    // 传到master-1的路径下
-    val path = GlobalConfig.Others.ontheFlyStorage+ Trigger.dagId
-    val st = s"scp -r $path root@master-6492c86-1:/root/storage/on-the-fly"
-
-    st.run
-    println(s"st = $st")
+//    // 传到master-1的路径下
+//    val path = GlobalConfig.Others.ontheFlyStorage+ Trigger.dagId
+//    val st = s"scp -r $path root@master-6492c86-1:/root/storage/on-the-fly"
+//
+//    st.run
+//    println(s"st = $st")
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
@@ -3362,7 +3362,7 @@ object Coverage {
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
     val file :File = new File(saveFilePath)
 
-    val client: BosClient = BosClientUtil_scala.getClient
+    val client: BosClient = BosClientUtil_scala.getClient2
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.putObject("oge-user",path,file)
 //    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
@@ -3380,12 +3380,12 @@ object Coverage {
       path = s"$userID/$coverageId.tiff"
     }
 
-    val client = BosClientUtil_scala.getClient
+    val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-
+    println(path)
     val getObjectRequest = new GetObjectRequest("oge-user",path)
-    val bosObject = client.getObject(getObjectRequest,new File(tempPath,s"${dagId}.tiff"))
+    val bosObject = client.getObject(getObjectRequest,new File(filePath))
 
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 

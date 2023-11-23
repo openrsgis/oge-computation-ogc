@@ -450,26 +450,32 @@ object BosCOGUtil{
 
     val getObjectRequest : GetObjectRequest = new GetObjectRequest("ogebos",coverageMetadata.getPath)
     getObjectRequest.setRange(0,MINIO_HEAD_SIZE)
-    val bucketObject = client.getObject(getObjectRequest)
-    val inputStream: InputStream = bucketObject.getObjectContent()
-//    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
-    // Read data from stream
-    val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](MINIO_HEAD_SIZE)
-    var len: Int = 0
-    while ( {
-      len = inputStream.read(buffer)
-      len != -1
-    }) {
-      outStream.write(buffer, 0, len)
+    try{
+      val bucketObject = client.getObject(getObjectRequest)
+      val inputStream: InputStream = bucketObject.getObjectContent()
+      //    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
+      // Read data from stream
+      val outStream = new ByteArrayOutputStream
+      val buffer = new Array[Byte](MINIO_HEAD_SIZE)
+      var len: Int = 0
+      while ( {
+        len = inputStream.read(buffer)
+        len != -1
+      }) {
+        outStream.write(buffer, 0, len)
+      }
+      val headerByte: Array[Byte] = outStream.toByteArray
+      outStream.close()
+      inputStream.close()
+
+      parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
+
+      getTiles(level, coverageMetadata, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, windowsExtent, queryGeometry)
+
+    }catch {
+      case e:Exception =>
+        throw new Exception("所请求的数据在Bos中不存在！")
     }
-    val headerByte: Array[Byte] = outStream.toByteArray
-    outStream.close()
-    inputStream.close()
-
-    parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
-
-    getTiles(level, coverageMetadata, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, windowsExtent, queryGeometry)
 
   }
 
