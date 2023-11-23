@@ -26,7 +26,7 @@ import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-import whu.edu.cn.algorithms.terrain.core.RDDTransformerUtil
+
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
@@ -3383,11 +3383,12 @@ object Coverage {
     val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-    println(path)
+    val tempfile = new File(filePath)
     val getObjectRequest = new GetObjectRequest("oge-user",path)
-    val bosObject = client.getObject(getObjectRequest,new File(filePath))
-
-    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest,tempfile)
+    println(filePath)
+    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
   }
