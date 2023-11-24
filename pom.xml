@@ -18,6 +18,9 @@
         <akka.http.version>10.1.15</akka.http.version>
         <geotrellis.version>3.0.0</geotrellis.version>
         <spatial4j.version>0.8</spatial4j.version>
+        <spark.version>3.0.0</spark.version>
+        <hadoop.version>2.8.5</hadoop.version>
+        <dom4j.version>1.6.1</dom4j.version>
     </properties>
 
     <repositories>
@@ -45,7 +48,12 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.compat.version}</artifactId>
-            <version>3.0.0</version>
+            <version>${spark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -147,6 +155,11 @@
             <artifactId>spatial4j</artifactId>
             <version>${spatial4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+            <version>${dom4j.version}</version>
+        </dependency>
         <!--geotools-->
         <dependency>
             <groupId>com.alibaba</groupId>
@@ -189,6 +202,41 @@
             <version>5.5.3</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/netcdfAll-5.5.3.jar</systemPath>
+        </dependency>
+
+        <!-- Hadoop HDFS -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <!-- Hadoop Common -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-client -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-auth -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-auth</artifactId>
+            <version>${hadoop.version}</version>
         </dependency>
 
     </dependencies>

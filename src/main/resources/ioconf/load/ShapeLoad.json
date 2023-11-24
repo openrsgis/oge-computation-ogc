@@ -1,0 +1,21 @@
+{
+  "loadConfig": {
+    "@type": "standalone",
+    "master": "local[*]",
+    "location": "D:/bigdata/oge-computation-ogc/src/main/resources/outfiles/shape",
+    "fileMode": "single_file",
+    "partNum": 8,
+    "fileType": "shp"
+  },
+  "dataConfig": {
+    "@type": "trajectory",
+    "trajId": {
+      "sourceName": "tid",
+      "dataType": "String"
+    },
+    "objectId": {
+      "sourceName": "oid",
+      "dataType": "String"
+    }
+  }
+}

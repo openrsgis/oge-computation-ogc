@@ -117,4 +117,12 @@ public class TrajPoint extends BasePoint implements Serializable {
                 + this.getLat() + ", timeStamp=" + this.getTimestamp() + ", extendedValues="
                 + this.extendedValues + '}';
     }
+    public String getPointSequence() {
+        return String.format(
+                "(%s,%s,%s,%s)",
+                this.pid,
+                this.timestamp,
+                this.getLng(),
+                this.getLat());
+    }
 }

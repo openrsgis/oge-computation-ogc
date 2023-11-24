@@ -1,0 +1,13 @@
+{
+  "loadConfig": {
+    "@type": "standalone",
+    "master": "local[*]",
+    "location": "D:/bigdata/oge-computation-ogc/src/main/resources/outfiles/wkt",
+    "fileMode": "single_file",
+    "partNum": 8,
+    "fileType": "wkt"
+  },
+  "dataConfig": {
+    "@type": "trajectory"
+  }
+}

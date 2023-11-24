@@ -1,0 +1,54 @@
+{
+  "loadConfig": {
+    "@type": "standalone",
+    "master": "local[*]",
+    "location": "D:/bigdata/oge-computation-ogc/src/main/resources/geolife",
+    "fileMode": "multi_file",
+    "partNum": 8,
+    "splitter": ",",
+    "fileType": "csv"
+  },
+  "dataConfig": {
+    "@type": "trajectory",
+    "trajId": {
+      "sourceName": "traj_id",
+      "dataType": "String",
+      "index": 1
+    },
+    "objectId": {
+      "sourceName": "object_id",
+      "dataType": "String",
+      "index": 0
+    },
+    "trajPointConfig": {
+      "@type": "traj_point",
+      "pointId": {
+        "sourceName": "point_id",
+        "dataType": "String",
+        "index": 2
+      },
+      "lng": {
+        "sourceName": "lng",
+        "dataType": "Double",
+        "index": 4
+      },
+      "lat": {
+        "sourceName": "lat",
+        "dataType": "Double",
+        "index": 3
+      },
+      "time": {
+        "sourceName": "time",
+        "dataType": "Date",
+        "index": 5,
+        "format": "yyyy-MM-dd HH:mm:ss"
+      }
+    }
+  },
+  "storeConfig": {
+    "@type": "standalone",
+    "location": "D:/bigdata/oge-computation-ogc/src/main/resources/outfiles/geojson",
+    "schema": "POINT_BASED_TRAJECTORY",
+    "fileType": "geojson"
+  }
+}

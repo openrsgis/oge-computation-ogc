@@ -1,0 +1,25 @@
+{
+  "loadConfig": {
+    "@type": "standalone",
+    "master": "local[*]",
+    "location": "D:/bigdata/oge-computation-ogc/src/main/resources/outfiles/kml",
+    "fileMode": "single_file",
+    "partNum": 8,
+    "fileType": "kml"
+  },
+  "dataConfig": {
+    "@type": "trajectory",
+    "trajId": {
+      "sourceName": "tid",
+      "dataType": "String"
+    },
+    "objectId": {
+      "sourceName": "oid",
+      "dataType": "String"
+    },
+    "timeList": {
+      "sourceName": "timestamp",
+      "dataType": "String"
+    }
+  }
+}
