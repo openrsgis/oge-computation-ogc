@@ -110,11 +110,11 @@ object GlobalConfig {
   }
   object QGISConf {
     // PostgreSQL 基础配置
-    var QGIS_DATA: String = "/home/ogeStorage/algorithmData/"
-    var QGIS_ALGORITHMCODE: String = "cd /home/geocube/oge/oge-server/dag-boot/qgis;"
-    var QGIS_HOST: String = "10.101.240.10"
+    var QGIS_DATA: String = "/root/storage/algorithmData/"
+    var QGIS_ALGORITHMCODE: String = "cd cd /root/qgis/;"
+    var QGIS_HOST: String = "180.76.55.162"
     var QGIS_USERNAME: String = "root"
-    var QGIS_PASSWORD: String = "ypfamily"
+    var QGIS_PASSWORD: String = "Ypfamily608!"
     var QGIS_PORT: Int = 22
     var QGIS_PYTHON: String = "/home/ogeStorage/miniconda3/bin/python"
     var QGIS_RS: String = "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
@@ -124,7 +124,7 @@ object GlobalConfig {
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
-    final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
+    final var jsonSavePath = "/root/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "local"
   }
