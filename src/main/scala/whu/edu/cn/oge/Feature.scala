@@ -568,7 +568,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = "http://10.101.240.20:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = "http://120.48.147.38:8080/oge_vector/vector_" + time + ".json"
     storageURL
   }
 

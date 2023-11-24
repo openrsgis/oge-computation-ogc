@@ -62,7 +62,7 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://192.168.32.5:8085/oge-dag-22"
+    var DAG_ROOT_URL: String = "http://120.48.147.38:8085/oge-dag-22"
 
   }
 
