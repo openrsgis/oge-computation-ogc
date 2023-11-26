@@ -670,6 +670,73 @@ object QGIS {
 
   /**
    *
+   * @param sc    Alias object for SparkContext
+   * @param input Input line vector layer
+   * @param valueForward Value set in the direction field to identify edges with a forward direction
+   * @param valueBoth Value set in the direction field to identify bidirectional edges
+   * @param startPoint Point feature representing the start point of the routes
+   * @param defaultDirection If a feature has no value set in the direction field or if no direction field is set, then this direction value is used. One of: 0 — Forward direction 1 — Backward direction 2 — Both directions
+   * @param strategy The type of path to calculate. One of: 0 — Shortest 1 — Fastest
+   * @param tolerance  Two lines with nodes closer than the specified tolerance are considered connected
+   * @param defaultSpeed  Value to use to calculate the travel time if no speed field is provided for an edge
+   * @param directionField  The field used to specify directions for the network edges.
+   * @param endPoint  Point feature representing the end point of the routes.
+   * @param valueBackward  Value set in the direction field to identify edges with a backward direction.
+   * @param speedField  Field providing the speed value (in ) for the edges of the network when looking for the fastest path.
+   * @return The output line vector layer from polygons
+   */
+  def nativeShortestPathPointToPoint(implicit sc: SparkContext,
+                                   input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                     valueForward: String = "",
+                                     valueBoth: String = "",
+                                     startPoint: String = "",
+                                     defaultDirection: String = "2",
+                                     strategy: String = "0",
+                                     tolerance: Double = 0.0,
+                                     defaultSpeed: Double = 50.0,
+                                     directionField: String = "",
+                                     endPoint: String = "",
+                                     valueBackward: String = "",
+                                     speedField: String = ""):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val strategyInput: String = Map(
+      "0" -> "0",
+      "1" -> "1"
+    ).getOrElse(strategy, "0")
+
+    val defaultDirectionInput: String = Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2"
+    ).getOrElse(defaultDirection, "0")
+
+    val time = System.currentTimeMillis()
+
+    val outputTiffPath = algorithmData + "nativeShortestPathPointToPoint_" + time + ".shp"
+    val writePath = algorithmData + "nativeShortestPathPointToPoint_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputTiffPath)
+
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_shortestpathpointtopoint.py --input "$outputTiffPath" --value-forward "$valueForward" --value-both "$valueBoth" --start-point "$startPoint" --default-direction "$defaultDirectionInput" --strategy "$strategyInput" --tolerance $tolerance --default-speed $defaultSpeed --direction-field "$directionField" --end-point "$endPoint" --value-backward "$valueBackward" --speed-field "$speedField" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+
+  }
+
+  /**
+   *
    * @param sc                       Alias object for SparkContext
    * @param input                    Input polygon vector layer
    * @param minDistance              The minimum distance between points within one polygon feature
