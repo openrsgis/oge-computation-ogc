@@ -111,7 +111,7 @@ object GlobalConfig {
   object QGISConf {
     // PostgreSQL 基础配置
     var QGIS_DATA: String = "/root/storage/algorithmData/"
-    var QGIS_ALGORITHMCODE: String = "cd cd /root/qgis/;"
+    var QGIS_ALGORITHMCODE: String = "cd /root/qgis/;"
     var QGIS_HOST: String = "180.76.55.162"
     var QGIS_USERNAME: String = "root"
     var QGIS_PASSWORD: String = "Ypfamily608!"
