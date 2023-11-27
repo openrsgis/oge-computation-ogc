@@ -18,6 +18,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.cannyEdgeDetection
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.{Coverage, CoverageCollection}
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -52,10 +53,10 @@ object CoverageDubug {
 
   //  def ndviLandsat7(): Unit = {
   //
-  //    val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
-  //    val sc = new SparkContext(conf)
+//      val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
+//      val sc = new SparkContext(conf)
   //
-  //    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", "LE07_L1T_C01_T1")
+//      val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "LE07_L1TP_125039_20130110_20161126_01_T1", "LE07_L1T_C01_T1")
   //    val coverageDouble: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(coverage)
   //    val ndwi: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.normalizedDifference(coverageDouble, List("B4", "B3"))
   //
@@ -88,22 +89,22 @@ object CoverageDubug {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
 
-//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056",
-//      "ASTER_GDEM_DEM30", 10)
+//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056", "ASTER_GDEM_DEM30", 10)
 //    makeTIFF(coverage1, "dem")
-    val coverageCollection1 = CoverageCollection.load(sc,"ASTER_GDEM_DEM30",null,ArrayBuffer.empty[String],"2000-01-01 00:00:00","2000-01-01 00:00:00",extent = Extent(108.5, 18.1, 111, 20.1),level = 7)
-    val coverage1 = CoverageCollection.mosaic(coverageCollection1)
-    println(coverageCollection1.size)
+//    val coverageCollection1 = CoverageCollection.load(sc,"ASTER_GDEM_DEM30",null,ArrayBuffer.empty[String],"2000-01-01 00:00:00","2000-01-01 00:00:00",extent = Extent(108.5, 18.1, 111, 20.1),level = 7)
+//    val coverage2 = cannyEdgeDetection(coverage1)
+//    println(coverageCollection1.size)
 //    coverageCollection1.foreach(coverage =>{
 //      println(coverage._1)
 //      makeTIFF(coverage._2,coverage._1)
 //    })
-    makeTIFF(coverage1,"dem")
+//    makeTIFF(coverage2,"dem")
     println("Finish")
   }
   def test1(implicit sc: SparkContext):Unit={
 
-    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N28E056",     "ASTER_GDEM_DEM30", 7)
+    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LC81220392015275LGN00", "LC08_L1T",0)
+    val cc2=cannyEdgeDetection(coverage1)
 
 //    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "T49REK_20231004T030551","S2A_MSIL1C", 10)
 //    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LE07_L1TP_124039_20130612_20161124_01_T1","LE07_L1TP_C01_T1", 10)
@@ -111,7 +112,7 @@ object CoverageDubug {
 //    val res = Coverage.normalizedDifference(coverage2,List("B3","B5"))
 //    println(res._1.first()._2.cellType)
 //    val coverage = Coverage.selectBands(coverage1,List("B01"))
-    makeTIFF(coverage1,"dem1")
+    makeTIFF(cc2,"cannyTest")
 
 //    makeTIFF(coverage2, "lc07")
 
@@ -212,7 +213,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
