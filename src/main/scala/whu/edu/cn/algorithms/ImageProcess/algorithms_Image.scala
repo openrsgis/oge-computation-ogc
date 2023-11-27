@@ -342,7 +342,7 @@ object algorithms_Image {
 
 
   //canny边缘提取
-  def cannyEdgeDetection(coverage: RDDImage,lowCoefficient:Double= -1.0,highCoefficient:Double = -1.0)
+  def cannyEdgeDetection(coverage: RDDImage, lowCoefficient: Double = -1.0, highlowCoefficient: Double = -1.0)
   : RDDImage = {
     def gradXTileCalculate(tile: Tile, radius: Int): Tile = {
       val rows = tile.rows
@@ -582,7 +582,7 @@ object algorithms_Image {
     }
 
     val radius: Int = 1
-    val normalizRDD = globalNormalizeDouble(coverage, 0, 255)
+    val normalizRDD = globalNormalize(coverage, 0, 255)
     val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(normalizRDD, radius)
     val InternRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = group._1.map(
       image => {
@@ -631,16 +631,16 @@ object algorithms_Image {
       }
     )
     val singleBandGradRDDImage = (singleBandGrad, PaddingVriable._2)
-    val normalizedGrad: RDDImage = globalNormalizeDouble(singleBandGradRDDImage, 0, 255)
+    val normalizedGrad: RDDImage = globalNormalize(singleBandGradRDDImage, 0, 255)
     val threshold255 = OTSU(normalizedGrad)
     val minMaxMap = findMinMaxValueDouble(singleBandGradRDDImage)
-    println("thewshold:" + threshold255.toString)
+    println("threshold:" + threshold255.toString)
     val minGrad = minMaxMap(0)._1
     val maxGrad = minMaxMap(0)._2
     val normalThreshold = (threshold255.toDouble / 255.0) * (maxGrad - minGrad) + minGrad
     println(normalThreshold)
     val maxGradient = processedRDD.map(_.max).reduce(math.max)
-
+    //    println("经过非极大抑制后的最大幅值为：" + maxGradient)
 
     val newRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = PaddingVriable._1.map(
       image => {
@@ -654,14 +654,15 @@ object algorithms_Image {
 
         var highThreshold: Double = 6 * normalThreshold
         var lowThreshold: Double = 3 * normalThreshold
-        if (highCoefficient != -1) {
-          highThreshold = highThreshold * highCoefficient
+        if (highlowCoefficient != -1) {
+          highThreshold = normalThreshold * highlowCoefficient
         }
-        if (lowCoefficient == -1) {
-          lowThreshold = lowThreshold * lowCoefficient
+        if (lowCoefficient != -1) {
+          lowThreshold = normalThreshold * lowCoefficient
         }
+        if (image._1.spaceTimeKey.col == 0 && image._1.spaceTimeKey.row == 0) println("Low threshold: " + lowThreshold.toString + ",high threshold: " + highThreshold.toString)
 
-        val cannyEdgeExtraction = doubleThresholdDetection(NMS, 0.3 * maxGradient, 0.1 * maxGradient, radius)
+        val cannyEdgeExtraction = doubleThresholdDetection(NMS, highThreshold, lowThreshold, radius)
 
 
         (image._1, MultibandTile(cannyEdgeExtraction).crop(radius, radius, cols - radius - 1, rows - radius - 1))
