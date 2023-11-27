@@ -3477,36 +3477,24 @@ object QGIS {
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
-
-    val outputTiffPath = algorithmData+"ndvi_" + time + ".tif"
+    val writePath = algorithmData+"rsNDVI_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"rsNDVI_" + time + ".tif"
     saveRasterRDDToTif(input, outputTiffPath)
-    val rsPath = rsAlgorithm + "calculate_ndvi.py"
-    val pb = new ProcessBuilder(pythonPath, rsPath)
-    pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectError(ProcessBuilder.Redirect.PIPE)
-    System.out.println("Process start")
-    val process = pb.start
-    // 获取子进程的输入输出流
-    val inputStream = process.getInputStream
-    val outputStream = process.getOutputStream
-    val writer = new PrintWriter(new OutputStreamWriter(outputStream), true)
-    writer.println(outputTiffPath)
-    writer.close()
 
-    // 读取子进程的输出
-    val reader = new BufferedReader(new InputStreamReader(inputStream))
-    var line : String = ""
-    var writePath: String = ""
-    while (line != null) {
-      println(line)
-      writePath = line
-      line = reader.readLine
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_ndvi.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
     }
-    // 等待子进程结束并检查退出代码
-    val exitCode = process.waitFor
-    println("Exited with error code " + exitCode)
-    reader.close()
+
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
@@ -3521,46 +3509,50 @@ object QGIS {
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
-
-    val outputTiffPath = algorithmData+"lswi_" + time + ".tif"
+    val writePath = algorithmData+"rsLSWI_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"rsLSWI_" + time + ".tif"
     saveRasterRDDToTif(input, outputTiffPath)
-    val rsPath = rsAlgorithm + "calculate_lswi.py"
-    val pb = new ProcessBuilder(pythonPath, rsPath)
-    pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectError(ProcessBuilder.Redirect.PIPE)
-    System.out.println("Process start")
-    val process = pb.start
-    // 获取子进程的输入输出流
-    val inputStream = process.getInputStream
-    val outputStream = process.getOutputStream
-    val writer = new PrintWriter(new OutputStreamWriter(outputStream), true)
-    writer.println(outputTiffPath)
-    writer.close()
 
-    // 读取子进程的输出
-    val reader = new BufferedReader(new InputStreamReader(inputStream))
-    var line : String = ""
-    var writePath: String = ""
-    while (line != null) {
-      println(line)
-      writePath = line
-      line = reader.readLine
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
     }
-    // 等待子进程结束并检查退出代码
-    val exitCode = process.waitFor
-    println("Exited with error code " + exitCode)
-    reader.close()
+
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
+  /**
+   *
+   * @param extend
+   * @return
+   */
   def energyUtilisation(extend:String):String= {
-    val dataPath:mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty[String]
-    dataPath.append("/home/geocube/oge/oge-server/dag-boot/qgis/data/")
-    dataPath.append("/home/geocube/oge/oge-server/dag-boot/qgis/data/")
-    dataPath(0)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --input $extend""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    "extend"
   }
+
 
   /**
    *
@@ -3570,40 +3562,29 @@ object QGIS {
    * @return
    */
   def calNPP(implicit sc: SparkContext,
-              inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),energyPara :String):
+             inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),energyPara :String):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
+    val writePath = algorithmData+"rsNPP_" + time + "_out.tif"
+    val outputLSWIPath = algorithmData+"rsLSWI_" + time + ".tif"
+    val outputNDVIPath = algorithmData+"rsNDVI_" + time + ".tif"
+    saveRasterRDDToTif(inputLSWI, outputLSWIPath)
+    saveRasterRDDToTif(inputNDVI, outputNDVIPath)
 
-    val outputTiffPath = algorithmData+"npp_" + time + ".tif"
-    saveRasterRDDToTif(inputLSWI, outputTiffPath)
-    val rsPath = rsAlgorithm + "calculate_npp.py"
-    val pb = new ProcessBuilder(pythonPath, rsPath)
-    pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectError(ProcessBuilder.Redirect.PIPE)
-    System.out.println("Process start")
-    val process = pb.start
-    // 获取子进程的输入输出流
-    val inputStream = process.getInputStream
-    val outputStream = process.getOutputStream
-    val writer = new PrintWriter(new OutputStreamWriter(outputStream), true)
-    writer.println(outputTiffPath)
-    writer.close()
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --inputLSWI "$outputLSWIPath" --inputNDVI "$outputNDVIPath"   --output "$writePath"""".stripMargin
 
-    // 读取子进程的输出
-    val reader = new BufferedReader(new InputStreamReader(inputStream))
-    var line : String = ""
-    var writePath: String = ""
-    while (line != null) {
-      println(line)
-      writePath = line
-      line = reader.readLine
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
     }
-    // 等待子进程结束并检查退出代码
-    val exitCode = process.waitFor
-    println("Exited with error code " + exitCode)
-    reader.close()
+
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
