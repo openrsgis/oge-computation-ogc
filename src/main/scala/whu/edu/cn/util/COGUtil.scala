@@ -69,7 +69,12 @@ object COGUtil {
     val geoTrans: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val cell: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]] = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]]
-
+    try{
+      val inputStream_test: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(1).build)
+    }catch {
+      case e:Exception =>
+        throw new Exception("Minio中不存在相应数据，请联系管理员检查数据完整性。")
+    }
     val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
     // Read data from stream
     val outStream = new ByteArrayOutputStream
