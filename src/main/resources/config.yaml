@@ -1,5 +1,5 @@
 DagBootConf: # dag-boot 服务根路径
-  DAG_ROOT_URL: "http://125.220.153.22:8085/oge-dag-22"
+  DAG_ROOT_URL: "http://192.168.32.5:8085/oge-dag-22"
 
 
 RedisConf:
@@ -20,7 +20,7 @@ MinioConf:
 
 PostgreSqlConf:
   # PostgreSQL 基础配置
-  POSTGRESQL_URL: "jdbc:postgresql://125.220.153.23:30865/oge"
+  POSTGRESQL_URL: "jdbc:postgresql://120.48.44.57:3306/oge"
   POSTGRESQL_DRIVER: "org.postgresql.Driver"
   POSTGRESQL_USER: "oge"
   POSTGRESQL_PWD: "ypfamily608"
@@ -34,9 +34,20 @@ GcConf:
   localHtmlRoot: "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/"
   algorithmJson: "/home/geocube/kernel/geocube-core/tb19/process_description.json"
 
+QGISConf:
+  QGIS_DATA: "/home/ogeStorage/algorithmData/"
+  QGIS_ALGORITHMCODE: "cd /home/geocube/oge/oge-server/dag-boot/qgis;"
+  QGIS_HOST: "10.101.240.10"
+  QGIS_USERNAME:  "root"
+  QGIS_PASSWORD:  "ypfamily"
+  QGIS_PORT: 22
+  QGIS_PYTHON: "/home/ogeStorage/miniconda3/bin/python"
+  QGIS_RS : "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
+
 Others:
-  jsonAlgorithms: "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json" # 存储json解析文件地址
-  tempFilePath: "/mnt/ogeStorage/temp/" # 各类临时文件的地址
-  tmsPath: "http://oge.whu.edu.cn/api/oge-tms-png/" # tms服务url
-  ontheFlyStorage: "/mnt/ogeStorage/on-the-fly" # tms瓦片存储地址
-  jsonSavePath: "/mnt/ogeStorage/algorithmData/" # geojson临时存储地址
+  jsonAlgorithms: "/root/storage/algorithms_ogc.json" # 存储json解析文件地址
+  tempFilePath: "/mnt/storage/temp/" # 各类临时文件的地址
+  tmsPath: "http://120.48.147.38/api/oge-tms-png/" # tms服务url
+  ontheFlyStorage: "/mnt/storage/on-the-fly/" # tms瓦片存储地址
+  jsonSavePath: "/mnt/storage/algorithmData/" # geojson临时存储地址
+  bucketName : "ogebos"

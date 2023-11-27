@@ -62,7 +62,7 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://120.48.147.38:8085/oge-dag-22"
+    var DAG_ROOT_URL: String = "http://192.168.32.5:8085/oge-dag-22"
 
   }
 
@@ -110,8 +110,8 @@ object GlobalConfig {
   }
   object QGISConf {
     // PostgreSQL 基础配置
-    var QGIS_DATA: String = "/root/storage/algorithmData/"
-    var QGIS_ALGORITHMCODE: String = "cd /root/qgis/;"
+    var QGIS_DATA: String = "/mnt/storage/algorithmData/"
+    var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
     var QGIS_HOST: String = "180.76.55.162"
     var QGIS_USERNAME: String = "root"
     var QGIS_PASSWORD: String = "Ypfamily608!"
@@ -120,7 +120,7 @@ object GlobalConfig {
     var QGIS_RS: String = "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
   }
   object Others {
-    final var jsonAlgorithms = "/root/storage/algorithms_ogc.json" //存储json解析文件地址
+    final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址

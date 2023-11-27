@@ -8877,7 +8877,7 @@
   },
   "Coverage.cannyEdgeDetection": {
     "description": "Edge detection by Canny",
-    "returns": "coverage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
