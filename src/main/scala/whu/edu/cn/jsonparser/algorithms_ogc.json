@@ -1373,6 +1373,60 @@
       }
     ]
   },
+  "Coverage.calNDVI": {
+    "description": "Calculates the NDVI in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Digital Terrain Model raster layer."
+      }
+    ]
+  },
+  "Coverage.calLSWI": {
+    "description": "Calculates the aspect of the Digital Terrain Model in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Digital Terrain Model raster layer."
+      }
+    ]
+  },
+  "Coverage.energyUtilisation": {
+    "description": "Calculates the aspect of the Digital Terrain Model in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "extend",
+        "type": "String",
+        "description": "extend layer."
+      }
+    ]
+  },
+  "Coverage.calNPP": {
+    "description": "Calculates the aspect of the Digital Terrain Model in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "inputLSWI",
+        "type": "Coverage",
+        "description": "raster layer."
+      },
+      {
+        "name": "inputNDVI",
+        "type": "Coverage",
+        "description": "raster layer."
+      },
+      {
+        "name": "extend",
+        "type": "String",
+        "description": "extend layer."
+      }
+    ]
+  },
   "Coverage.slopeByQGIS": {
     "description": "Calculates the slope from an input raster layer.",
     "returns": "Coverage",
@@ -1876,22 +1930,22 @@
       {
         "name": "directionField",
         "type": "String",
-        "description": "The field used to specify directions for the network edges.",
+        "description": "The field used to specify directions for the network edges."
       },
       {
         "name": "endPoint",
         "type": "String",
-        "description": "Point feature representing the end point of the routes.",
+        "description": "Point feature representing the end point of the routes."
       },
       {
         "name": "valueBackward",
         "type": "String",
-        "description": "Value set in the direction field to identify edges with a backward direction.",
+        "description": "Value set in the direction field to identify edges with a backward direction."
       },
       {
         "name": "speedField",
         "type": "String",
-        "description": "Field providing the speed value (in ) for the edges of the network when looking for the fastest path.",
+        "description": "Field providing the speed value (in ) for the edges of the network when looking for the fastest path."
       }
     ]
   },
