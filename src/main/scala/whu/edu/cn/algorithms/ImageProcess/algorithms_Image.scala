@@ -4,7 +4,7 @@ import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalizeDouble}
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalize, globalNormalizeDouble}
 import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.paddingRDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
@@ -342,7 +342,7 @@ object algorithms_Image {
 
 
   //canny边缘提取
-  def cannyEdgeDetection(coverage: RDDImage, lowCoefficient: Double = -1.0, highlowCoefficient: Double = -1.0)
+  def cannyEdgeDetection(coverage: RDDImage, lowCoefficient: Double = -1.0, highCoefficient: Double = -1.0)
   : RDDImage = {
     def gradXTileCalculate(tile: Tile, radius: Int): Tile = {
       val rows = tile.rows
@@ -654,8 +654,8 @@ object algorithms_Image {
 
         var highThreshold: Double = 6 * normalThreshold
         var lowThreshold: Double = 3 * normalThreshold
-        if (highlowCoefficient != -1) {
-          highThreshold = normalThreshold * highlowCoefficient
+        if (highCoefficient != -1) {
+          highThreshold = normalThreshold * highCoefficient
         }
         if (lowCoefficient != -1) {
           lowThreshold = normalThreshold * lowCoefficient
