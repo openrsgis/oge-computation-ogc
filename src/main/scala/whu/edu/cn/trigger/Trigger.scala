@@ -32,6 +32,9 @@ import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
 
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
+import scala.collection.mutable.ArrayBuffer
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]

@@ -47,6 +47,7 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
 import scala.io.Source
 import scala.math.{max, min}
+import scala.sys.process._
 
 object Feature {
   def load(implicit sc: SparkContext, productName: String = null, dataTime: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
@@ -315,13 +316,14 @@ object Feature {
    *
    * @param sc         used to create RDD
    * @param gjson      to create geometry
-   * @param properties properties for geometry,it is a json String
    * @param crs        projection of geometry
    * @return
    */
 
   def geometry(implicit sc: SparkContext, gjson: String, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
-    val jsonobject: JSONObject = JSON.parseObject(gjson)
+    //异常处理，报错信息统一格式
+    val escapedJson = gjson.replace("\\", "")//去除转义符
+    val jsonobject: JSONObject = JSON.parseObject(escapedJson)
     val array = jsonobject.getJSONArray("features")
     var list: List[(Geometry, String)] = List.empty
     for (i <- 0 until (array.size())) {
@@ -538,7 +540,8 @@ object Feature {
   def saveJSONToServer(geoJSONString: String): String = {
     val time = System.currentTimeMillis()
 
-    val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
+   val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
+  //val outputVectorPath = s"D:/shuju/vector_${time}.json"
 
     // 创建PrintWriter对象
     val writer: BufferedWriter = new BufferedWriter(new FileWriter(outputVectorPath))
@@ -549,18 +552,22 @@ object Feature {
     // 关闭PrintWriter
     writer.close()
 
-    try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
-      val st =
-        raw"""scp "$outputVectorPath" wkx@125.220.153.22:/home/wkx/oge/apache-tomcat-9.0.69/webapps/oge_vector/""".stripMargin
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
+    versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
 
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-    val storageURL = "http://125.220.153.22:8027/oge_vector/vector_" + time + ".json"
+    val st = s"scp $outputVectorPath root@10.101.240.20:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
+
+    //本地测试使用代码
+//      val exitCode: Int = st.!
+//      if (exitCode == 0) {
+//        println("SCP command executed successfully.")
+//      } else {
+//        println(s"SCP command failed with exit code $exitCode.")
+//      }
+
+      runCmd(st, "UTF-8")
+      println(s"st = $st")
+
+    val storageURL = "http://10.101.240.20:8080/oge_vector/vector_" + time + ".json"
     storageURL
   }
 
