@@ -116,8 +116,6 @@ object GlobalConfig {
     var QGIS_USERNAME: String = "root"
     var QGIS_PASSWORD: String = "Ypfamily608!"
     var QGIS_PORT: Int = 22
-    var QGIS_PYTHON: String = "/home/ogeStorage/miniconda3/bin/python"
-    var QGIS_RS: String = "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
   }
   object Others {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
