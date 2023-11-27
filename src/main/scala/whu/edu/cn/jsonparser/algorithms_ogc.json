@@ -1373,6 +1373,60 @@
       }
     ]
   },
+  "Coverage.calNDVI": {
+    "description": "Calculates the NDVI in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Digital Terrain Model raster layer."
+      }
+    ]
+  },
+  "Coverage.calLSWI": {
+    "description": "Calculates the aspect of the Digital Terrain Model in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Digital Terrain Model raster layer."
+      }
+    ]
+  },
+  "Coverage.energyUtilisation": {
+    "description": "Calculates the aspect of the Digital Terrain Model in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "extend",
+        "type": "String",
+        "description": "extend layer."
+      }
+    ]
+  },
+  "Coverage.calNPP": {
+    "description": "Calculates the aspect of the Digital Terrain Model in input.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "inputLSWI",
+        "type": "Coverage",
+        "description": "raster layer."
+      },
+      {
+        "name": "inputNDVI",
+        "type": "Coverage",
+        "description": "raster layer."
+      },
+      {
+        "name": "extend",
+        "type": "String",
+        "description": "extend layer."
+      }
+    ]
+  },
   "Coverage.slopeByQGIS": {
     "description": "Calculates the slope from an input raster layer.",
     "returns": "Coverage",
@@ -1822,6 +1876,76 @@
         "name": "input",
         "type": "Feature",
         "description": "The feature as the input data "
+      }
+    ]
+  },
+  "Feature.shortestPathPointToPointByQGIS": {
+    "description": "Computes the optimal (shortest or fastest) route between a given start point and a given end point.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "The feature as the input data "
+      },
+      {
+        "name": "valueForward",
+        "type": "String",
+        "description": "Value set in the direction field to identify edges with a forward direction"
+      },
+      {
+        "name": "valueBoth",
+        "type": "String",
+        "description": "Value set in the direction field to identify bidirectional edges"
+      },
+      {
+        "name": "startPoint",
+        "type": "String",
+        "description": "Point feature representing the start point of the routes"
+      },
+      {
+        "name": "defaultDirection",
+        "type": "String",
+        "description": "If a feature has no value set in the direction field or if no direction field is set, then this direction value is used. One of: 0 — Forward direction 1 — Backward direction 2 — Both directions",
+        "default": "2"
+      },
+      {
+        "name": "strategy",
+        "type": "String",
+        "description": "The type of path to calculate. One of: 0 — Shortest 1 — Fastest",
+        "default": "0"
+      },
+      {
+        "name": "tolerance",
+        "type": "Double",
+        "description": "Two lines with nodes closer than the specified tolerance are considered connected",
+        "default": 0.0
+      },
+      {
+        "name": "defaultSpeed",
+        "type": "Double",
+        "description": "Value to use to calculate the travel time if no speed field is provided for an edge",
+        "default": 50.0
+      },
+      {
+        "name": "directionField",
+        "type": "String",
+        "description": "The field used to specify directions for the network edges."
+      },
+      {
+        "name": "endPoint",
+        "type": "String",
+        "description": "Point feature representing the end point of the routes."
+      },
+      {
+        "name": "valueBackward",
+        "type": "String",
+        "description": "Value set in the direction field to identify edges with a backward direction."
+      },
+      {
+        "name": "speedField",
+        "type": "String",
+        "description": "Field providing the speed value (in ) for the edges of the network when looking for the fastest path."
       }
     ]
   },
