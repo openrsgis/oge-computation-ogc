@@ -24,12 +24,14 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter,reduction,broveyFusion,cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
+
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -335,7 +337,7 @@ object Trigger {
         case "Coverage.bilateralFilter" =>
           coverageRddList += (UUID -> bilateralFilter(coverage = coverageRddList(args("coverage")),d=args("d").toInt,sigmaSpace = args("sigmaSpace").toDouble,sigmaColor = args("sigmaColor").toDouble,borderType = args("borderType").toString))
         case "Coverage.gaussianBlur" =>
-          coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")), ksize = args("ksize").stripPrefix("List(").stripSuffix(")").split(",").map(_.trim.toInt).toList, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
+          coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")),d=args("d").toInt, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
         case "Coverage.falseColorComposite" =>
           coverageRddList += (UUID -> falseColorComposite(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
         case "Coverage.linearTransformation" =>
