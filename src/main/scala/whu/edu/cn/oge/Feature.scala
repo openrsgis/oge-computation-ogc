@@ -540,6 +540,10 @@ object Feature {
 
   def saveJSONToServer(geoJSONString: String): String = {
     val time = System.currentTimeMillis()
+    val host = GlobalConfig.QGISConf.QGIS_HOST
+    val userName = GlobalConfig.QGISConf.QGIS_USERNAME
+    val password = GlobalConfig.QGISConf.QGIS_PASSWORD
+    val port = GlobalConfig.QGISConf.QGIS_PORT
 
    val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
   //val outputVectorPath = s"D:/shuju/vector_${time}.json"
@@ -553,7 +557,7 @@ object Feature {
     // 关闭PrintWriter
     writer.close()
 
-    versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+    versouSshUtil(host, userName, password, port)
 
     val st = s"scp $outputVectorPath root@120.48.147.38:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
@@ -568,7 +572,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = "http://10.101.240.20:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = "http://120.48.147.38:8080/oge_vector/vector_" + time + ".json"
     storageURL
   }
 
