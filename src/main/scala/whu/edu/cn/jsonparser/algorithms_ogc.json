@@ -8861,7 +8861,7 @@
   },
   "Coverage.cannyEdgeDetection": {
     "description": "Edge detection by Canny",
-    "returns": "coverage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
@@ -8917,9 +8917,9 @@
         "optional": "False"
       },
       {
-        "name": "ksize",
-        "type": "List[Int]",
-        "description": "The list containing the height and width of the filter.",
+        "name": "d",
+        "type": "Int",
+        "description": "111",
         "default": "None",
         "optional": "False"
       },
