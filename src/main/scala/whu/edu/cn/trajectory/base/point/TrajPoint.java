@@ -7,6 +7,7 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+
 /**
  * @author xuqi
  * @date 2023/11/6
@@ -83,6 +84,9 @@ public class TrajPoint extends BasePoint implements Serializable {
     }
 
     public String getTimestampString() {
+        if(timeString == null){
+            timeString = BasicDateUtils.format(timestamp, BasicDateUtils.getDeaultFormat());
+        }
         return timeString;
     }
 

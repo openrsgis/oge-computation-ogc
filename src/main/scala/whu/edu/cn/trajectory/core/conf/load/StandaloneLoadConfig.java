@@ -16,6 +16,7 @@ public class StandaloneLoadConfig implements ILoadConfig {
     private int partNum;
     private String splitter;
     private FileTypeEnum fileType;
+    private String filterText;
 
   @JsonCreator
   public StandaloneLoadConfig(
@@ -24,13 +25,15 @@ public class StandaloneLoadConfig implements ILoadConfig {
       @JsonProperty("fileMode") FileModeEnum fileModeEnum,
       @JsonProperty("partNum") @JsonInclude(JsonInclude.Include.NON_NULL) int partNum,
       @JsonProperty("splitter") String splitter,
-      @JsonProperty("fileType") FileTypeEnum fileType) {
+      @JsonProperty("fileType") FileTypeEnum fileType,
+      @JsonProperty("filterText") @JsonInclude(JsonInclude.Include.NON_NULL) String filterText) {
         this.master = master;
         this.location = location;
         this.fileModeEnum = fileModeEnum;
         this.partNum = partNum;
         this.splitter = splitter;
         this.fileType = fileType;
+        this.filterText = filterText;
     }
 
     public String getMaster() {
@@ -43,6 +46,14 @@ public class StandaloneLoadConfig implements ILoadConfig {
 
     public int getPartNum() {
         return this.partNum == 0 ? 1 : this.partNum;
+    }
+
+    public String getFilterText() {
+        return filterText;
+    }
+
+    public FileModeEnum getFileModeEnum() {
+        return fileModeEnum;
     }
 
     public String getLocation() {

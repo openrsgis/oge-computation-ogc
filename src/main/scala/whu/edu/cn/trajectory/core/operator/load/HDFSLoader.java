@@ -9,12 +9,15 @@ import whu.edu.cn.trajectory.base.trajectory.Trajectory;
 import whu.edu.cn.trajectory.core.conf.data.IDataConfig;
 import whu.edu.cn.trajectory.core.conf.data.TrajPointConfig;
 import whu.edu.cn.trajectory.core.conf.data.TrajectoryConfig;
+import whu.edu.cn.trajectory.core.conf.load.StandaloneLoadConfig;
 import whu.edu.cn.trajectory.core.enums.FileTypeEnum;
 import whu.edu.cn.trajectory.core.conf.load.HDFSLoadConfig;
 import whu.edu.cn.trajectory.core.conf.load.ILoadConfig;
+import whu.edu.cn.trajectory.core.operator.transform.ParquetTransform;
 import whu.edu.cn.trajectory.core.operator.transform.source.*;
 
 import javax.ws.rs.NotSupportedException;
+import java.io.File;
 import java.util.Objects;
 
 /**
@@ -56,11 +59,50 @@ public class HDFSLoader implements ILoader {
     throw new NotImplementedError();
   }
 
+  private JavaRDD<Trajectory> loadTrajectoryFromParquet(
+      SparkSession sparkSession, HDFSLoadConfig hdfsLoadConfig, TrajectoryConfig trajectoryConfig, boolean isTraj) {
+    String filterText = hdfsLoadConfig.getFilterText();
+    String location = hdfsLoadConfig.getLocation();
+    File directory = new File(location);
+    File[] files = directory.listFiles();
+    JavaRDD<Trajectory> unionJavaRDD = null;
+    if (files != null) {
+      for (File file : files) {
+        String fileName = file.getName();
+        if (file.isFile() && fileName.endsWith(".parquet")) {
+          JavaRDD<Trajectory> trajectoryJavaRDD = null;
+          if (isTraj) {
+            trajectoryJavaRDD =
+                ParquetTransform.loadParquetTrajData(
+                    file.getAbsolutePath(), sparkSession, filterText, hdfsLoadConfig.getPartNum());
+          } else {
+            trajectoryJavaRDD =
+                ParquetTransform.loadParquetPointData(
+                    file.getAbsolutePath(),
+                    sparkSession,
+                    filterText,
+                    trajectoryConfig,
+                    hdfsLoadConfig.getPartNum());
+          }
+          if (unionJavaRDD == null) {
+            unionJavaRDD = trajectoryJavaRDD;
+          } else {
+            unionJavaRDD.union(trajectoryJavaRDD);
+          }
+        }
+      }
+    }
+    return unionJavaRDD;
+  }
+
   private JavaRDD<Trajectory> loadTrajectoryFromMultiFile(
       SparkSession sparkSession, HDFSLoadConfig hdfsLoadConfig, TrajectoryConfig trajectoryConfig) {
     LOGGER.info("Loading trajectories from multi_files in folder: " + hdfsLoadConfig.getLocation());
     int partNum = hdfsLoadConfig.getPartNum();
     FileTypeEnum fileType = hdfsLoadConfig.getFileType();
+    if (fileType == FileTypeEnum.parquet) {
+      return loadTrajectoryFromParquet(sparkSession, hdfsLoadConfig, trajectoryConfig, false);
+    }
     JavaRDD<Tuple2<String, String>> loadRDD =
         sparkSession
             .sparkContext()
@@ -103,13 +145,13 @@ public class HDFSLoader implements ILoader {
       case shp:
         resultRdd =
             loadRDD
-                .map((s) -> Shp2Traj.parseShapefileToTrajectory(s._2(), trajectoryConfig))
+                .map((s) -> Shp2Traj.parseShapefileToTrajectory(s._1, trajectoryConfig))
                 .filter(Objects::nonNull);
         break;
       case kml:
         resultRdd =
             loadRDD
-                .map((s) -> KML2Traj.parseKMLToTrajectory(s._2(), trajectoryConfig))
+                .map((s) -> KML2Traj.parseKMLToTrajectory(s._1, trajectoryConfig))
                 .filter(Objects::nonNull);
         break;
       default:
@@ -121,64 +163,66 @@ public class HDFSLoader implements ILoader {
 
   private JavaRDD<Trajectory> loadTrajectoryFromSingleFile(
       SparkSession sparkSession, HDFSLoadConfig hdfsLoadConfig, TrajectoryConfig trajectoryConfig) {
-    TrajPointConfig trajPointConfig = trajectoryConfig.getTrajPointConfig();
     LOGGER.info("Loading trajectories from single file : " + hdfsLoadConfig.getLocation());
     int partNum = hdfsLoadConfig.getPartNum();
-      FileTypeEnum fileType = hdfsLoadConfig.getFileType();
-      JavaRDD<Tuple2<String, String>> loadRDD =
-              sparkSession
-                      .sparkContext()
-                      .wholeTextFiles(hdfsLoadConfig.getLocation(), partNum)
-                      .toJavaRDD()
-                      .filter(
-                              (s) -> {
-                                  return !(s._2).isEmpty();
-                              });
-      JavaRDD<Trajectory> resultRdd = null;
-      switch (fileType) {
-          case csv:
-              loadRDD
-                      .flatMap(
-                              s -> {
-                                  return CSV2Traj.singlefileParse(
-                                                  s._2, trajectoryConfig, hdfsLoadConfig.getSplitter())
-                                          .iterator();
-                              })
-                      .filter(Objects::nonNull);
-              break;
-          case wkt:
-              resultRdd =
-                      loadRDD
-                              .flatMap(s -> WKT2Traj.parseWKTToTrajectoryList(s._2).iterator())
-                              .filter(Objects::nonNull);
-              break;
-          case geojson:
-              resultRdd =
-                      loadRDD
-                              .flatMap(
-                                      (s ->
-                                              GeoJson2Traj.parseGeoJsonToTrajectoryList(s._2, trajectoryConfig)
-                                                      .iterator()))
-                              .filter(Objects::nonNull);
-              break;
-          case shp:
-              resultRdd =
-                      loadRDD
-                              .flatMap(
-                                      s -> Shp2Traj.parseShapefileToTrajectoryList(s._2, trajectoryConfig).iterator())
-                              .filter(Objects::nonNull);
-              break;
-          case kml:
-              resultRdd =
-                      loadRDD
-                              .flatMap(s -> KML2Traj.parseKMLToTrajectoryList(s._2, trajectoryConfig).iterator())
-                              .filter(Objects::nonNull);
-              break;
-          default:
-              throw new NotSupportedException(
-                      "can't support fileType " + hdfsLoadConfig.getFileType().getFileTypeEnum());
-      }
-      return resultRdd;
+    FileTypeEnum fileType = hdfsLoadConfig.getFileType();
+    if (fileType == FileTypeEnum.parquet) {
+      return loadTrajectoryFromParquet(sparkSession, hdfsLoadConfig, trajectoryConfig, true);
+    }
+    JavaRDD<Tuple2<String, String>> loadRDD =
+        sparkSession
+            .sparkContext()
+            .wholeTextFiles(hdfsLoadConfig.getLocation(), partNum)
+            .toJavaRDD()
+            .filter(
+                (s) -> {
+                  return !(s._2).isEmpty();
+                });
+    JavaRDD<Trajectory> resultRdd = null;
+    switch (fileType) {
+      case csv:
+        loadRDD
+            .flatMap(
+                s -> {
+                  return CSV2Traj.singlefileParse(
+                          s._2, trajectoryConfig, hdfsLoadConfig.getSplitter())
+                      .iterator();
+                })
+            .filter(Objects::nonNull);
+        break;
+      case wkt:
+        resultRdd =
+            loadRDD
+                .flatMap(s -> WKT2Traj.parseWKTToTrajectoryList(s._2).iterator())
+                .filter(Objects::nonNull);
+        break;
+      case geojson:
+        resultRdd =
+            loadRDD
+                .flatMap(
+                    (s ->
+                        GeoJson2Traj.parseGeoJsonToTrajectoryList(s._2, trajectoryConfig)
+                            .iterator()))
+                .filter(Objects::nonNull);
+        break;
+      case shp:
+        resultRdd =
+            loadRDD
+                .flatMap(
+                    s -> Shp2Traj.parseShapefileToTrajectoryList(s._1, trajectoryConfig).iterator())
+                .filter(Objects::nonNull);
+        break;
+      case kml:
+        resultRdd =
+            loadRDD
+                .flatMap(s -> KML2Traj.parseKMLToTrajectoryList(s._1, trajectoryConfig).iterator())
+                .filter(Objects::nonNull);
+        break;
+      default:
+        throw new NotSupportedException(
+            "can't support fileType " + hdfsLoadConfig.getFileType().getFileTypeEnum());
+    }
+    return resultRdd;
   }
 
   private JavaRDD<Trajectory> loadTrajectoryFromMultiSingleFile(

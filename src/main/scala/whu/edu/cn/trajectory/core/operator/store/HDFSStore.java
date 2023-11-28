@@ -7,6 +7,7 @@ import org.apache.spark.HashPartitioner;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.StorageLevels;
+import org.apache.spark.sql.SparkSession;
 import scala.NotImplementedError;
 import scala.Tuple2;
 import whu.edu.cn.trajectory.base.point.StayPoint;
@@ -109,6 +110,11 @@ public class HDFSStore implements IStore {
             default:
                 throw new NotImplementedError();
         }
+    }
+
+    @Override
+    public void storeTrajectory(JavaRDD<Trajectory> t, SparkSession ss) throws Exception {
+
     }
 
 

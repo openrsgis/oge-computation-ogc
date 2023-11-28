@@ -18,6 +18,7 @@ public class HDFSLoadConfig implements ILoadConfig {
 
   private String splitter;
   private FileTypeEnum fileType;
+  private String filterText;
 
   @JsonCreator
   public HDFSLoadConfig(
@@ -27,7 +28,8 @@ public class HDFSLoadConfig implements ILoadConfig {
       @JsonProperty("fileMode") FileModeEnum fileModeEnum,
       @JsonProperty("partNum") @JsonInclude(JsonInclude.Include.NON_NULL) int partNum,
       @JsonProperty("splitter") String splitter,
-      @JsonProperty("fileType") FileTypeEnum fileType) {
+      @JsonProperty("fileType") FileTypeEnum fileType,
+      @JsonProperty("filterText") @JsonInclude(JsonInclude.Include.NON_NULL) String filterText) {
     this.master = master;
     this.fsDefaultName = fsDefaultName;
     this.location = location;
@@ -35,6 +37,7 @@ public class HDFSLoadConfig implements ILoadConfig {
     this.partNum = partNum;
     this.splitter = splitter;
     this.fileType = fileType;
+    this.filterText = filterText;
   }
 
   public HDFSLoadConfig() {}
@@ -45,6 +48,14 @@ public class HDFSLoadConfig implements ILoadConfig {
 
   public FileTypeEnum getFileType() {
     return fileType;
+  }
+
+  public FileModeEnum getFileModeEnum() {
+    return fileModeEnum;
+  }
+
+  public String getFilterText() {
+    return filterText;
   }
 
   public int getPartNum() {

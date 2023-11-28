@@ -11,7 +11,8 @@ public enum FileTypeEnum {
     geojson("geojson"),
     wkt("wkt"),
     kml("kml"),
-    shp("shp");
+    shp("shp"),
+    parquet("parquet");
     private final String fileType;
 
     FileTypeEnum(String fileType) {

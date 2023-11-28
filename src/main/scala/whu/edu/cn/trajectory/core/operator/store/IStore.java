@@ -3,6 +3,7 @@ package whu.edu.cn.trajectory.core.operator.store;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.SparkSession;
 import scala.NotImplementedError;
 import whu.edu.cn.trajectory.base.point.StayPoint;
 import whu.edu.cn.trajectory.base.trajectory.Trajectory;
@@ -17,6 +18,7 @@ import java.util.List;
  */
 public interface IStore extends Serializable {
     void storeTrajectory(JavaRDD<Trajectory> t) throws Exception;
+    void storeTrajectory(JavaRDD<Trajectory> t, SparkSession ss) throws Exception;
     void storeStayPointList(JavaRDD<List<StayPoint>> spList);
     void storeStayPointASTraj(JavaRDD<StayPoint> sp);
 

@@ -1,0 +1,14 @@
+{
+  "loadConfig": {
+    "@type": "standalone",
+    "master": "local[*]",
+    "location": "D:/bigdata/oge-computation-ogc/src/main/resources/outfiles/parquet_traj",
+    "fileMode": "single_file",
+    "partNum": 8,
+    "splitter": ",",
+    "fileType": "parquet"
+  },
+  "dataConfig": {
+    "@type": "trajectory"
+  }
+}

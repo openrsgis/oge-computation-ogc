@@ -1,6 +1,7 @@
 package whu.edu.cn.trajectory.core.operator.store;
 
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.SparkSession;
 import whu.edu.cn.trajectory.base.point.StayPoint;
 import whu.edu.cn.trajectory.base.trajectory.Trajectory;
 import whu.edu.cn.trajectory.core.conf.store.HBaseStoreConfig;
@@ -22,6 +23,11 @@ public class HiveStore implements IStore{
 
     @Override
     public void storeTrajectory(JavaRDD<Trajectory> t) throws Exception {
+
+    }
+
+    @Override
+    public void storeTrajectory(JavaRDD<Trajectory> t, SparkSession ss) throws Exception {
 
     }
 

@@ -1,5 +1,6 @@
 package whu.edu.cn.trajectory.core.operator.load;
 
+import geotrellis.raster.render.png.PaethFilter;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.SparkSession;
 import scala.NotImplementedError;
@@ -10,6 +11,7 @@ import whu.edu.cn.trajectory.core.conf.data.TrajectoryConfig;
 import whu.edu.cn.trajectory.core.enums.FileTypeEnum;
 import whu.edu.cn.trajectory.core.conf.load.ILoadConfig;
 import whu.edu.cn.trajectory.core.conf.load.StandaloneLoadConfig;
+import whu.edu.cn.trajectory.core.operator.transform.ParquetTransform;
 import whu.edu.cn.trajectory.core.operator.transform.source.*;
 
 import javax.ws.rs.NotSupportedException;
@@ -54,6 +56,49 @@ public class StandaloneLoader implements ILoader {
     throw new NotImplementedError();
   }
 
+  private JavaRDD<Trajectory> loadTrajectoryFromParquet(
+      SparkSession sparkSession,
+      StandaloneLoadConfig standaloneLoadConfig,
+      TrajectoryConfig trajectoryConfig,
+      boolean isTraj) {
+
+    String filterText = standaloneLoadConfig.getFilterText();
+    String location = standaloneLoadConfig.getLocation();
+    File directory = new File(location);
+    File[] files = directory.listFiles();
+    JavaRDD<Trajectory> unionJavaRDD = null;
+    if (files != null) {
+      for (File file : files) {
+        String fileName = file.getName();
+        if (file.isFile() && fileName.endsWith(".parquet")) {
+          JavaRDD<Trajectory> trajectoryJavaRDD = null;
+          if (isTraj) {
+            trajectoryJavaRDD =
+                ParquetTransform.loadParquetTrajData(
+                    file.getAbsolutePath(),
+                    sparkSession,
+                    filterText,
+                    standaloneLoadConfig.getPartNum());
+          } else {
+            trajectoryJavaRDD =
+                ParquetTransform.loadParquetPointData(
+                    file.getAbsolutePath(),
+                    sparkSession,
+                    filterText,
+                    trajectoryConfig,
+                    standaloneLoadConfig.getPartNum());
+          }
+          if (unionJavaRDD == null) {
+            unionJavaRDD = trajectoryJavaRDD;
+          } else {
+            unionJavaRDD.union(trajectoryJavaRDD);
+          }
+        }
+      }
+    }
+    return unionJavaRDD;
+  }
+
   private JavaRDD<Trajectory> loadTrajectoryFromMultiFile(
       SparkSession sparkSession,
       StandaloneLoadConfig standaloneLoadConfig,
@@ -61,6 +106,9 @@ public class StandaloneLoader implements ILoader {
 
     int partNum = standaloneLoadConfig.getPartNum();
     FileTypeEnum fileType = standaloneLoadConfig.getFileType();
+    if (fileType == FileTypeEnum.parquet) {
+      return loadTrajectoryFromParquet(sparkSession, standaloneLoadConfig, trajectoryConfig, false);
+    }
     JavaRDD<Tuple2<String, String>> loadRDD =
         sparkSession
             .sparkContext()
@@ -112,7 +160,7 @@ public class StandaloneLoader implements ILoader {
       case kml:
         resultRdd =
             loadRDD
-                .map((s) -> KML2Traj.parseKMLToTrajectory(s._2(), trajectoryConfig))
+                .map((s) -> KML2Traj.parseKMLToTrajectory(s._1, trajectoryConfig))
                 .filter(Objects::nonNull);
         break;
       default:
@@ -128,6 +176,9 @@ public class StandaloneLoader implements ILoader {
       TrajectoryConfig trajectoryConfig) {
     int partNum = standaloneLoadConfig.getPartNum();
     FileTypeEnum fileType = standaloneLoadConfig.getFileType();
+    if (fileType == FileTypeEnum.parquet) {
+      return loadTrajectoryFromParquet(sparkSession, standaloneLoadConfig, trajectoryConfig, true);
+    }
     JavaRDD<Tuple2<String, String>> loadRDD =
         sparkSession
             .sparkContext()

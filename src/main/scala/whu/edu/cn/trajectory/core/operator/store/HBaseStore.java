@@ -16,6 +16,7 @@ import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.NotImplementedError;
@@ -39,6 +40,11 @@ public class HBaseStore extends Configured implements IStore {
 
     @Override
     public void storeTrajectory(JavaRDD<Trajectory> t) throws Exception {
+
+    }
+
+    @Override
+    public void storeTrajectory(JavaRDD<Trajectory> t, SparkSession ss) throws Exception {
 
     }
 

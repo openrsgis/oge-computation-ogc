@@ -2,12 +2,14 @@ package whu.edu.cn.trajectory.core.operator.store;
 
 import com.alibaba.fastjson.JSONObject;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.SparkSession;
 import scala.NotImplementedError;
 import whu.edu.cn.trajectory.base.point.StayPoint;
 import whu.edu.cn.trajectory.base.trajectory.Trajectory;
 import whu.edu.cn.trajectory.core.conf.store.StandaloneStoreConfig;
 import whu.edu.cn.trajectory.core.conf.store.StoreTypeEnum;
 import whu.edu.cn.trajectory.core.enums.FileTypeEnum;
+import whu.edu.cn.trajectory.core.operator.transform.ParquetTransform;
 import whu.edu.cn.trajectory.core.operator.transform.sink.*;
 import whu.edu.cn.trajectory.core.operator.transform.source.GeoJson2Traj;
 import whu.edu.cn.trajectory.core.operator.transform.source.KML2Traj;
@@ -108,6 +110,28 @@ public class StandaloneStore implements IStore {
         return;
       default:
         throw new NotImplementedError();
+    }
+  }
+
+  @Override
+  public void storeTrajectory(JavaRDD<Trajectory> trajectoryJavaRDD, SparkSession ss) throws Exception {
+    switch (this.storeConfig.getSchema()) {
+      case POINT_BASED_TRAJECTORY:
+        this.storePointBasedTrajectoryUseSpark(trajectoryJavaRDD, ss);
+        return;
+      default:
+        throw new NotImplementedError();
+    }
+  }
+  public void storePointBasedTrajectoryUseSpark(JavaRDD<Trajectory> trajectoryJavaRDD, SparkSession ss) throws IOException {
+    FileTypeEnum fileType = storeConfig.getFileType();
+    switch (fileType){
+      case parquet:
+        ParquetTransform.storeTrajAsParquet(trajectoryJavaRDD, ss, storeConfig.getLocation());
+        break;
+      default:
+        throw new NotSupportedException(
+                "can't support fileType " + storeConfig.getFileType().getFileTypeEnum());
     }
   }
 

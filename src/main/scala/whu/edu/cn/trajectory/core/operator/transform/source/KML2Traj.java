@@ -22,7 +22,9 @@ import java.util.List;
  */
 public class KML2Traj {
     public static Trajectory parseKMLToTrajectory(String sourcePath, TrajectoryConfig trajectoryConfig){
-        return null;
+
+        List<Trajectory> trajectories = parseKMLToTrajectoryList(sourcePath, trajectoryConfig);
+        return trajectories.get(0);
     }
     public static List<Trajectory> parseKMLToTrajectoryList(String sourcePath, TrajectoryConfig trajectoryConfig){
         File kmlFile = new File(sourcePath);
