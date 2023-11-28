@@ -737,6 +737,43 @@ object QGIS {
 
   /**
    *
+   * @param sc               Alias object for SparkContext
+   * @param input            Point vector layer to use for sampling.
+   * @param rasterCopy Raster layer to sample at the given point locations.
+   * @param columnPrefix  Prefix for the names of the added columns.
+   * @return The output layer containing the sampled values.
+   */
+  def nativeRasterSampling(implicit sc: SparkContext,
+                                     input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                           rasterCopy: String = "",
+                           columnPrefix: String = ""):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+    val outputTiffPath = algorithmData + "nativeRasterSampling_" + time + ".shp"
+    val writePath = algorithmData + "nativeRasterSampling_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, outputTiffPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rastersampling.py --input "$outputTiffPath" --rastercopy "$rasterCopy" --column-prefix "$columnPrefix" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+
+  }
+
+  /**
+   *
    * @param sc                       Alias object for SparkContext
    * @param input                    Input polygon vector layer
    * @param minDistance              The minimum distance between points within one polygon feature

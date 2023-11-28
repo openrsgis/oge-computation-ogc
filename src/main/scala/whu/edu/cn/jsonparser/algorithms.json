@@ -1946,6 +1946,31 @@
       }
     ]
   },
+  "Feature.rasterSamplingByQGIS": {
+    "description": "Extracts raster values at the point locations. If the raster layer is multiband, each band is sampled.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Point vector layer to use for sampling."
+      },
+      {
+        "name": "rasterCopy",
+        "type": "String",
+        "description": "Raster layer to sample at the given point locations.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "columnPrefix",
+        "type": "String",
+        "description": "Prefix for the names of the added columns.",
+        "optional": "True",
+        "default": "SAMPLE_"
+      }
+    ]
+  },
   "Feature.randomPointsInPolygonsByQGIS": {
     "description": "Creates a point layer with points placed inside the polygons of another layer.",
     "returns": "Feature",
