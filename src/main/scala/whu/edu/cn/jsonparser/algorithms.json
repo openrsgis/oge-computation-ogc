@@ -8378,6 +8378,31 @@
         "description": "The id of target coverage."
       },
       {
+        "name": "gridDimX",
+        "type": "String",
+        "description": "The grid column counts of the cube."
+      },
+      {
+        "name": "gridDimY",
+        "type": "String",
+        "description": "The grid row counts of the cube."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent of the cube."
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "The start time of the cube."
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "The end time of the cube."
+      },
+      {
         "name": "subset",
         "type": "List<Float>",
         "description": "The subset of target coverage.",
@@ -8496,11 +8521,6 @@
         "name": "cube",
         "type": "Cube",
         "description": "The cube to be exported"
-      },
-      {
-        "name": "exportedName",
-        "type": "String",
-        "description": "The layer to be exported"
       },
       {
         "name": "description",
@@ -8933,9 +8953,9 @@
         "optional": "False"
       },
       {
-        "name": "ksize",
-        "type": "List[Int]",
-        "description": "The list containing the height and width of the filter.",
+        "name": "d",
+        "type": "Int",
+        "description": "111",
         "default": "None",
         "optional": "False"
       },

@@ -24,12 +24,17 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter,reduction,broveyFusion,cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, standardDeviationCalculation, standardDeviationStretching}
+
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
+import scala.collection.mutable.ArrayBuffer
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -335,7 +340,7 @@ object Trigger {
         case "Coverage.bilateralFilter" =>
           coverageRddList += (UUID -> bilateralFilter(coverage = coverageRddList(args("coverage")),d=args("d").toInt,sigmaSpace = args("sigmaSpace").toDouble,sigmaColor = args("sigmaColor").toDouble,borderType = args("borderType").toString))
         case "Coverage.gaussianBlur" =>
-          coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")), ksize = args("ksize").stripPrefix("List(").stripSuffix(")").split(",").map(_.trim.toInt).toList, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
+          coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")),d=args("d").toInt, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
         case "Coverage.falseColorComposite" =>
           coverageRddList += (UUID -> falseColorComposite(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
         case "Coverage.linearTransformation" =>
@@ -484,6 +489,8 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativePolygonsToLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.randomPointsInPolygonsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsInPolygons(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includePolygonAttributes = args("includePolygonAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
+        case "Feature.shortestPathPointToPointByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = args("startPoint"), defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = args("endPoint"), valueBackward = args("valueBackward"), speedField = args("speedField")))
         case "Feature.randomPointsOnLinesByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsOnLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includeLineAttributes = args("includeLineAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
         case "Feature.rotateFeaturesByQGIS" =>
@@ -602,8 +609,6 @@ object Trigger {
           featureRddList += (UUID -> QGIS.gdalBufferVectors(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
         case "Feature.oneSideBufferByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalOneSideBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), bufferSide = args("bufferSide"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
-        case "Feature.shortestPathPointToPointByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = args("startPoint"), defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = args("endPoint"), valueBackward = args("valueBackward"), speedField = args("speedField")))
         case "Coverage.calNDVI" =>
           coverageRddList += (UUID -> QGIS.calNDVI(sc, coverageRddList(args("input"))))
         case "Coverage.calLSWI" =>
@@ -1048,14 +1053,16 @@ object Trigger {
         }
 
         case "Cube.build" => {
-//          val coverageString = args("coverageIDList")
-//          val productString = args("productIDList")
-//          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
-//          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
-//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
-          }
+          val coverageString = args("coverageIDList")
+          val productString = args("productIDList")
+          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").asInstanceOf[ArrayBuffer[String]]
+          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").asInstanceOf[ArrayBuffer[String]]
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
+            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
+            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
+        }
         case "Cube.export" =>
-//          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
+          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
       }
 
 
