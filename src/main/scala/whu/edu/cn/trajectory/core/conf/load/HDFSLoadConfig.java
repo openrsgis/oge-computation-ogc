@@ -29,7 +29,7 @@ public class HDFSLoadConfig implements ILoadConfig {
       @JsonProperty("partNum") @JsonInclude(JsonInclude.Include.NON_NULL) int partNum,
       @JsonProperty("splitter") String splitter,
       @JsonProperty("fileType") FileTypeEnum fileType,
-      @JsonProperty("filterText") @JsonInclude(JsonInclude.Include.NON_NULL) String filterText) {
+      @JsonProperty("filterText") String filterText) {
     this.master = master;
     this.fsDefaultName = fsDefaultName;
     this.location = location;

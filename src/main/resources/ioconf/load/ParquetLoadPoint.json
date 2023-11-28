@@ -5,7 +5,6 @@
     "location": "D:/bigdata/oge-computation-ogc/src/main/resources/outfiles/parquet",
     "fileMode": "multi_file",
     "partNum": 8,
-    "splitter": ",",
     "fileType": "parquet"
   },
   "dataConfig": {
