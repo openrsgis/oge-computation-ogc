@@ -1057,8 +1057,8 @@ object Trigger {
         case "Cube.build" => {
           val coverageString = args("coverageIDList")
           val productString = args("productIDList")
-          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").asInstanceOf[ArrayBuffer[String]]
-          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").asInstanceOf[ArrayBuffer[String]]
+          val coverageList: ArrayBuffer[String] = coverageString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val productList: ArrayBuffer[String] = productString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
           cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
             gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
             startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
@@ -1236,7 +1236,7 @@ object Trigger {
 
 
     /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1330,7 +1330,8 @@ object Trigger {
 
 
     if (sc.master.contains("local")) {
-      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
+//      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1382,7 +1383,8 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeBatch.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
