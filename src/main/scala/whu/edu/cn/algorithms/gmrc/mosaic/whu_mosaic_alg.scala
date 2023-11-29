@@ -46,7 +46,9 @@ class whu_mosaic_alg {
    * @param diFileDim  输出图像块的维度，如 1 则是一幅图像，2 则是四幅图像等
    * @return 是否执行成功
    */
-  private def splitMosaic(sc: SparkContext, siFileArr: Array[String], diFile: String, diFileDim: Int): Boolean = {
+  def splitMosaic(sc: SparkContext, siFileArr: Array[String], diFile: String, diFileDim: Int): Boolean = {
+    initGdal()
+
     // 1.生成镶嵌线文件并解析
     val output_dir = CommonTools.GetDirectory(diFile)
     val  bResult = MosaicLineLibrary.MOSAIC_LINE.GenerateMosaicLine(siFileArr, output_dir)
@@ -111,6 +113,7 @@ class whu_mosaic_alg {
     }).collect()
 
     System.out.println("splitMosaic() execute successfully")
+    destroyGdal()
     true
   }
 
@@ -292,7 +295,7 @@ object whu_mosaic_alg{
     inputImgArray(0) = "./data/testdata/mosaic/input/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit.tif"
     inputImgArray(1) = "./data/testdata/mosaic/input/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit.tif"
     val sOutoutFile = "./data/testdata/mosaic/output/mosaic_test.tif"
-    val dmn = 2
+    val dmn = 1
 
     val mosaic_alg = new whu_mosaic_alg
     val startTime = System.nanoTime()

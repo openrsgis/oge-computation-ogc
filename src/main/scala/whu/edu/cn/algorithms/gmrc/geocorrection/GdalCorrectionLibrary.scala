@@ -5,7 +5,6 @@
  * Created On: 2023/11/20
  * Created By: Qunchao Cui
  * Description: 本文件提供进行几何校正开发的 JNA 接口
- * 本文件提供进行几何校正开发的 JNA 接口
  */
 
 package whu.edu.cn.algorithms.gmrc.geocorrection
