@@ -9246,6 +9246,11 @@
     "returns": "Unit",
     "args": [
       {
+        "name": "sc",
+        "type": "SparkContext",
+        "description": "spark context"
+      },
+      {
         "name": "inputFileArr",
         "type": "Array[String]",
         "description": "array of image paths to be geometrically corrected"
@@ -9266,6 +9271,11 @@
     "description": "image split mosaic",
     "returns": "Unit",
     "args": [
+      {
+        "name": "sc",
+        "type": "SparkContext",
+        "description": "spark context"
+      },
       {
         "name": "siFileArr",
         "type": "Array[String]",

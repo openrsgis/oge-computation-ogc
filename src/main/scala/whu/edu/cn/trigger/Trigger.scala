@@ -30,6 +30,8 @@ import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.gmrc.geocorrection.whu_geometric_correction_alg
+import whu.edu.cn.algorithms.gmrc.mosaic.whu_mosaic_alg
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -142,7 +144,7 @@ object Trigger {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getCube" =>
-            cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
+          cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -978,7 +980,7 @@ object Trigger {
           val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean,args("split"))
           featureRddList += (UUID -> re_gwr._1)
           stringList += (UUID -> re_gwr._2)
-//          print(re_gwr._2)
+        //          print(re_gwr._2)
         case "SpatialStats.GWModels.GWRbasic.fit" =>
           val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean,args("split"))
           featureRddList += (UUID -> re_gwr._1)
@@ -1011,6 +1013,10 @@ object Trigger {
           val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
           featureRddList += (UUID -> re_sdm._1)
           stringList += (UUID -> re_sdm._2)
+        case "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction" =>
+          val re_sdm = whu_geometric_correction_alg.whu_geometric_correction(sc, args("inputFileArr"), args("outPutDir"), args("outputSuf").toBoolean)
+        case "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic" =>
+          val re_sdm = whu_mosaic_alg.splitMosaic(sc, args("siFileArr"), args("diFile"), args("diFileDim"))
 
         //Cube
         //        case "Service.getCollections" =>
@@ -1091,12 +1097,12 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-//          throw new Exception("Error occur in lambda: " +
-//            "UUID = " + list(i)._1 + "\t" +
-//            "funcName = " + list(i)._2 + "\n" +
-//            "innerErrorType = " + e.getClass + "\n" +
-//            "innerErrorInfo = " + e.getMessage + "\n" +
-//            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+          //          throw new Exception("Error occur in lambda: " +
+          //            "UUID = " + list(i)._1 + "\t" +
+          //            "funcName = " + list(i)._2 + "\n" +
+          //            "innerErrorType = " + e.getClass + "\n" +
+          //            "innerErrorInfo = " + e.getMessage + "\n" +
+          //            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
           throw new Exception(e)
       }
     }
@@ -1192,36 +1198,36 @@ object Trigger {
 
 
     try {
-//      val jedis: Jedis = new JedisUtil().getJedis
-//
-//      // z曲线编码后的索引字符串
-//      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
-//      // 等价于两层循环
-//      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
-//           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
-//        // 排除 redis 已经存在的前端瓦片编码
-//           ) { // redis里存在当前的索引
-//        // Redis 里没有的前端瓦片编码
-//        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-//        zIndexStrArray.append(zIndexStr)
-//        // 将这些新的瓦片编号存到 Redis
-//        //        jedis.sadd(key, zIndexStr)
-//      }
-//      jedis.close()
-//      if (zIndexStrArray.isEmpty) {
-//        //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
-//        println("窗口范围无明显变化，没有新的瓦片待计算")
-//        return
-//      }
+      //      val jedis: Jedis = new JedisUtil().getJedis
+      //
+      //      // z曲线编码后的索引字符串
+      //      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
+      //      // 等价于两层循环
+      //      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
+      //           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+      //        // 排除 redis 已经存在的前端瓦片编码
+      //           ) { // redis里存在当前的索引
+      //        // Redis 里没有的前端瓦片编码
+      //        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+      //        zIndexStrArray.append(zIndexStr)
+      //        // 将这些新的瓦片编号存到 Redis
+      //        //        jedis.sadd(key, zIndexStr)
+      //      }
+      //      jedis.close()
+      //      if (zIndexStrArray.isEmpty) {
+      //        //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
+      //        println("窗口范围无明显变化，没有新的瓦片待计算")
+      //        return
+      //      }
     }finally {
       // 处理redis异常情况
-//      if(zIndexStrArray.isEmpty){
-//        zIndexStrArray.clear()
-//        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
-//          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-//          zIndexStrArray.append(zIndexStr)
-//        }
-//      }
+      //      if(zIndexStrArray.isEmpty){
+      //        zIndexStrArray.clear()
+      //        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
+      //          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+      //          zIndexStrArray.append(zIndexStr)
+      //        }
+      //      }
 
     }
 
@@ -1264,7 +1270,7 @@ object Trigger {
         sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
-//         打印至后端控制台
+      //         打印至后端控制台
 
 
     } finally {
@@ -1390,7 +1396,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-//    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+    //    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
