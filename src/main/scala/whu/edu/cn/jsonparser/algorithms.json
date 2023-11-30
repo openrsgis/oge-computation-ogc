@@ -8388,14 +8388,9 @@
     "returns": "Cube",
     "args": [
       {
-        "name": "baseUrl",
-        "type": "String",
-        "description": "The base url of service."
-      },
-      {
         "name": "productIDList",
         "type": "String",
-        "description": "The id of target collection."
+        "description": "The id of target product."
       },
       {
         "name": "coverageIDList",
@@ -8521,11 +8516,6 @@
         "name": "cube",
         "type": "Cube",
         "description": "The cube to be exported"
-      },
-      {
-        "name": "exportedName",
-        "type": "String",
-        "description": "The layer to be exported"
       },
       {
         "name": "description",
