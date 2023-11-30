@@ -71,7 +71,7 @@ object MathTools {
           val tile = image._2.band(bandIndex)
           val min = minAndMax(bandIndex)._1
           val max = minAndMax(bandIndex)._2
-          //          println(min,max)
+//          println(min,max)
           val result = Array.ofDim[Int](rows, cols)
           for (i <- 0 until rows; j <- 0 until cols) {
             result(i)(j) = ((tile.getDouble(j, i) - min) * (nmax - nmin) / (max - min) + nmin).toInt

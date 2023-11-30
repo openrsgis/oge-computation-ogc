@@ -18,6 +18,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{cannyEdgeDetection, falseColorComposite, reduction, standardDeviationStretching}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.{Coverage, CoverageCollection}
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -103,20 +104,16 @@ object CoverageDubug {
   }
   def test1(implicit sc: SparkContext):Unit={
 
-    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "ASTGTM_N28E056",     "ASTER_GDEM_DEM30", 7)
+    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LC81220392015275LGN00", "LC08_L1T" ,7)
 
-//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "T49REK_20231004T030551","S2A_MSIL1C", 10)
-//    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LE07_L1TP_124039_20130612_20161124_01_T1","LE07_L1TP_C01_T1", 10)
-//    val coverage2 = Coverage.toFloat(coverage1)
-//    val res = Coverage.normalizedDifference(coverage2,List("B3","B5"))
-//    println(res._1.first()._2.cellType)
-//    val coverage = Coverage.selectBands(coverage1,List("B01"))
-    makeTIFF(coverage1,"dem1")
+    val newCoverage=cannyEdgeDetection(coverage1,7,9)
 
-//    makeTIFF(coverage2, "lc07")
 
-//    val coverage = Coverage.add(coverage1, coverage2)
-//    makeTIFF(coverage, "add")
+      makeTIFF(newCoverage,"cannyTest"    )
+
+
+
+
     println("Finish")
   }
 
@@ -212,7 +209,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 

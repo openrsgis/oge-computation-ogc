@@ -32,7 +32,7 @@ import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
 
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -331,7 +331,7 @@ object Trigger {
           coverageRddList += (UUID -> cannyEdgeDetection(coverage = coverageRddList(args("coverage")),lowCoefficient=args("lowCoefficient").toDouble,highCoefficient=args("highCoefficient").toDouble))
         case "Coverage.histogramEqualization" =>
           coverageRddList += (UUID -> histogramEqualization(coverage = coverageRddList(args("coverage"))))
-        case "Coverage.reduction" =>
+        case "Coverage.y" =>
           coverageRddList += (UUID -> reduction(coverage = coverageRddList(args("coverage")),option = args("option").toInt))
         case "Coverage.broveyFusion" =>
           coverageRddList += (UUID -> broveyFusion(multispectral = coverageRddList(args("multispectral")),panchromatic = coverageRddList(args("panchromatic"))))
