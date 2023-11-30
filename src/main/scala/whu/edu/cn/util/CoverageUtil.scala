@@ -38,10 +38,12 @@ object CoverageUtil {
     val measurementResoMap: Map[String, Double] = tileRDDReP.map(tile => {
       Map(tile.getMeasurement -> tile.getResolutionCol)
     }).collect().flatten.toMap
-    val resoMeasurementMap = measurementResoMap.groupBy(_._2).map {
+    // 根据key值进行排序
+    val resoMeasurementListMap = mutable.ListMap(measurementResoMap.groupBy(_._2).map {
       case (value, pairs) =>
         value -> pairs.keys.toList
-    }
+    }.toSeq.sortBy(_._1):_*)
+    val resoMeasurementMap = mergeLists(resoMeasurementListMap)
     val resoMin = resoMeasurementMap.keys.min
     //    if (resoMeasurementMap.size != 1) {
     //      //存在不同分辨率的波段,先根据波段名，组成多个rdd，再根据波段及分辨率进行重投影
@@ -116,6 +118,24 @@ object CoverageUtil {
     removeZeroFromCoverage(coverage)
   }
 
+  def mergeLists(resoMeasurementMap: mutable.ListMap[Double, List[String]]): mutable.Map[Double, List[String]] = {
+
+    // 定义一个辅助函数，用于合并List[String]
+    def mergeListsHelper(lists: List[List[String]]): List[String] = lists.flatten.distinct
+
+    // 使用foldLeft遍历sortedMap，合并相对差距小于万分之一的List[String]
+    val mergedMap = resoMeasurementMap.foldLeft(mutable.Map.empty[Double, List[String]]) {
+      case (acc, (key, value)) =>
+        acc.lastOption match {
+          case Some((prevKey, prevValue)) if math.abs((key - prevKey)/key) < 0.0001 =>
+            acc.init + (prevKey -> mergeListsHelper(List(prevValue, value)))
+          case _ =>
+            acc + (key -> value)
+        }
+    }
+
+    mergedMap
+  }
   def addBandstoRDD(coverage1:RDD[(SpaceTimeBandKey, MultibandTile)],coverage2:RDD[(SpaceTimeBandKey, MultibandTile)]):RDD[(SpaceTimeBandKey, MultibandTile)]={
     val c2 = coverage2.collect().map( t=>{
       (t._1.spaceTimeKey.spatialKey,(t._1.measurementName,t._2))

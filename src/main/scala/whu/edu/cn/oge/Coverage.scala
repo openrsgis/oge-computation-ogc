@@ -3397,7 +3397,11 @@ object Coverage {
 
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
-
+    //通知前端
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("dagId", Trigger.dagId)
+    outJsonObject.put("state", "success")
+    sendPost(DAG_ROOT_URL + "/updateStatus", outJsonObject.toJSONString)
     //    minIOUtil.releaseMinioClient(client)
 
   }
