@@ -491,13 +491,8 @@ object Cube {
           x => {
             val tilePair = x._2.toArray
             val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
-            rasterTileLayerRddFirstDim._2.measurementNames.foreach { measurement => {
-              tilePair.foreach { ele =>
-                if (ele._2.equals(measurement)) {
-                  multiBandTiles.append(ele._3)
-                }
-              }
-            }
+            tilePair.foreach { ele =>
+              multiBandTiles.append(ele._3)
             }
             (x._1, MultibandTile(multiBandTiles))
           }
@@ -602,13 +597,8 @@ object Cube {
           x => {
             val tilePair = x._2.toArray
             val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
-            rasterTileLayerRddFirstDim._2.measurementNames.foreach { measurement => {
-              tilePair.foreach { ele =>
-                if (ele._2.equals(measurement)) {
-                  multiBandTiles.append(ele._3)
-                }
-              }
-            }
+            tilePair.foreach { ele =>
+              multiBandTiles.append(ele._3)
             }
             (x._1, MultibandTile(multiBandTiles))
           }
@@ -786,23 +776,40 @@ object Cube {
     }
 
     // 回调服务
+
+    val cl_Extent: Array[String] = tol_Extent.distinct.toArray
+    val cl_Time: Array[Instant] = tol_Time.distinct.toArray
     val jsonObject: JSONObject = new JSONObject
+    val dim: ArrayBuffer[JSONObject] = ArrayBuffer()
 
-    jsonObject.put("raster", tol_urljson.toString())
+    val dimObject1: JSONObject = new JSONObject
+    dimObject1.put("name", "extent")
+    dimObject1.put("values", cl_Extent)
+    dim.append(dimObject1)
+
+    val dimObject2: JSONObject = new JSONObject
+    dimObject2.put("name", "dateTime")
+    dimObject2.put("values", cl_Time)
+    dim.append(dimObject2)
+
+    val dimObject3: JSONObject = new JSONObject
+    dimObject3.put("name", "bands")
+    dimObject3.put("values", bands)
+    dim.append(dimObject3)
+
+    jsonObject.put("raster", tol_urljson.toArray)
+    jsonObject.put("extent", tol_Extent.toArray)
+    jsonObject.put("dateTime", tol_Time.toArray)
     jsonObject.put("bands", bands)
-    jsonObject.put("extent", tol_Extent.toString())
-    println(tol_Extent)
-    jsonObject.put("dateTime", tol_Time.toString())
-    println(tol_Time)
-
+    jsonObject.put("dimension", dim.toArray)
 
     val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
+    outJsonObject.put("status", "success")
+    outJsonObject.put("cube", jsonObject)
 
     sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 
-    println("outputJSON: ", outJsonObject.toJSONString)
+    println(outJsonObject.toJSONString)
 
 
 
