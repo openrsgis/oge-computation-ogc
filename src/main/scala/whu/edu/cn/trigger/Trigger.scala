@@ -606,6 +606,8 @@ object Trigger {
           featureRddList += (UUID -> QGIS.gdalBufferVectors(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
         case "Feature.oneSideBufferByGDAL" =>
           featureRddList += (UUID -> QGIS.gdalOneSideBuffer(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], distance = args("distance").toDouble, explodeCollections = args("explodeCollections"), bufferSide = args("bufferSide"), field = args("field"), dissolve = args("dissolve"), geometry = args("geometry"), options = args("options")))
+        case "Feature.shortestPathPointToPointByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = args("startPoint"), defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = args("endPoint"), valueBackward = args("valueBackward"), speedField = args("speedField")))
         case "Coverage.calNDVI" =>
           coverageRddList += (UUID -> QGIS.calNDVI(sc, coverageRddList(args("input"))))
         case "Coverage.calLSWI" =>
@@ -1060,6 +1062,15 @@ object Trigger {
         }
         case "Cube.export" =>
           Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
+//        case "Cube.build" => {
+//          val coverageString = args("coverageIDList")
+//          val productString = args("productIDList")
+//          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
+//          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
+//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
+//          }
+//        case "Cube.export" =>
+//          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
       }
 
 

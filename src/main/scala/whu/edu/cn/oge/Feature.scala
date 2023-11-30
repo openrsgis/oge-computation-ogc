@@ -1,17 +1,18 @@
 package whu.edu.cn.oge
 
-import java.io.{BufferedWriter, FileWriter, PrintWriter}
+import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
+
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.geocube.util.HbaseUtil._
-
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util
 import java.util.{Date, UUID}
+
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
@@ -39,9 +40,11 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{MinIOUtil, PostgresqlUtil}
-
+import whu.edu.cn.util.{BosClientUtil_scala, MinIOUtil, PostgresqlUtil}
 import java.nio.file.Paths
+
+import com.baidubce.services.bos.model.GetObjectRequest
+
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
@@ -539,6 +542,10 @@ object Feature {
 
   def saveJSONToServer(geoJSONString: String): String = {
     val time = System.currentTimeMillis()
+    val host = GlobalConfig.QGISConf.QGIS_HOST
+    val userName = GlobalConfig.QGISConf.QGIS_USERNAME
+    val password = GlobalConfig.QGISConf.QGIS_PASSWORD
+    val port = GlobalConfig.QGISConf.QGIS_PORT
 
    val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
   //val outputVectorPath = s"D:/shuju/vector_${time}.json"
@@ -552,7 +559,7 @@ object Feature {
     // 关闭PrintWriter
     writer.close()
 
-    versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+    versouSshUtil(host, userName, password, port)
 
     val st = s"scp $outputVectorPath root@10.101.240.20:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
@@ -567,7 +574,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = "http://10.101.240.20:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = "http://120.48.147.38:8080/oge_vector/vector_" + time + ".json"
     storageURL
   }
 
@@ -1110,24 +1117,22 @@ object Feature {
   // 下载用户上传的geojson文件
   def loadFeatureFromUpload(implicit sc: SparkContext, featureId: String, userID: String, dagId: String, crs: String = "EPSG:4326"): (RDD[(String, (Geometry, Map[String, Any]))]) = {
     var path: String = new String()
+    if (featureId.endsWith(".geojson")) {
+      path = s"${userID}/$featureId"
+    } else {
+      path = s"$userID/$featureId.geojson"
+    }
 
-    path = s"$userID/$featureId"
-
-
-    val client = MinIOUtil.getMinioClient
+    val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.geojson"
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
-
-    val outputPath = Paths.get(filePath)
-
-    import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
-    inputStream.close()
-
+    val tempfile = new File(filePath)
+    val getObjectRequest = new GetObjectRequest("oge-user",path)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest,tempfile)
+    println(filePath)
     val temp = Source.fromFile(filePath).mkString
-    val feature = geometry(sc, temp, crs)
-
+    val feature = geometry(sc, temp,crs)
     feature
   }
 

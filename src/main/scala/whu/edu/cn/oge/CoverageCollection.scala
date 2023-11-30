@@ -1,5 +1,6 @@
 package whu.edu.cn.oge
 
+import com.baidubce.services.bos.BosClient
 import geotrellis.layer._
 import geotrellis.proj4.CRS
 import geotrellis.raster.MultibandTile
@@ -10,10 +11,9 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
 import whu.edu.cn.entity._
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
-import whu.edu.cn.util.{COGUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, ZCurveUtil}
 
 import java.time.LocalDateTime
 import scala.collection.mutable
@@ -65,10 +65,10 @@ object CoverageCollection {
         .map(t => {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val minIOUtil = MinIOUtil
-            val client: MinioClient = minIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, Extent(union.getEnvelopeInternal),t.getGeom)
-//            minIOUtil.releaseMinioClient(client)
+
+            val client: BosClient = BosClientUtil_scala.getClient
+
+            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, Extent(union.getEnvelopeInternal),t.getGeom)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -84,9 +84,10 @@ object CoverageCollection {
       val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
       (t._1, tileRDDRePar.mapPartitions(par => {
 
-        val client: MinioClient = MinIOUtil.getMinioClient
+
+        val client: BosClient = BosClientUtil_scala.getClient
         par.map(t=>{
-          getTileBuf(client,t)
+          BosCOGUtil.getTileBuf(client,t)
         })
       }))
     })
@@ -175,7 +176,7 @@ object CoverageCollection {
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], visParam: VisualizationParam): Unit = {
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(coverageCollection)
-    COGUtil.extent = coverage._2.extent
+    BosCOGUtil.extent = coverage._2.extent
     Coverage.visualizeOnTheFly(sc, coverage, visParam)
   }
 

@@ -183,6 +183,7 @@ object PostgresqlServiceUtil {
             coverageMetadata.setDataType(extentResults.getString("dtype"))
             coverageMetadata.setResolution(extentResults.getDouble("resolution_m"))
             metaData.append(coverageMetadata)
+            println(coverageMetadata.getPath)
           }
         }
       }

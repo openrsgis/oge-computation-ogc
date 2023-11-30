@@ -1,6 +1,8 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
+import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -24,18 +26,19 @@ import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
+
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.windowExtent
+import whu.edu.cn.trigger.Trigger.{layerName, windowExtent}
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
-import whu.edu.cn.util._
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
@@ -44,6 +47,10 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, RemapWithDefaultValue, RemapWithoutDefaultValue}
+
+import java.io.File
+import sys.process._
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -74,12 +81,11 @@ object Coverage {
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val minIOUtil = MinIOUtil
-        val client: MinioClient = minIOUtil.getMinioClient
+        val client: BosClient = BosClientUtil_scala.getClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union,queryGeometry)
+            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -99,9 +105,10 @@ object Coverage {
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
-      val client: MinioClient = MinIOUtil.getMinioClient
+
+      val client: BosClient = BosClientUtil_scala.getClient
       par.map(t => {
-        getTileBuf(client, t)
+        BosCOGUtil.getTileBuf(client, t)
       })
     })
     println("Loading data Time: " + (System.currentTimeMillis() - time1))
@@ -2139,7 +2146,7 @@ object Coverage {
 
 
     //val level: Int = COGUtil.tileDifference
-    val level: Int = targetZoom - COGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
+    val level: Int = targetZoom - BosCOGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
 
     if (level > 0) {
       val time1 = System.currentTimeMillis()
@@ -3230,13 +3237,13 @@ object Coverage {
 
     //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
     //     大于0是上采样
-    if (COGUtil.tileDifference > 0) {
+    if (BosCOGUtil.tileDifference > 0) {
       // 首先对其进行上采样
       // 上采样必须考虑范围缩小，不然非常占用内存
-      val levelUp: Int = COGUtil.tileDifference
+      val levelUp: Int = BosCOGUtil.tileDifference
       val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
       val extentOrigin: Extent = coverageTMS.metadata.layout.extent
-      val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
+      val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
       val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
       val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
       val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
@@ -3279,6 +3286,12 @@ object Coverage {
       }
     }
 
+//    // 传到master-1的路径下
+//    val path = GlobalConfig.Others.ontheFlyStorage+ Trigger.dagId
+//    val st = s"scp -r $path root@master-6492c86-1:/root/storage/on-the-fly"
+//
+//    st.run
+//    println(s"st = $st")
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
@@ -3344,14 +3357,15 @@ object Coverage {
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
 
 
-    // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
+    // 上传文件
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-    val minIOUtil = MinIOUtil
-    val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+    val file :File = new File(saveFilePath)
 
+    val client: BosClient = BosClientUtil_scala.getClient2
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+    client.putObject("oge-user",path,file)
+//    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
 
     //    minIOUtil.releaseMinioClient(client)
 
@@ -3366,17 +3380,15 @@ object Coverage {
       path = s"$userID/$coverageId.tiff"
     }
 
-    val client = MinIOUtil.getMinioClient
+    val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
-
-    val outputPath = Paths.get(filePath)
-
-
-    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
-    inputStream.close()
-    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    val tempfile = new File(filePath)
+    val getObjectRequest = new GetObjectRequest("oge-user",path)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest,tempfile)
+    println(filePath)
+    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
   }
