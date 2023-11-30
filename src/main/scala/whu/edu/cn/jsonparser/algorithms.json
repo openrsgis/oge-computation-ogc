@@ -1957,7 +1957,7 @@
       },
       {
         "name": "rasterCopy",
-        "type": "String",
+        "type": "Coverage",
         "description": "Raster layer to sample at the given point locations.",
         "optional": "True",
         "default": ""
