@@ -1946,6 +1946,31 @@
       }
     ]
   },
+  "Feature.rasterSamplingByQGIS": {
+    "description": "Extracts raster values at the point locations. If the raster layer is multiband, each band is sampled.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Point vector layer to use for sampling."
+      },
+      {
+        "name": "rasterCopy",
+        "type": "String",
+        "description": "Raster layer to sample at the given point locations.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "columnPrefix",
+        "type": "String",
+        "description": "Prefix for the names of the added columns.",
+        "optional": "True",
+        "default": "SAMPLE_"
+      }
+    ]
+  },
   "Feature.randomPointsInPolygonsByQGIS": {
     "description": "Creates a point layer with points placed inside the polygons of another layer.",
     "returns": "Feature",
@@ -8363,44 +8388,14 @@
     "returns": "Cube",
     "args": [
       {
-        "name": "baseUrl",
-        "type": "String",
-        "description": "The base url of service."
-      },
-      {
         "name": "productIDList",
         "type": "String",
-        "description": "The id of target collection."
+        "description": "The id of target product."
       },
       {
         "name": "coverageIDList",
         "type": "String",
         "description": "The id of target coverage."
-      },
-      {
-        "name": "gridDimX",
-        "type": "String",
-        "description": "The grid column counts of the cube."
-      },
-      {
-        "name": "gridDimY",
-        "type": "String",
-        "description": "The grid row counts of the cube."
-      },
-      {
-        "name": "extent",
-        "type": "String",
-        "description": "The extent of the cube."
-      },
-      {
-        "name": "startTime",
-        "type": "String",
-        "description": "The start time of the cube."
-      },
-      {
-        "name": "endTime",
-        "type": "String",
-        "description": "The end time of the cube."
       },
       {
         "name": "subset",
@@ -9384,5 +9379,58 @@
         "description": "independent variable properties"
       }
     ]
+  },
+  "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
+    "description": "image geometric correction",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "sc",
+        "type": "SparkContext",
+        "description": "spark context"
+      },
+      {
+        "name": "inputFileArr",
+        "type": "Array[String]",
+        "description": "array of image paths to be geometrically corrected"
+      },
+      {
+        "name": "outPutDir",
+        "type": "String",
+        "description": "output file name of geometric correction results"
+      },
+      {
+        "name": "outputSuf",
+        "type": "Boolean",
+        "description": "add a suffix after the geometric correction result"
+      }
+    ]
+  },
+  "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic": {
+    "description": "image split mosaic",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "sc",
+        "type": "SparkContext",
+        "description": "spark context"
+      },
+      {
+        "name": "siFileArr",
+        "type": "Array[String]",
+        "description": "array of image paths to be mosaiced"
+      },
+      {
+        "name": "diFile",
+        "type": "String",
+        "description": "output file name of mosaic results"
+      },
+      {
+        "name": "diFileDim",
+        "type": "Int",
+        "description": "dimension of output mosaic result block"
+      }
+    ]
   }
+
 }

@@ -1949,6 +1949,31 @@
       }
     ]
   },
+  "Feature.rasterSamplingByQGIS": {
+    "description": "Extracts raster values at the point locations. If the raster layer is multiband, each band is sampled.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Point vector layer to use for sampling."
+      },
+      {
+        "name": "rasterCopy",
+        "type": "String",
+        "description": "Raster layer to sample at the given point locations.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "columnPrefix",
+        "type": "String",
+        "description": "Prefix for the names of the added columns.",
+        "optional": "True",
+        "default": "SAMPLE_"
+      }
+    ]
+  },
   "Feature.randomPointsInPolygonsByQGIS": {
     "description": "Creates a point layer with points placed inside the polygons of another layer.",
     "returns": "Feature",
@@ -8780,6 +8805,83 @@
       }
     ]
   },
+  "Cube.export": {
+    "description": "Export a Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the Cube",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported Cube",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.build": {
+    "description": "Building Cube from coverage id",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "productIDList",
+        "type": "String",
+        "description": "The id of target product."
+      },
+      {
+        "name": "coverageIDList",
+        "type": "String",
+        "description": "The id of target coverage."
+      },
+      {
+        "name": "subset",
+        "type": "List<Float>",
+        "description": "The subset of target coverage.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Get the bands.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Cube.aggregate": {
     "description": "Aggregate along a dimension",
     "returns": "Cube",
@@ -9346,6 +9448,48 @@
         "name": "propertiesX",
         "type": "String",
         "description": "independent variable properties"
+      }
+    ]
+  },
+  "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
+    "description": "image geometric correction",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "inputFileArr",
+        "type": "Array[String]",
+        "description": "array of image paths to be geometrically corrected"
+      },
+      {
+        "name": "outPutDir",
+        "type": "String",
+        "description": "output file name of geometric correction results"
+      },
+      {
+        "name": "outputSuf",
+        "type": "Boolean",
+        "description": "add a suffix after the geometric correction result"
+      }
+    ]
+  },
+  "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic": {
+    "description": "image split mosaic",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "siFileArr",
+        "type": "Array[String]",
+        "description": "array of image paths to be mosaiced"
+      },
+      {
+        "name": "diFile",
+        "type": "String",
+        "description": "output file name of mosaic results"
+      },
+      {
+        "name": "diFileDim",
+        "type": "Int",
+        "description": "dimension of output mosaic result block"
       }
     ]
   }
