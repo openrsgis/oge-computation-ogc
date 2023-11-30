@@ -1,8 +1,6 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
-import com.baidubce.services.bos.BosClient
-import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -26,7 +24,6 @@ import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
@@ -3331,12 +3328,6 @@ object Coverage {
       }
     }
 
-//    // 传到master-1的路径下
-//    val path = GlobalConfig.Others.ontheFlyStorage+ Trigger.dagId
-//    val st = s"scp -r $path root@master-6492c86-1:/root/storage/on-the-fly"
-//
-//    st.run
-//    println(s"st = $st")
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
