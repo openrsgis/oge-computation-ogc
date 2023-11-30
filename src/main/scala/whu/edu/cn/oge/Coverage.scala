@@ -1,6 +1,8 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
+import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
