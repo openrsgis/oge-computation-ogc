@@ -1,5 +1,5 @@
 /**
- * File Name: whu_geometric_correction_alg.scala
+ * File Name: GeoCorrection.scala
  * Project Name: OGE
  * Module Name: OGE
  * Created On: 2023/11/20
@@ -19,7 +19,7 @@ import java.nio.file.Paths
 import GdalCorrectionLibrary.GDAL_CORRECTION_LIBRARY
 
 
-class whu_geometric_correction_alg {
+class GeoCorrection {
 
   /**
    * * 图像几何校正
@@ -30,7 +30,7 @@ class whu_geometric_correction_alg {
    * @param outputSuf  是否对输出图像添加除文件属性外的后缀，默认为 true，即当待校正文件为 1.tif 时，
    *                   校正后为1_0.tif，默认从 _0 开始
    */
-  def whu_geometric_correction(sc: SparkContext, inputFileArr: Array[String], outPutDir: String, outputSuf: Boolean = true): Unit = {
+  def geometricCorrection(sc: SparkContext, inputFileArr: Array[String], outPutDir: String, outputSuf: Boolean = true): Unit = {
     val input_file_rdd = sc.makeRDD(inputFileArr)
 
     if (outputSuf) {
@@ -64,7 +64,7 @@ class whu_geometric_correction_alg {
       })
 
       input_output_file_rdd.foreach(input_output_file => {
-        val geo_correction =  new whu_geometric_correction_alg()
+        val geo_correction =  new GeoCorrection()
         geo_correction.whu_geometric_correction(input_output_file._1, input_output_file._2)
       })
     } else {
@@ -78,7 +78,7 @@ class whu_geometric_correction_alg {
       })
 
       input_output_file_rdd.foreach(input_output_file => {
-        val geo_correction =  new whu_geometric_correction_alg()
+        val geo_correction =  new GeoCorrection()
         geo_correction.whu_geometric_correction(input_output_file._1, input_output_file._2)
       })
     }
@@ -163,29 +163,34 @@ class whu_geometric_correction_alg {
   }
 }
 
-object whu_geometric_correction_alg {
+object GeoCorrection {
   def main(args: Array[String]): Unit = {
 
-    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("whu_correction")
+    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Correction")
     val sc = new SparkContext(sparkConf)
 
     val inputImgPath1: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__1.tiff")
     val inputImgPath2: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__2.tiff")
     val inputImgPath3: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__3.tiff")
-    val input_file_arr = new Array[String](1)
+    val input_file_arr = new Array[String](3)
     input_file_arr(0) = inputImgPath1
-//    input_file_arr(1) = inputImgPath2
-//    input_file_arr(2) = inputImgPath3
+    input_file_arr(1) = inputImgPath2
+    input_file_arr(2) = inputImgPath3
 
     val outputImgPath: String = new String("./data/testdata/geometric_correction/output")
     val startTime = System.nanoTime()
-    val correction_alg = new whu_geometric_correction_alg()
-    correction_alg.whu_geometric_correction(sc, input_file_arr, outputImgPath)
+    val correction_alg = new GeoCorrection()
+    correction_alg.geometricCorrection(sc, input_file_arr, outputImgPath)
     val endTime = System.nanoTime()
     val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
     println("")
     println(" spark cost time is: " + costtime.toString + "s")
 
     sc.stop()
+  }
+
+  def geometricCorrection(sc: SparkContext, inputFileArr: Array[String], outPutDir: String, outputSuf: Boolean = true): Unit = {
+    val correction_alg = new GeoCorrection()
+    correction_alg.geometricCorrection(sc, inputFileArr, outPutDir, outputSuf)
   }
 }

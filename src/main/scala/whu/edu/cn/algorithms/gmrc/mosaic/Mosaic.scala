@@ -1,5 +1,5 @@
 /**
- * File Name: whu_mosaic_alg.scala
+ * File Name: Mosaic.scala
  * Project Name: OGE
  * Module Name: OGE
  * Created On: 2023/11/20
@@ -22,7 +22,7 @@ import java.util
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 
-class whu_mosaic_alg {
+class Mosaic {
   /**
    * 注册 gdal
    */
@@ -289,20 +289,31 @@ class whu_mosaic_alg {
 }
 
 
-object whu_mosaic_alg{
+object Mosaic{
   def main(args: Array[String]): Unit = {
+    // 1.创建 spark 环境
+    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Mosaic")
+    val sc = new SparkContext(sparkConf)
+
     val inputImgArray = new Array[String](2)
     inputImgArray(0) = "./data/testdata/mosaic/input/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit.tif"
     inputImgArray(1) = "./data/testdata/mosaic/input/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit.tif"
     val sOutoutFile = "./data/testdata/mosaic/output/mosaic_test.tif"
     val dmn = 1
 
-    val mosaic_alg = new whu_mosaic_alg
+    val mosaic_alg = new Mosaic
     val startTime = System.nanoTime()
-    mosaic_alg.splitMosaic(inputImgArray, sOutoutFile, dmn)
+    mosaic_alg.splitMosaic(sc, inputImgArray, sOutoutFile, dmn)
     val endTime = System.nanoTime()
 
     val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
     println("\nspark cost time is: " + costtime.toString + "s")
+
+    sc.stop()
+  }
+
+  def splitMosaic(sc: SparkContext, siFileArr: Array[String], diFile: String, diFileDim: Int): Boolean = {
+    val mosaic_alg = new Mosaic
+    mosaic_alg.splitMosaic(sc, siFileArr, diFile, diFileDim)
   }
 }
