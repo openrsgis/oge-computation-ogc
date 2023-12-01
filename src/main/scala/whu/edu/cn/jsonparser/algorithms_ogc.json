@@ -1900,7 +1900,7 @@
       },
       {
         "name": "startPoint",
-        "type": "String",
+        "type": "Feature",
         "description": "Point feature representing the start point of the routes"
       },
       {
@@ -1934,7 +1934,7 @@
       },
       {
         "name": "endPoint",
-        "type": "String",
+        "type": "Feature",
         "description": "Point feature representing the end point of the routes."
       },
       {

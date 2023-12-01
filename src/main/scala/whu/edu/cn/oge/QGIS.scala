@@ -689,13 +689,13 @@ object QGIS {
                                    input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                                      valueForward: String = "",
                                      valueBoth: String = "",
-                                     startPoint: String = "",
+                                     startPoint: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                                      defaultDirection: String = "2",
                                      strategy: String = "0",
                                      tolerance: Double = 0.0,
                                      defaultSpeed: Double = 50.0,
                                      directionField: String = "",
-                                     endPoint: String = "",
+                                     endPoint: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                                      valueBackward: String = "",
                                      speedField: String = ""):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
@@ -715,13 +715,18 @@ object QGIS {
 
     val outputTiffPath = algorithmData + "nativeShortestPathPointToPoint_" + time + ".shp"
     val writePath = algorithmData + "nativeShortestPathPointToPoint_" + time + "_out.shp"
+    val startPointPath = algorithmData + "startPoint_" + time + ".shp"
+    val endPointPath = algorithmData + "endPoint_" + time + ".shp"
+
     saveFeatureRDDToShp(input, outputTiffPath)
+    saveFeatureRDDToShp(startPoint, startPointPath)
+    saveFeatureRDDToShp(endPoint, endPointPath)
 
 
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_shortestpathpointtopoint.py --input "$outputTiffPath" --value-forward "$valueForward" --value-both "$valueBoth" --start-point "$startPoint" --default-direction "$defaultDirectionInput" --strategy "$strategyInput" --tolerance $tolerance --default-speed $defaultSpeed --direction-field "$directionField" --end-point "$endPoint" --value-backward "$valueBackward" --speed-field "$speedField" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_shortestpathpointtopoint.py --input "$outputTiffPath" --value-forward "$valueForward" --value-both "$valueBoth" --start-point "$startPointPath" --default-direction "$defaultDirectionInput" --strategy "$strategyInput" --tolerance $tolerance --default-speed $defaultSpeed --direction-field "$directionField" --end-point "$endPointPath" --value-backward "$valueBackward" --speed-field "$speedField" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
