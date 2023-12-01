@@ -411,7 +411,7 @@
         "optional": "True"
       },
       {
-        "name": "dataTime",
+        "name": "dateTime",
         "type": "String",
         "description": "The range of time used for deleting.",
         "default": "null",
@@ -8390,12 +8390,37 @@
       {
         "name": "productIDList",
         "type": "String",
-        "description": "The id of target product."
+        "description": "The id of target collection."
       },
       {
         "name": "coverageIDList",
         "type": "String",
         "description": "The id of target coverage."
+      },
+      {
+        "name": "gridDimX",
+        "type": "String",
+        "description": "The grid column counts of the cube."
+      },
+      {
+        "name": "gridDimY",
+        "type": "String",
+        "description": "The grid row counts of the cube."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent of the cube."
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "The start time of the cube."
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "The end time of the cube."
       },
       {
         "name": "subset",
