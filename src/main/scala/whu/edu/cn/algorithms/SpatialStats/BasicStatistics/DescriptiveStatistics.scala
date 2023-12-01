@@ -40,10 +40,10 @@ object DescriptiveStatistics {
     //    println("sum", sum)
     //    println("variance", variance)
 
-    val f = Figure()
-    val p = f.subplot(0)
-    p += hist(list, m_bins)
-    p.title = "histogram"
+//    val f = Figure()
+//    val p = f.subplot(0)
+//    p += hist(list, m_bins)
+//    p.title = "histogram"
     //    f.saveas("hist.png")
     var str = f"count : ${stats.count % .4f}\n"
     str += f"sum : ${stats.sum % .4f}\n"

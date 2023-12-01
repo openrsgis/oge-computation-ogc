@@ -1,9 +1,15 @@
 package whu.edu.cn.algorithms.SpatialStats.Utils
 
 import au.com.bytecode.opencsv._
+import breeze.plot.Figure
+import com.alibaba.fastjson.JSONObject
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Geometry, LineString, MultiPolygon, Point}
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.GlobalConstantUtil.DAG_ROOT_URL
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 import whu.edu.cn.util.ShapeFileUtil._
 
 import scala.collection.mutable.{ArrayBuffer, Map}
@@ -21,6 +27,45 @@ object OtherUtils {
    * @param sc      SparkContext
    * @param csvPath csvPath
    * @return        RDD
+   */
+  def readcsv2(implicit sc: SparkContext, csvPath: String, firstline: Boolean = true): RDD[mutable.Map[String, Any]] = {
+    val data = sc.textFile(csvPath)
+    val csvdata = data.map(line => {
+      val reader = new CSVReader(new StringReader(line))
+      reader.readNext()
+    })
+    val preRDD=ArrayBuffer.empty[mutable.Map[String, Any]]
+    val names = csvdata.take(1).flatten
+    if(firstline) {
+      val no1line = csvdata.collect().drop(1)
+      no1line.foreach(t => {
+        val mapdata = mutable.Map.empty[String, Any]
+        for (i <- names.indices) {
+          mapdata += (names(i) -> t(i))
+        }
+        preRDD += mapdata
+      })
+    }
+    else{
+      val nameidx=names.zipWithIndex.map(t=>"x"+t._2.toString)
+      csvdata.collect().foreach(t => {
+        val mapdata = mutable.Map.empty[String, Any]
+        for (i <- nameidx.indices) {
+          mapdata += (nameidx(i) -> t(i))
+        }
+        preRDD += mapdata
+      })
+    }
+    //    preRDD.foreach(println)
+    sc.makeRDD(preRDD)
+  }
+
+  /**
+   * 读入csv
+   *
+   * @param sc      SparkContext
+   * @param csvPath csvPath
+   * @return RDD
    */
   def readcsv(implicit sc: SparkContext, csvPath: String): RDD[Array[(String, Int)]] = {
     val data = sc.textFile(csvPath)
@@ -142,6 +187,34 @@ object OtherUtils {
     })
     date.foreach(println)
     println((date(300).getTime - date(0).getTime) / 1000 / 60 / 60 / 24)
+  }
+
+  def showPng(fileName: String, fig: Figure): Unit = {
+    val time = System.currentTimeMillis()
+
+    fig.saveas(s"$fileName+$time.png", 300)
+    val outputPath = s"$fileName+$time.png"
+
+    try {
+      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      val st = s"scp $outputPath root@10.101.240.20:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    val storageURL = "http://10.101.240.20:8080/oge_vector/vector_" + time + ".json"
+    val geoJson = new JSONObject
+    geoJson.put(Trigger.layerName, storageURL)
+    val jsonObject = new JSONObject
+    jsonObject.put("vector", geoJson)
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("workID", Trigger.dagId)
+    outJsonObject.put("json", jsonObject)
+    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    println(outJsonObject.toJSONString)
   }
 
 }

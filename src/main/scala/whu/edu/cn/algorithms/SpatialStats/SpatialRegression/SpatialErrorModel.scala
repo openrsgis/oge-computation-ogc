@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Geometry
 
 import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+import whu.edu.cn.oge.Service
 
 import scala.collection.mutable
 
@@ -192,13 +193,14 @@ object SpatialErrorModel {
    * @return featureRDD and diagnostic String
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String)
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))]= {
     val mdl = new SpatialErrorModel
     mdl.init(featureRDD)
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    (sc.makeRDD(re._1), re._2)
+    Service.print(re._2,"Diagnostics","String")
+    sc.makeRDD(re._1)
   }
 
 }
