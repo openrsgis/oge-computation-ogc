@@ -1014,10 +1014,9 @@ object Trigger {
           featureRddList += (UUID -> re_sdm._1)
           stringList += (UUID -> re_sdm._2)
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
-          val re_sdm = GeoCorrection.geometricCorrection(sc, args("inputFileArr").asInstanceOf[Array[String]], args("outPutDir"), args("outputSuf").toBoolean)
-
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
-          val re_sdm = Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile"), args("diFileDim").toInt)
+          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile")))
 
         //Cube
         //        case "Service.getCollections" =>
