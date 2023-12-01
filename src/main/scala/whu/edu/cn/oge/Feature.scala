@@ -548,7 +548,7 @@ object Feature {
     val port = GlobalConfig.QGISConf.QGIS_PORT
 
    val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
-  //val outputVectorPath = s"D:/shuju/vector_${time}.json"
+
 
     // 创建PrintWriter对象
     val writer: BufferedWriter = new BufferedWriter(new FileWriter(outputVectorPath))
@@ -561,7 +561,7 @@ object Feature {
 
     versouSshUtil(host, userName, password, port)
 
-    val st = s"scp $outputVectorPath root@10.101.240.20:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
+    val st = s"scp $outputVectorPath root@${GlobalConfig.Others.tmsHost}:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
     //本地测试使用代码
 //      val exitCode: Int = st.!
@@ -574,7 +574,8 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = "http://120.48.147.38:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = s"http://${GlobalConfig.Others.tmsHost}:8080/oge_vector/vector_" + time + ".json"
+
     storageURL
   }
 
