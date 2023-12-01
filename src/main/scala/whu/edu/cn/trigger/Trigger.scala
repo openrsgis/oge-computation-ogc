@@ -24,11 +24,19 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
+
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.gmrc.geocorrection.whu_geometric_correction_alg
+import whu.edu.cn.algorithms.gmrc.mosaic.whu_mosaic_alg
+
+import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 import whu.edu.cn.oge.Sheet.CsvData
 object Trigger {
@@ -145,7 +153,7 @@ object Trigger {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getCube" =>
-            cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
+          cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -352,7 +360,7 @@ object Trigger {
         case "Coverage.bilateralFilter" =>
           coverageRddList += (UUID -> bilateralFilter(coverage = coverageRddList(args("coverage")),d=args("d").toInt,sigmaSpace = args("sigmaSpace").toDouble,sigmaColor = args("sigmaColor").toDouble,borderType = args("borderType").toString))
         case "Coverage.gaussianBlur" =>
-          coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")), ksize = args("ksize").stripPrefix("List(").stripSuffix(")").split(",").map(_.trim.toInt).toList, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
+          coverageRddList += (UUID -> gaussianBlur(coverage = coverageRddList(args("coverage")),d=args("d").toInt, sigmaX = args("sigmaX").toDouble, sigmaY = args("sigmaY").toDouble, borderType = args("borderType")))
         case "Coverage.falseColorComposite" =>
           coverageRddList += (UUID -> falseColorComposite(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
         case "Coverage.linearTransformation" =>
@@ -501,6 +509,10 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativePolygonsToLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.randomPointsInPolygonsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsInPolygons(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includePolygonAttributes = args("includePolygonAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
+        case "Feature.shortestPathPointToPointByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = args("startPoint"), defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = args("endPoint"), valueBackward = args("valueBackward"), speedField = args("speedField")))
+        case "Feature.rasterSamplingByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeRasterSampling(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rasterCopy = args("rasterCopy"), columnPrefix = args("columnPrefix")))
         case "Feature.randomPointsOnLinesByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsOnLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includeLineAttributes = args("includeLineAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
         case "Feature.rotateFeaturesByQGIS" =>
@@ -993,7 +1005,7 @@ object Trigger {
           val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean,args("split"))
           featureRddList += (UUID -> re_gwr._1)
           stringList += (UUID -> re_gwr._2)
-//          print(re_gwr._2)
+        //          print(re_gwr._2)
         case "SpatialStats.GWModels.GWRbasic.fit" =>
           val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean,args("split"))
           featureRddList += (UUID -> re_gwr._1)
@@ -1026,6 +1038,10 @@ object Trigger {
           val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
           featureRddList += (UUID -> re_sdm._1)
           stringList += (UUID -> re_sdm._2)
+        case "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction" =>
+          val re_sdm = whu_geometric_correction_alg.whu_geometric_correction(sc, args("inputFileArr"), args("outPutDir"), args("outputSuf").toBoolean)
+        case "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic" =>
+          val re_sdm = whu_mosaic_alg.splitMosaic(sc, args("siFileArr"), args("diFile"), args("diFileDim"))
 
         //Cube
         //        case "Service.getCollections" =>
@@ -1062,15 +1078,17 @@ object Trigger {
           Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
 
-//        case "Cube.build" => {
-//          val coverageString = args("coverageIDList")
-//          val productString = args("productIDList")
-//          val coverageList = coverageString.stripPrefix("[").stripSuffix("]").split(",").toList
-//          val productList = productString.stripPrefix("[").stripSuffix("]").split(",").toList
-//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level))
-//          }
-//        case "Cube.export" =>
-//          Cube.visualizeBatch(sc, rasterTileLayerRdd = cubeRDDList(args("cube")), args("exportedName"), batchParam = batchParam, dagId)
+        case "Cube.build" => {
+          val coverageString = args("coverageIDList")
+          val productString = args("productIDList")
+          val coverageList: ArrayBuffer[String] = coverageString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val productList: ArrayBuffer[String] = productString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
+            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
+            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
+        }
+        case "Cube.export" =>
+          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
       }
 
 
@@ -1105,12 +1123,12 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-//          throw new Exception("Error occur in lambda: " +
-//            "UUID = " + list(i)._1 + "\t" +
-//            "funcName = " + list(i)._2 + "\n" +
-//            "innerErrorType = " + e.getClass + "\n" +
-//            "innerErrorInfo = " + e.getMessage + "\n" +
-//            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
+          //          throw new Exception("Error occur in lambda: " +
+          //            "UUID = " + list(i)._1 + "\t" +
+          //            "funcName = " + list(i)._2 + "\n" +
+          //            "innerErrorType = " + e.getClass + "\n" +
+          //            "innerErrorInfo = " + e.getMessage + "\n" +
+          //            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
           throw new Exception(e)
       }
     }
@@ -1206,36 +1224,36 @@ object Trigger {
 
 
     try {
-//      val jedis: Jedis = new JedisUtil().getJedis
-//
-//      // z曲线编码后的索引字符串
-//      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
-//      // 等价于两层循环
-//      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
-//           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
-//        // 排除 redis 已经存在的前端瓦片编码
-//           ) { // redis里存在当前的索引
-//        // Redis 里没有的前端瓦片编码
-//        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-//        zIndexStrArray.append(zIndexStr)
-//        // 将这些新的瓦片编号存到 Redis
-//        //        jedis.sadd(key, zIndexStr)
-//      }
-//      jedis.close()
-//      if (zIndexStrArray.isEmpty) {
-//        //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
-//        println("窗口范围无明显变化，没有新的瓦片待计算")
-//        return
-//      }
+      //      val jedis: Jedis = new JedisUtil().getJedis
+      //
+      //      // z曲线编码后的索引字符串
+      //      //TODO 从redis 找到并剔除这些瓦片中已经算过的，之前缓存在redis中的瓦片编号
+      //      // 等价于两层循环
+      //      for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile
+      //           if !jedis.sismember(key, ZCurveUtil.xyToZCurve(Array[Int](x, y), level))
+      //        // 排除 redis 已经存在的前端瓦片编码
+      //           ) { // redis里存在当前的索引
+      //        // Redis 里没有的前端瓦片编码
+      //        val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+      //        zIndexStrArray.append(zIndexStr)
+      //        // 将这些新的瓦片编号存到 Redis
+      //        //        jedis.sadd(key, zIndexStr)
+      //      }
+      //      jedis.close()
+      //      if (zIndexStrArray.isEmpty) {
+      //        //      throw new RuntimeException("窗口范围无明显变化，没有新的瓦片待计算")
+      //        println("窗口范围无明显变化，没有新的瓦片待计算")
+      //        return
+      //      }
     }finally {
       // 处理redis异常情况
-//      if(zIndexStrArray.isEmpty){
-//        zIndexStrArray.clear()
-//        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
-//          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
-//          zIndexStrArray.append(zIndexStr)
-//        }
-//      }
+      //      if(zIndexStrArray.isEmpty){
+      //        zIndexStrArray.clear()
+      //        for (y <- yMinOfTile to yMaxOfTile; x <- xMinOfTile to xMaxOfTile) {
+      //          val zIndexStr: String = ZCurveUtil.xyToZCurve(Array[Int](x, y), level)
+      //          zIndexStrArray.append(zIndexStr)
+      //        }
+      //      }
 
     }
 
@@ -1243,7 +1261,7 @@ object Trigger {
 
 
     /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1278,7 +1296,7 @@ object Trigger {
         sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
-//         打印至后端控制台
+      //         打印至后端控制台
 
 
     } finally {

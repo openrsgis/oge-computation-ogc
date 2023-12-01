@@ -26,7 +26,6 @@ import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
-
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
@@ -1208,18 +1207,63 @@ object Coverage {
       return (coverage._1.filter(t => false), coverage._2)
     }
 
-    val indexList: List[Int] = bands.map(bandsAlready.indexOf)
+
 
     (coverage._1.map(t => {
       val bandNames: mutable.ListBuffer[String] = t._1.measurementName
       val tileBands: Vector[Tile] = t._2.bands
       val newBandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
       var newTileBands: Vector[Tile] = Vector.empty[Tile]
-      for (index <- indexList) {
-        newBandNames += bandNames(index)
-        newTileBands :+= tileBands(index)
+      for (index <- bandNames.indices) {
+        if(bands.contains(bandNames(index))){
+          newBandNames += bandNames(index)
+          newTileBands :+= tileBands(index)
+        }
       }
       (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(newTileBands))
+    }), coverage._2)
+
+  }
+
+  def selectBandsForMakingRDD(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), bands: List[String])
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val bandsAlready: mutable.ListBuffer[String] = coverage._1.map(t => {
+      t._1.measurementName
+    }).reduce((a, b) => {
+      a.union(b)
+    }).distinct
+    val duplicates: List[String] = bands.diff(bands.distinct)
+    if (duplicates.nonEmpty) {
+      val errorMessage = s"Error: Duplicate bands found: ${duplicates.mkString(", ")}"
+      throw new IllegalArgumentException(errorMessage)
+    }
+    val missingElements: List[String] = bands.filterNot(bandsAlready.contains)
+    if (missingElements.nonEmpty) {
+      //      val errorMessage = s"Error: Bands not found: ${missingElements.mkString(", ")}"
+      return (coverage._1.filter(t => false), coverage._2)
+    }
+
+
+    (coverage._1.map(t => {
+      val bandNames: mutable.ListBuffer[String] = t._1.measurementName
+      val tileBands: Vector[Tile] = t._2.bands
+      val newBandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      for (index <- bandNames.indices) {
+        if (bands.contains(bandNames(index))) {
+          newBandNames += bandNames(index)
+          newTileBands :+= tileBands(index)
+        }
+      }
+      if(newBandNames.isEmpty){
+        //先赋值，后面filter掉
+        newBandNames+="null"
+        (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(tileBands.head))
+      }else{
+        (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(newTileBands))
+      }
+    }).filter(c =>{
+      c._1.measurementName.head != "null"
     }), coverage._2)
 
   }
@@ -3286,12 +3330,6 @@ object Coverage {
       }
     }
 
-//    // 传到master-1的路径下
-//    val path = GlobalConfig.Others.ontheFlyStorage+ Trigger.dagId
-//    val st = s"scp -r $path root@master-6492c86-1:/root/storage/on-the-fly"
-//
-//    st.run
-//    println(s"st = $st")
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
     val rasterJsonObject: JSONObject = new JSONObject
