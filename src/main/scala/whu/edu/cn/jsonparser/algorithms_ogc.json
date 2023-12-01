@@ -1960,7 +1960,7 @@
       },
       {
         "name": "rasterCopy",
-        "type": "String",
+        "type": "Coverage",
         "description": "Raster layer to sample at the given point locations.",
         "optional": "True",
         "default": ""
@@ -8805,6 +8805,83 @@
       }
     ]
   },
+  "Cube.export": {
+    "description": "Export a Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube",
+        "type": "Cube",
+        "description": "The cube to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the Cube",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported Cube",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported Cube",
+        "optional": "True"
+      }
+    ]
+  },
+  "Cube.build": {
+    "description": "Building Cube from coverage id",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "productIDList",
+        "type": "String",
+        "description": "The id of target product."
+      },
+      {
+        "name": "coverageIDList",
+        "type": "String",
+        "description": "The id of target coverage."
+      },
+      {
+        "name": "subset",
+        "type": "List<Float>",
+        "description": "The subset of target coverage.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "Get the bands.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Cube.aggregate": {
     "description": "Aggregate along a dimension",
     "returns": "Cube",
@@ -9374,7 +9451,7 @@
       }
     ]
   },
-  "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
+  "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
     "description": "image geometric correction",
     "returns": "Unit",
     "args": [
@@ -9395,7 +9472,7 @@
       }
     ]
   },
-  "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic": {
+  "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
     "description": "image split mosaic",
     "returns": "Unit",
     "args": [

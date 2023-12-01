@@ -1957,7 +1957,7 @@
       },
       {
         "name": "rasterCopy",
-        "type": "String",
+        "type": "Coverage",
         "description": "Raster layer to sample at the given point locations.",
         "optional": "True",
         "default": ""
@@ -9380,15 +9380,10 @@
       }
     ]
   },
-  "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
+  "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
     "description": "image geometric correction",
     "returns": "Unit",
     "args": [
-      {
-        "name": "sc",
-        "type": "SparkContext",
-        "description": "spark context"
-      },
       {
         "name": "inputFileArr",
         "type": "Array[String]",
@@ -9406,15 +9401,10 @@
       }
     ]
   },
-  "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic": {
+  "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
     "description": "image split mosaic",
     "returns": "Unit",
     "args": [
-      {
-        "name": "sc",
-        "type": "SparkContext",
-        "description": "spark context"
-      },
       {
         "name": "siFileArr",
         "type": "Array[String]",

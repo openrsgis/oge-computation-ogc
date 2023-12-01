@@ -745,20 +745,22 @@ object QGIS {
    */
   def nativeRasterSampling(implicit sc: SparkContext,
                            input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
-                           rasterCopy: String = "",
+                           rasterCopy: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                            columnPrefix: String = ""):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = algorithmData + "nativeRasterSampling_" + time + ".shp"
+    val outputShpPath = algorithmData + "nativeRasterSampling_" + time + ".shp"
+    val outputTiffPath = algorithmData+"nativeRasterSamplingRater_" + time + ".tif"
     val writePath = algorithmData + "nativeRasterSampling_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputTiffPath)
-
+    
+    saveFeatureRDDToShp(input, outputShpPath)
+    saveRasterRDDToTif(rasterCopy, outputTiffPath)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rastersampling.py --input "$outputTiffPath" --rastercopy "$rasterCopy" --column-prefix "$columnPrefix" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rastersampling.py --input "$outputShpPath" --rastercopy "$outputTiffPath" --column-prefix "$columnPrefix" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")

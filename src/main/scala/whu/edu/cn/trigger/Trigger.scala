@@ -33,8 +33,8 @@ import scala.io.{BufferedSource, Source}
 import scala.util.Random
 
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
-import whu.edu.cn.algorithms.gmrc.geocorrection.whu_geometric_correction_alg
-import whu.edu.cn.algorithms.gmrc.mosaic.whu_mosaic_alg
+import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
+import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -494,7 +494,7 @@ object Trigger {
         case "Feature.shortestPathPointToPointByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = args("startPoint"), defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = args("endPoint"), valueBackward = args("valueBackward"), speedField = args("speedField")))
         case "Feature.rasterSamplingByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeRasterSampling(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rasterCopy = args("rasterCopy"), columnPrefix = args("columnPrefix")))
+          featureRddList += (UUID -> QGIS.nativeRasterSampling(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rasterCopy = coverageRddList(args("rasterCopy")), columnPrefix = args("columnPrefix")))
         case "Feature.randomPointsOnLinesByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsOnLines(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includeLineAttributes = args("includeLineAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
         case "Feature.rotateFeaturesByQGIS" =>
@@ -1020,10 +1020,11 @@ object Trigger {
           val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
           featureRddList += (UUID -> re_sdm._1)
           stringList += (UUID -> re_sdm._2)
-        case "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction" =>
-          val re_sdm = whu_geometric_correction_alg.whu_geometric_correction(sc, args("inputFileArr"), args("outPutDir"), args("outputSuf").toBoolean)
-        case "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic" =>
-          val re_sdm = whu_mosaic_alg.splitMosaic(sc, args("siFileArr"), args("diFile"), args("diFileDim"))
+        case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
+          val re_sdm = GeoCorrection.geometricCorrection(sc, args("inputFileArr").asInstanceOf[Array[String]], args("outPutDir"), args("outputSuf").toBoolean)
+
+        case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
+          val re_sdm = Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile"), args("diFileDim").toInt)
 
         //Cube
         //        case "Service.getCollections" =>
