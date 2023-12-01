@@ -9453,12 +9453,12 @@
   },
   "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
     "description": "image geometric correction",
-    "returns": "Unit",
+    "returns": "RDDImage",
     "args": [
       {
-        "name": "inputFileArr",
-        "type": "Array[String]",
-        "description": "array of image paths to be geometrically corrected"
+        "name": "inputFile",
+        "type": "String",
+        "description": "image path to be geometrically corrected"
       },
       {
         "name": "outPutDir",
@@ -9474,7 +9474,7 @@
   },
   "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
     "description": "image split mosaic",
-    "returns": "Unit",
+    "returns": "RDDImage",
     "args": [
       {
         "name": "siFileArr",
@@ -9485,11 +9485,6 @@
         "name": "diFile",
         "type": "String",
         "description": "output file name of mosaic results"
-      },
-      {
-        "name": "diFileDim",
-        "type": "Int",
-        "description": "dimension of output mosaic result block"
       }
     ]
   }
