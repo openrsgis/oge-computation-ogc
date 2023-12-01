@@ -9492,5 +9492,121 @@
         "description": "dimension of output mosaic result block"
       }
     ]
+  },
+  "Service.getSheet": {
+    "description": "Getting resource CSV data",
+    "returns": "Sheet",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "sheetID",
+        "type": "String",
+        "description": "The id of target csv."
+      }
+    ]
+  },
+  "Service.printSheet": {
+    "description": "Print the Sheet to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "Sheet",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Service.printSheet": {
+    "description": "Print the Sheet to console.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "object",
+        "type": "Sheet",
+        "description": "The value to print."
+      },
+      {
+        "name": "name",
+        "type": "String",
+        "description": "The name of the value."
+      }
+    ]
+  },
+  "Sheet.getcellValue": {
+    "description": "get cell value at given position.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "sheet",
+        "type": "Sheet",
+        "description": "The sheet to get cell value."
+      },
+      {
+        "name": "row",
+        "type": "Int",
+        "description": "The row of the cell."
+      },
+      {
+        "name": "col",
+        "type": "Int",
+        "description": "The col of the cell."
+      }
+    ]
+  },
+  "Sheet.slice": {
+    "description": "slice the sheet to a new sheet.",
+    "returns": "Sheet",
+    "args": [
+      {
+        "name": "sheet",
+        "type": "Sheet",
+        "description": "The sheet to slice."
+      },
+      {
+        "name": "sliceRows",
+        "type": "Boolean",
+        "description": "slice by rows or cols."
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "The begin rows/cols of the slice."
+      },
+      {
+        "name": "end",
+        "type": "Int",
+        "description": "The end rows/cols of the slice."
+      }
+    ]
+  },
+  "Sheet.filterByHeader": {
+    "description": "select new sheet by header condition.",
+    "returns": "Sheet",
+    "args": [
+      {
+        "name": "sheet",
+        "type": "Sheet",
+        "description": "The sheet to select."
+      },
+      {
+        "name": "condition",
+        "type": "String",
+        "description": "The name of select header."
+      },
+      {
+        "name": "value",
+        "type": "String",
+        "description": "The value of select header."
+      }
+    ]
   }
 }

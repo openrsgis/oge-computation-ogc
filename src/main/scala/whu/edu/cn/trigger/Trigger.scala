@@ -37,6 +37,8 @@ import whu.edu.cn.algorithms.gmrc.geocorrection.whu_geometric_correction_alg
 import whu.edu.cn.algorithms.gmrc.mosaic.whu_mosaic_alg
 
 import scala.collection.mutable.ArrayBuffer
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.oge.Sheet.CsvData
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -47,6 +49,7 @@ object Trigger {
   var doubleList: mutable.Map[String, Double] = mutable.Map.empty[String, Double]
   var stringList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var intList: mutable.Map[String, Int] = mutable.Map.empty[String, Int]
+  var SheetList:mutable.Map[String,CsvData] =mutable.Map.empty[String,CsvData]
 
   // TODO lrx: 以下为未检验
 
@@ -134,6 +137,9 @@ object Trigger {
           val res = temp._1
           val valueType = temp._2
           Service.print(res, args("name"), valueType)
+        case "Service.printSheet" =>
+          val sheet = SheetList(args("object"))
+          Sheet.printSheet(sheet, args("name"))
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
@@ -161,6 +167,10 @@ object Trigger {
           } else {
             featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
           }
+        case "Service.getSheet" =>
+          if (args("sheetID").startsWith("myData/")) {
+            SheetList += (UUID -> Sheet.loadCSVFromUpload(sc, args("sheetID"), userId, dagId))
+          }
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
           lazyFunc += (UUID -> (funcName, args))
@@ -170,6 +180,14 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
         case "Filter.bounds" =>
           lazyFunc += (UUID -> (funcName, args))
+
+        // Sheet
+        case "Sheet.getcellValue" =>
+          stringList += (UUID -> Sheet.getcellValue(SheetList(args("sheet")), args("row").toInt, args("col").toInt))
+        case "Sheet.slice" =>
+          SheetList += (UUID -> Sheet.slice(SheetList(args("sheet")), args("sliceRows").toBoolean, args("start").toInt, args("end").toInt))
+        case "Sheet.filterByHeader" =>
+          SheetList += (UUID -> Sheet.filterByHeader(SheetList(args("sheet")), args("condition"), args("value")))
 
         // CoverageCollection
         case "CoverageCollection.filter" =>
@@ -1091,6 +1109,7 @@ object Trigger {
         Trigger.featureRddList.clear()
         Trigger.cubeRDDList.clear()
         Trigger.cubeLoad.clear()
+        Trigger.SheetList.clear()
 
         throw e
     }
@@ -1336,8 +1355,7 @@ object Trigger {
 
 
     if (sc.master.contains("local")) {
-//      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
+      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1389,8 +1407,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeBatch.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1398,14 +1415,14 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
-    userId = "3c3a165b-6604-47b8-bce9-1f0c5470b9f8"
+    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    //    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+//    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
