@@ -582,7 +582,7 @@ object algorithms_Image {
     }
 
     val radius: Int = 1
-    val normalizRDD = globalNormalize(coverage, 0, 255)
+    val normalizRDD = globalNormalizeDouble(coverage, 0, 255)
     val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(normalizRDD, radius)
     val InternRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = group._1.map(
       image => {
@@ -631,7 +631,7 @@ object algorithms_Image {
       }
     )
     val singleBandGradRDDImage = (singleBandGrad, PaddingVriable._2)
-    val normalizedGrad: RDDImage = globalNormalize(singleBandGradRDDImage, 0, 255)
+    val normalizedGrad: RDDImage = globalNormalizeDouble(singleBandGradRDDImage, 0, 255)
     val threshold255 = OTSU(normalizedGrad)
     val minMaxMap = findMinMaxValueDouble(singleBandGradRDDImage)
     println("threshold:" + threshold255.toString)

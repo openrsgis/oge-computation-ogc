@@ -411,7 +411,7 @@
         "optional": "True"
       },
       {
-        "name": "dataTime",
+        "name": "dateTime",
         "type": "String",
         "description": "The range of time used for deleting.",
         "default": "null",
@@ -1897,7 +1897,7 @@
       },
       {
         "name": "startPoint",
-        "type": "String",
+        "type": "Feature",
         "description": "Point feature representing the start point of the routes"
       },
       {
@@ -1931,7 +1931,7 @@
       },
       {
         "name": "endPoint",
-        "type": "String",
+        "type": "Feature",
         "description": "Point feature representing the end point of the routes."
       },
       {
@@ -1957,7 +1957,7 @@
       },
       {
         "name": "rasterCopy",
-        "type": "String",
+        "type": "Coverage",
         "description": "Raster layer to sample at the given point locations.",
         "optional": "True",
         "default": ""
@@ -8390,12 +8390,37 @@
       {
         "name": "productIDList",
         "type": "String",
-        "description": "The id of target product."
+        "description": "The id of target collection."
       },
       {
         "name": "coverageIDList",
         "type": "String",
         "description": "The id of target coverage."
+      },
+      {
+        "name": "gridDimX",
+        "type": "String",
+        "description": "The grid column counts of the cube."
+      },
+      {
+        "name": "gridDimY",
+        "type": "String",
+        "description": "The grid row counts of the cube."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent of the cube."
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "The start time of the cube."
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "The end time of the cube."
       },
       {
         "name": "subset",
@@ -9080,22 +9105,30 @@
       {
         "name": "kernel",
         "type": "String",
-        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian",
+        "optional": "True"
       },
       {
         "name": "approach",
         "type": "String",
-        "description": "approach function: AICc, CV"
+        "description": "approach function: AICc, CV",
+        "default": "AICc",
+        "optional": "True"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
-        "description": "true for adaptive distance, false for fixed distance"
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "split of the x properties, default: \",\""
+        "description": "split of the x properties, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       }
     ]
   },
@@ -9126,17 +9159,23 @@
       {
         "name": "kernel",
         "type": "String",
-        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian",
+        "optional": "True"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
-        "description": "true for adaptive distance, false for fixed distance"
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "split of the x properties, default: \",\""
+        "description": "split of the x properties, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       }
     ]
   },
@@ -9162,27 +9201,37 @@
       {
         "name": "kernel",
         "type": "String",
-        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian",
+        "optional": "True"
       },
       {
         "name": "approach",
         "type": "String",
-        "description": "approach function: AICc, CV"
+        "description": "approach function: AICc, CV",
+        "default": "AICc",
+        "optional": "True"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
-        "description": "true for adaptive distance, false for fixed distance"
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "split of the x properties, default: \",\""
+        "description": "split of the x properties, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       },
       {
         "name": "varSelTh",
         "type": "Double",
-        "description": "threshold of variable selection, default: 3.0"
+        "description": "threshold of variable selection, default: 3.0",
+        "default": "3.0",
+        "optional": "True"
       }
     ]
   },
@@ -9235,12 +9284,16 @@
       {
         "name": "method",
         "type": "String",
-        "description": "pearson or spearman method, default: pearson"
+        "description": "pearson or spearman method, default: pearson",
+        "default": "pearson",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "properties split, default: \",\""
+        "description": "properties split, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       }
     ]
   },
@@ -9261,17 +9314,23 @@
       {
         "name": "plot",
         "type": "Boolean",
-        "description": "whether to plot Moran points or not, default: false"
+        "description": "whether to plot Moran points or not, default: false",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "test",
         "type": "Boolean",
-        "description": "whether to calculate p value, default: false"
+        "description": "whether to calculate p value, default: false",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "weightstyle",
         "type": "String",
-        "description": "neighbor weight type, including: W, B, C, U, default: W"
+        "description": "neighbor weight type, including: W, B, C, U, default: W",
+          "default": "\"W\"",
+        "optional": "True"
       }
     ]
   },
@@ -9292,7 +9351,9 @@
       {
         "name": "adjust",
         "type": "Boolean",
-        "description": "whether to adjust n, default: false"
+        "description": "whether to adjust n, default: false",
+        "default": "false",
+        "optional": "True"
       }
     ]
   },
@@ -9313,7 +9374,8 @@
       {
         "name": "timelag",
         "type": "Int",
-        "description": "time lag, default:20"
+        "description": "time lag, default:20",
+        "default": "20"
       }
     ]
   },
@@ -9481,55 +9543,70 @@
     ]
   },
   "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
-    "description": "image geometric correction",
-    "returns": "Unit",
-    "args": [
-      {
-        "name": "sc",
-        "type": "SparkContext",
-        "description": "spark context"
-      },
-      {
-        "name": "inputFileArr",
-        "type": "Array[String]",
-        "description": "array of image paths to be geometrically corrected"
-      },
-      {
-        "name": "outPutDir",
-        "type": "String",
-        "description": "output file name of geometric correction results"
-      },
-      {
-        "name": "outputSuf",
-        "type": "Boolean",
-        "description": "add a suffix after the geometric correction result"
-      }
-    ]
-  },
-  "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic": {
-    "description": "image split mosaic",
-    "returns": "Unit",
-    "args": [
-      {
-        "name": "sc",
-        "type": "SparkContext",
-        "description": "spark context"
-      },
-      {
-        "name": "siFileArr",
-        "type": "Array[String]",
-        "description": "array of image paths to be mosaiced"
-      },
-      {
-        "name": "diFile",
-        "type": "String",
-        "description": "output file name of mosaic results"
-      },
-      {
-        "name": "diFileDim",
-        "type": "Int",
-        "description": "dimension of output mosaic result block"
-      }
-    ]
+    "SpatialStats.SpatialRegression.LinearRegression.feature": {
+      "description": "Linear Regression for feature",
+      "returns": "Feature",
+      "args": [
+        {
+          "name": "data",
+          "type": "Feature",
+          "description": "feature input"
+        },
+        {
+          "name": "y",
+          "type": "String",
+          "description": "dependent variable property"
+        },
+        {
+          "name": "x",
+          "type": "String",
+          "description": "independent variable properties"
+        },
+        {
+          "name": "Intercept",
+          "type": "Boolean",
+          "description": "whether need Intercept",
+          "default": "true",
+          "optional": "True"
+        }
+      ]
+    },
+    "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
+      "description": "image geometric correction",
+      "returns": "RDDImage",
+      "args": [
+        {
+          "name": "inputFile",
+          "type": "String",
+          "description": "image path to be geometrically corrected"
+        },
+        {
+          "name": "outPutDir",
+          "type": "String",
+          "description": "output file name of geometric correction results"
+        },
+        {
+          "name": "outputSuf",
+          "type": "Boolean",
+          "description": "add a suffix after the geometric correction result"
+        }
+      ]
+    },
+    "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
+      "description": "image split mosaic",
+      "returns": "RDDImage",
+      "args": [
+        {
+          "name": "siFileArr",
+          "type": "Array[String]",
+          "description": "array of image paths to be mosaiced"
+        },
+        {
+          "name": "diFile",
+          "type": "String",
+          "description": "output file name of mosaic results"
+        }
+      ]
+    }
   }
 }
