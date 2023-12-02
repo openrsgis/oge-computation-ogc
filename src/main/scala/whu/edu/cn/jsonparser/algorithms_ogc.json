@@ -255,6 +255,36 @@
       }
     ]
   },
+  "Service.getCube": {
+    "description": "Getting resource Cube of certain Name",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "CubeName",
+        "type": "String",
+        "description": "The Name of target collection."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "dateTime",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      }
+    ]
+  },
   "Service.getCollections": {
     "description": "Getting resource Collections",
     "returns": "Collections",
@@ -8859,12 +8889,37 @@
       {
         "name": "productIDList",
         "type": "String",
-        "description": "The id of target product."
+        "description": "The id of target collection."
       },
       {
         "name": "coverageIDList",
         "type": "String",
         "description": "The id of target coverage."
+      },
+      {
+        "name": "gridDimX",
+        "type": "String",
+        "description": "The grid column counts of the cube."
+      },
+      {
+        "name": "gridDimY",
+        "type": "String",
+        "description": "The grid row counts of the cube."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent of the cube."
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "The start time of the cube."
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "The end time of the cube."
       },
       {
         "name": "subset",

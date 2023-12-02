@@ -1055,10 +1055,8 @@ object Trigger {
         }
 
         case "Cube.build" => {
-          val coverageString = args("coverageIDList")
-          val productString = args("productIDList")
-          val coverageList: ArrayBuffer[String] = coverageString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-          val productList: ArrayBuffer[String] = productString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
           cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
             gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
             startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
@@ -1331,7 +1329,7 @@ object Trigger {
 
     if (sc.master.contains("local")) {
 //      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1383,8 +1381,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeBatch.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1399,7 +1396,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    //    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+//        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
