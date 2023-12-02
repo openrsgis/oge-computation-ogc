@@ -4,7 +4,7 @@ package whu.edu.cn.trigger
 import whu.edu.cn.algorithms.SpatialStats.GWModels
 import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
-import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
@@ -26,12 +26,10 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 
-
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
@@ -985,17 +983,14 @@ object Trigger {
         //algorithms.SpatialStats
         case "SpatialStats.GWModels.GWRbasic.autoFit" =>
           val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean,args("split"))
-          featureRddList += (UUID -> re_gwr._1)
-          stringList += (UUID -> re_gwr._2)
-        //          print(re_gwr._2)
+          featureRddList += (UUID -> re_gwr)
+        //          Service.print(re_gwr._2, "Diagnostics", "String")
         case "SpatialStats.GWModels.GWRbasic.fit" =>
           val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean,args("split"))
-          featureRddList += (UUID -> re_gwr._1)
-          stringList += (UUID -> re_gwr._2)
+          featureRddList += (UUID -> re_gwr)
         case "SpatialStats.GWModels.GWRbasic.auto" =>
           val re_gwr = GWModels.GWRbasic.auto(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("kernel"), args("approach"), args("adaptive").toBoolean,args("split"),args("varSelTh").toDouble)
-          featureRddList += (UUID -> re_gwr._1)
-          stringList += (UUID -> re_gwr._2)
+          featureRddList += (UUID -> re_gwr)
         case "SpatialStats.BasicStatistics.AverageNearestNeighbor" =>
           stringList += (UUID -> AverageNearestNeighbor.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "SpatialStats.BasicStatistics.DescriptiveStatistics" =>
@@ -1010,16 +1005,15 @@ object Trigger {
           stringList += (UUID -> TemporalAutoCorrelation.ACF(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("timelag").toInt))
         case "SpatialStats.SpatialRegression.SpatialLagModel.fit" =>
           val re_slm = SpatialLagModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
-          featureRddList += (UUID -> re_slm._1)
-          stringList += (UUID -> re_slm._2)
+          featureRddList += (UUID -> re_slm)
         case "SpatialStats.SpatialRegression.SpatialErrorModel.fit" =>
           val re_sem = SpatialErrorModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
-          featureRddList += (UUID -> re_sem._1)
-          stringList += (UUID -> re_sem._2)
+          featureRddList += (UUID -> re_sem)
         case "SpatialStats.SpatialRegression.SpatialDurbinModel.fit" =>
           val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
-          featureRddList += (UUID -> re_sdm._1)
-          stringList += (UUID -> re_sdm._2)
+          featureRddList += (UUID -> re_sdm)
+        case "SpatialStats.SpatialRegression.LinearRegression.feature" =>
+          featureRddList += (UUID -> LinearRegression.LinearReg(featureRddList(args("data")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y"), args("x"), args("Intercept").toBoolean))
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
           coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>

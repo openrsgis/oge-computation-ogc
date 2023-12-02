@@ -9080,22 +9080,30 @@
       {
         "name": "kernel",
         "type": "String",
-        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian",
+        "optional": "True"
       },
       {
         "name": "approach",
         "type": "String",
-        "description": "approach function: AICc, CV"
+        "description": "approach function: AICc, CV",
+        "default": "AICc",
+        "optional": "True"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
-        "description": "true for adaptive distance, false for fixed distance"
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "split of the x properties, default: \",\""
+        "description": "split of the x properties, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       }
     ]
   },
@@ -9126,17 +9134,23 @@
       {
         "name": "kernel",
         "type": "String",
-        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian",
+        "optional": "True"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
-        "description": "true for adaptive distance, false for fixed distance"
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "split of the x properties, default: \",\""
+        "description": "split of the x properties, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       }
     ]
   },
@@ -9162,27 +9176,37 @@
       {
         "name": "kernel",
         "type": "String",
-        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar"
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian",
+        "optional": "True"
       },
       {
         "name": "approach",
         "type": "String",
-        "description": "approach function: AICc, CV"
+        "description": "approach function: AICc, CV",
+        "default": "AICc",
+        "optional": "True"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
-        "description": "true for adaptive distance, false for fixed distance"
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "split of the x properties, default: \",\""
+        "description": "split of the x properties, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       },
       {
         "name": "varSelTh",
         "type": "Double",
-        "description": "threshold of variable selection, default: 3.0"
+        "description": "threshold of variable selection, default: 3.0",
+        "default": "3.0",
+        "optional": "True"
       }
     ]
   },
@@ -9235,12 +9259,16 @@
       {
         "name": "method",
         "type": "String",
-        "description": "pearson or spearman method, default: pearson"
+        "description": "pearson or spearman method, default: pearson",
+        "default": "pearson",
+        "optional": "True"
       },
       {
         "name": "split",
         "type": "String",
-        "description": "properties split, default: \",\""
+        "description": "properties split, default: \",\"",
+        "default": "\",\"",
+        "optional": "True"
       }
     ]
   },
@@ -9261,17 +9289,23 @@
       {
         "name": "plot",
         "type": "Boolean",
-        "description": "whether to plot Moran points or not, default: false"
+        "description": "whether to plot Moran points or not, default: false",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "test",
         "type": "Boolean",
-        "description": "whether to calculate p value, default: false"
+        "description": "whether to calculate p value, default: false",
+        "default": "false",
+        "optional": "True"
       },
       {
         "name": "weightstyle",
         "type": "String",
-        "description": "neighbor weight type, including: W, B, C, U, default: W"
+        "description": "neighbor weight type, including: W, B, C, U, default: W",
+          "default": "\"W\"",
+        "optional": "True"
       }
     ]
   },
@@ -9292,7 +9326,9 @@
       {
         "name": "adjust",
         "type": "Boolean",
-        "description": "whether to adjust n, default: false"
+        "description": "whether to adjust n, default: false",
+        "default": "false",
+        "optional": "True"
       }
     ]
   },
@@ -9313,7 +9349,8 @@
       {
         "name": "timelag",
         "type": "Int",
-        "description": "time lag, default:20"
+        "description": "time lag, default:20",
+        "default": "20"
       }
     ]
   },
@@ -9377,6 +9414,34 @@
         "name": "propertiesX",
         "type": "String",
         "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialRegression.LinearRegression.feature": {
+    "description": "Linear Regression for feature",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "data",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "Intercept",
+        "type": "Boolean",
+        "description": "whether need Intercept",
+        "default": "true",
+        "optional": "True"
       }
     ]
   },
