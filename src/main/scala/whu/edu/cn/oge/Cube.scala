@@ -953,11 +953,11 @@ object Cube {
     val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
 
     val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
-    var coverageId: String = ""
+    var measurement: String = ""
     var timeKey: Long = 0L
     val tileArray: ArrayBuffer[(Tile, SpatialKey)] = rdd.map { tile =>
       val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      coverageId = tile.getCoverageId
+      measurement = tile.getCoverageId
       timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
       (Tile, tile.getSpatialKey)
     }.collect().to[ArrayBuffer]
@@ -971,7 +971,7 @@ object Cube {
       if (tempExtent.intersects(rddExtent)) {
         val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
         val intersectTile: Tile = totalTile.crop(rddExtent, tempExtent)
-        val bandKey = SpaceTimeBandKey(spaceTimeKey, coverageId, null)
+        val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
         removeZeroFromTile(intersectTile)
         result.append((bandKey, intersectTile))
       }

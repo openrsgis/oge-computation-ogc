@@ -43,7 +43,7 @@ object CorrelationAnalysis {
     //    propertyArr.foreach(t => printf("%-20s\t", t))
     //    print("\n")
     //    println(corrMat)
-    propertyArr.foreach(t => outStr += s"    \t$t\t    ")
+    propertyArr.foreach(t => outStr += f"$t%-22s")
     outStr += "\n" + corrMat.toString()
     println(outStr)
     //    corrMat

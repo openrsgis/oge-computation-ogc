@@ -4,7 +4,7 @@ package whu.edu.cn.trigger
 import whu.edu.cn.algorithms.SpatialStats.GWModels
 import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
-import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
@@ -26,12 +26,10 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 
-
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
@@ -492,7 +490,7 @@ object Trigger {
         case "Feature.randomPointsInPolygonsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRandomPointsInPolygons(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], minDistance = args("minDistance").toDouble, includePolygonAttributes = args("includePolygonAttributes"), maxTriesPerPoint = args("maxTriesPerPoint").toInt, pointsNumber = args("pointsNumber").toInt, minDistanceGlobal = args("minDistanceGlobal").toDouble))
         case "Feature.shortestPathPointToPointByQGIS" =>
-          featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = args("startPoint"), defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = args("endPoint"), valueBackward = args("valueBackward"), speedField = args("speedField")))
+          featureRddList += (UUID -> QGIS.nativeShortestPathPointToPoint(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueForward = args("valueForward"), valueBoth = args("valueBoth"), startPoint = featureRddList(args("startPoint")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], defaultDirection = args("defaultDirection"), strategy = args("strategy"), tolerance = args("tolerance").toDouble, defaultSpeed = args("defaultSpeed").toDouble, directionField = args("directionField"), endPoint = featureRddList(args("endPoint")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], valueBackward = args("valueBackward"), speedField = args("speedField")))
         case "Feature.rasterSamplingByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeRasterSampling(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], rasterCopy = coverageRddList(args("rasterCopy")), columnPrefix = args("columnPrefix")))
         case "Feature.randomPointsOnLinesByQGIS" =>
@@ -985,17 +983,14 @@ object Trigger {
         //algorithms.SpatialStats
         case "SpatialStats.GWModels.GWRbasic.autoFit" =>
           val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean,args("split"))
-          featureRddList += (UUID -> re_gwr._1)
-          stringList += (UUID -> re_gwr._2)
-        //          print(re_gwr._2)
+          featureRddList += (UUID -> re_gwr)
+        //          Service.print(re_gwr._2, "Diagnostics", "String")
         case "SpatialStats.GWModels.GWRbasic.fit" =>
           val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean,args("split"))
-          featureRddList += (UUID -> re_gwr._1)
-          stringList += (UUID -> re_gwr._2)
+          featureRddList += (UUID -> re_gwr)
         case "SpatialStats.GWModels.GWRbasic.auto" =>
           val re_gwr = GWModels.GWRbasic.auto(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("kernel"), args("approach"), args("adaptive").toBoolean,args("split"),args("varSelTh").toDouble)
-          featureRddList += (UUID -> re_gwr._1)
-          stringList += (UUID -> re_gwr._2)
+          featureRddList += (UUID -> re_gwr)
         case "SpatialStats.BasicStatistics.AverageNearestNeighbor" =>
           stringList += (UUID -> AverageNearestNeighbor.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "SpatialStats.BasicStatistics.DescriptiveStatistics" =>
@@ -1010,21 +1005,19 @@ object Trigger {
           stringList += (UUID -> TemporalAutoCorrelation.ACF(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("timelag").toInt))
         case "SpatialStats.SpatialRegression.SpatialLagModel.fit" =>
           val re_slm = SpatialLagModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
-          featureRddList += (UUID -> re_slm._1)
-          stringList += (UUID -> re_slm._2)
+          featureRddList += (UUID -> re_slm)
         case "SpatialStats.SpatialRegression.SpatialErrorModel.fit" =>
           val re_sem = SpatialErrorModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
-          featureRddList += (UUID -> re_sem._1)
-          stringList += (UUID -> re_sem._2)
+          featureRddList += (UUID -> re_sem)
         case "SpatialStats.SpatialRegression.SpatialDurbinModel.fit" =>
           val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
-          featureRddList += (UUID -> re_sdm._1)
-          stringList += (UUID -> re_sdm._2)
+          featureRddList += (UUID -> re_sdm)
+        case "SpatialStats.SpatialRegression.LinearRegression.feature" =>
+          featureRddList += (UUID -> LinearRegression.LinearReg(featureRddList(args("data")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y"), args("x"), args("Intercept").toBoolean))
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
-          val re_sdm = GeoCorrection.geometricCorrection(sc, args("inputFileArr").asInstanceOf[Array[String]], args("outPutDir"), args("outputSuf").toBoolean)
-
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
-          val re_sdm = Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile"), args("diFileDim").toInt)
+          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile")))
 
         //Cube
         //        case "Service.getCollections" =>
@@ -1062,10 +1055,8 @@ object Trigger {
         }
 
         case "Cube.build" => {
-          val coverageString = args("coverageIDList")
-          val productString = args("productIDList")
-          val coverageList: ArrayBuffer[String] = coverageString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-          val productList: ArrayBuffer[String] = productString.stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
           cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
             gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
             startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
@@ -1338,7 +1329,7 @@ object Trigger {
 
     if (sc.master.contains("local")) {
 //      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1390,8 +1381,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cubeBatch.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1406,7 +1396,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    //    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+//        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
