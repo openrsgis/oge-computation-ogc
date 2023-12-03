@@ -9329,7 +9329,7 @@
         "name": "weightstyle",
         "type": "String",
         "description": "neighbor weight type, including: W, B, C, U, default: W",
-          "default": "\"W\"",
+        "default": "\"W\"",
         "optional": "True"
       }
     ]
@@ -9541,72 +9541,5 @@
         "description": "The value of select header."
       }
     ]
-  },
-  "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction": {
-    "SpatialStats.SpatialRegression.LinearRegression.feature": {
-      "description": "Linear Regression for feature",
-      "returns": "Feature",
-      "args": [
-        {
-          "name": "data",
-          "type": "Feature",
-          "description": "feature input"
-        },
-        {
-          "name": "y",
-          "type": "String",
-          "description": "dependent variable property"
-        },
-        {
-          "name": "x",
-          "type": "String",
-          "description": "independent variable properties"
-        },
-        {
-          "name": "Intercept",
-          "type": "Boolean",
-          "description": "whether need Intercept",
-          "default": "true",
-          "optional": "True"
-        }
-      ]
-    },
-    "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
-      "description": "image geometric correction",
-      "returns": "RDDImage",
-      "args": [
-        {
-          "name": "inputFile",
-          "type": "String",
-          "description": "image path to be geometrically corrected"
-        },
-        {
-          "name": "outPutDir",
-          "type": "String",
-          "description": "output file name of geometric correction results"
-        },
-        {
-          "name": "outputSuf",
-          "type": "Boolean",
-          "description": "add a suffix after the geometric correction result"
-        }
-      ]
-    },
-    "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
-      "description": "image split mosaic",
-      "returns": "RDDImage",
-      "args": [
-        {
-          "name": "siFileArr",
-          "type": "Array[String]",
-          "description": "array of image paths to be mosaiced"
-        },
-        {
-          "name": "diFile",
-          "type": "String",
-          "description": "output file name of mosaic results"
-        }
-      ]
-    }
   }
 }
