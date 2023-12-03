@@ -1,6 +1,7 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
+import com.baidubce.services.bos.BosClient
 import geotrellis.layer
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
@@ -49,7 +50,7 @@ import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
-import whu.edu.cn.util.{JedisUtil, MinIOUtil}
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, JedisUtil, MinIOUtil}
 
 import java.io.{File, FileWriter, Reader, StringReader}
 import java.nio.charset.Charset
@@ -885,9 +886,52 @@ object Cube {
     (ld, bounds)
   }
 
-  def getRawTileRDD(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
-    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+  def getRawTileRDDBos(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
+    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
+    if (metaList.isEmpty) {
+      throw new Exception("No such coverage in database!")
+    }
 
+    var union: Extent = Trigger.windowExtent
+    if(union == null){
+      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
+    }
+    val queryGeometry: Geometry = metaList.head.getGeom
+
+    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
+    val tileRDDFlat: RDD[RawTile] = tileMetadata
+      .mapPartitions(par => {
+        val minIOUtil = MinIOUtil
+        val client: BosClient = BosClientUtil_scala.getClient
+        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
+          val time1: Long = System.currentTimeMillis()
+          val rawTiles: mutable.ArrayBuffer[RawTile] = {
+            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
+            tiles
+          }
+          val time2: Long = System.currentTimeMillis()
+          println("Get Tiles Meta Time is " + (time2 - time1))
+          // 根据元数据和范围查询后端瓦片
+          if (rawTiles.nonEmpty) rawTiles
+          else mutable.Buffer.empty[RawTile]
+        })
+        result
+      }).flatMap(t => t).persist()
+
+    val tileNum: Int = tileRDDFlat.count().toInt
+    println("tileNum = " + tileNum)
+    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
+    tileRDDFlat.unpersist()
+    val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
+      val client: BosClient = BosClientUtil_scala.getClient
+      par.map(t => {
+        BosCOGUtil.getTileBuf(client, t)
+      })
+    })
+    rawTileRdd
+  }
+
+  def getRawTileRDD(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
     if (metaList.isEmpty) {
       throw new Exception("No such coverage in database!")
@@ -989,13 +1033,15 @@ object Cube {
     var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
     val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
-    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
 
-    val minIOUtil = MinIOUtil
-    val client: MinioClient = minIOUtil.getMinioClient
+    // 上传文件
+    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+    val file :File = new File(saveFilePath)
+
+    val client: BosClient = BosClientUtil_scala.getClient2
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+    client.putObject("oge-user", path, file)
   }
 
 
@@ -1045,7 +1091,8 @@ object Cube {
     val cubeArray: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
     coverageIdList.zipWithIndex.foreach { case (coverageId, index) =>
       val productKey = productKeyList(index)
-      val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
+//      val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
+      val rawTileRdd = getRawTileRDDBos(sc, coverageId, productKey, level)
 
       val tic = System.nanoTime()
       val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = genCubeRDD(sc, rawTileRdd, metadata)
