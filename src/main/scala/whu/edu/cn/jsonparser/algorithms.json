@@ -8438,6 +8438,22 @@
       }
     ]
   },
+  "Cube.NDVI": {
+    "description": "Compute NDWI of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "input",
+        "type": "Cube",
+        "description": "The cube to compute NDVI."
+      },
+      {
+        "name": "bands",
+        "type": "String",
+        "description": "The bands in cube to compute NDVI"
+      }
+    ]
+  },
   "Cube.band": {
     "description": "Select a new cube by band name",
     "returns": "Cube",
