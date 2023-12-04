@@ -487,97 +487,92 @@ object Cube {
             rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions) && rdd._1.measurementName == xband
           }
         }, rasterTileLayerRdd._2)
-        var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim.map(x => (x._1.spaceTimeKey, x._1.measurementName, x._2)).groupBy(_._1).map {
+        var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim._1.map {
           x => {
-            val tilePair = x._2.toArray
             val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
-            tilePair.foreach { ele =>
-              multiBandTiles.append(ele._3)
-            }
-            (x._1, MultibandTile(multiBandTiles))
+            multiBandTiles.append(x._2)
+            (x._1.spaceTimeKey, MultibandTile(multiBandTiles))
           }
         }
-        if (rasterTileLayerRddFirstDim._2._measurementNames.size > 1) {
-          // multiband ignore
-          null
-        } else {
-          // min的数量
-          val minNum: Int = visualizationParam.getMin.length
-          // max的数量
-          val maxNum: Int = visualizationParam.getMax.length
-          if (minNum * maxNum != 0) {
-            // 首先找到现有的最小最大值
-            val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
-              val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
-              if (noNaNArray.nonEmpty) {
-                (noNaNArray.min, noNaNArray.max)
+
+        // min的数量
+        val minNum: Int = visualizationParam.getMin.length
+        // max的数量
+        val maxNum: Int = visualizationParam.getMax.length
+        if (minNum * maxNum != 0) {
+          // 首先找到现有的最小最大值
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN).filter(x => x != Int.MinValue)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+          val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
+          val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
+          val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+          val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
+            Add(Multiply(tile, gainBand), biasBand)
+          })))
+        }
+        // 如果存在palette
+        if (visualizationParam.getPalette.nonEmpty) {
+          val paletteVis: List[String] = visualizationParam.getPalette
+          val colorVis: List[Color] = paletteVis.map(t => {
+            try {
+              val color: Color = Color.valueOf(t)
+              color
+            } catch {
+              case e: Exception =>
+                throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+            }
+          })
+          val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+
+          val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
+            val len: Int = colorRGB.length - 1
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              var R: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  R = colorRGB(i)._1 * 255.0
+                }
               }
-              else {
-                (Int.MaxValue.toDouble, Int.MinValue.toDouble)
-              }
-            }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-            val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
-            val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
-            val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
-            val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
-            rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
-              Add(Multiply(tile, gainBand), biasBand)
-            })))
-          }
-          // 如果存在palette
-          if (visualizationParam.getPalette.nonEmpty) {
-            val paletteVis: List[String] = visualizationParam.getPalette
-            val colorVis: List[Color] = paletteVis.map(t => {
-              try {
-                val color: Color = Color.valueOf(t)
-                color
-              } catch {
-                case e: Exception =>
-                  throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
-              }
+              R
             })
-            val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
-            val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
-              val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
-              if (noNaNArray.nonEmpty) {
-                (noNaNArray.min, noNaNArray.max)
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              var G: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  G = colorRGB(i)._2 * 255.0
+                }
               }
-              else {
-                (Int.MaxValue.toDouble, Int.MinValue.toDouble)
-              }
-            }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-            val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
-            rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
-              val bandR: Tile = t._2.bands.head.mapDouble(d => {
-                var R: Double = 0.0
-                for (i <- colorRGB.indices) {
-                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                    R = colorRGB(i)._1 * 255.0
-                  }
-                }
-                R
-              })
-              val bandG: Tile = t._2.bands.head.mapDouble(d => {
-                var G: Double = 0.0
-                for (i <- colorRGB.indices) {
-                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                    G = colorRGB(i)._2 * 255.0
-                  }
-                }
-                G
-              })
-              val bandB: Tile = t._2.bands.head.mapDouble(d => {
-                var B: Double = 0.0
-                for (i <- colorRGB.indices) {
-                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                    B = colorRGB(i)._3 * 255.0
-                  }
-                }
-                B
-              })
-              (t._1, MultibandTile(bandR, bandG, bandB))
+              G
             })
-          }
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              var B: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  B = colorRGB(i)._3 * 255.0
+                }
+              }
+              B
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          })
         }
         multibandRaster.append((rasterMultiBandTileRdd, rasterTileLayerRddFirstDim._2.tileLayerMetadata))
       }
@@ -593,103 +588,99 @@ object Cube {
             rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions) && rdd._1.measurementName == xband
           }
         }, rasterTileLayerRdd._2)
-        var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim.map(x => (x._1.spaceTimeKey, x._1.measurementName, x._2)).groupBy(_._1).map {
+        var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim._1.map {
           x => {
-            val tilePair = x._2.toArray
             val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
-            tilePair.foreach { ele =>
-              multiBandTiles.append(ele._3)
-            }
-            (x._1, MultibandTile(multiBandTiles))
+            multiBandTiles.append(x._2)
+            (x._1.spaceTimeKey, MultibandTile(multiBandTiles))
           }
         }
-        if (rasterTileLayerRddFirstDim._2._measurementNames.size > 1) {
-          // multiband ignore
-          null
-        } else {
-          // min的数量
-          val minNum: Int = visualizationParam.getMin.length
-          // max的数量
-          val maxNum: Int = visualizationParam.getMax.length
-          if (minNum * maxNum != 0) {
-            // 首先找到现有的最小最大值
-            val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
-              val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
-              if (noNaNArray.nonEmpty) {
-                (noNaNArray.min, noNaNArray.max)
+
+        // min的数量
+        val minNum: Int = visualizationParam.getMin.length
+        // max的数量
+        val maxNum: Int = visualizationParam.getMax.length
+        if (minNum * maxNum != 0) {
+          // 首先找到现有的最小最大值
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN).filter(x => x != Int.MinValue)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+          val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
+          val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
+          val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+          val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
+            Add(Multiply(tile, gainBand), biasBand)
+          })))
+        }
+        // 如果存在palette
+        if (visualizationParam.getPalette.nonEmpty) {
+          val paletteVis: List[String] = visualizationParam.getPalette
+          val colorVis: List[Color] = paletteVis.map(t => {
+            try {
+              val color: Color = Color.valueOf(t)
+              color
+            } catch {
+              case e: Exception =>
+                throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+            }
+          })
+          val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+
+          val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
+            val len: Int = colorRGB.length - 1
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              var R: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  R = colorRGB(i)._1 * 255.0
+                }
               }
-              else {
-                (Int.MaxValue.toDouble, Int.MinValue.toDouble)
-              }
-            }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-            val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
-            val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
-            val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
-            val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
-            rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
-              Add(Multiply(tile, gainBand), biasBand)
-            })))
-          }
-          // 如果存在palette
-          if (visualizationParam.getPalette.nonEmpty) {
-            val paletteVis: List[String] = visualizationParam.getPalette
-            val colorVis: List[Color] = paletteVis.map(t => {
-              try {
-                val color: Color = Color.valueOf(t)
-                color
-              } catch {
-                case e: Exception =>
-                  throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
-              }
+              R
             })
-            val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
-            val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
-              val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
-              if (noNaNArray.nonEmpty) {
-                (noNaNArray.min, noNaNArray.max)
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              var G: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  G = colorRGB(i)._2 * 255.0
+                }
               }
-              else {
-                (Int.MaxValue.toDouble, Int.MinValue.toDouble)
-              }
-            }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-            val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
-            rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
-              val bandR: Tile = t._2.bands.head.mapDouble(d => {
-                var R: Double = 0.0
-                for (i <- colorRGB.indices) {
-                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                    R = colorRGB(i)._1 * 255.0
-                  }
-                }
-                R
-              })
-              val bandG: Tile = t._2.bands.head.mapDouble(d => {
-                var G: Double = 0.0
-                for (i <- colorRGB.indices) {
-                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                    G = colorRGB(i)._2 * 255.0
-                  }
-                }
-                G
-              })
-              val bandB: Tile = t._2.bands.head.mapDouble(d => {
-                var B: Double = 0.0
-                for (i <- colorRGB.indices) {
-                  if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                    B = colorRGB(i)._3 * 255.0
-                  }
-                }
-                B
-              })
-              (t._1, MultibandTile(bandR, bandG, bandB))
+              G
             })
-          }
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              var B: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  B = colorRGB(i)._3 * 255.0
+                }
+              }
+              B
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          })
         }
         multibandRaster.append((rasterMultiBandTileRdd, rasterTileLayerRddFirstDim._2.tileLayerMetadata))
       }
     }
     multibandRaster
   }
+
 
   def visualizeOnTheFly(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam): Unit = {
 
@@ -1214,7 +1205,7 @@ object Cube {
 //    coverage1._1.map{x => x._1.measurementName}.foreach(x => println(x))
 
     var vis = new VisualizationParam
-    vis.setAllParam(bands = "[B3,B4]")
+    vis.setAllParam(bands = "[B3,B4]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
 
 //    val coverage2:(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Cube.addStyles(coverage1, vis)
     Cube.visualizeOnTheFly(sc, coverage1, vis)
