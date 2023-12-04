@@ -8,7 +8,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{ByteConstantNoDataCellType, CellType, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
+import geotrellis.raster.{ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.FileLayerWriter
@@ -59,6 +59,7 @@ import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, Map}
 import java.time.Instant
 import java.util
+import java.util.Date
 import scala.Console.println
 import scala.math.{max, min}
 
@@ -944,11 +945,11 @@ object Cube {
     val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
 
     val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
-    var coverageId: String = ""
+    var measurement: String = ""
     var timeKey: Long = 0L
     val tileArray: ArrayBuffer[(Tile, SpatialKey)] = rdd.map { tile =>
       val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      coverageId = tile.getCoverageId
+      measurement = tile.getCoverageId
       timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
       (Tile, tile.getSpatialKey)
     }.collect().to[ArrayBuffer]
@@ -962,7 +963,7 @@ object Cube {
       if (tempExtent.intersects(rddExtent)) {
         val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
         val intersectTile: Tile = totalTile.crop(rddExtent, tempExtent)
-        val bandKey = SpaceTimeBandKey(spaceTimeKey, coverageId, null)
+        val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
         removeZeroFromTile(intersectTile)
         result.append((bandKey, intersectTile))
       }
@@ -1195,6 +1196,57 @@ object Cube {
     val minLatititude = latititude.min
     val maxLatititude = latititude.max
     longLat(0) = minLongtitude; longLat(1) = minLatititude; longLat(2) = maxLongtitude; longLat(3) = maxLatititude
+  }
+
+
+  def NDVI(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
+           bandNames: List[String]): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+    if (bandNames.length != 2) {
+      throw new IllegalArgumentException(s"输入的波段数量不为2，输入了${bandNames.length}个波段")
+    }
+    else {
+      println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is submitted")
+      println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is running ...")
+      //    val bandsArray: Array[String] = bands.replace("[", "").replace("]", "").replace(" ", "").split(",")
+      val redBand = bandNames.head
+      val nirRedBand = bandNames(1)
+
+      def ndviTile(redBandTile: Tile, nirBandTile: Tile): Tile = {
+
+        //convert stored tile with constant Float.NaN to Double.NaN
+        val doubleRedBandTile = DoubleArrayTile(redBandTile.toArrayDouble(), redBandTile.cols, redBandTile.rows)
+          .convert(DoubleConstantNoDataCellType)
+        val doubleNirBandTile = DoubleArrayTile(nirBandTile.toArrayDouble(), nirBandTile.cols, nirBandTile.rows)
+          .convert(DoubleConstantNoDataCellType)
+
+        //calculate ndvi tile
+        val ndviTile = Divide(
+          Subtract(doubleNirBandTile, doubleRedBandTile),
+          Add(doubleNirBandTile, doubleRedBandTile))
+        ndviTile
+      }
+
+      val analysisBegin = System.currentTimeMillis()
+      val RedOrNearRdd: RDD[(SpaceTimeBandKey, Tile)] = tileLayerRddWithMeta._1.filter { x => {
+        x._1.measurementName == redBand || x._1.measurementName == nirRedBand
+      }
+      }
+      val ndviRDD: RDD[(SpaceTimeBandKey, Tile)] = RedOrNearRdd.map(x => (x._1.spaceTimeKey, x._1.measurementName, x._2)).groupBy(_._1).map {
+        x => {
+          val tilePair = x._2.toArray
+          val spaceTimeBandKey: SpaceTimeBandKey = SpaceTimeBandKey(x._1, "ndvi")
+          val RedTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+          val NearInfraredTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+          tilePair.foreach { ele =>
+            if (ele._2 == redBand) RedTiles.append(ele._3)
+            if (ele._2 == nirRedBand) NearInfraredTiles.append(ele._3)
+          }
+          (spaceTimeBandKey, ndviTile(RedTiles(0), NearInfraredTiles(0)).withNoData(Some(0)))
+        }
+      }
+      println("求解ndvi的时间为：" + (System.currentTimeMillis() - analysisBegin) + "ms")
+      (ndviRDD, tileLayerRddWithMeta._2)
+    }
   }
 
   def main(args: Array[String]): Unit = {
