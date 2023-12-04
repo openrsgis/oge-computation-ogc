@@ -1014,9 +1014,9 @@ object Trigger {
           featureRddList += (UUID -> re_sdm._1)
           stringList += (UUID -> re_sdm._2)
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
-          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
-          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile")))
+          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
 
         //Cube
         //        case "Service.getCollections" =>

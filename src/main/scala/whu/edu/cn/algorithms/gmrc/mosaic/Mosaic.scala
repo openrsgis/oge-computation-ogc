@@ -17,21 +17,45 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.gdal.gdal._
 import org.gdal.gdalconst.gdalconstConstants
 import org.gdal.ogr.ogr
+import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.algorithms.gmrc.util.CommonTools
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
+import whu.edu.cn.trigger.Trigger.dagId
+import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 
 import java.io.File
 import java.lang.Math._
 import java.util
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.mutable.ArrayBuffer
 
 
-class Mosaic {
+object Mosaic {
+  type CoverageMap = Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
+
+  def main(args: Array[String]): Unit = {
+
+    // 1.创建 spark 环境
+    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Mosaic")
+    val sc = new SparkContext(sparkConf)
+
+    val startTime = System.nanoTime()
+
+    // 2.执行具体算法
+    val coverageMap: CoverageMap = null
+    splitMosaic(sc, coverageMap)
+
+    val endTime = System.nanoTime()
+    val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
+    println("\nspark cost time is: " + costtime.toString + "s")
+
+    sc.stop()
+  }
+
   /**
    * 注册 gdal
    */
-  def initGdal(): Unit = {
+  private def initGdal(): Unit = {
     gdal.AllRegister()
     ogr.RegisterAll()
   }
@@ -39,7 +63,7 @@ class Mosaic {
   /**
    * 销毁 gdal
    */
-  def destroyGdal(): Unit = {
+  private def destroyGdal(): Unit = {
     gdal.GDALDestroyDriverManager()
   }
 
@@ -47,19 +71,42 @@ class Mosaic {
    * 进行图像镶嵌操作
    *
    * @param sc        Spark 环境
-   * @param siFileArr 要输入的图像文件数组
-   * @param diFile    要输出的图像文件名，文件名格式为 name_i_j.suf，i 和 j 为镶嵌图像输出拼接时的块索引
+   * @param coverage 图像保存在这里
+   * @param
    * @return 图像的RDD
    */
-  def splitMosaic(sc: SparkContext, siFileArr: Array[String], diFile: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def splitMosaic(sc: SparkContext, coverageCollection: CoverageMap): RDDImage = {
+    val isTest: Boolean = false
 
-    val outputfile_relative_path: String = splitMosaic(sc, siFileArr, diFile, 1)
+    if (isTest) {
+      val inputImgArray = new Array[String](2)
+      inputImgArray(0) = "./data/testdata/mosaic/input/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit.tif"
+      inputImgArray(1) = "./data/testdata/mosaic/input/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit.tif"
+      val sOutoutFile = "./data/testdata/mosaic/output/mosaic_test.tif"
 
-    val output_file = new File(outputfile_relative_path)
-    val outputfile_absolute_path = output_file.getAbsolutePath
-    val hadoop_file_path = "/" + outputfile_absolute_path
-    println("hadoop path: " + hadoop_file_path)
-    makeChangedRasterRDDFromTif(sc, hadoop_file_path)
+      val outputfile_relative_path: String = splitMosaic(sc, inputImgArray, sOutoutFile, 1)
+
+      val output_file = new File(outputfile_relative_path)
+      val outputfile_absolute_path = output_file.getAbsolutePath
+      val hadoop_file_path = "/" + outputfile_absolute_path
+      println("out put file is: " + hadoop_file_path)
+      makeChangedRasterRDDFromTif(sc, hadoop_file_path)
+
+    } else {
+      val inputFileArr: ArrayBuffer[String] = new ArrayBuffer[String]()
+
+      coverageCollection.foreach(file_coverage => {
+        val inputSaveFile = s"/mnt/storage/${dagId}_mosaic.tiff"
+        saveRasterRDDToTif(file_coverage._2, inputSaveFile)
+        inputFileArr.append(inputSaveFile)
+      })
+
+      val inputFleArray: Array[String] = inputFileArr.toArray
+      val resInitFile = s"/mnt/storage/${dagId}_mosaic_temp.tiff"
+      val resFile = splitMosaic(sc, inputFleArray, resInitFile, 1)
+
+      makeChangedRasterRDDFromTif(sc, resFile)
+    }
   }
 
   /**
@@ -76,6 +123,7 @@ class Mosaic {
 
     // 1.生成镶嵌线文件并解析
     val output_dir = CommonTools.GetDirectory(diFile)
+
     val bResult = MosaicLineLibrary.MOSAIC_LINE.GenerateMosaicLine(siFileArr, output_dir)
     val cut_line_file = output_dir + "\\project.shp"
     if (!bResult && !CommonTools.IsFileExists(cut_line_file)) {
@@ -292,56 +340,5 @@ class Mosaic {
 
     ds.delete()
     listSql
-  }
-
-  /**
-   * 进行图像镶嵌操作
-   *
-   * @param siFileArr 要输入的图像文件数组
-   * @param diFile    要输出的图像文件名，文件名格式为 name_i_j.suf，i 和 j 为镶嵌图像输出拼接时的块索引
-   * @param diFileDim 输出图像块的维度，如 1 则是一幅图像，2 则是四幅图像等
-   * @return 是否执行成功
-   */
-  def splitMosaic(siFileArr: Array[String], diFile: String, diFileDim: Int): Unit = {
-    // 1.创建 spark 环境
-    val sparkConf = new SparkConf().setMaster("local").setAppName("Mosaic")
-    val sc = new SparkContext(sparkConf)
-
-    // 2.进行镶嵌
-    initGdal()
-    val ret = splitMosaic(sc, siFileArr, diFile, diFileDim)
-
-    destroyGdal()
-
-    sc.stop()
-  }
-}
-
-
-object Mosaic{
-  def main(args: Array[String]): Unit = {
-    // 1.创建 spark 环境
-    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Mosaic")
-    val sc = new SparkContext(sparkConf)
-
-    val inputImgArray = new Array[String](2)
-    inputImgArray(0) = "./data/testdata/mosaic/input/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit.tif"
-    inputImgArray(1) = "./data/testdata/mosaic/input/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit.tif"
-    val sOutoutFile = "./data/testdata/mosaic/output/mosaic_test.tif"
-
-    val mosaic_alg = new Mosaic
-    val startTime = System.nanoTime()
-    mosaic_alg.splitMosaic(sc, inputImgArray, sOutoutFile)
-    val endTime = System.nanoTime()
-
-    val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
-    println("\nspark cost time is: " + costtime.toString + "s")
-
-    sc.stop()
-  }
-
-  def splitMosaic(sc: SparkContext, siFileArr: Array[String], diFile: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val mosaic_alg = new Mosaic
-    mosaic_alg.splitMosaic(sc, siFileArr, diFile)
   }
 }
