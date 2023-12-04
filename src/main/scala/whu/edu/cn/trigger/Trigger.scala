@@ -1063,6 +1063,8 @@ object Trigger {
         }
         case "Cube.export" =>
           Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
+        case "Cube.NDVI" =>
+          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
       }
 
 
