@@ -23,3 +23,4 @@ data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A00016
 data/testdata/mosaic/output/project.prj
 data/testdata/mosaic/output/project.seam
 data/testdata/mosaic/output/project.txt
+*.log

@@ -224,7 +224,7 @@ object GeoCorrection {
     sc.stop()
   }
 
-  def geometricCorrection(sc: SparkContext, inputFile: String, outPutDir: String, outputSuf: Boolean = true): Unit = {
+  def geometricCorrection(sc: SparkContext, inputFile: String, outPutDir: String, outputSuf: Boolean = true): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val correction_alg = new GeoCorrection()
     correction_alg.geometricCorrection(sc, inputFile, outPutDir, outputSuf)
   }
