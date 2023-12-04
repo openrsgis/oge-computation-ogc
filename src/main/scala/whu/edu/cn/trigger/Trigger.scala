@@ -1021,9 +1021,9 @@ object Trigger {
           featureRddList += (UUID -> re_sdm._1)
           stringList += (UUID -> re_sdm._2)
         case "algorithms.gmrc.geocorrection.whu_geometric_correction_alg.whu_geometric_correction" =>
-          val re_sdm = whu_geometric_correction_alg.whu_geometric_correction(sc, args("inputFileArr"), args("outPutDir"), args("outputSuf").toBoolean)
+//          val re_sdm = whu_geometric_correction_alg.whu_geometric_correction(sc, args("inputFileArr"), args("outPutDir"), args("outputSuf").toBoolean)
         case "algorithms.gmrc.geocorrection.whu_mosaic_alg.splitMosaic" =>
-          val re_sdm = whu_mosaic_alg.splitMosaic(sc, args("siFileArr"), args("diFile"), args("diFileDim"))
+//          val re_sdm = whu_mosaic_alg.splitMosaic(sc, args("siFileArr"), args("diFile"), args("diFileDim"))
 
         //Cube
         //        case "Service.getCollections" =>
