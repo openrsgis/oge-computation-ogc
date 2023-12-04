@@ -76,7 +76,7 @@ object Mosaic {
    * @return 图像的RDD
    */
   def splitMosaic(sc: SparkContext, coverageCollection: CoverageMap): RDDImage = {
-    val isTest: Boolean = false
+    val isTest: Boolean = false  // 此变量为 true 时，可以正常正确的运行
 
     if (isTest) {
       val inputImgArray = new Array[String](2)
