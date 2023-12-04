@@ -47,7 +47,7 @@ object GeoCorrection {
    * @param coverage 图像存在该内存中
    */
   def geometricCorrection(sc: SparkContext, coverage:  RDDImage): RDDImage = {
-    val isTest = false  // 此变量为 true 时，程序可以正常正确运行
+    val isTest = false  // 此变量为 true 时，本算子在本地可以正常正确运行
 
     if (isTest) {
       val inputImgPath: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__1.tiff")
@@ -139,29 +139,3 @@ object GeoCorrection {
     outputFile
   }
 }
-
-//object GeoCorrection {
-//
-//  def main(args: Array[String]): Unit = {
-//
-//    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Correction")
-//    val sc = new SparkContext(sparkConf)
-//
-//    val startTime = System.nanoTime()
-//    val inputImage: RDDImage = null
-//
-//    geometricCorrection(sc, inputImage)
-//
-//    val endTime = System.nanoTime()
-//    val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
-//    println("")
-//    println(" spark cost time is: " + costtime.toString + "s")
-//
-//    sc.stop()
-//  }
-//
-//  def geometricCorrection(sc: SparkContext, coverage:  RDDImage): RDDImage = {
-//    val geoCorrection = new GeoCorrection
-//    geoCorrection.geometricCorrection(sc, coverage)
-//  }
-//}
