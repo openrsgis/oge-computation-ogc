@@ -26,7 +26,6 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 
-
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
@@ -1036,7 +1035,7 @@ object Trigger {
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
 //          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
-          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile")))
+          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
 
         //Cube
         //        case "Service.getCollections" =>
@@ -1082,6 +1081,8 @@ object Trigger {
         }
         case "Cube.export" =>
           Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
+        case "Cube.NDVI" =>
+          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
       }
 
 
@@ -1409,14 +1410,14 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
-    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
+    userId = "3c3a165b-6604-47b8-bce9-1f0c5470b9f8"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    //    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+//        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
