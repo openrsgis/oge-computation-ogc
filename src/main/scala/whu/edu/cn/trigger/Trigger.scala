@@ -1015,9 +1015,9 @@ object Trigger {
         case "SpatialStats.SpatialRegression.LinearRegression.feature" =>
           featureRddList += (UUID -> LinearRegression.LinearReg(featureRddList(args("data")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y"), args("x"), args("Intercept").toBoolean))
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
-          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
-          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, args("siFileArr").asInstanceOf[Array[String]], args("diFile")))
+          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
 
         //Cube
         //        case "Service.getCollections" =>

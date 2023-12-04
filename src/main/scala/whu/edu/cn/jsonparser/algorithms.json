@@ -9493,19 +9493,9 @@
     "returns": "RDDImage",
     "args": [
       {
-        "name": "inputFile",
-        "type": "String",
-        "description": "image path to be geometrically corrected"
-      },
-      {
-        "name": "outPutDir",
-        "type": "String",
-        "description": "output file name of geometric correction results"
-      },
-      {
-        "name": "outputSuf",
-        "type": "Boolean",
-        "description": "add a suffix after the geometric correction result"
+        "name": "coverage",
+        "type": "RDDImage",
+        "description": "image to be geometrically corrected"
       }
     ]
   },
@@ -9514,14 +9504,9 @@
     "returns": "RDDImage",
     "args": [
       {
-        "name": "siFileArr",
-        "type": "Array[String]",
-        "description": "array of image paths to be mosaiced"
-      },
-      {
-        "name": "diFile",
-        "type": "String",
-        "description": "output file name of mosaic results"
+        "name": "coverageCollection",
+        "type": "Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]",
+        "description": "map of image paths to be mosaiced"
       }
     ]
   }

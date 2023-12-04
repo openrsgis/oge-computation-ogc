@@ -12,115 +12,70 @@ package whu.edu.cn.algorithms.gmrc.geocorrection
 
 import com.sun.jna.{Pointer, StringArray}
 import org.apache.spark.{SparkConf, SparkContext}
+import GdalCorrectionLibrary.GDAL_CORRECTION_LIBRARY
+import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
+import whu.edu.cn.trigger.Trigger.dagId
+import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 
 import java.io.File
-import java.nio.file.Paths
-import GdalCorrectionLibrary.GDAL_CORRECTION_LIBRARY
-import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.MultibandTile
-import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 
-class GeoCorrection {
+object GeoCorrection {
 
+  def main(args: Array[String]): Unit = {
 
-  /**
-   * * 图像几何校正
-   * 使用本算子前，需要确保待校正文件的路径和输出文件夹合法且存在，且待校正文件有对应的同名 RPC 文件存在
-   *
-   * @param sc           spark 上下文环境
-   * @param inputFile 待校正的文件路径名称
-   * @param outPutDir    校正后图像保存的文件夹
-   * @param outputSuf    是否对输出图像添加除文件属性外的后缀，默认为 true，即当待校正文件为 1.tif 时，
-   *                     校正后为1_0.tif，默认从 _0 开始
-   */
-  def geometricCorrection(sc: SparkContext, inputFile: String, outPutDir: String, outputSuf: Boolean = true): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val inputFileArr = new Array[String](1)
-    inputFileArr(0) = inputFile
-    geometricCorrection(sc, inputFileArr, outPutDir, outputSuf)
+    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Correction")
+    val sc = new SparkContext(sparkConf)
+
+    val startTime = System.nanoTime()
+    val inputImage: RDDImage = null
+
+    geometricCorrection(sc, inputImage)
+
+    val endTime = System.nanoTime()
+    val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
+    println("")
+    println(" spark cost time is: " + costtime.toString + "s")
+
+    sc.stop()
   }
 
   /**
    * * 图像几何校正
    * 使用本算子前，需要确保待校正文件的路径和输出文件夹合法且存在，且待校正文件有对应的同名 RPC 文件存在
    * @param sc spark 上下文环境
-   * @param inputFileArr 待校正的文件路径名称数组
-   * @param outPutDir 校正后图像保存的文件夹
-   * @param outputSuf  是否对输出图像添加除文件属性外的后缀，默认为 true，即当待校正文件为 1.tif 时，
-   *                   校正后为1_0.tif，默认从 _0 开始
+   * @param coverage 图像存在该内存中
    */
-  private def geometricCorrection(sc: SparkContext, inputFileArr: Array[String], outPutDir: String, outputSuf: Boolean): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val input_file_rdd = sc.makeRDD(inputFileArr)
+  def geometricCorrection(sc: SparkContext, coverage:  RDDImage): RDDImage = {
+    val isTest = false  // 此变量为 true 时，本算子在本地可以正常正确运行
 
-    if (outputSuf) {
-      val output_file_suf_arr = new Array[String](inputFileArr.length)
-      for (i <- inputFileArr.indices) {
-        output_file_suf_arr(i) = "_" + i.toString
-      }
-      val output_file_suf_rdd = sc.makeRDD(output_file_suf_arr)
+    if (isTest) {
+      val inputImgPath: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__1.tiff")
+      val outputImgPath: String = new String("./data/testdata/geometric_correction/output/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__1_output.tiff")
 
-      val input_file_path_output_suf_rdd = input_file_rdd.zip(output_file_suf_rdd)
+      whu_geometric_correction(inputImgPath, outputImgPath)
 
-      val input_output_file_rdd = input_file_path_output_suf_rdd.map(input_file_path_output_suf => {
-        val input_file = new File(input_file_path_output_suf._1)
-        val input_file_name = input_file.getName
-
-        var output_file_name = ""
-        val last_dot_index = input_file_name.lastIndexOf(".")
-        if (last_dot_index >= 0) {
-          val filePrefix = input_file_name.substring(0, last_dot_index)
-          val fileSuffix = input_file_name.substring(last_dot_index)
-
-          output_file_name = filePrefix + input_file_path_output_suf._2
-          output_file_name += fileSuffix
-        } else {
-          output_file_name = input_file_name + input_file_path_output_suf._2
-        }
-
-        val output_file_path = Paths.get(outPutDir, output_file_name).toString
-
-        (input_file_path_output_suf._1, output_file_path)
-      })
-
-      input_output_file_rdd.foreach(input_output_file => {
-        val geo_correction =  new GeoCorrection()
-        geo_correction.whu_geometric_correction(input_output_file._1, input_output_file._2)
-      })
-
-      val outputfile_relative_path = input_output_file_rdd.first()._2
-      val outputfile_absolute_path = new File(outputfile_relative_path).getAbsolutePath
+      val outputfile_absolute_path = new File(outputImgPath).getAbsolutePath
       val hadoop_file_path = "/" + outputfile_absolute_path
       makeChangedRasterRDDFromTif(sc, hadoop_file_path)
     } else {
-      val input_output_file_rdd = input_file_rdd.map(input_file_path => {
-        val input_file = new File(input_file_path)
-        val input_file_name = input_file.getName
+      val inputSavePath = s"/mnt/storage/${dagId}_geometricCorrection.tiff"
+      saveRasterRDDToTif(coverage,inputSavePath)
 
-        val output_file_path = Paths.get(outPutDir, input_file_name).toString
+      val resFile = s"/mnt/storage/${dagId}_geometricCorrection_temp.tiff"
+      whu_geometric_correction(inputSavePath, resFile)
 
-        (input_file_path, output_file_path)
-      })
-
-      input_output_file_rdd.foreach(input_output_file => {
-        val geo_correction = new GeoCorrection()
-        geo_correction.whu_geometric_correction(input_output_file._1, input_output_file._2)
-      })
-
-      val outputfile_relative_path = input_output_file_rdd.first()._2
-      val outputfile_absolute_path = new File(outputfile_relative_path).getAbsolutePath
-      val hadoop_file_path = "/" + outputfile_absolute_path
-      makeChangedRasterRDDFromTif(sc, hadoop_file_path)
+      makeChangedRasterRDDFromTif(sc, resFile)
     }
   }
 
   /**
    * 几何校正
+   *
    * @param inputFile  待校正图像
    * @param outputFile 校正后的图像
    */
-  private def whu_geometric_correction(inputFile: String, outputFile: String): Unit = {
+  private def whu_geometric_correction(inputFile: String, outputFile: String): String = {
     GDAL_CORRECTION_LIBRARY.whu_gdal_GDALAllRegister()
 
     // 1.获取 RPC 数据
@@ -141,7 +96,7 @@ class GeoCorrection {
    * 几何校正，RPC校正，gdal库分开版本
    *
    * @param inputDataset
-   * @param outFile
+   * @param outputFile
    * @param rpcInfo
    * @param dfPixErrThreshold
    * @param paOptions
@@ -149,8 +104,7 @@ class GeoCorrection {
    * @param format
    * @return
    */
-  private def whu_geometric_correction_rpc_separate_dll(inputDataset: Pointer, outFile: String, rpcInfo: Pointer, dfPixErrThreshold: Double,
-                                                        paOptions: StringArray, eResampleMethod: Int, format: String): String = {
+  private def whu_geometric_correction_rpc_separate_dll(inputDataset: Pointer, outputFile: String, rpcInfo: Pointer, dfPixErrThreshold: Double, paOptions: StringArray, eResampleMethod: Int, format: String): String = {
 
     val bandCount: Int = GDAL_CORRECTION_LIBRARY.whu_gdal_GetRasterCount(inputDataset)
     val transformArg: Pointer = GDAL_CORRECTION_LIBRARY.whu_gdal_GDALCreateRPCTransformer(rpcInfo, 0, dfPixErrThreshold, null)
@@ -165,7 +119,7 @@ class GeoCorrection {
     }
 
     val dataType: Int = GDAL_CORRECTION_LIBRARY.whu_gdal_GetRasterDataType(inputDataset)
-    val outputDataset: Pointer = GDAL_CORRECTION_LIBRARY.whu_gdal_Create(format, outFile, pixels(0), lines(0), bandCount, dataType)
+    val outputDataset: Pointer = GDAL_CORRECTION_LIBRARY.whu_gdal_Create(format, outputFile, pixels(0), lines(0), bandCount, dataType)
     GDAL_CORRECTION_LIBRARY.whu_gdal_SetGeoTransform(outputDataset, adfGeoTransform)
 
     val WKT_WGS84: String = "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9108\"]],AUTHORITY[\"EPSG\",\"4326\"]]"
@@ -182,50 +136,6 @@ class GeoCorrection {
     GDAL_CORRECTION_LIBRARY.whu_gdal_GDALDestroyRPCTransformer(transformArg)
     GDAL_CORRECTION_LIBRARY.whu_gdal_GDALClose(outputDataset)
 
-    outFile
-  }
-
-  // RPC校正，gdal库合并版本，可以只用
-  private def whu_geometric_correction_rpc_part_dll(inputDataset: Pointer, outFile: String, rpcInfo: Pointer, dfPixErrThreshold: Double,
-                                 paOptions: StringArray, eResampleMethod: Int, format: String): Int = {
-    GDAL_CORRECTION_LIBRARY.whu_gdal_imageWarpByRPC(inputDataset, outFile, rpcInfo, dfPixErrThreshold, paOptions, eResampleMethod, format)
-  }
-
-  // RPC校正，gdal库整个版本，可以直接使用
-  private def whu_geometric_correction_rpc_all_dll(inputFile: String, outputFile: String): Unit = {
-    GDAL_CORRECTION_LIBRARY.whu_gdal_correction_all(inputFile, outputFile)
-  }
-}
-
-object GeoCorrection {
-  def main(args: Array[String]): Unit = {
-
-    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Correction")
-    val sc = new SparkContext(sparkConf)
-
-    val inputImgPath1: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__1.tiff")
-    val inputImgPath2: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__2.tiff")
-    val inputImgPath3: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__3.tiff")
-//    val input_file_arr = new Array[String](3)
-//    input_file_arr(0) = inputImgPath1
-//    input_file_arr(1) = inputImgPath2
-//    input_file_arr(2) = inputImgPath3
-
-    val outputImgPath: String = new String("./data/testdata/geometric_correction/output")
-
-    val startTime = System.nanoTime()
-    val correction_alg = new GeoCorrection()
-    correction_alg.geometricCorrection(sc, inputImgPath1, outputImgPath, false)
-    val endTime = System.nanoTime()
-    val costtime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
-    println("")
-    println(" spark cost time is: " + costtime.toString + "s")
-
-    sc.stop()
-  }
-
-  def geometricCorrection(sc: SparkContext, inputFile: String, outPutDir: String, outputSuf: Boolean = true): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val correction_alg = new GeoCorrection()
-    correction_alg.geometricCorrection(sc, inputFile, outPutDir, outputSuf)
+    outputFile
   }
 }
