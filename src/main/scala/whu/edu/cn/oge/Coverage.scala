@@ -2589,12 +2589,13 @@ object Coverage {
    */
   def metadata(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : String = {
-    val metadataObject = new JSONObject()
-    metadataObject.put("CRS",coverage._2.crs.toString())
-    metadataObject.put("Extent",coverage._2.extent.toString())
-    metadataObject.put("Resolution",coverage._2.cellheight)
+    val crs = coverage._2.crs.toString()
+    val extent = coverage._2.extent.toString()
+    val cellSize = coverage._2.cellheight
 
-    metadataObject.toJSONString
+    val string = s"CRS: $crs \nExtent: $extent \nResolution: $cellSize"
+
+    string
   }
 
   /**
