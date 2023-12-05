@@ -9,6 +9,7 @@ import org.locationtech.jts.geom.Geometry
 import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+import whu.edu.cn.oge.Service
 import whu.edu.cn.util.ShapeFileUtil.readShp
 
 import scala.collection.mutable
@@ -67,15 +68,15 @@ class GWRbasic extends GWRbase {
     })
     printString += f"Best bandwidth is $bwselect%.2f\n"
     //    println(s"best bandwidth is $bwselect")
-    val f = Figure()
-    f.height = 600
-    f.width = 900
-    val p = f.subplot(0)
-    val optv_sort = opt_value.zipWithIndex.map(t => (t._1, opt_result(t._2))).sortBy(_._1)
-    p += plot(optv_sort.map(_._1), optv_sort.map(_._2))
-    p.title = "bandwidth selection"
-    p.xlabel = "bandwidth"
-    p.ylabel = s"$approach"
+//    val f = Figure()
+//    f.height = 600
+//    f.width = 900
+//    val p = f.subplot(0)
+//    val optv_sort = opt_value.zipWithIndex.map(t => (t._1, opt_result(t._2))).sortBy(_._1)
+//    p += plot(optv_sort.map(_._1), optv_sort.map(_._2))
+//    p.title = "bandwidth selection"
+//    p.xlabel = "bandwidth"
+//    p.ylabel = s"$approach"
     val result = fit(bwselect, kernel = kernel, adaptive = adaptive)
     printString += result._2
     if (_outString == null) {
@@ -120,14 +121,14 @@ class GWRbasic extends GWRbase {
       }
       remainNameBuf.remove(valArrIdx(0)._2)
     }
-    val f = Figure()
-    f.height = 600
-    f.width = 900
-    val p = f.subplot(0)
-    p += plot(plotIdx.toArray, plotAic.toArray)
-    p.title = "variable selection"
-    p.xlabel = "variable selection order"
-    p.ylabel = "AICc"
+//    val f = Figure()
+//    f.height = 600
+//    f.width = 900
+//    val p = f.subplot(0)
+//    p += plot(plotIdx.toArray, plotAic.toArray)
+//    p.title = "variable selection"
+//    p.xlabel = "variable selection order"
+//    p.ylabel = "AICc"
     _outString = "Auto variable selection\n"
     _outString += ordString
     (getNameBuf.toArray, select_idx)
@@ -368,7 +369,7 @@ object GWRbasic {
    */
   def auto(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String,
            kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = false, split: String = ",", varSelTh: Double = 3.0)
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
     val model = new GWRbasic
     model.init(featureRDD)
     model.setY(propertyY)
@@ -377,8 +378,8 @@ object GWRbasic {
     val r = vars._1.take(vars._2)
     model.resetX(r)
     val re = model.auto(kernel = kernel, approach = approach, adaptive = adaptive)
-    print(re._2)
-    (sc.makeRDD(re._1), re._2)
+    Service.print(re._2, "Diagnostics", "String")
+    sc.makeRDD(re._1)
   }
 
   /** Basic GWR calculation with bandwidth auto selection
@@ -395,14 +396,15 @@ object GWRbasic {
    */
   def autoFit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String,
               kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = false, split: String = ",")
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))]= {
     val model = new GWRbasic
     model.init(featureRDD)
     model.setY(propertyY)
     model.setX(propertiesX)
     val re = model.auto(kernel = kernel, approach = approach, adaptive = adaptive)
-    print(re._2)
-    (sc.makeRDD(re._1), re._2)
+//    print(re._2)
+    Service.print(re._2, "Diagnostics", "String")
+    sc.makeRDD(re._1)
   }
 
   /** Basic GWR calculation with specific bandwidth
@@ -419,14 +421,15 @@ object GWRbasic {
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String,
           bandwidth: Double, kernel: String = "gaussian", adaptive: Boolean = false, split: String = ",")
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
     val model = new GWRbasic
     model.init(featureRDD)
     model.setY(propertyY)
     model.setX(propertiesX)
     val re = model.fit(bw = bandwidth, kernel = kernel, adaptive = adaptive)
-    print(re._2)
-    (sc.makeRDD(re._1), re._2)
+//    print(re._2)
+    Service.print(re._2,"Diagnostics","String")
+    sc.makeRDD(re._1)
   }
 
 }
