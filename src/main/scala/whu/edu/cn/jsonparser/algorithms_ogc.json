@@ -5605,7 +5605,7 @@
   },
   "Coverage.bandTypes": {
     "description": " Returns a map of the coverage's band types.",
-    "returns": "Map",
+    "returns": "String",
     "args": [
       {
         "name": "coverage",

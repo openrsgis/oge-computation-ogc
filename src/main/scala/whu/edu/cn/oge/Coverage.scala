@@ -1274,14 +1274,14 @@ object Coverage {
    * @param coverage The coverage from which the left operand bands are taken.
    * @return Map[String, String]  key: band name, value: band type
    */
-  def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
-    var bandTypesMap: mutable.Map[String, String] = mutable.Map.empty[String, String]
+  def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    var res :String = new String()
     var bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
     coverage._1.first()._2.bands.foreach(tile => {
-      bandTypesMap += (bandNames.head -> tile.cellType.toString())
+      res += s"${bandNames.head} -> ${tile.cellType.toString()} \n"
       bandNames = bandNames.tail
     })
-    bandTypesMap.toMap
+    res
   }
 
 
@@ -1456,15 +1456,16 @@ object Coverage {
    * @return
    */
   def remap(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), from: List[Int],
-            to: List[Double], defaultValue: Option[Double] = None): (RDD[(SpaceTimeBandKey, MultibandTile)],
+            to: List[Double], defaultValue: String = null): (RDD[(SpaceTimeBandKey, MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
     if (to.length != from.length) {
       throw new IllegalArgumentException("The length of two lists not same!")
     }
-    if (defaultValue.isEmpty) {
+
+    if (defaultValue == null) {
       coverageTemplate(coverage, (tile) => RemapWithoutDefaultValue(tile, from.zip(to).toMap))
     } else {
-      coverageTemplate(coverage, (tile) => RemapWithDefaultValue(tile, from.zip(to).toMap, defaultValue.get))
+      coverageTemplate(coverage, (tile) => RemapWithDefaultValue(tile, from.zip(to).toMap, defaultValue.toDouble))
     }
   }
 
