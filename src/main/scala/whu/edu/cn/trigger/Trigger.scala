@@ -23,8 +23,9 @@ import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, 
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{JedisUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -1255,7 +1256,7 @@ object Trigger {
 
 
     /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms.json"
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1275,6 +1276,9 @@ object Trigger {
 
     try {
       lambda(sc, optimizedDagMap("0"))
+
+      //返回正常信息
+      PostSender.sendShelvedPost()
     } catch {
       case e: Throwable =>
         e.printStackTrace()
@@ -1308,6 +1312,10 @@ object Trigger {
       Trigger.featureRddList.clear()
       Trigger.cubeRDDList.clear()
       Trigger.cubeLoad.clear()
+      Trigger.intList.clear()
+      Trigger.doubleList.clear()
+      Trigger.stringList.clear()
+      PostSender.clearShelvedMessages()
       val tempFilePath = GlobalConfig.Others.tempFilePath
       val filePath = s"${tempFilePath}${dagId}.tiff"
       if (scala.reflect.io.File(filePath).exists)
@@ -1417,7 +1425,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-//        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+    //    runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")

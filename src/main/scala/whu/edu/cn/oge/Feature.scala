@@ -8,11 +8,11 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Geometry, Point}
 import org.locationtech.jts.io.WKTReader
 import whu.edu.cn.geocube.util.HbaseUtil._
+
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util
 import java.util.{Date, UUID}
-
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4
@@ -40,7 +40,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{BosClientUtil_scala, MinIOUtil, PostgresqlUtil}
+import whu.edu.cn.util.{BosClientUtil_scala, MinIOUtil, PostSender, PostgresqlUtil}
 import java.nio.file.Paths
 
 import com.baidubce.services.bos.model.GetObjectRequest
@@ -1105,12 +1105,13 @@ object Feature {
     val geoJSONString = toGeoJSONString(feature)
     val url = saveJSONToServer(geoJSONString)
     geoJson.put(Trigger.layerName, url)
-    val jsonObject = new JSONObject
-    jsonObject.put("vector", geoJson)
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+//    val jsonObject = new JSONObject
+//    jsonObject.put("vector", geoJson)
+//    val outJsonObject: JSONObject = new JSONObject
+//    outJsonObject.put("workID", Trigger.dagId)
+//    outJsonObject.put("json", jsonObject)
+    PostSender.shelvePost("vector",geoJson)
+//    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 //    println(outJsonObject.toJSONString)
   }
 
