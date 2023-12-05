@@ -34,12 +34,7 @@ object PostSender {
     val url = DAG_ROOT_URL + "/deliverUrl"
     val JsonObject_1 = new JSONObject()
     for((name,json) <- messages){
-      if(json.size == 1){
-        JsonObject_1.put(name,json.head)
-      }else{
-        JsonObject_1.put(name,json.toArray)
-      }
-
+      JsonObject_1.put(name,json.toArray)
     }
 
     val outPutJson = new JSONObject()

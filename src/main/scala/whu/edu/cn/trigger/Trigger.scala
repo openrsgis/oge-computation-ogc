@@ -381,7 +381,7 @@ object Trigger {
         case "Coverage.signum" =>
           coverageRddList += (UUID -> Coverage.signum(coverage = coverageRddList(args("coverage"))))
         case "Coverage.bandTypes" =>
-          stringList += (UUID -> Coverage.bandTypes(coverage = coverageRddList(args("coverage"))).toString())
+          stringList += (UUID -> Coverage.bandTypes(coverage = coverageRddList(args("coverage"))))
         case "Coverage.rename" =>
           coverageRddList += (UUID -> Coverage.rename(coverage = coverageRddList(args("coverage")), name = args("name").split(",").toList))
         case "Coverage.pow" =>
@@ -408,7 +408,7 @@ object Trigger {
           stringList += (UUID -> Coverage.projection(coverage = coverageRddList(args("coverage"))))
         case "Coverage.remap" =>
           coverageRddList += (UUID -> Coverage.remap(coverage = coverageRddList(args("coverage")), args("from").slice(1, args("from").length - 1).split(',').toList.map(_.toInt),
-            args("to").slice(1, args("to").length - 1).split(',').toList.map(_.toDouble), Option(isOptionalArg(args, "defaultValue").toDouble)))
+            args("to").slice(1, args("to").length - 1).split(',').toList.map(_.toDouble), isOptionalArg(args, "defaultValue")))
         case "Coverage.polynomial" =>
           coverageRddList += (UUID -> Coverage.polynomial(coverage = coverageRddList(args("coverage")), args("l").slice(1, args("l").length - 1).split(',').toList.map(_.toDouble)))
         case "Coverage.slice" =>
