@@ -46,7 +46,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, RemapWithDefaultValue, RemapWithoutDefaultValue}
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
 import java.io.File
 import sys.process._
