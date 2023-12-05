@@ -39,7 +39,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{MinIOUtil, PostgresqlUtil}
+import whu.edu.cn.util.{MinIOUtil, PostSender, PostgresqlUtil}
 
 import java.nio.file.Paths
 import scala.collection.mutable
@@ -1097,12 +1097,13 @@ object Feature {
     val geoJSONString = toGeoJSONString(feature)
     val url = saveJSONToServer(geoJSONString)
     geoJson.put(Trigger.layerName, url)
-    val jsonObject = new JSONObject
-    jsonObject.put("vector", geoJson)
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+//    val jsonObject = new JSONObject
+//    jsonObject.put("vector", geoJson)
+//    val outJsonObject: JSONObject = new JSONObject
+//    outJsonObject.put("workID", Trigger.dagId)
+//    outJsonObject.put("json", jsonObject)
+    PostSender.shelvePost("vector",geoJson)
+//    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 //    println(outJsonObject.toJSONString)
   }
 

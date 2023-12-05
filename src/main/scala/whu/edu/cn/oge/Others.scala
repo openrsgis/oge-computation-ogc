@@ -5,21 +5,19 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.PostSender
+
 import java.math.BigInteger
 import java.security.MessageDigest
 
 package object Others {
   def sendNotice(notice: JSONObject): Unit = {
-
-    val noticeJson = new JSONObject
-    noticeJson.put("workID", Trigger.dagId)
-    noticeJson.put("notice", notice.toJSONString)
-
-    sendPost(DAG_ROOT_URL + "/deliverUrl", noticeJson.toJSONString)
+    PostSender.shelvePost("notice", notice)
   }
-  def printNotice(name:String, res: String):Unit={
+
+  def printNotice(name: String, res: String): Unit = {
     val noticeJson = new JSONObject
-    noticeJson.put(name,res)
+    noticeJson.put(name, res)
     sendNotice(noticeJson)
   }
 

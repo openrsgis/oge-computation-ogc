@@ -39,7 +39,7 @@ import whu.edu.cn.util._
 
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZonedDateTime}
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -570,7 +570,7 @@ object Coverage {
    * @return
    */
   def date(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
-    coverage._1.first()._1.getSpaceTimeKey().time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    Instant.ofEpochMilli(coverage._1.first()._1.getSpaceTimeKey().time.toInstant.toEpochMilli.*(1000L)).atZone(ZoneId.systemDefault()).toLocalDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
   }
 
   /**
@@ -3333,42 +3333,15 @@ object Coverage {
     else {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
-    jsonObject.put("raster", rasterJsonObject)
+//    jsonObject.put("raster", rasterJsonObject)
+//
+//    val outJsonObject: JSONObject = new JSONObject
+//    outJsonObject.put("workID", Trigger.dagId)
+//    outJsonObject.put("json", jsonObject)
 
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
+    PostSender.shelvePost("raster",rasterJsonObject)
 
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-
-    println("outputJSON: ", outJsonObject.toJSONString)
-
-    try{
-//      val jedis: Jedis = new JedisUtil().getJedis
-//      zIndexStrArray.foreach(zIndexStr => {
-//        val key: String = Trigger.dagMd5 + ":solvedTile:" + Trigger.level + zIndexStr
-//        jedis.sadd(key, "cached")
-//        jedis.expire(key, REDIS_CACHE_TTL)
-//      })
-//      jedis.close()
-    }
-
-
-
-    // 清空list
-    Trigger.optimizedDagMap.clear()
-    Trigger.coverageCollectionMetadata.clear()
-    Trigger.lazyFunc.clear()
-    Trigger.coverageCollectionRddList.clear()
-    Trigger.coverageRddList.clear()
-    Trigger.zIndexStrArray.clear()
-    JsonToArg.dagMap.clear()
-    //    // TODO lrx: 以下为未检验
-    Trigger.tableRddList.clear()
-    Trigger.kernelRddList.clear()
-    Trigger.featureRddList.clear()
-    Trigger.cubeRDDList.clear()
-    Trigger.cubeLoad.clear()
+//    println("outputJSON: ", outJsonObject.toJSONString)
 
     if (sc.master.contains("local")) {
       whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
