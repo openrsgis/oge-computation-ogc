@@ -85,6 +85,11 @@ object GlobalConfig {
     final val MINIO_MAX_CONNECTIONS: Int = 10000
   }
 
+  object BosConf{
+    //Bos基础配置
+    final val BOS_ENDPOINT: String = "https://s3.bj.bcebos.com"
+  }
+
   object PostgreSqlConf {
     // PostgreSQL 基础配置
     var POSTGRESQL_URL: String = "jdbc:postgresql://125.220.153.23:30865/oge" //"jdbc:postgresql://10.101.240.21:30865/oge"
@@ -125,5 +130,6 @@ object GlobalConfig {
     final var tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
     final var ontheFlyStorage = "/home/ogeStorage/on-the-fly" //tms瓦片存储地址
     final var jsonSavePath = "/home/ogeStorage/algorithmData/" //geojson临时存储地址
+    final var platform = "bmr"//平台名称
   }
 }
