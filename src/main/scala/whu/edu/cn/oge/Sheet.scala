@@ -1,22 +1,26 @@
 package whu.edu.cn.oge
 
-import com.alibaba.fastjson.JSONObject
+import com.alibaba.fastjson.{JSONArray, JSONObject}
 import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.objectStorage.ObjectStorageFactory
+import whu.edu.cn.oge.Feature.geometry
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.BosClientUtil_scala
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 
 import java.io.{BufferedReader, BufferedWriter, File, FileReader, FileWriter}
+import scala.collection.mutable.Map
 
 object Sheet{
   case class CsvData(header: List[String], data: List[List[String]])
+
   def loadCSVFromUpload(implicit sc: SparkContext, csvId: String, userID: String, dagId: String): CsvData = {
     var path: String = new String()
     if (csvId.endsWith(".csv")) {
@@ -25,14 +29,21 @@ object Sheet{
       path = s"$userID/$csvId.csv"
     }
 
+    val platform = GlobalConfig.Others.platform
+    var endpoint = ""
+    if(platform =="bmr"){
+      endpoint = GlobalConfig.BosConf.BOS_ENDPOINT
+    }else if(platform =="cc"){
+      endpoint = GlobalConfig.MinioConf.MINIO_ENDPOINT
+    }else{
+      endpoint = ""
+    }
+
     //向百度云发送下载数据的请求，将数据下载到临时文件夹
-    val client = BosClientUtil_scala.getClient2
+    val client = ObjectStorageFactory.getClient(platform,endpoint)
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.csv"
-    val tempfile = new File(filePath)
-    val getObjectRequest = new GetObjectRequest("oge-user", path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest, tempfile)
+    val bosObject = client.DownloadObject(path, filePath,"oge-user")
     println(filePath)
 
     val csvdata = readCsv(filePath)
@@ -73,8 +84,11 @@ object Sheet{
   def getcellValue(sheet: CsvData, row: Int, col: Int): String = {
     // 检查行和列的有效性
     if (row >= 1 && row <= sheet.data.length && col >= 1 && col <= sheet.data(row).length) {
-      Some(sheet.data(row-1)(col-1)).get
+      val ans = Some(sheet.data(row-1)(col-1)).get
+      println("cellValue is"+ans.toString)
+      ans
     } else {
+      println("None value")
       "None"
     }
   }
@@ -111,14 +125,14 @@ object Sheet{
     }
   }
 
-//  def printSheet(csvData: CsvData)
+  //  def printSheet(csvData: CsvData)
 
   def printSheet(res: CsvData, name: String): Unit = {
     val j = new JSONObject()
     val res_format = formatCsvData(res)
     j.put("name", name)
     j.put("value", res_format)
-//    j.put("type", valueType)
+    //    j.put("type", valueType)
     Trigger.outputInformationList.append(j)
 
 
@@ -129,7 +143,7 @@ object Sheet{
     val outJsonObject: JSONObject = new JSONObject
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
-    println(outJsonObject)
+    println("打印的表格为："+outJsonObject)
     sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
   }
 
@@ -144,33 +158,80 @@ object Sheet{
     s"Table:\n$formattedTable"
   }
 
-  def main(args: Array[String]): Unit = {
-    val filePath = "C:\\Users\\17510\\Desktop\\test1.csv"
+  def toGeoJson_Point(implicit sc: SparkContext,csvData: CsvData): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val keys = csvData.header
+    val data = csvData.data
+    val propertyKeys = keys.filterNot(Set("lat", "lon").contains)
 
+    val containsLatAndLon = keys.contains("lat") && keys.contains("lon")
+    if(containsLatAndLon){
+      // 创建一个 JSONArray 用于存放 features
+      val features = new JSONArray()
+
+      // 遍历数据列表
+      data.foreach { row =>
+        // 将 keys 和当前行的数据组合成一个 Map
+        val coordinates = keys.zip(row).toMap
+        // 创建一个 JSONObject 用于表示 feature
+        val feature = new JSONObject()
+        // 创建一个 JSONObject 用于表示 geometry
+        val geometry = new JSONObject()
+        // 向 geometry 中添加 coordinates 和 type 键值对
+        val coordinatesList = new JSONArray()
+        coordinatesList.add(coordinates("lon").toDouble)
+        coordinatesList.add(coordinates("lat").toDouble)
+
+        //      val coordinatesList = Seq(coordinates("lon").toDouble, coordinates("lat").toDouble)
+        geometry.put("coordinates", coordinatesList)
+        geometry.put("type", "Point")
+
+        // 向 feature 中添加 geometry 和 type 键值对
+        feature.put("geometry", geometry)
+        feature.put("type", "Feature")
+
+        // 创建一个 JSONObject 用于表示 properties
+        val properties = new JSONObject()
+        // 遍历所有的属性键，添加到 properties 中
+        propertyKeys.foreach { propertyKey =>
+          properties.put(propertyKey, coordinates.getOrElse(propertyKey, ""))
+        }
+
+        feature.put("properties", properties)
+        features.add(feature)
+      }
+
+      // 创建一个 JSONObject 用于表示整个 GeoJSON
+      val geoJson = new JSONObject()
+      // 向 geoJson 中添加 features 和 type 键值对
+      geoJson.put("features", features)
+      geoJson.put("type", "FeatureCollection")
+
+      // 将整个 geoJson 转换为 JSON 字符串并返回
+      val geoJson_string = geoJson.toJSONString
+      geometry(sc, geoJson_string, "EPSG:4326")
+    }else{
+      throw new IllegalArgumentException("请确保表格中有“lat”和“lon”字段！")
+    }
+
+  }
+
+  def main(args: Array[String]): Unit = {
+    val filePath = "C:\\Users\\17510\\Desktop\\ICESat-2.csv"
     // 读取CSV文件
     val csvData = readCsv(filePath)
 
-    // 写入CSV文件
-//    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", CsvData(header = csvData.header, data = csvData.data))
-
     // 获取第二行第三列的值
-    val value = getcellValue(csvData, row = 2, col = 3)
+//    val value = getcellValue(csvData, row = 2, col = 3)
+//
+    val filteredData = filterByHeader(csvData, condition = "sig", value = "3")
+//    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", filteredData)
 
-//    value match {
-//      case Some(v) => println(s"Value at row 2, column 3: $v")
-//      case None => println("Invalid row or column index.")
-//    }
-
-    // 切片部分行
-//    val slicedRows = slice(csvData, sliceRows = true, start = 1, end = 2)
-//    slicedRows.foreach(row => println(row.mkString(", ")))
-
-    val filteredData = filterByHeader(csvData, condition = "age", value = "25")
-    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", filteredData)
-    println(filteredData)
 
     val formattedTable = formatCsvData(filteredData)
     println(formattedTable)
+
+//    val geojson = toGeoJson_Point(formattedTable)
+//    println(geojson)
   }
 
 

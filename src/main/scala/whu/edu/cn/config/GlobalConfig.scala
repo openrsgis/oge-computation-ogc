@@ -77,12 +77,17 @@ object GlobalConfig {
 
   object MinioConf {
     // MinIO 基础配置
-    final val MINIO_ENDPOINT: String = "http://10.101.240.20:9006" // "http://125.220.153.23:9006"
-    final val MINIO_ACCESS_KEY: String = "oge"
+    final val MINIO_ENDPOINT: String = "http://125.220.153.23:9006"
+    final val MINIO_ACCESS_KEY: String = "rssample"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "oge"
     final val MINIO_HEAD_SIZE: Int = 5000000
     final val MINIO_MAX_CONNECTIONS: Int = 10000
+  }
+
+  object BosConf{
+    //Bos基础配置
+    final val BOS_ENDPOINT: String = "https://s3.bj.bcebos.com"
   }
 
   object PostgreSqlConf {
@@ -125,6 +130,6 @@ object GlobalConfig {
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
-    var platform = "local"
+    var platform = "bmr"
   }
 }

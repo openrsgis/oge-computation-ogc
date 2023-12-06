@@ -34,6 +34,7 @@ import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
+import whu.edu.cn.oge.Sheet.CsvData
 
 import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
@@ -250,6 +251,17 @@ object Trigger {
             args("recession").toInt, args("tMax").toInt, args("iterception").toInt, args("waterShedArea").toInt)
         case "Algorithm.SWMM5" =>
           Table.SWMM5(null)
+
+        // Sheet
+        case "Sheet.getcellValue" =>
+          stringList += (UUID -> Sheet.getcellValue(SheetList(args("sheet")), args("row").toInt, args("col").toInt))
+        case "Sheet.slice" =>
+          SheetList += (UUID -> Sheet.slice(SheetList(args("sheet")), args("sliceRows").toBoolean, args("start").toInt, args("end").toInt))
+        case "Sheet.filterByHeader" =>
+          SheetList += (UUID -> Sheet.filterByHeader(SheetList(args("sheet")), args("condition"), args("value")))
+        case "Sheet.toPoint" =>
+          featureRddList += (UUID -> Sheet.toGeoJson_Point(sc, SheetList(args("sheet"))))
+
 
         // Coverage
         case "Coverage.export" =>
@@ -1418,7 +1430,7 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
-    userId = "3c3a165b-6604-47b8-bce9-1f0c5470b9f8"
+    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()

@@ -2858,7 +2858,7 @@ object Coverage {
       }
       else {
         //用户没选波段,且原coverage波段数>3
-        val bandsDefault: List[String] = List[String]("B4", "B3", "B2")
+        val bandsDefault: List[String] = coverageVis1._1.first()._1.measurementName.slice(0,3).toList
         val coverageVis3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = selectBands(coverageVis1, bandsDefault)
         resultCoverage = addStyles3Band(coverageVis3, visParam)
       }
@@ -3356,9 +3356,9 @@ object Coverage {
 
 //    println("outputJSON: ", outJsonObject.toJSONString)
 
-    if (sc.master.contains("local")) {
-      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
-    }
+//    if (sc.master.contains("local")) {
+//      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
+//    }
 
   }
 

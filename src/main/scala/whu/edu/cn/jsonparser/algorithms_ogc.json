@@ -9612,7 +9612,7 @@
     ]
   },
   "Service.getSheet": {
-    "description": "Getting resource CSV data",
+    "description": "Getting resource Sheet data",
     "returns": "Sheet",
     "args": [
       {
@@ -9624,22 +9624,6 @@
         "name": "sheetID",
         "type": "String",
         "description": "The id of target csv."
-      }
-    ]
-  },
-  "Service.printSheet": {
-    "description": "Print the Sheet to console.",
-    "returns": "Unit",
-    "args": [
-      {
-        "name": "object",
-        "type": "Sheet",
-        "description": "The value to print."
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of the value."
       }
     ]
   },
@@ -9724,6 +9708,17 @@
         "name": "value",
         "type": "String",
         "description": "The value of select header."
+      }
+    ]
+  },
+  "Sheet.toPoint": {
+    "description": "convert sheet to point feature.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "sheet",
+        "type": "Sheet",
+        "description": "The sheet to convert."
       }
     ]
   }
