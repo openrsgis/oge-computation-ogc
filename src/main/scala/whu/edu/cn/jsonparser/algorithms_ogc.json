@@ -9219,7 +9219,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "kernel",
@@ -9258,7 +9258,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "bandwidth",
@@ -9296,7 +9296,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "kernel",
@@ -9359,7 +9359,7 @@
       {
         "name": "properties",
         "type": "String",
-        "description": "The properties to calculate."
+        "description": "The properties to calculate, seperated by \",\" "
       },
       {
         "name": "method",
@@ -9467,7 +9467,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       }
     ]
   },
@@ -9488,7 +9488,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       }
     ]
   },
@@ -9509,7 +9509,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       }
     ]
   },
@@ -9530,7 +9530,7 @@
       {
         "name": "x",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "Intercept",
@@ -9557,7 +9557,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "bandwidth",
@@ -9601,7 +9601,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "bandwidth",
@@ -9619,6 +9619,90 @@
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
         "default": "false"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoRiskDetector": {
+    "description": "RiskDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoFactorDetector": {
+    "description": "FactorDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoInteractionDetector": {
+    "description": "InteractionDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoEcologicalDetector": {
+    "description": "EcologicalDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
       }
     ]
   },

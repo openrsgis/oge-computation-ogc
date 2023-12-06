@@ -9521,6 +9521,90 @@
       }
     ]
   },
+  "SpatialStats.SpatialHeterogeneity.GeoRiskDetector": {
+    "description": "RiskDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoFactorDetector": {
+    "description": "FactorDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoInteractionDetector": {
+    "description": "InteractionDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoEcologicalDetector": {
+    "description": "EcologicalDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
   "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
     "description": "image geometric correction",
     "returns": "RDDImage",
