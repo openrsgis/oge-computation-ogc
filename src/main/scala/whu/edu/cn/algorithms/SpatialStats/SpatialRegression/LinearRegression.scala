@@ -41,13 +41,13 @@ object LinearRegression {
    * @param data      RDD, csv读入
    * @param x         输入X
    * @param y         输入Y
-   * @param split       split of the x properties, default: ","
    * @param Intercept 是否需要截距项，默认：是（true）
    * @return          （系数，预测值，残差）各自以Array形式储存
    */
-  def LinearRegression(data: RDD[mutable.Map[String, Any]], y: String, x: String, split: String = ",", Intercept: Boolean =true)
+  def LinearRegression(data: RDD[mutable.Map[String, Any]], y: String, x: String, Intercept: Boolean =true)
   : RDD[mutable.Map[String, Any]] = {
     _data=data
+    val split = ","
     setX(x, split, Intercept)
     setY(y)
     var X=_1X
@@ -63,7 +63,7 @@ object LinearRegression {
     val betas = xtwx_inv * xtwy
     val y_hat = X * betas
     val res = Y - y_hat
-    var str = "  Linear Regression\n"
+    var str = "\n  Linear Regression\n"
     if (Intercept) {
       str += f"Intercept: ${betas(0)}%.4f\n${_nameX(0)}: ${betas(1)}%.4f\n${_nameX(1)}: ${betas(2)}%.4f\n"
     } else {
@@ -76,7 +76,7 @@ object LinearRegression {
       t._1 += ("yhat" -> y_hat(t._2.toInt))
       t._1 += ("residual" -> res(t._2.toInt))
     })
-    Service.print(str, "Diagnostics", "String")
+    Service.print(str, "Linear Regression", "String")
     shpRDDidx.map(t => t._1)
   }
 
@@ -107,7 +107,7 @@ object LinearRegression {
     val betas = xtwx_inv * xtwy
     val y_hat = X * betas
     val res = Y - y_hat
-    var str = "  Linear Regression\n"
+    var str = "\n  Linear Regression\n"
     if(Intercept){
       str += f"Intercept: ${betas(0)}%.4f\n${_nameX(0)}: ${betas(1)}%.4f\n${_nameX(1)}: ${betas(2)}%.4f\n"
     }else{
@@ -120,7 +120,7 @@ object LinearRegression {
       t._1._2._2 += ("yhat" -> y_hat(t._2.toInt))
       t._1._2._2 += ("residual" -> res(t._2.toInt))
     })
-    Service.print(str,"Diagnostics","String")
+    Service.print(str,"Linear Regression for feature","String")
     shpRDDidx.map(t=>t._1)
   }
 
