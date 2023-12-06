@@ -80,7 +80,7 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
 
     fitvalue = (_Y - res).toArray
 
-    var printStr = "-----------------------------Spatial Error Model-----------------------------\n" +
+    var printStr = "\n-----------------------------Spatial Error Model-----------------------------\n" +
       f"lambda is $lambda%.6f\n"
     printStr += try_LRtest(-lllambda, lly)
     printStr += f"coeffients:\n$betas_map\n"
@@ -199,7 +199,7 @@ object SpatialErrorModel {
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    Service.print(re._2,"Diagnostics","String")
+    Service.print(re._2,"Spatial Error Model","String")
     sc.makeRDD(re._1)
   }
 

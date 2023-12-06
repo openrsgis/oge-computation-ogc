@@ -9124,29 +9124,19 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "approach",
         "type": "String",
         "description": "approach function: AICc, CV",
-        "default": "AICc",
-        "optional": "True"
+        "default": "AICc"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "false"
       }
     ]
   },
@@ -9178,22 +9168,13 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "false"
       }
     ]
   },
@@ -9220,29 +9201,19 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "approach",
         "type": "String",
         "description": "approach function: AICc, CV",
-        "default": "AICc",
-        "optional": "True"
+        "default": "AICc"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "false"
       },
       {
         "name": "varSelTh",
@@ -9272,16 +9243,6 @@
         "name": "featureRDD",
         "type": "Feature",
         "description": "feature input for calculation"
-      },
-      {
-        "name": "property",
-        "type": "String",
-        "description": "the property to extract."
-      },
-      {
-        "name": "histBins",
-        "type": "Int",
-        "description": "number of histogram bin"
       }
     ]
   },
@@ -9303,15 +9264,7 @@
         "name": "method",
         "type": "String",
         "description": "pearson or spearman method, default: pearson",
-        "default": "pearson",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "properties split, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "pearson"
       }
     ]
   },
@@ -9392,8 +9345,7 @@
       {
         "name": "timelag",
         "type": "Int",
-        "description": "time lag, default:20",
-        "default": "20"
+        "description": "time lag"
       }
     ]
   },
@@ -9460,103 +9412,218 @@
       }
     ]
   },
-  "Service.getSheet": {
-    "description": "Getting resource Sheet data",
-    "returns": "Sheet",
+  "SpatialStats.SpatialRegression.LinearRegression.feature": {
+    "description": "Linear Regression for feature",
+    "returns": "Feature",
     "args": [
       {
-        "name": "baseUrl",
-        "type": "String",
-        "description": "The base url of service."
+        "name": "data",
+        "type": "Feature",
+        "description": "feature input"
       },
       {
-        "name": "sheetID",
+        "name": "y",
         "type": "String",
-        "description": "The id of target csv."
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "Intercept",
+        "type": "Boolean",
+        "description": "whether need Intercept",
+        "default": "true"
       }
     ]
   },
-  "Service.printSheet": {
-    "description": "Print the Sheet to console.",
-    "returns": "Unit",
-    "args": [
-      {
-        "name": "object",
-        "type": "Sheet",
-        "description": "The value to print."
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of the value."
-      }
-    ]
-  },
-  "Sheet.getcellValue": {
-    "description": "get cell value at given position.",
+  "SpatialStats.GWModels.GWAverage": {
+    "description": "Geographically weighted Statistic Summary: Average",
     "returns": "String",
     "args": [
       {
-        "name": "sheet",
-        "type": "Sheet",
-        "description": "The sheet to get cell value."
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
       },
       {
-        "name": "row",
-        "type": "Int",
-        "description": "The row of the cell."
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
       },
       {
-        "name": "col",
-        "type": "Int",
-        "description": "The col of the cell."
-      }
-    ]
-  },
-  "Sheet.slice": {
-    "description": "slice the sheet to a new sheet.",
-    "returns": "Sheet",
-    "args": [
-      {
-        "name": "sheet",
-        "type": "Sheet",
-        "description": "The sheet to slice."
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
       },
       {
-        "name": "sliceRows",
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian"
+      },
+      {
+        "name": "adaptive",
         "type": "Boolean",
-        "description": "slice by rows or cols."
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false"
       },
       {
-        "name": "start",
-        "type": "Int",
-        "description": "The begin rows/cols of the slice."
-      },
-      {
-        "name": "end",
-        "type": "Int",
-        "description": "The end rows/cols of the slice."
+        "name": "quantile",
+        "type": "Boolean",
+        "description": "true for quantile",
+        "default": "false"
       }
     ]
   },
-  "Sheet.filterByHeader": {
-    "description": "select new sheet by header condition.",
-    "returns": "Sheet",
+  "SpatialStats.GWModels.GWCorrelation": {
+    "description": "Geographically weighted Statistic Summary: Correlation",
+    "returns": "String",
     "args": [
       {
-        "name": "sheet",
-        "type": "Sheet",
-        "description": "The sheet to select."
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
       },
       {
-        "name": "condition",
+        "name": "propertyY",
         "type": "String",
-        "description": "The name of select header."
+        "description": "dependent variable property"
       },
       {
-        "name": "value",
+        "name": "propertiesX",
         "type": "String",
-        "description": "The value of select header."
+        "description": "independent variable properties"
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoRiskDetector": {
+    "description": "RiskDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoFactorDetector": {
+    "description": "FactorDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoInteractionDetector": {
+    "description": "InteractionDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoEcologicalDetector": {
+    "description": "EcologicalDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
+    "description": "image geometric correction",
+    "returns": "RDDImage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "RDDImage",
+        "description": "image to be geometrically corrected"
+      }
+    ]
+  },
+  "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
+    "description": "image split mosaic",
+    "returns": "RDDImage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]",
+        "description": "map of image paths to be mosaiced"
       }
     ]
   },

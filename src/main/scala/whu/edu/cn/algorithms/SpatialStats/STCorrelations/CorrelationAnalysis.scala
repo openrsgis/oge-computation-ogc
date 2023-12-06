@@ -15,12 +15,11 @@ object CorrelationAnalysis {
    *
    * @param featureRDD   shapefile RDD
    * @param properties properties
-   * @param split      properties split, default: ","
    * @param method     pearson or spearman
    * @return correlation matrix
    */
-  def corrMat(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], properties: String, method: String = "pearson", split: String = ","): String = {
-    val propertyArr = properties.split(split)
+  def corrMat(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], properties: String, method: String = "pearson"): String = {
+    val propertyArr = properties.split(",")
     val n = propertyArr.length
     var cor = new Array[Array[Double]](n)
     val arrList = propertyArr.map(p => featureRDD.map(t => t._2._2(p).asInstanceOf[String].toDouble).collect())
