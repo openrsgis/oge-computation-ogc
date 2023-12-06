@@ -9225,22 +9225,19 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "approach",
         "type": "String",
         "description": "approach function: AICc, CV",
-        "default": "AICc",
-        "optional": "True"
+        "default": "AICc"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
+        "default": "false"
       }
     ]
   },
@@ -9272,15 +9269,13 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
+        "default": "false"
       }
     ]
   },
@@ -9307,22 +9302,19 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "approach",
         "type": "String",
         "description": "approach function: AICc, CV",
-        "default": "AICc",
-        "optional": "True"
+        "default": "AICc"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
+        "default": "false"
       },
       {
         "name": "varSelTh",
@@ -9373,8 +9365,7 @@
         "name": "method",
         "type": "String",
         "description": "pearson or spearman method, default: pearson",
-        "default": "pearson",
-        "optional": "True"
+        "default": "pearson"
       }
     ]
   },
@@ -9455,8 +9446,7 @@
       {
         "name": "timelag",
         "type": "Int",
-        "description": "time lag, default:20",
-        "default": "20"
+        "description": "time lag"
       }
     ]
   },
@@ -9546,8 +9536,89 @@
         "name": "Intercept",
         "type": "Boolean",
         "description": "whether need Intercept",
-        "default": "true",
-        "optional": "True"
+        "default": "true"
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWAverage": {
+    "description": "Geographically weighted Statistic Summary: Average",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false"
+      },
+      {
+        "name": "quantile",
+        "type": "Boolean",
+        "description": "true for quantile",
+        "default": "false"
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWCorrelation": {
+    "description": "Geographically weighted Statistic Summary: Correlation",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties"
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false"
       }
     ]
   },
