@@ -983,21 +983,21 @@ object Trigger {
 
         //algorithms.SpatialStats
         case "SpatialStats.GWModels.GWRbasic.autoFit" =>
-          val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean,args("split"))
+          val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean)
           featureRddList += (UUID -> re_gwr)
         //          Service.print(re_gwr._2, "Diagnostics", "String")
         case "SpatialStats.GWModels.GWRbasic.fit" =>
-          val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean,args("split"))
+          val re_gwr = GWModels.GWRbasic.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean)
           featureRddList += (UUID -> re_gwr)
         case "SpatialStats.GWModels.GWRbasic.auto" =>
-          val re_gwr = GWModels.GWRbasic.auto(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("kernel"), args("approach"), args("adaptive").toBoolean,args("split"),args("varSelTh").toDouble)
+          val re_gwr = GWModels.GWRbasic.auto(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("kernel"), args("approach"), args("adaptive").toBoolean,args("varSelTh").toDouble)
           featureRddList += (UUID -> re_gwr)
         case "SpatialStats.BasicStatistics.AverageNearestNeighbor" =>
           stringList += (UUID -> AverageNearestNeighbor.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "SpatialStats.BasicStatistics.DescriptiveStatistics" =>
-          stringList += (UUID -> DescriptiveStatistics.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("histBins").toInt))
+          stringList += (UUID -> DescriptiveStatistics.result(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "SpatialStats.STCorrelations.CorrelationAnalysis.corrMat" =>
-          stringList += (UUID -> CorrelationAnalysis.corrMat(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("properties"), args("method"), args("split")))
+          stringList += (UUID -> CorrelationAnalysis.corrMat(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("properties"), args("method")))
         case "SpatialStats.STCorrelations.SpatialAutoCorrelation.globalMoranI" =>
           stringList += (UUID -> SpatialAutoCorrelation.globalMoranI(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("plot").toBoolean, args("test").toBoolean, args("weightstyle")))
         case "SpatialStats.STCorrelations.SpatialAutoCorrelation.localMoranI" =>

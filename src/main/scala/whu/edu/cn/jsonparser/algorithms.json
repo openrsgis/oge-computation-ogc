@@ -9140,13 +9140,6 @@
         "description": "true for adaptive distance, false for fixed distance",
         "default": "false",
         "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
       }
     ]
   },
@@ -9186,13 +9179,6 @@
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
         "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
         "optional": "True"
       }
     ]
@@ -9238,13 +9224,6 @@
         "optional": "True"
       },
       {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
-      },
-      {
         "name": "varSelTh",
         "type": "Double",
         "description": "threshold of variable selection, default: 3.0",
@@ -9272,16 +9251,6 @@
         "name": "featureRDD",
         "type": "Feature",
         "description": "feature input for calculation"
-      },
-      {
-        "name": "property",
-        "type": "String",
-        "description": "the property to extract."
-      },
-      {
-        "name": "histBins",
-        "type": "Int",
-        "description": "number of histogram bin"
       }
     ]
   },
@@ -9304,13 +9273,6 @@
         "type": "String",
         "description": "pearson or spearman method, default: pearson",
         "default": "pearson",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "properties split, default: \",\"",
-        "default": "\",\"",
         "optional": "True"
       }
     ]
