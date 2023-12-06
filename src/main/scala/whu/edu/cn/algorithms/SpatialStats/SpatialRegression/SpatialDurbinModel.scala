@@ -80,7 +80,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     val lly = get_logLik(get_res(X = _1X))
 
     fitvalue = (_Y - res).toArray
-    var printStr = "-----------------------------Spatial Durbin Model-----------------------------\n" +
+    var printStr = "\n-----------------------------Spatial Durbin Model-----------------------------\n" +
       f"rho is $rho%.6f\nlambda is $lambda%.6f\n"
     printStr += try_LRtest(-llopt, lly, chi_pama = 2)
     printStr += f"coeffients:\n$betas_map\n"
@@ -194,7 +194,7 @@ object SpatialDurbinModel {
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    Service.print(re._2,"Diagnostics","String")
+    Service.print(re._2,"Spatial Durbin Model","String")
     sc.makeRDD(re._1)
   }
 

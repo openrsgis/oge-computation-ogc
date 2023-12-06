@@ -9219,35 +9219,25 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "approach",
         "type": "String",
         "description": "approach function: AICc, CV",
-        "default": "AICc",
-        "optional": "True"
+        "default": "AICc"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "false"
       }
     ]
   },
@@ -9268,7 +9258,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "bandwidth",
@@ -9279,22 +9269,13 @@
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "false"
       }
     ]
   },
@@ -9315,35 +9296,25 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "kernel",
         "type": "String",
         "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
-        "default": "gaussian",
-        "optional": "True"
+        "default": "gaussian"
       },
       {
         "name": "approach",
         "type": "String",
         "description": "approach function: AICc, CV",
-        "default": "AICc",
-        "optional": "True"
+        "default": "AICc"
       },
       {
         "name": "adaptive",
         "type": "Boolean",
         "description": "true for adaptive distance, false for fixed distance",
-        "default": "false",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "split of the x properties, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "false"
       },
       {
         "name": "varSelTh",
@@ -9373,16 +9344,6 @@
         "name": "featureRDD",
         "type": "Feature",
         "description": "feature input for calculation"
-      },
-      {
-        "name": "property",
-        "type": "String",
-        "description": "the property to extract."
-      },
-      {
-        "name": "histBins",
-        "type": "Int",
-        "description": "number of histogram bin"
       }
     ]
   },
@@ -9398,21 +9359,13 @@
       {
         "name": "properties",
         "type": "String",
-        "description": "The properties to calculate."
+        "description": "The properties to calculate, seperated by \",\" "
       },
       {
         "name": "method",
         "type": "String",
         "description": "pearson or spearman method, default: pearson",
-        "default": "pearson",
-        "optional": "True"
-      },
-      {
-        "name": "split",
-        "type": "String",
-        "description": "properties split, default: \",\"",
-        "default": "\",\"",
-        "optional": "True"
+        "default": "pearson"
       }
     ]
   },
@@ -9493,8 +9446,7 @@
       {
         "name": "timelag",
         "type": "Int",
-        "description": "time lag, default:20",
-        "default": "20"
+        "description": "time lag"
       }
     ]
   },
@@ -9515,7 +9467,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       }
     ]
   },
@@ -9536,7 +9488,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       }
     ]
   },
@@ -9557,7 +9509,7 @@
       {
         "name": "propertiesX",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       }
     ]
   },
@@ -9578,14 +9530,179 @@
       {
         "name": "x",
         "type": "String",
-        "description": "independent variable properties"
+        "description": "independent variable properties, seperated by \",\" "
       },
       {
         "name": "Intercept",
         "type": "Boolean",
         "description": "whether need Intercept",
-        "default": "true",
-        "optional": "True"
+        "default": "true"
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWAverage": {
+    "description": "Geographically weighted Statistic Summary: Average",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties, seperated by \",\" "
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false"
+      },
+      {
+        "name": "quantile",
+        "type": "Boolean",
+        "description": "true for quantile",
+        "default": "false"
+      }
+    ]
+  },
+  "SpatialStats.GWModels.GWCorrelation": {
+    "description": "Geographically weighted Statistic Summary: Correlation",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "propertyY",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "propertiesX",
+        "type": "String",
+        "description": "independent variable properties, seperated by \",\" "
+      },
+      {
+        "name": "bandwidth",
+        "type": "Double",
+        "description": "bandwidth value"
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "kernel function: including gaussian (default), exponential, bisquare, tricube, boxcar",
+        "default": "gaussian"
+      },
+      {
+        "name": "adaptive",
+        "type": "Boolean",
+        "description": "true for adaptive distance, false for fixed distance",
+        "default": "false"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoRiskDetector": {
+    "description": "RiskDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoFactorDetector": {
+    "description": "FactorDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoInteractionDetector": {
+    "description": "InteractionDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
+      }
+    ]
+  },
+  "SpatialStats.SpatialHeterogeneity.GeoEcologicalDetector": {
+    "description": "EcologicalDetector for geoDetector",
+    "returns": "String",
+    "args": [
+      {
+        "name": "featureRDD",
+        "type": "Feature",
+        "description": "feature input"
+      },
+      {
+        "name": "y_title",
+        "type": "String",
+        "description": "dependent variable property"
+      },
+      {
+        "name": "x_titles",
+        "type": "String",
+        "description": "independent variable properties"
       }
     ]
   },

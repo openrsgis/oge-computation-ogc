@@ -74,7 +74,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     val llrho = rho4optimize(rho)
 
     fitvalue = (_Y - res).toArray
-    var printStr = "------------------------------Spatial Lag Model------------------------------\n" +
+    var printStr = "\n------------------------------Spatial Lag Model------------------------------\n" +
       f"rho is $rho%.6f\n"
     printStr += try_LRtest(-llrho, lly)
     printStr += f"coeffients:\n$betas_map\n"
@@ -181,7 +181,7 @@ object SpatialLagModel {
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    Service.print(re._2,"Diagnostics","String")
+    Service.print(re._2,"Spatial Lag Model","String")
     sc.makeRDD(re._1)
   }
 
