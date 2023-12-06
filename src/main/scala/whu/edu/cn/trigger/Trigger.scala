@@ -34,6 +34,7 @@ import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
+import whu.edu.cn.oge.Sheet.CsvData
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -46,6 +47,7 @@ object Trigger {
   var doubleList: mutable.Map[String, Double] = mutable.Map.empty[String, Double]
   var stringList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var intList: mutable.Map[String, Int] = mutable.Map.empty[String, Int]
+  var SheetList:mutable.Map[String,CsvData] =mutable.Map.empty[String,CsvData]
 
   // TODO lrx: 以下为未检验
 
@@ -133,6 +135,9 @@ object Trigger {
           val res = temp._1
           val valueType = temp._2
           Service.print(res, args("name"), valueType)
+        case "Service.printSheet" =>
+          val sheet = SheetList(args("object"))
+          Sheet.printSheet(sheet, args("name"))
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
@@ -159,6 +164,10 @@ object Trigger {
               featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, "EPSG:4326"))
           } else {
             featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
+          }
+        case "Service.getSheet" =>
+          if (args("sheetID").startsWith("myData/")) {
+            SheetList += (UUID -> Sheet.loadCSVFromUpload(sc, args("sheetID"), userId, dagId))
           }
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -232,6 +241,17 @@ object Trigger {
             args("recession").toInt, args("tMax").toInt, args("iterception").toInt, args("waterShedArea").toInt)
         case "Algorithm.SWMM5" =>
           Table.SWMM5(null)
+
+        // Sheet
+        case "Sheet.getcellValue" =>
+          stringList += (UUID -> Sheet.getcellValue(SheetList(args("sheet")), args("row").toInt, args("col").toInt))
+        case "Sheet.slice" =>
+          SheetList += (UUID -> Sheet.slice(SheetList(args("sheet")), args("sliceRows").toBoolean, args("start").toInt, args("end").toInt))
+        case "Sheet.filterByHeader" =>
+          SheetList += (UUID -> Sheet.filterByHeader(SheetList(args("sheet")), args("condition"), args("value")))
+        case "Sheet.toPoint" =>
+          featureRddList += (UUID -> Sheet.toGeoJson_Point(sc, SheetList(args("sheet"))))
+
 
         // Coverage
         case "Coverage.export" =>
@@ -1086,6 +1106,7 @@ object Trigger {
         Trigger.featureRddList.clear()
         Trigger.cubeRDDList.clear()
         Trigger.cubeLoad.clear()
+        Trigger.SheetList.clear()
 
         throw e
     }
@@ -1399,7 +1420,7 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
-    userId = "3c3a165b-6604-47b8-bce9-1f0c5470b9f8"
+    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
