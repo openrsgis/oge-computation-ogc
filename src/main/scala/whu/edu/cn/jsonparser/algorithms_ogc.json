@@ -6802,6 +6802,22 @@
       }
     ]
   },
+  "CoverageCollection.mergeCoverages": {
+    "description": "Merge Coverages to a CoverageCollection.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "coverages",
+        "type": "List<Coverage>",
+        "description": "A list of coverages."
+      },
+      {
+        "name": "names",
+        "type": "List<String>",
+        "description": "A list of names."
+      }
+    ]
+  },
   "CoverageCollection.addStyles": {
     "description": "Add the styles to the coverage collection.",
     "returns": "CoverageCollection",

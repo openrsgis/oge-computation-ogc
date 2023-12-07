@@ -19,6 +19,9 @@ import scala.math.{max, min}
 import whu.edu.cn.oge.Coverage
 
 object CoverageUtil {
+  // 检查coverage的完整性，包括每个瓦片是否包括所有的波段，以及每个瓦片波段数是否与实际一致。
+  def checkValidity(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Boolean = ???
+
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
   def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
