@@ -113,6 +113,17 @@ object Trigger {
     }
   }
 
+  def getCoverageListFromArgs(coverageNames: String, args:  mutable.Map[String, String]): List[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] ={
+    // String转List
+    val names = coverageNames.replace("[", "").replace("]", "").split(',')
+    val coverages = mutable.ListBuffer.empty[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
+
+    for(name <- names){
+      coverages.append(coverageRddList(name))
+    }
+    coverages.toList
+  }
+
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
     try {
@@ -183,6 +194,8 @@ object Trigger {
         // CoverageCollection
         case "CoverageCollection.filter" =>
           coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
+        case "CoverageCollection.mergeCoverages" =>
+          coverageCollectionRddList += (UUID -> CoverageCollection.mergeCoverages(getCoverageListFromArgs(args("coverages"),args),args("names").replace("[", "").replace("]", "").split(',').toList))
         case "CoverageCollection.mosaic" =>
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
