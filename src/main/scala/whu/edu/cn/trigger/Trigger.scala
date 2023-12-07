@@ -115,7 +115,7 @@ object Trigger {
     }
   }
 
-  def getCoverageListFromArgs(coverageNames: String, args:  mutable.Map[String, String]): List[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] ={
+  def getCoverageListFromArgs(coverageNames: String): List[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] ={
     // String转List
     val names = coverageNames.replace("[", "").replace("]", "").split(',')
     val coverages = mutable.ListBuffer.empty[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
