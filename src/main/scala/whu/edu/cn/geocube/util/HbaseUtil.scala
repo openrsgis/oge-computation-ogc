@@ -15,13 +15,13 @@ import scala.collection.mutable.ListBuffer
  *
  */
 object HbaseUtil {
-  System.setProperty("hadoop.home.dir", "/home/geocube/hadoop")
+  System.setProperty("hadoop.home.dir", "/root/hadoop")
 
   //configuration for hbase
   val configuration = HBaseConfiguration.create()
 
   //set zookeeper cluster
-  configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
+  configuration.set(HConstants.ZOOKEEPER_QUORUM, "120.48.4.142:2181")
 
   //set RPC timeout
   configuration.set("hbase.rpc.timeout", "200000")

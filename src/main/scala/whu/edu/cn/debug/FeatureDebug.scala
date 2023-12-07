@@ -43,29 +43,30 @@ object FeatureDebug {
       .setMaster("local[*]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    val points = Feature.load(sc, "China_EnvironmentMonitor_Vector", "2015010301")
-    val maskGeom = Feature.load(sc, "China_ADM_Country_Vector")
-    val t2 = System.currentTimeMillis()
-    println("启动spark时间:" + (t2 - t1) / 1000)
-
-
-
-    //原始数据矢量转栅格
-    saveFeatureRDDToShp(points, "D:/cog/out/points.shp")
-    val pointsToRaster = Feature.rasterize(points, "PM2.5")
-    CoverageDubug.makeTIFF(pointsToRaster, "pointsToRaster")
-
-    //反距离加权插值
-    val idw = Feature.inverseDistanceWeighted(sc, points, "PM2.5", maskGeom)
-    //结果生成 tiff 和 png
-    CoverageDubug.makeTIFF(idw, "idw")
-    CoverageDubug.makePNG(idw, "idw")
-
-
-    //TODO 简单克里金插值(奇异矩阵报错)
-    val skg = Feature.simpleKriging(sc, points, "PM2.5","模型未知")
-    CoverageDubug.makeTIFF(skg, "skg")
-    CoverageDubug.makePNG(skg, "skg")
+    val points = Feature.load(sc, "China_MainRoad_Vector")
+    println("Finish")
+//    val maskGeom = Feature.load(sc, "China_ADM_Country_Vector")
+//    val t2 = System.currentTimeMillis()
+//    println("启动spark时间:" + (t2 - t1) / 1000)
+//
+//
+//
+//    //原始数据矢量转栅格
+//    saveFeatureRDDToShp(points, "D:/cog/out/points.shp")
+//    val pointsToRaster = Feature.rasterize(points, "PM2.5")
+//    CoverageDubug.makeTIFF(pointsToRaster, "pointsToRaster")
+//
+//    //反距离加权插值
+//    val idw = Feature.inverseDistanceWeighted(sc, points, "PM2.5", maskGeom)
+//    //结果生成 tiff 和 png
+//    CoverageDubug.makeTIFF(idw, "idw")
+//    CoverageDubug.makePNG(idw, "idw")
+//
+//
+//    //TODO 简单克里金插值(奇异矩阵报错)
+//    val skg = Feature.simpleKriging(sc, points, "PM2.5","模型未知")
+//    CoverageDubug.makeTIFF(skg, "skg")
+//    CoverageDubug.makePNG(skg, "skg")
 
 
     //    val t1 = System.currentTimeMillis()
