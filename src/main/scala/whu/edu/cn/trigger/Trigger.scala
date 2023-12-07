@@ -195,7 +195,7 @@ object Trigger {
         case "CoverageCollection.filter" =>
           coverageCollectionMetadata += (UUID -> CoverageCollection.filter(filter = args("filter"), collection = coverageCollectionMetadata(args("collection"))))
         case "CoverageCollection.mergeCoverages" =>
-          coverageCollectionRddList += (UUID -> CoverageCollection.mergeCoverages(getCoverageListFromArgs(args("coverages"),args),args("names").replace("[", "").replace("]", "").split(',').toList))
+          coverageCollectionRddList += (UUID -> CoverageCollection.mergeCoverages(getCoverageListFromArgs(args("coverages")),args("names").replace("[", "").replace("]", "").split(',').toList))
         case "CoverageCollection.mosaic" =>
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> CoverageCollection.mosaic(coverageCollectionRddList(args("coverageCollection"))))
