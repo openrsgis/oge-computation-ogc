@@ -96,6 +96,15 @@ object CoverageCollection {
   }
 
 
+  def mergeCoverages(coverages: List[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],names: List[String]): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] ={
+    if(coverages.length != names.length) {
+      throw new Exception("Coverages 和 Names数量不匹配！")
+    }
+    val resMap = names.zip(coverages).toMap
+
+    resMap
+  }
+
   // TODO lrx: 检查相同的影像被写入同一个CoverageCollection
   // TODO lrx: 如果相同波段就拼（包括顺序、个数、名称），不相同就不拼
   def mosaic(coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
