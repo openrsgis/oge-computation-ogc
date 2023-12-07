@@ -1,22 +1,25 @@
 package whu.edu.cn.algorithms.gmrc.colorbalance
 
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import org.gdal.gdal.{Band, Dataset, Driver, gdal}
 import org.gdal.gdalconst.gdalconstConstants
 import org.gdal.ogr.ogr
-import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance.getDimensionSize
 
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
-import scala.collection.mutable.ArrayBuffer
-import scala.math.{abs, ceil, floor, min, sqrt}
+import scala.math.{abs, ceil, sqrt}
 
-object ColorBalance {
+object ColorBalanceSpark {
   def main(args: Array[String]): Unit = {
-    test_calColorBalancedBigImage()
+    colorBalance()
   }
 
-  def test_calColorBalancedBigImage(): Any = {
+  def colorBalance(): Any = {
+    val sparkConf = new SparkConf().setMaster("local[*]").setAppName("Correction")
+    val sc = new SparkContext(sparkConf)
+
     initGdal()
     val inputImagePath = "./data\\testdata\\colorbalance\\input\\Ortho_8bit.tiff"
     val dataset: Dataset = gdal.Open(inputImagePath, gdalconstConstants.GA_ReadOnly)
@@ -28,35 +31,62 @@ object ColorBalance {
     val blockSizeX = 1024
     val blockSizeY = 1024
     val overlap = 32
-    val splitBlockSizeX = blockSizeX - overlap
-    val splitBlockSizeY = blockSizeY - overlap
-    val sideBlockSizeX = width % blockSizeX
-    val sideBlockSizeY = height % blockSizeY
-    val leftX = splitBlockSizeX - sideBlockSizeX
-    val leftY = splitBlockSizeY - sideBlockSizeY
-
-    val xBlockCounts1 = ceil(width.toDouble / (blockSizeX - overlap)).toInt
-    val yBlockCounts1 = ceil(height.toDouble / (blockSizeY - overlap)).toInt
-
 
     val imageBlocksArr: (ImagesPixelArr, ImagesGeoArr) = splitImage(dataset, blockSizeX, blockSizeY, overlap)
+    val XBlockCounts = getDimensionSize(imageBlocksArr._2, 1)
+    val yBlockCounts = getDimensionSize(imageBlocksArr._2, 2)
 
-    val blockMeanVarianceArr = calBlocksMeanVariance(imageBlocksArr._1)
-    val bigImageMeanVarianceArr = calBigImageMeanVariance(imageBlocksArr._1, blockMeanVarianceArr, dataset.getRasterXSize * dataset.getRasterYSize)
-    val weightArr: Array[Array[Array[Array[Array[Array[Array[Float]]]]]]] = calWeight(imageBlocksArr._2)
-    val abPar = abParameter(weightArr, imageBlocksArr._2, bigImageMeanVarianceArr, blockMeanVarianceArr)
-    val cb = calColorBalancedImageBlocks(imageBlocksArr._1, abPar)
+    val lineImgBlkArr = lineSplitImgBlk(imageBlocksArr._1)
+    val imgBlk_rdd: PixelBlkMapRDD = sc.makeRDD(lineImgBlkArr)
 
-    val outputFile = "./data\\testdata\\colorbalance\\output\\Ortho_8bit_output.tif"
-    val result = writeCbdImgBlks(outputFile, cb, dataset, overlap, overlap)
+    val blockMeanVar_rdd: MeanVarMapRDD = calBlocksMeanVariance(imgBlk_rdd)
+    blockMeanVar_rdd.foreach(meanVarianceMap => {
+      println("band= " + meanVarianceMap._1 + " x= " + meanVarianceMap._2._1 + " y= " + meanVarianceMap._2._2 +
+      " mean= " + meanVarianceMap._3._1 + " variance= " + meanVarianceMap._3._2)
+    })
 
-    destroyGdal()
+    val bigImageMeanVarArr = calBigImageMeanVariance(imgBlk_rdd, blockMeanVar_rdd, XBlockCounts * yBlockCounts, width * height)
+//
+//    val weightArr: Array[Array[Array[Array[Array[Array[Array[Float]]]]]]] = calWeight(imageBlocksArr._2)
+//
+//    val abPar = abParameter(weightArr, imageBlocksArr._2, bigImageMeanVarArr, blockMeanVarArr)
+//    val cbImgBlks = calColorBalancedImageBlocks(imageBlocksArr._1, abPar)
+//
+//    val outputFile = "./data\\testdata\\colorbalance\\output\\Ortho_8bit_output.tif"
+//    val result = writeCbdImgBlks(outputFile, cbImgBlks, dataset, overlap, overlap)
+//
+//    destroyGdal()
+
+    sc.stop()
+  }
+
+  // 线性化数组，为了可以生成 rdd
+  private def lineSplitImgBlk(splitImgBlk: ImagesPixelArr): Array[ImageBlockMap] = {
+    val bandCounts = getDimensionSize(splitImgBlk, 0)
+    val xBlockCounts = getDimensionSize(splitImgBlk, 1)
+    val yBlockCounts = getDimensionSize(splitImgBlk, 2)
+
+    val lineArr: Array[ImageBlockMap] = new Array[(Int, (Int, Int), Array[Array[Short]])](bandCounts * xBlockCounts * yBlockCounts)
+
+    for (bandIndex <- 1 to  bandCounts) {
+      for (x <- 0 until xBlockCounts) {
+        for (y <- 0 until yBlockCounts) {
+          lineArr((bandIndex - 1) * xBlockCounts * yBlockCounts + x * yBlockCounts + y) = (bandIndex, (x, y), splitImgBlk(bandIndex - 1)(x)(y))
+        }
+      }
+    }
+
+    lineArr
   }
 
   // 图像的像素数组，一维为波段，二三维分别为 x 和 y 方向的分块，四五维分别为图像块 x 和 y 方向块的位置，模板值为像素值
   type ImagesPixelArr = Array[Array[Array[Array[Array[Short]]]]]
   // 图像的几何数据数组，一维为波段，二三维分别为 x 和 y 方向的分块，模板值为分块的 x 和 y 方向的像素个数
   type ImagesGeoArr = Array[Array[Array[(Int, Int)]]]
+
+  type ImageBlockMap = (Int, (Int, Int), Array[Array[Short]])
+  type PixelBlkMapRDD = RDD[(Int, (Int, Int), Array[Array[Short]])]
+  type MeanVarMapRDD = RDD[(Int, (Int, Int), (Double, Double))]
 
   /**
    * 按照 LRM 思想，划分图像
@@ -118,9 +148,11 @@ object ColorBalance {
    * @param splitOverlap  划分的块的重叠大小
    * @param writeOverlap  写入块的重叠大小
    */
-  private def writeCbdImgBlks(file: String, cbdImgBlksArr: ImagesPixelArr, surDataset: Dataset, splitOverlap: Int, writeOverlap: Int): Unit = {
+  private def writeCbdImgBlks(file: String, cbdImgBlksArr: ImagesPixelArr,
+                              surDataset: Dataset, splitOverlap: Int, writeOverlap: Int): Unit = {
     val driver: Driver = gdal.GetDriverByName("GTiff")
-    val dataset = driver.Create(file, surDataset.getRasterXSize, surDataset.getRasterYSize, surDataset.getRasterCount, surDataset.GetRasterBand(1).getDataType)
+    val dataset = driver.Create(file, surDataset.getRasterXSize,
+      surDataset.getRasterYSize, surDataset.getRasterCount, surDataset.GetRasterBand(1).getDataType)
 
     val bandCounts = getDimensionSize(cbdImgBlksArr, 0)
     val xBlockCounts = getDimensionSize(cbdImgBlksArr, 1)
@@ -199,122 +231,90 @@ object ColorBalance {
 
   /**
    * 计算所有分块图像的均值和方差
-   * @param imageBlocksArr 图像分块
-   * @return Array[Array[Array[(Double, Double)]]] 一维数组为波段数，二维为 x 方向个数，三维为 y 方向个数，元素为图像分块的均值和方差，_1 为均值，_2 为方差
+   * @param imgBlk_rdd 图像分块 RDD
+   * @return MeanVarMapRDD 图像分块的均值和方差 RDD
    */
-  private def calBlocksMeanVariance(imageBlocksArr: ImagesPixelArr): Array[Array[Array[(Double, Double)]]] = {
-    val bandCounts = getDimensionSize(imageBlocksArr, 0)
-    val xBlockCounts = getDimensionSize(imageBlocksArr, 1)
-    val yBlockCounts = getDimensionSize(imageBlocksArr, 2)
+  private def calBlocksMeanVariance(imgBlk_rdd: RDD[ImageBlockMap]): MeanVarMapRDD = {
 
-    val meanVarianceArr: Array[Array[Array[(Double, Double)]]] = Array.ofDim[(Double, Double)](bandCounts, xBlockCounts, yBlockCounts)
+    val imgBlk_meanVar_rdd: MeanVarMapRDD = imgBlk_rdd.map(imageBlockMap => {
+      (imageBlockMap._1, imageBlockMap._2, getMeanVariance(imageBlockMap._3))
+    })
 
-    // 计算每个块中的均值和方差
-    for (bandIndex <- 1 to bandCounts) {
-      for (x <- 0 until xBlockCounts) {
-        for (y <- 0 until yBlockCounts) {
-          val pixelArr: Array[Array[Short]] = imageBlocksArr(bandIndex - 1)(x)(y)
-          meanVarianceArr(bandIndex - 1)(x)(y) = getMeanVariance(pixelArr)
-        }
-      }
-    }
-
-    meanVarianceArr
+    imgBlk_meanVar_rdd
   }
 
   /**
    * 依据图像的分块，和分块后的均值和方差（主要是均值），计算整幅图像的均值和方差
-   * @param imageBlocksArr 图像分块数组的像素值
-   * @param meanVarianceArr 图像分块数组的均值和方差
+   * @param pixelBlk_rdd 图像分块数组的像素值
+   * @param meanVar_rdd 图像分块数组的均值和方差
+   * @param bandBlkCounts  图像块数
    * @param bigImageScale 整幅图像的范围
    * @return Array[(Double, Double)] 整幅图像的均值和方差数组，_1 为均值，_2 为方差
    */
-  private def calBigImageMeanVariance(imageBlocksArr: ImagesPixelArr, meanVarianceArr: Array[Array[Array[(Double, Double)]]], bigImageScale: Long): Array[(Double, Double)] = {
-    var bigImageMeanVarianceArr: Array[(Double, Double)] = null
-
-    val bandCounts = getDimensionSize(imageBlocksArr, 0)
-    val xBlockCounts = getDimensionSize(imageBlocksArr, 1)
-    val yBlockCounts = getDimensionSize(imageBlocksArr, 2)
-
-    bigImageMeanVarianceArr = Array.ofDim(bandCounts) // 返回值
+  private def calBigImageMeanVariance(pixelBlk_rdd: PixelBlkMapRDD, meanVar_rdd: MeanVarMapRDD,
+                                      bandBlkCounts: Int, bigImageScale: Long): Any = {
 
     // 1.计算整幅图像的均值之和
-    val meanSumArr: Array[Double] = new Array[Double](bandCounts)
-    for (bandIndex <- 1 to bandCounts) {
-      for (x <- 0 until xBlockCounts) {
-        for (y <- 0 until yBlockCounts) {
-          meanSumArr(bandIndex - 1) += meanVarianceArr(bandIndex - 1)(x)(y)._1
-        }
-      }
-    }
+//    val meanSumArr: Array[Double] = new Array[Double](bandCounts)
+//
+//    val meanSum: Double = meanVar_rdd.map(meanVarianceMap => {
+//      meanVarianceMap._3._1
+//    }).reduce((mean1, mean2) => mean1 + mean2)
+
+    val band_mean_rdd: RDD[(Int, Iterable[Double])] = meanVar_rdd.map(meanVarMap => {
+      (meanVarMap._1, meanVarMap._3._1)
+    }).groupByKey()
+
+    val band_mean: Array[(Int, Double)] = band_mean_rdd.map(band_meanArr => {
+      var meanSum = 0.0
+      band_meanArr._2.foreach(mean => {
+        meanSum += mean
+      })
+      var bigImageMean = meanSum / bandBlkCounts
+      (band_meanArr._1, bigImageMean)
+    }).collect()
+
+    val a = 1
 
     // 2.由每个分块的均值之和计算整幅图像的均值，此处均值不是真正的均值
-    val bigImageMeanArr: Array[Double] = new Array[Double](bandCounts)
-    for (bandIndex <- 1 to bandCounts) {
-      bigImageMeanArr(bandIndex - 1) = meanSumArr(bandIndex - 1) / (xBlockCounts * yBlockCounts) // 这里是由每个块的和构成，所以除以块数
-    }
+//    val bigImageMeanArr: Array[Double] = new Array[Double](bandCounts)
+//    for (bandIndex <- 1 to bandCounts) {
+//      bigImageMeanArr(bandIndex - 1) = meanSumArr(bandIndex - 1) / (xBlockCounts * yBlockCounts) // 这里是由每个块的和构成，所以除以块数
+//    }
+//
+//    // 3.计算整幅图像的方差之和
+//    val varianceSumArr: Array[Double] = new Array[Double](bandCounts)
+//    for (bandIndex <- 1 to bandCounts) {
+//      for (x <- 0 until xBlockCounts) {
+//        for (y <- 0 until yBlockCounts) {
+//
+//          val imagePixelBlock: Array[Array[Short]] = pixelBlk_rdd(bandIndex - 1)(x)(y)
+//          val xSize = getDimensionSize(imagePixelBlock, 0)
+//          val ySize = getDimensionSize(imagePixelBlock, 1)
+//
+//          for (i <- 0 until xSize) {
+//            for (j <- 0 until ySize) {
+//              val deviationPixel: Double = imagePixelBlock(i)(j) - bigImageMeanArr(bandIndex - 1)
+//              varianceSumArr(bandIndex - 1) += deviationPixel * deviationPixel
+//            }
+//          }
+//        }
+//      }
+//    }
+//
+//    // 4.由整幅图像的方差之和计算整幅图像的方差
+//    val bigImageVarianceArr: Array[Double] = new Array[Double](bandCounts)
+//    for (bandIndex <- 1 to bandCounts) {
+//      bigImageVarianceArr(bandIndex - 1) = varianceSumArr(bandIndex - 1) / (bigImageScale - 1)
+//    }
+//
+//    // 5.将值以元组数组的形式，返回
+//    for (bandIndex <- 1 to bandCounts) {
+//      bigImageMeanVarianceArr(bandIndex - 1) = (bigImageMeanArr(bandIndex - 1), bigImageVarianceArr(bandIndex - 1))
+//    }
 
-    // 此方法计算的均值，是真正的均值，但是没有上面的效果好
-    //      // 计算整幅图像的方差之和
-    //      val mean1SumArr: Array[Double] = new Array[Double](bandCounts)
-    //      for (bandIndex <- 1 to bandCounts) {
-    //        for (x <- 0 until xBlockCounts) {
-    //          for (y <- 0 until yBlockCounts) {
-    //
-    //            val imagePixelBlock: Array[Array[Short]] = imageBlocksArr(bandIndex - 1)(x)(y)
-    //            val xSize = getDimensionSize(imagePixelBlock, 0)
-    //            val ySize = getDimensionSize(imagePixelBlock, 1)
-    //
-    //            for (i <- 0 until xSize) {
-    //              for (j <- 0 until ySize) {
-    //                mean1SumArr(bandIndex - 1) += imagePixelBlock(i)(j)
-    //              }
-    //            }
-    //
-    //          }
-    //        }
-    //      }
-    //
-    //      // 由整幅图像的方差之和计算整幅图像的方差
-    //      val bigImageMean1Arr: Array[Double] = new Array[Double](bandCounts)
-    //      for (bandIndex <- 1 to bandCounts) {
-    //        bigImageMean1Arr(bandIndex - 1) = mean1SumArr(bandIndex - 1) / (bigImageScale - 1)
-    //      }
-
-    // 3.计算整幅图像的方差之和
-    val varianceSumArr: Array[Double] = new Array[Double](bandCounts)
-    for (bandIndex <- 1 to bandCounts) {
-      for (x <- 0 until xBlockCounts) {
-        for (y <- 0 until yBlockCounts) {
-
-          val imagePixelBlock: Array[Array[Short]] = imageBlocksArr(bandIndex - 1)(x)(y)
-          val xSize = getDimensionSize(imagePixelBlock, 0)
-          val ySize = getDimensionSize(imagePixelBlock, 1)
-
-          for (i <- 0 until xSize) {
-            for (j <- 0 until ySize) {
-              val deviationPixel: Double = imagePixelBlock(i)(j) - bigImageMeanArr(bandIndex - 1)
-              varianceSumArr(bandIndex - 1) += deviationPixel * deviationPixel
-            }
-          }
-        }
-      }
-    }
-
-    // 4.由整幅图像的方差之和计算整幅图像的方差
-    val bigImageVarianceArr: Array[Double] = new Array[Double](bandCounts)
-    for (bandIndex <- 1 to bandCounts) {
-      bigImageVarianceArr(bandIndex - 1) = varianceSumArr(bandIndex - 1) / (bigImageScale - 1)
-    }
-
-    // 5.将值以元组数组的形式，返回
-    for (bandIndex <- 1 to bandCounts) {
-      bigImageMeanVarianceArr(bandIndex - 1) = (bigImageMeanArr(bandIndex - 1), bigImageVarianceArr(bandIndex - 1))
-    }
-
-    bigImageMeanVarianceArr
+//    bigImageMeanVarianceArr
   }
-
 
 
   /**
@@ -482,7 +482,8 @@ object ColorBalance {
    * @param yBlockCounts  分块的 y 方向个数
    * @return  某块的邻域块的范围
    */
-  private def scaleSizeNbh(imageBlocksBandGeoArr: Array[Array[(Int, Int)]], x: Int, y: Int, xBlockCounts: Int, yBlockCounts: Int): Array[Array[(Int, Int)]] = {
+  private def scaleSizeNbh(imageBlocksBandGeoArr: Array[Array[(Int, Int)]], x: Int, y: Int,
+                           xBlockCounts: Int, yBlockCounts: Int): Array[Array[(Int, Int)]] = {
     val weightXSize = 3
     val weightYSize = 3
     val scaleSizeNbh: Array[Array[(Int, Int)]] = Array.ofDim[(Int, Int)](weightXSize, weightYSize)
@@ -497,8 +498,6 @@ object ColorBalance {
         var xSize = 0  // 没在范围则设置为 0，由邻域位置保证
         var ySize = 0  // 没在范围则设置为 0，由邻域位置保证
         if (((-1 < xNbh) && (xNbh < xBlockCounts)) && ((-1 < yNbh) && (yNbh < yBlockCounts))) {
-//          xSize = getDimensionSize(imageBlocksGeoArr(xNbh)(yNbh), 0)
-//          ySize = getDimensionSize(imageBlocksGeoArr(xNbh)(yNbh), 1)
           xSize = imageBlocksBandGeoArr(xNbh)(yNbh)._1
           ySize = imageBlocksBandGeoArr(xNbh)(yNbh)._2
         }
@@ -508,80 +507,6 @@ object ColorBalance {
     }
 
     scaleSizeNbh
-  }
-
-
-  private def weightCoordinate(x: Int, y: Int, xBlockCounts: Int, yBlockCounts: Int, centerX: Int, centerY: Int, sideCenterX: Int, sideCenterY: Int): Array[Array[(Int, Int)]] = {
-    val weightCoordinateArr: Array[Array[(Int, Int)]] = Array.ofDim[(Int, Int)](3, 3)
-    for (i <- 0 until 3) {
-      for (j <- 0 until 3) {
-        weightCoordinateArr(i)(j) = (centerX, centerY)
-      }
-    }
-
-    // 中间的非特殊块，此处非特殊块指的是有 3 * 3 的邻域，而不是边界不规则的特殊块
-    if (((0 < x) && (x < (xBlockCounts - 1))) && ((0 < y) && (y < (yBlockCounts - 1)))) {
-      if (((xBlockCounts - 2) == x) && ((yBlockCounts - 2) != y)) { // 除了最右下角的倒数第二列，有中心像素的邻域的第三列特殊
-        weightCoordinateArr(2)(0) = (sideCenterX, centerY)
-        weightCoordinateArr(2)(1) = (sideCenterX, centerY)
-        weightCoordinateArr(2)(2) = (sideCenterX, centerY)
-      } else if (((xBlockCounts - 2) != x) && ((yBlockCounts - 2) == y)) { // 除了最右下角的倒数第二行，有中心像素邻域的第三行特殊
-        weightCoordinateArr(0)(2) = (centerX, sideCenterY)
-        weightCoordinateArr(1)(2) = (centerX, sideCenterY)
-        weightCoordinateArr(2)(2) = (centerX, sideCenterY)
-      } else if (((xBlockCounts - 2) == x) && ((yBlockCounts - 2) == y)) { // 倒数第二列，倒数第二行的右下角，中心像素邻域的第三列第三行特殊
-        weightCoordinateArr(2)(0) = (sideCenterX, centerY)
-        weightCoordinateArr(2)(1) = (sideCenterX, centerY)
-        weightCoordinateArr(0)(2) = (centerX, sideCenterY)
-        weightCoordinateArr(1)(2) = (centerX, sideCenterY)
-        weightCoordinateArr(2)(2) = (sideCenterX, sideCenterY)
-      }
-    } else if (((0 == x) || ((xBlockCounts - 1) == x)) && ((0 < y) && (y < (yBlockCounts - 1)))) { // 除了左上角和左下角的 第一列     除了右上角和右下角的 最后一列
-      // 第一列，周围块相对位置变化；邻域中，第一列无，第二列无特殊邻域
-      if ((0 == x) && ((yBlockCounts - 2) == y)) { // 第一列的倒数第二个，y 方向特殊
-        weightCoordinateArr(1)(2) = (centerX, sideCenterY)
-        weightCoordinateArr(2)(2) = (centerX, sideCenterY)
-      } else if ((xBlockCounts - 1) == x) { // 最后一列，周围块相对位置变化，第三列无，第二列有特殊邻边界，且为中心像素
-        // 最后一列，对了第二列中心像素的 x 方向的特殊情况
-        weightCoordinateArr(1)(0) = (sideCenterX, centerY)
-        weightCoordinateArr(1)(1) = (sideCenterX, centerY)
-        weightCoordinateArr(1)(2) = (sideCenterX, centerY)
-
-        if ((yBlockCounts - 2) == y) { // 最后一列的倒数第二个， y 方向特殊，x方向最后一个特殊
-          weightCoordinateArr(0)(2) = (centerX, sideCenterY)
-          weightCoordinateArr(1)(2) = (sideCenterX, sideCenterY)
-        }
-      }
-    } else if (((0 < x) && (x < (xBlockCounts - 1))) && ((0 == y) || ((yBlockCounts - 1) == y))) { // 除了左上角和右上角的 第一行    除了左下角和右下角的 最后一行
-      // 第一行，周围块相对位置变化；邻域中，第一行无，第二行无特殊邻域
-      if ((0 == y) && ((xBlockCounts - 2) == x)) { // 第一行的倒数第二个，x 方向特殊
-        weightCoordinateArr(2)(1) = (sideCenterX, centerY) // 默认整个图像分块最小为 3 * 3
-        weightCoordinateArr(2)(2) = (sideCenterX, centerY)
-      } else if ((yBlockCounts - 1) == y) { // 最后一行，周围块相对位置变化，第三行无，第二行有特殊邻边界，且为中心像素
-        weightCoordinateArr(0)(1) = (centerX, sideCenterY)
-        weightCoordinateArr(1)(1) = (centerX, sideCenterY)
-        weightCoordinateArr(2)(1) = (centerX, sideCenterY)
-
-        if ((xBlockCounts - 2) == x) { // 最后一行的倒数第二个，x 方向特殊，y方向最后一个特殊
-          weightCoordinateArr(2)(0) = (sideCenterX, centerY)
-          weightCoordinateArr(1)(2) = (sideCenterX, sideCenterY)
-        }
-      }
-    } else if (((0 == x) || ((xBlockCounts - 1) == x)) && ((0 == y) || ((yBlockCounts - 1) == y))) { // 左上角和左下角 或 右上角和右下角
-      if (((xBlockCounts - 1) == x) && (0 == y)) { // 右上角
-        weightCoordinateArr(1)(1) = (sideCenterX, centerY)
-        weightCoordinateArr(1)(2) = (sideCenterX, centerY)
-      } else if ((0 == x) && ((yBlockCounts - 1) == y)) { // 左下角
-        weightCoordinateArr(1)(1) = (centerX, sideCenterY)
-        weightCoordinateArr(2)(1) = (centerX, sideCenterY)
-      } else if (((xBlockCounts - 1) == x) && ((yBlockCounts - 1) == y)) { // 右下角，最特殊
-        weightCoordinateArr(1)(0) = (sideCenterX, centerY)
-        weightCoordinateArr(0)(1) = (centerX, sideCenterY)
-        weightCoordinateArr(1)(1) = (sideCenterX, sideCenterY)
-      }
-    }
-
-    weightCoordinateArr
   }
 
   /**
@@ -615,17 +540,26 @@ object ColorBalance {
           for (i <- 0 until xPixelSize) {
             for (j <- 0 until yPixelSize) {
 
-              weightBlocksArr(0)(0)(i)(j) = weightPosArr(0)(0) * 1 / sqrt(square(scaleSizeNbhArr(0)(0)._1 + i) + square(scaleSizeNbhArr(0)(0)._2 + j)).toFloat
-              weightBlocksArr(0)(1)(i)(j) = weightPosArr(0)(1) * 1 / sqrt(square(scaleSizeNbhArr(0)(1)._1 + i) + square(scaleSizeNbhArr(0)(1)._2 - j)).toFloat
-              weightBlocksArr(0)(2)(i)(j) = weightPosArr(0)(2) * 1 / sqrt(square(scaleSizeNbhArr(0)(2)._1 + i) + square(scaleSizeNbhArr(0)(2)._2 + 2 * scaleSizeNbhArr(1)(1)._2 - j)).toFloat
+              weightBlocksArr(0)(0)(i)(j) = weightPosArr(0)(0) * 1 / sqrt(square(scaleSizeNbhArr(0)(0)._1 + i) +
+                square(scaleSizeNbhArr(0)(0)._2 + j)).toFloat
+              weightBlocksArr(0)(1)(i)(j) = weightPosArr(0)(1) * 1 / sqrt(square(scaleSizeNbhArr(0)(1)._1 + i) +
+                square(scaleSizeNbhArr(0)(1)._2 - j)).toFloat
+              weightBlocksArr(0)(2)(i)(j) = weightPosArr(0)(2) * 1 / sqrt(square(scaleSizeNbhArr(0)(2)._1 + i) +
+                square(scaleSizeNbhArr(0)(2)._2 + 2 * scaleSizeNbhArr(1)(1)._2 - j)).toFloat
 
-              weightBlocksArr(1)(0)(i)(j) = weightPosArr(1)(0) * 1 / sqrt(square(scaleSizeNbhArr(1)(0)._1 - i) + square(scaleSizeNbhArr(1)(0)._2 + j)).toFloat
-              weightBlocksArr(1)(1)(i)(j) = weightPosArr(1)(1) * 1 / sqrt(square(scaleSizeNbhArr(1)(1)._1 - i) + square(scaleSizeNbhArr(1)(1)._2 - j)).toFloat
-              weightBlocksArr(1)(2)(i)(j) = weightPosArr(1)(2) * 1 / sqrt(square(scaleSizeNbhArr(1)(2)._1 - i) + square(scaleSizeNbhArr(1)(2)._2 + 2 * scaleSizeNbhArr(1)(1)._1 - j)).toFloat
+              weightBlocksArr(1)(0)(i)(j) = weightPosArr(1)(0) * 1 / sqrt(square(scaleSizeNbhArr(1)(0)._1 - i) +
+                square(scaleSizeNbhArr(1)(0)._2 + j)).toFloat
+              weightBlocksArr(1)(1)(i)(j) = weightPosArr(1)(1) * 1 / sqrt(square(scaleSizeNbhArr(1)(1)._1 - i) +
+                square(scaleSizeNbhArr(1)(1)._2 - j)).toFloat
+              weightBlocksArr(1)(2)(i)(j) = weightPosArr(1)(2) * 1 / sqrt(square(scaleSizeNbhArr(1)(2)._1 - i) +
+                square(scaleSizeNbhArr(1)(2)._2 + 2 * scaleSizeNbhArr(1)(1)._1 - j)).toFloat
 
-              weightBlocksArr(2)(0)(i)(j) = weightPosArr(2)(0) * 1 / sqrt(square(scaleSizeNbhArr(2)(0)._1 + 2 * scaleSizeNbhArr(1)(1)._1 - i) + square(scaleSizeNbhArr(2)(0)._2 + j)).toFloat
-              weightBlocksArr(2)(1)(i)(j) = weightPosArr(2)(1) * 1 / sqrt(square(scaleSizeNbhArr(2)(1)._1 + 2 * scaleSizeNbhArr(1)(1)._1 - i) + square(scaleSizeNbhArr(2)(1)._2 - j)).toFloat
-              weightBlocksArr(2)(2)(i)(j) = weightPosArr(2)(2) * 1 / sqrt(square(scaleSizeNbhArr(2)(2)._1 + 2 * scaleSizeNbhArr(1)(1)._1 - i) + square(scaleSizeNbhArr(2)(2)._2 + 2 * scaleSizeNbhArr(1)(1)._2 - j)).toFloat
+              weightBlocksArr(2)(0)(i)(j) = weightPosArr(2)(0) * 1 / sqrt(square(scaleSizeNbhArr(2)(0)._1 + 2 * scaleSizeNbhArr(1)(1)._1 - i) +
+                square(scaleSizeNbhArr(2)(0)._2 + j)).toFloat
+              weightBlocksArr(2)(1)(i)(j) = weightPosArr(2)(1) * 1 / sqrt(square(scaleSizeNbhArr(2)(1)._1 + 2 * scaleSizeNbhArr(1)(1)._1 - i) +
+                square(scaleSizeNbhArr(2)(1)._2 - j)).toFloat
+              weightBlocksArr(2)(2)(i)(j) = weightPosArr(2)(2) * 1 / sqrt(square(scaleSizeNbhArr(2)(2)._1 + 2 * scaleSizeNbhArr(1)(1)._1 - i) +
+                square(scaleSizeNbhArr(2)(2)._2 + 2 * scaleSizeNbhArr(1)(1)._2 - j)).toFloat
 
               // 求所有权重和
               var weightBlocksSum: Float = 0.0.toFloat
@@ -673,7 +607,8 @@ object ColorBalance {
     val weightXSize = 3
     val weightYSize = 3
 
-    val abParameterArr: Array[Array[Array[(Array[Array[Float]], Array[Array[Float]])]]] = Array.ofDim[(Array[Array[Float]], Array[Array[Float]])](bandCounts, xBlockCounts, yBlockCounts)
+    val abParameterArr: Array[Array[Array[(Array[Array[Float]], Array[Array[Float]])]]] =
+      Array.ofDim[(Array[Array[Float]], Array[Array[Float]])](bandCounts, xBlockCounts, yBlockCounts)
     for (bandIndex <- 1 to bandCounts) {
       for (x <- 0 until xBlockCounts) {
         for (y <- 0 until yBlockCounts) {
@@ -704,7 +639,6 @@ object ColorBalance {
                     variance =  bigImageVariance
                   }
 
-//                  println("x = " + x + " y = " + y + " i = " + i + " j = " + j + " m = " + m + " n = " + n)
                   aWeightVarianceRateArr(i)(j) += (meanVariancePosArr(m)(n) * weightBlockValueNbhArr(m)(n)(i)(j) * bigImageVariance / variance).toFloat // a 系数公式
                   bWeightVarianceRateMeanArr(i)(j) += (meanVariancePosArr(m)(n) * weightBlockValueNbhArr(m)(n)(i)(j) *
                     (bigImageMean - bigImageVariance / variance * meanVarianceNbhArr(m)(n)._1)).toFloat // b 系数公式
@@ -792,70 +726,4 @@ object ColorBalance {
   def destroyGdal(): Unit = {
     gdal.GDALDestroyDriverManager()
   }
-
-  /**
-   * 按照 LRM 思想，将图像分块，只能划分非 tif 图像
-   *
-   * @param inputImgPath 输入的图像路径
-   * @param horBlocks    图像水平方向分块数，即为行数
-   * @param verBlocks    图像垂直方向分块数，即为列数
-   * @return
-   */
-  private def splitImage_temp(inputImgPath: String, horBlocks: Int, verBlocks: Int): Array[BufferedImage] = {
-    // 读取输入图像
-    val inputImageFile = new File(inputImgPath)
-    if (inputImageFile.exists()) {
-      println("file : " + inputImageFile.canRead)
-    }
-    val inputImage = ImageIO.read(inputImageFile)
-    if (null == inputImage) {
-      println("read input image [" + inputImgPath + "] failed")
-    }
-
-    // 获取输入图像的宽度和高度
-    val inputImgWidth = inputImage.getWidth
-    val inputImgHeight = inputImage.getHeight
-
-    // 为最后一块考虑
-    val regularHorBlocks = horBlocks - 1
-    val regularVerBlocks = verBlocks - 1
-
-    // 计算水平和垂直高度
-    val regularImgWidth = inputImgWidth / regularHorBlocks
-    val regularImgHeight = inputImgHeight / regularVerBlocks
-
-    // 计算剩余的一个可能块的水平和垂直高度
-    val leftImgWidth = inputImgWidth % regularHorBlocks
-    val leftImgHeight = inputImgHeight % regularVerBlocks
-
-    // 创建输出数组
-    val subImgBlockArr = new Array[BufferedImage](horBlocks * verBlocks)
-
-    // 分块并放入数组中
-    for (i <- 0 until horBlocks) {
-      // 行是控制高度
-      val yOff = i * regularImgHeight
-
-      var subBlockHeight = regularImgHeight
-      if ((horBlocks - 1) == i) {
-        subBlockHeight = leftImgHeight
-      }
-
-      for (j <- 0 until verBlocks) {
-        // 列是控制宽度
-        val xOff = j * regularImgWidth
-
-        var subBlockWidth = regularImgWidth
-        if ((verBlocks - 1) == j) {
-          subBlockWidth = leftImgWidth
-        }
-
-        val block: BufferedImage = inputImage.getSubimage(xOff, yOff, subBlockWidth, subBlockHeight) // 最后两个参数可以为 0
-        subImgBlockArr(i * verBlocks + j) = block
-      }
-    }
-
-    subImgBlockArr
-  }
-
 }
