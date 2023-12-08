@@ -9852,6 +9852,31 @@
         "name": "sheet",
         "type": "Sheet",
         "description": "The sheet to convert."
+      },
+      {
+        "name": "lat_column",
+        "type": "String",
+        "description": "The column to get latitude.",
+        "default": "lat",
+        "optional": "True"
+      },
+      {
+        "name": "lon_column",
+        "type": "String",
+        "description": "The column to get longitude.",
+        "default": "lon",
+        "optional": "True"
+      }
+    ]
+  },
+  "Sheet.pointToSheet": {
+    "description": "convert point feature to sheet.",
+    "returns": "Sheet",
+    "args": [
+      {
+        "name": "point",
+        "type": "Feature",
+        "description": "The point feature to convert."
       }
     ]
   }

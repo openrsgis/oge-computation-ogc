@@ -264,7 +264,11 @@ object Trigger {
         case "Sheet.filterByHeader" =>
           SheetList += (UUID -> Sheet.filterByHeader(SheetList(args("sheet")), args("condition"), args("value")))
         case "Sheet.toPoint" =>
-          featureRddList += (UUID -> Sheet.toGeoJson_Point(sc, SheetList(args("sheet"))))
+          val lat_col: String = args.getOrElse("lat_column", "lat")
+          val lon_col: String = args.getOrElse("lon_column", "lon")
+          featureRddList += (UUID -> Sheet.sheetToPoint(sc, SheetList(args("sheet")),lat_col, lon_col))
+        case "Sheet.pointToSheet" =>
+          SheetList += (UUID -> Sheet.pointToSheet(featureRddList(args("point")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
 
 
         // Coverage
