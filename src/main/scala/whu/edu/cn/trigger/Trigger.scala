@@ -805,6 +805,19 @@ object Trigger {
           coverageRddList += (UUID -> calculator.Curvature(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrHillshade" =>
           coverageRddList += (UUID -> calculator.HillShade(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrPitrouter" =>
+          coverageRddList += (UUID -> calculator.PitRouter(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+        case "Coverage.terrPiteliminator" =>
+          coverageRddList += (UUID -> calculator.PitEliminator(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+        case "Coverage.terrFlowdirection" =>
+          coverageRddList += (UUID -> calculator.FlowDirection(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+        case "Coverage.terrFlowaccumulation" =>
+          coverageRddList += (UUID -> calculator.FlowAccumulation(rddImage = coverageRddList(args("coverage")), zFactor = args("z-factor").toDouble))
+        case "Coverage.terrChannelnetwork" =>
+          featureRddList += (UUID -> calculator.ChannelNetwork(rddImage = coverageRddList(args("DEM")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), dirImage = coverageRddList(args("FlowDirection")), zFactor = args("z-factor").toDouble, threshold = args("threshold").toDouble))
+        case "Coverage.terrFilter" =>
+          coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").replaceAll("[()]", "").split(",").map(_.toDouble).toList, max = args("max").replaceAll("[()]", "").split(",").map(_.toDouble).toList, zFactor = args("z-factor").toDouble))
+
 
         case "Coverage.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
