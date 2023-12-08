@@ -14,6 +14,7 @@ import whu.edu.cn.objectStorage.ObjectStorageFactory
 import whu.edu.cn.oge.Feature.geometry
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.PostSender
 
 import java.io.{BufferedReader, BufferedWriter, File, FileReader, FileWriter}
 import scala.collection.mutable.Map
@@ -135,16 +136,7 @@ object Sheet{
     //    j.put("type", valueType)
     Trigger.outputInformationList.append(j)
 
-
-    val jsonObject: JSONObject = new JSONObject
-
-    jsonObject.put("info", Trigger.outputInformationList.toArray)
-
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
-//    println("打印的表格为："+outJsonObject)
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    PostSender.shelvePost("info",Trigger.outputInformationList.toArray)
   }
 
   def formatCsvData(csvData: CsvData): String = {
