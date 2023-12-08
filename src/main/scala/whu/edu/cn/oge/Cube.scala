@@ -1,50 +1,67 @@
 package whu.edu.cn.oge
 
-import com.alibaba.fastjson.JSONObject
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer
+import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.mapalgebra.local.{Add, Max, Mean, Min, Multiply}
-import geotrellis.raster.{ByteConstantNoDataCellType, ColorMap, ColorRamp, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
-import geotrellis.raster.render.Png
+import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.{ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
+import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.FileLayerWriter
-import geotrellis.spark.{TileLayerRDD, _}
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
-import geotrellis.vector.Extent
+import geotrellis.vector.{Extent, Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon}
+import io.minio.{MinioClient, UploadObjectArgs}
 import javafx.scene.paint.Color
-import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory, Polygon}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext
-import org.json4s._
-import org.json4s.jackson.Serialization
-import org.json4s.jackson.Serialization._
+import org.geotools.data.{FeatureWriter, Transaction}
+import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
+import org.geotools.feature.simple.SimpleFeatureTypeBuilder
+import org.geotools.geojson.feature.FeatureJSON
+import org.geotools.geojson.geom.GeometryJSON
+import org.geotools.referencing.crs.DefaultGeographicCRS
+import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}
+import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import redis.clients.jedis.Jedis
-import whu.edu.cn.entity.VisualizationParam
+import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
+import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
+import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, VisualizationParam}
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
-import whu.edu.cn.geocube.application.gdc.gdcCoverage.{getCropExtent, getMultiBandStitchRDD, getSingleStitchRDD, scaleCoverage, stitchRDDWriteFile}
+import whu.edu.cn.geocube.application.gdc.gdcCoverage._
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
-import whu.edu.cn.geocube.core.cube.vector.GeoObjectRDD
-import whu.edu.cn.geocube.core.entity.{GcDimension, QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
-import whu.edu.cn.geocube.core.io.Output.saveAsGeojson
+import whu.edu.cn.geocube.core.cube.vector.{FeatureRDD, GeoObject}
+import whu.edu.cn.geocube.core.entity.{GcDimension, GcMeasurement, GcProduct, QueryParams, RasterTile, RasterTileLayerMetadata, SpaceTimeBandKey, VectorGridLayerMetadata}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
+import whu.edu.cn.geocube.core.vector.grid.GridConf
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
-import whu.edu.cn.geocube.util.{PostgresqlService, TileUtil}
+import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.oge.Coverage.removeZeroFromTile
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.{GlobalConstantUtil, JedisUtil}
+import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
+import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
+import whu.edu.cn.util.{JedisUtil, MinIOUtil}
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{File, FileWriter, Reader, StringReader}
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
-import java.time.ZonedDateTime
-import java.util.Date
+import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, Map}
+import java.time.Instant
+import java.util
+import java.util.Date
+import scala.Console.println
+import scala.math.{max, min}
 
 object Cube {
   /**
@@ -64,7 +81,7 @@ object Cube {
       //TODO  比较时间和空间范围
       val postgresqlService = new PostgresqlService
       val cubeId = postgresqlService.getCubeIdByCubeName(cubeName)
-      val productName = postgresqlService.getProductNameByCubeName(postgresqlService.getMeasurementsProductViewName(cubeName))
+      val productName: String = postgresqlService.getProductNameByCubeName(postgresqlService.getMeasurementsProductViewName(cubeName))
       queryParams.setCubeId(cubeId)
       queryParams.setRasterProductName(productName)
       // TODO 如果extent和dateTime为null 应该从数据库中获取整个的范围
@@ -454,183 +471,338 @@ object Cube {
   }
 
   def addStyles(rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam):
-  (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    // the min time
-    val minTime = rasterTileLayerRdd._2.tileLayerMetadata.bounds.get.minKey.time.toInstant.toEpochMilli
-    // get the first image
-    val rasterTileLayerRddFirstDim: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = (rasterTileLayerRdd.filter {
-      rdd => {
-        rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions)
-      }
-    }, rasterTileLayerRdd._2)
-    var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim.map(x => (x._1.spaceTimeKey, x._1.measurementName, x._2)).groupBy(_._1).map {
-      x => {
-        val tilePair = x._2.toArray
-        val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
-        rasterTileLayerRddFirstDim._2.measurementNames.foreach { measurement => {
-          tilePair.foreach { ele =>
-            if (ele._2.equals(measurement)) {
-              multiBandTiles.append(ele._3)
-            }
+  ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
+    // 从所有波段中提取出对应的波段
+
+    val multibandRaster: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = ArrayBuffer()
+    if (visualizationParam.getBands.nonEmpty) {
+      val bands: Array[String] = visualizationParam.getBands.toArray
+      val tar_bands = rasterTileLayerRdd._1.map { x => x._1.measurementName }.collect()
+
+      for (xband <- bands if tar_bands.contains(xband)) {
+        // the min time
+        val minTime = rasterTileLayerRdd._2.tileLayerMetadata.bounds.get.minKey.time.toInstant.toEpochMilli
+        // get the first image
+        val rasterTileLayerRddFirstDim: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = (rasterTileLayerRdd.filter {
+          rdd => {
+            rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions) && rdd._1.measurementName == xband
+          }
+        }, rasterTileLayerRdd._2)
+        var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim._1.map {
+          x => {
+            val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+            multiBandTiles.append(x._2)
+            (x._1.spaceTimeKey, MultibandTile(multiBandTiles))
           }
         }
+
+        // min的数量
+        val minNum: Int = visualizationParam.getMin.length
+        // max的数量
+        val maxNum: Int = visualizationParam.getMax.length
+        if (minNum * maxNum != 0) {
+          // 首先找到现有的最小最大值
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN).filter(x => x != Int.MinValue)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+          val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
+          val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
+          val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+          val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
+            Add(Multiply(tile, gainBand), biasBand)
+          })))
         }
-        (x._1, MultibandTile(multiBandTiles))
+        // 如果存在palette
+        if (visualizationParam.getPalette.nonEmpty) {
+          val paletteVis: List[String] = visualizationParam.getPalette
+          val colorVis: List[Color] = paletteVis.map(t => {
+            try {
+              val color: Color = Color.valueOf(t)
+              color
+            } catch {
+              case e: Exception =>
+                throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+            }
+          })
+          val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+
+          val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
+            val len: Int = colorRGB.length - 1
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              var R: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  R = colorRGB(i)._1 * 255.0
+                }
+              }
+              R
+            })
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              var G: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  G = colorRGB(i)._2 * 255.0
+                }
+              }
+              G
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              var B: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  B = colorRGB(i)._3 * 255.0
+                }
+              }
+              B
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          })
+        }
+        multibandRaster.append((rasterMultiBandTileRdd, rasterTileLayerRddFirstDim._2.tileLayerMetadata))
       }
     }
-    if (rasterTileLayerRddFirstDim._2._measurementNames.size > 1) {
-      // multiband ignore
-      null
-    } else {
-      // min的数量
-      val minNum: Int = visualizationParam.getMin.length
-      // max的数量
-      val maxNum: Int = visualizationParam.getMax.length
-      if (minNum * maxNum != 0) {
-        // 首先找到现有的最小最大值
-        val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
-          val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
-          if (noNaNArray.nonEmpty) {
-            (noNaNArray.min, noNaNArray.max)
+    else {
+      val tar_bands = rasterTileLayerRdd._1.map { x => x._1.measurementName }.collect()
+      for (xband <- tar_bands) {
+        // the min time
+        val minTime = rasterTileLayerRdd._2.tileLayerMetadata.bounds.get.minKey.time.toInstant.toEpochMilli
+        // get the first image
+        val rasterTileLayerRddFirstDim: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = (rasterTileLayerRdd.filter {
+          rdd => {
+            rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions) && rdd._1.measurementName == xband
           }
-          else {
-            (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+        }, rasterTileLayerRdd._2)
+        var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim._1.map {
+          x => {
+            val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+            multiBandTiles.append(x._2)
+            (x._1.spaceTimeKey, MultibandTile(multiBandTiles))
           }
-        }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-        val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
-        val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
-        val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
-        val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
-        rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
-          Add(Multiply(tile, gainBand), biasBand)
-        })))
+        }
+
+        // min的数量
+        val minNum: Int = visualizationParam.getMin.length
+        // max的数量
+        val maxNum: Int = visualizationParam.getMax.length
+        if (minNum * maxNum != 0) {
+          // 首先找到现有的最小最大值
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN).filter(x => x != Int.MinValue)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+          val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
+          val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
+          val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+          val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => (t._1, t._2.mapBands((_, tile) => {
+            Add(Multiply(tile, gainBand), biasBand)
+          })))
+        }
+        // 如果存在palette
+        if (visualizationParam.getPalette.nonEmpty) {
+          val paletteVis: List[String] = visualizationParam.getPalette
+          val colorVis: List[Color] = paletteVis.map(t => {
+            try {
+              val color: Color = Color.valueOf(t)
+              color
+            } catch {
+              case e: Exception =>
+                throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+            }
+          })
+          val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+          val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
+            val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN)
+            if (noNaNArray.nonEmpty) {
+              (noNaNArray.min, noNaNArray.max)
+            }
+            else {
+              (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            }
+          }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+
+          val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+          rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
+            val len: Int = colorRGB.length - 1
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              var R: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  R = colorRGB(i)._1 * 255.0
+                }
+              }
+              R
+            })
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              var G: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  G = colorRGB(i)._2 * 255.0
+                }
+              }
+              G
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              var B: Double = 0.0
+              for (i <- 0 to len) {
+                if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                  B = colorRGB(i)._3 * 255.0
+                }
+              }
+              B
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          })
+        }
+        multibandRaster.append((rasterMultiBandTileRdd, rasterTileLayerRddFirstDim._2.tileLayerMetadata))
       }
-      // 如果存在palette
-      if (visualizationParam.getPalette.nonEmpty) {
-        val paletteVis: List[String] = visualizationParam.getPalette
-        val colorVis: List[Color] = paletteVis.map(t => {
-          try {
-            val color: Color = Color.valueOf(t)
-            color
-          } catch {
-            case e: Exception =>
-              throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
-          }
-        })
-        val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
-        val minMaxBand: (Double, Double) = rasterMultiBandTileRdd.map(t => {
-          val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
-          if (noNaNArray.nonEmpty) {
-            (noNaNArray.min, noNaNArray.max)
-          }
-          else {
-            (Int.MaxValue.toDouble, Int.MinValue.toDouble)
-          }
-        }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
-        val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
-        rasterMultiBandTileRdd = rasterMultiBandTileRdd.map(t => {
-          val bandR: Tile = t._2.bands.head.mapDouble(d => {
-            var R: Double = 0.0
-            for (i <- colorRGB.indices) {
-              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                R = colorRGB(i)._1 * 255.0
-              }
-            }
-            R
-          })
-          val bandG: Tile = t._2.bands.head.mapDouble(d => {
-            var G: Double = 0.0
-            for (i <- colorRGB.indices) {
-              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                G = colorRGB(i)._2 * 255.0
-              }
-            }
-            G
-          })
-          val bandB: Tile = t._2.bands.head.mapDouble(d => {
-            var B: Double = 0.0
-            for (i <- colorRGB.indices) {
-              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
-                B = colorRGB(i)._3 * 255.0
-              }
-            }
-            B
-          })
-          (t._1, MultibandTile(bandR, bandG, bandB))
-        })
-      }
-      (rasterMultiBandTileRdd, rasterTileLayerRddFirstDim._2.tileLayerMetadata)
     }
+    multibandRaster
   }
 
+
   def visualizeOnTheFly(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam): Unit = {
-    val styledRasterRDD: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(rasterTileLayerRdd, visualizationParam)
-    val metadata = rasterTileLayerRdd._2.tileLayerMetadata
-    val spatialMetadata = TileLayerMetadata(
-      metadata.cellType,
-      metadata.layout,
-      metadata.extent,
-      metadata.crs,
-      metadata.bounds.get.toSpatial)
-    val tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(styledRasterRDD._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
 
-    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
-    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
-    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
-      tileLayerRdd.reproject(tmsCrs, layoutScheme)
+    val styledRasterRDD: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Cube.addStyles(rasterTileLayerRdd, visualizationParam)
 
-    val outputPath: String = "/mnt/storage/on-the-fly"
-    // Create the attributes store that will tell us information about our catalog.
-    val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
-    // Create the writer that we will use to store the tiles in the local catalog.
-    val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+    val bands: Array[String] = visualizationParam.getBands.toArray
+    val tol_Extent: ArrayBuffer[String] = ArrayBuffer()
+    val tol_Time: ArrayBuffer[Instant] = ArrayBuffer()
+    val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
 
-    if (zoom < Trigger.level) {
-      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-    }
+    for (tileRdd <- styledRasterRDD) {
+      val spatialMetadata = TileLayerMetadata(
+        tileRdd._2.cellType,
+        tileRdd._2.layout,
+        tileRdd._2.extent,
+        tileRdd._2.crs,
+        tileRdd._2.bounds.get.toSpatial)
+      val tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRdd._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
 
-    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-      if (z == Trigger.level) {
-        val layerId: LayerId = LayerId(Trigger.dagId, z)
-        println(layerId)
-        // If the layer exists already, delete it out before writing
-        if (attributeStore.layerExists(layerId)) {
-          //        new FileLayerManager(attributeStore).delete(layerId)
-          try {
-            writer.overwrite(layerId, rdd)
-          } catch {
-            case e: Exception =>
-              e.printStackTrace()
+      val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+      val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+      val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+        tileLayerRdd.reproject(tmsCrs, layoutScheme)
+
+      val outputPath: String = "/mnt/storage/on-the-fly"
+      // Create the attributes store that will tell us information about our catalog.
+      val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+      // Create the writer that we will use to store the tiles in the local catalog.
+      val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+
+      if (zoom < Trigger.level) {
+        throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+      }
+
+      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+        if (z == Trigger.level) {
+          val layerId: LayerId = LayerId(Trigger.dagId, z)
+          println(layerId)
+          // If the layer exists already, delete it out before writing
+          if (attributeStore.layerExists(layerId)) {
+            //        new FileLayerManager(attributeStore).delete(layerId)
+            try {
+              writer.overwrite(layerId, rdd)
+            } catch {
+              case e: Exception =>
+                e.printStackTrace()
+            }
+          }
+          else {
+            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
           }
         }
-        else {
-          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
-        }
+      }
+
+
+      val Time: Instant = rasterTileLayerRdd._2.tileLayerMetadata.bounds.get.minKey.time.toInstant
+      //    val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+      //    val TimeUtcString: String = dateTimeFormatter.format(Time)
+      tol_Time.append(Time)
+      val Extent: String = tileRdd._2.extent.toString()
+      println(Extent)
+      val subExtent: String = Extent.substring(6, Extent.length).replace("(", "[").replace(")", "]")
+      tol_Extent.append(subExtent)
+
+      val urlObject: JSONObject = new JSONObject
+      urlObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
+      println(urlObject.toJSONString)
+      tol_urljson.append(urlObject)
+
+
+      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+      val jedis: Jedis = new JedisUtil().getJedis
+      jedis.select(1)
+      zIndexStrArray.foreach(zIndexStr => {
+        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+        jedis.sadd(key, "cached")
+        jedis.expire(key, REDIS_CACHE_TTL)
+      })
+      jedis.close()
+
+      if (sc.master.contains("local")) {
+        whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube")
       }
     }
 
     // 回调服务
+
+    val cl_Extent: Array[String] = tol_Extent.distinct.toArray
+    val cl_Time: Array[Instant] = tol_Time.distinct.toArray
     val jsonObject: JSONObject = new JSONObject
-    val rasterJsonObject: JSONObject = new JSONObject
-    rasterJsonObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
-    jsonObject.put("raster", rasterJsonObject)
+    val dim: ArrayBuffer[JSONObject] = ArrayBuffer()
+
+    val dimObject1: JSONObject = new JSONObject
+    dimObject1.put("name", "extent")
+    dimObject1.put("values", cl_Extent)
+    dim.append(dimObject1)
+
+    val dimObject2: JSONObject = new JSONObject
+    dimObject2.put("name", "dateTime")
+    dimObject2.put("values", cl_Time)
+    dim.append(dimObject2)
+
+    val dimObject3: JSONObject = new JSONObject
+    dimObject3.put("name", "bands")
+    dimObject3.put("values", bands)
+    dim.append(dimObject3)
+
+    jsonObject.put("raster", tol_urljson.toArray)
+    jsonObject.put("extent", tol_Extent.toArray)
+    jsonObject.put("dateTime", tol_Time.toArray)
+    jsonObject.put("bands", bands)
+    jsonObject.put("dimension", dim.toArray)
 
     val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
+    outJsonObject.put("status", "success")
+    outJsonObject.put("cube", jsonObject)
 
-    sendPost(GlobalConstantUtil.DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 
-    println("outputJSON: ", outJsonObject.toJSONString)
-    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
-    val jedis: Jedis = new JedisUtil().getJedis
-    jedis.select(1)
-    zIndexStrArray.foreach(zIndexStr => {
-      val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
-      jedis.sadd(key, "cached")
-      jedis.expire(key, GlobalConstantUtil.REDIS_CACHE_TTL)
-    })
-    jedis.close()
+    println(outJsonObject.toJSONString)
+
 
 
     // 清空list
@@ -648,8 +820,551 @@ object Cube {
     Trigger.cubeRDDList.clear()
     Trigger.cubeLoad.clear()
 
-    if (sc.master.contains("local")) {
-      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube")
+  }
+
+//  def selectProducts(implicit sc: SparkContext, productList: String = null, dateTime: String = null, geom: String = null, bands: String = null): Unit = {
+//    // 将对应的参数赋值并得到应有的格式
+//    // cube的特性如何体现在将将productList中的产品统一至该维度geom, bandList等规定的维度下，但是格网如何统一的？
+//    val products = if (productList != null) productList.replace("[", "").replace("]", "").split(",") else null
+//    val geomList = if (geom != null) geom.replace("[", "").replace("]", "").split(",").map(t => {
+//      t.toDouble
+//    }) else null
+//    val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+//    val startTime = if (dateTimeArray.length == 2) dateTimeArray(0) else null
+//    val endTime = if (dateTimeArray.length == 2) dateTimeArray(1) else null
+//    val bandList = if (bands != null) bands.replace("[", "").replace("]", "").split(",") else null
+//    for (i <- 0 until products.length) {
+//      if (products(i).contains("EO")) { // EO:栅格数据
+//        val queryParams = new QueryParams
+//        // 有很多参数还没有设定，如何得到，如：cityCodes，cityNames
+//        queryParams.setCubeId("27") // 后期需要修改成可改变的。
+//        queryParams.setLevel("4000") // 瓦片分辨率，为什么这两个值是确定的？
+//        queryParams.setRasterProductName(products(i)) // 产品名
+//        queryParams.setExtent(geomList(0), geomList(1), geomList(2), geomList(3)) // 空间维度，矩形四点
+//        queryParams.setTime(startTime, endTime)
+//        queryParams.setMeasurements(bandList)
+//        val rasterRdd: RasterRDD = getData(sc, queryParams)
+////        result += (products(i) -> rasterRdd) // products(i)
+//      }
+//      else if (products(i).contains("Vector")) { // EO:矢量数据
+//        val queryParams = new QueryParams
+//        queryParams.setCubeId("27")
+//        queryParams.setCRS("WGS84")
+//        queryParams.setVectorProductName(products(i))
+//        queryParams.setExtent(geomList(0), geomList(1), geomList(2), geomList(3))
+//        queryParams.setTime(startTime, endTime)
+//        val featureRdd: FeatureRDD = getData(sc, queryParams)
+////        result += (products(i) -> featureRdd)
+//      }
+//      else if (products(i).contains("Tabular")) {
+//        val tabularRdd: RDD[(LocationTimeGenderKey, Int)] = getBITabulars(sc, new BiQueryParams)
+////        result += (products(i) -> tabularRdd)
+//      }
+//    }
+//  }
+
+  // 为cube划分网格
+  def meshing(gridDimX: Int, gridDimY: Int, startTime: String, endTime: String, extents: Extent):
+  (LayoutDefinition, Bounds[SpaceTimeKey]) = {
+
+    val tl: TileLayout = TileLayout(gridDimX, gridDimY, 256, 256)
+    val ld: LayoutDefinition = LayoutDefinition(extents, tl)
+    val minInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(startTime).getTime
+    val maxInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(endTime).getTime
+    val colRowInstant: (Int, Int, Long, Int, Int, Long) = (0, 0, minInstant, gridDimX, gridDimY, maxInstant)
+    val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(0, 0, colRowInstant._3),
+      SpaceTimeKey(colRowInstant._4 - colRowInstant._1, colRowInstant._5 - colRowInstant._2, colRowInstant._6))
+    (ld, bounds)
+  }
+
+  def getRawTileRDD(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
+    val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+
+    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
+    if (metaList.isEmpty) {
+      throw new Exception("No such coverage in database!")
+    }
+
+    var union: Extent = Trigger.windowExtent
+    if(union == null){
+      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
+    }
+    val queryGeometry: Geometry = metaList.head.getGeom
+
+    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
+    val tileRDDFlat: RDD[RawTile] = tileMetadata
+      .mapPartitions(par => {
+        val minIOUtil = MinIOUtil
+        val client: MinioClient = minIOUtil.getMinioClient
+        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
+          val time1: Long = System.currentTimeMillis()
+          val rawTiles: mutable.ArrayBuffer[RawTile] = {
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union, queryGeometry)
+            tiles
+          }
+          val time2: Long = System.currentTimeMillis()
+          println("Get Tiles Meta Time is " + (time2 - time1))
+          // 根据元数据和范围查询后端瓦片
+          if (rawTiles.nonEmpty) rawTiles
+          else mutable.Buffer.empty[RawTile]
+        })
+        result
+      }).flatMap(t => t).persist()
+
+    val tileNum: Int = tileRDDFlat.count().toInt
+    println("tileNum = " + tileNum)
+    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
+    tileRDDFlat.unpersist()
+    val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
+      val client: MinioClient = MinIOUtil.getMinioClient
+      par.map(t => {
+        getTileBuf(client, t)
+      })
+    })
+    rawTileRdd
+  }
+
+  // 为rawTile进行处理
+  def genCubeRDD(implicit sc: SparkContext, rdd: RDD[RawTile], meta: TileLayerMetadata[SpaceTimeKey]): ArrayBuffer[(SpaceTimeBandKey, Tile)] = {
+    val mbr: (Double, Double, Double, Double) = rdd.map(t => {
+      (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
+    }).reduce((a, b) => {
+      (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
+    })
+
+    val rddExtent: Extent = Extent(mbr._1, mbr._2, mbr._3, mbr._4)
+    val extent = meta.extent
+    val gridDimX = meta.tileLayout.layoutRows
+    val gridDimY = meta.tileLayout.layoutCols
+    val gridSizeX = (extent.xmax - extent.xmin) / gridDimY.toDouble
+    val gridSizeY = (extent.ymax - extent.ymin) / gridDimX.toDouble
+
+    val _xmin: Int = (math.floor((mbr._1 - extent.xmin) / gridSizeX) max 0).toInt
+    val _xmax: Int = (math.ceil((mbr._3 - extent.xmin) / gridSizeX) min gridDimX).toInt
+    val _ymin: Int = (math.floor((mbr._2 - extent.ymin) / gridSizeY) max 0).toInt
+    val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
+
+    val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
+    var measurement: String = ""
+    var timeKey: Long = 0L
+    val tileArray: ArrayBuffer[(Tile, SpatialKey)] = rdd.map { tile =>
+      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+      measurement = tile.getCoverageId
+      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+      (Tile, tile.getSpatialKey)
+    }.collect().to[ArrayBuffer]
+    val tileInfoArray = tileArray.map(t => (t._2, t._1))
+    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileInfoArray)
+    val ld = meta.layout
+
+    for (col <- _xmin until _xmax; row <- _ymin until _ymax) {
+      val geotrellis_j = (gridDimY - 1 - row)
+      val tempExtent = ld.mapTransform(SpatialKey(col, geotrellis_j))
+      if (tempExtent.intersects(rddExtent)) {
+        val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
+        val intersectTile: Tile = totalTile.crop(rddExtent, tempExtent)
+        val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
+        removeZeroFromTile(intersectTile)
+        result.append((bandKey, intersectTile))
+      }
+    }
+    result
+  }
+
+  // coverage visualize
+  def visualizeBatch(implicit sc: SparkContext, exportedRasterRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String) : Unit = {
+    val rasterArray: Array[(SpatialKey, Tile)] = exportedRasterRdd._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    }).collect()
+    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(rasterArray)
+    val stitchedTile: Raster[Tile] = Raster(tile, exportedRasterRdd._2.tileLayerMetadata.extent)
+    var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
+    val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
+    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
+    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+
+    val minIOUtil = MinIOUtil
+    val client: MinioClient = minIOUtil.getMinioClient
+    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+  }
+
+
+  // feature visualize
+  def visualizeBatch(implicit sc: SparkContext, exportedFeature: (RDD[(SpaceTimeKey, Iterable[GeoObject])], VectorGridLayerMetadata[SpaceTimeKey]),
+                     dagId: String, batchParam: BatchParam): Unit = {
+    val featureJSON = new FeatureJSON()
+    val setGeo: Set[SimpleFeature] = exportedFeature.flatMap { case (_, geoObjects) =>
+      geoObjects.map(g => g.feature)
+    }.collect().toSet
+    // 将 SimpleFeature 转换为 GeoJSON 字符串
+    val geoJSONStrings: Seq[String] = setGeo.map { simpleFeature =>
+      val str = featureJSON.toString(simpleFeature)
+      str
+    }.toSeq
+
+    val minIOUtil = MinIOUtil
+    val client: MinioClient = minIOUtil.getMinioClient
+    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+
+    val geoJSONFeatureCollection = geoJSONStrings.mkString(",")
+    val geoJSON = s"""{"type": "FeatureCollection", "features": [$geoJSONFeatureCollection]}"""
+    if (batchParam.getFormat == "geojson") {
+      val saveGJFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.json"
+      val outputWriter = new FileWriter(new File(saveGJFilePath))
+      outputWriter.write(geoJSON)
+      outputWriter.close()
+    } else if (batchParam.getFormat == "shp") {
+      val saveShpFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.shp"
+      geoJson2Shape(geoJSON, saveShpFilePath)
+      client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveShpFilePath).build())
     }
   }
+
+  def cubeBuild(implicit sc: SparkContext, coverageIdList: ArrayBuffer[String], productKeyList: ArrayBuffer[String], level: Int,
+                gridDimX: Int, gridDimY: Int, startTime: String, endTime: String, extents: String): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+    val tic = System.nanoTime()
+    val extentArray: Array[String] = extents.replace("[", "").replace("]", "").split(",")
+    val extent: Extent = Extent(extentArray(0).toDouble, extentArray(1).toDouble, extentArray(2).toDouble, extentArray(3).toDouble)
+    val mesh = meshing(gridDimX, gridDimY, startTime, endTime, extent)
+    val crs: CRS = CRS.fromEpsgCode(4326)
+    val ld = mesh._1
+    val bounds = mesh._2
+    val metadata: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(CellType.fromName("int16"), ld, extent, crs, bounds)
+    val rasterTileLayerMetadata: RasterTileLayerMetadata[SpaceTimeKey] = RasterTileLayerMetadata(metadata, _productNames = coverageIdList)
+
+    val cubeArray: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
+    coverageIdList.zipWithIndex.foreach { case (coverageId, index) =>
+      val productKey = productKeyList(index)
+      val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
+
+      val tic = System.nanoTime()
+      val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = genCubeRDD(sc, rawTileRdd, metadata)
+      val toc = System.nanoTime()
+      val executionTime = (toc - tic) / 1e9
+      println(s"执行时间cube建立时间: $executionTime seconds")
+      cubeArray.appendAll(result)
+    }
+    println(rasterTileLayerMetadata)
+    val executionTime = (System.nanoTime() - tic) / 1e9
+    println(s"Make RDD Time: $executionTime seconds")
+    (sc.makeRDD(cubeArray), rasterTileLayerMetadata)
+  }
+
+  def getFeatureCube(rdd: RDD[(String, (Geometry, Map[String, Any]))], meta: VectorGridLayerMetadata[SpaceTimeKey]): ArrayBuffer[(SpaceTimeKey, Iterable[GeoObject])] = {
+    val (startTime, endTime): (Long, Long) = meta.bounds.foldLeft((Long.MaxValue, Long.MinValue)) { case ((minTime, maxTime), bounds) =>
+      val currentMinTime: Long = Math.min(minTime, bounds._1.instant)
+      val currentMaxTime: Long = Math.max(maxTime, bounds._2.instant)
+      (currentMinTime, currentMaxTime)
+    }
+    println(startTime, endTime)
+    val extent = meta.extent
+    val gridDimY = meta.gridConf.gridDimY.toInt
+    val gridDimX = meta.gridConf.gridDimX.toInt
+    val gridWidth = (extent.xmax - extent.xmin) / gridDimX.toDouble
+    val gridHeight = (extent.ymax - extent.ymin) / gridDimY.toDouble
+
+    val colRowInstant: (Int, Int, Long, Int, Int, Long) = (0, 0, startTime, gridDimX, gridDimY, endTime)
+
+    val rddExtents = rdd.map(t => {
+      val coor = t._2._1.getCoordinate
+      (coor.x, coor.y, coor.x, coor.y)
+    }).reduce((coor1, coor2) => {
+      (min(coor1._1, coor2._1), min(coor1._2, coor2._2), max(coor1._3, coor2._3), max(coor1._4, coor2._4))
+    })
+    val rddExtent = Extent(rddExtents._1, rddExtents._2, rddExtents._3, rddExtents._4)
+    val productName: String = rdd.first()._2._2("productName").toString
+
+    println("rddExtent: " + rddExtent)
+
+    // 1. 遍历每个网格, 生成为其建立空间索引
+    val result: ArrayBuffer[(SpaceTimeKey, Iterable[GeoObject])] = ArrayBuffer[(SpaceTimeKey, Iterable[GeoObject])]()
+    for (col <- 0 until gridDimX) {
+      for (row <- 0 until gridDimY) {
+        val minX = extent.xmin + col * gridWidth
+        val minY = extent.ymin + row * gridHeight
+        val tempExtent = Extent(minX, minY, minX + gridWidth, minY + gridHeight)
+        // 遍历rdd
+        val geometries: List[GeoObject] = rdd.flatMap { case (_, (geom, info)) =>
+          val envelope = geom.getEnvelopeInternal
+          val localExtent = Extent(envelope.getMinX, envelope.getMinY, envelope.getMaxX, envelope.getMaxY)
+          if (localExtent.intersects(tempExtent)) {
+            val geometryJSON = new GeometryJSON()
+            val geoJSONString: String = geometryJSON.toString(geom)
+            val prop = info("properties").toString
+            val geoJson = "{\"type\":\"Feature\",\"geometry\": " + geoJSONString + ",\"properties\":" + prop.substring(1, prop.length - 1) + "}"
+            val fjson = new FeatureJSON()
+            val feature = fjson.readFeature(geoJson)
+            val data = new GeoObject(productName, feature)
+            Seq(data)
+          } else {
+            Seq.empty[GeoObject]
+          }
+        }.collect().toList
+        val spaceTimeKey = SpaceTimeKey(col, row, 0L)
+        result.append((spaceTimeKey, geometries))
+      }
+    }
+    println("长度为： " + result.length)
+    result
+  }
+
+  // feature的cube构建
+  def cubeBuild(implicit sc: SparkContext, gridDimX: Int, gridDimY: Int,
+                extents: String, startTime: String, endTime: String, featureIdList: List[String]):
+                    (RDD[(SpaceTimeKey, Iterable[GeoObject])], VectorGridLayerMetadata[SpaceTimeKey]) = {
+    val extentArray: Array[String] = extents.replace("[", "").replace("]", "").split(",")
+    val data: List[RDD[(String, (Geometry, Map[String, Any]))]] = featureIdList.map {
+      feature =>
+        val rdd = Feature.load(sc, productName = feature)
+        rdd
+    }
+
+    // 建立元数据
+    val crs: CRS = CRS.fromEpsgCode(4326)
+    val gridConf: GridConf = new GridConf(gridDimX, gridDimY, Extent(-180, -90, 180, 90))
+    val queryGeometry = new GeometryFactory().createPolygon(Array(
+      new Coordinate(extentArray(0).toDouble, extentArray(1).toDouble),
+      new Coordinate(extentArray(0).toDouble, extentArray(3).toDouble),
+      new Coordinate(extentArray(2).toDouble, extentArray(3).toDouble),
+      new Coordinate(extentArray(2).toDouble, extentArray(1).toDouble),
+      new Coordinate(extentArray(0).toDouble, extentArray(1).toDouble)
+    ))
+    val colRow: Array[Int] = new Array[Int](4)
+    val longLati: Array[Double] = new Array[Double](4)
+    getGeomGridInfo(queryGeometry, gridConf.gridDimX, gridConf.gridDimX, gridConf.extent, colRow, longLati,1)
+    val minCol = colRow(0); val minRow = colRow(1); val maxCol = colRow(2); val maxRow = colRow(3)
+    val minLong = longLati(0); val minLat = longLati(1) ; val maxLong = longLati(2); val maxLat = longLati(3)
+    val minInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(startTime).getTime
+    val maxInstant = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" ).parse(endTime).getTime
+    val bounds = Bounds(SpaceTimeKey(minCol,minRow,minInstant),SpaceTimeKey(maxCol,maxRow,maxInstant))
+    val extent = Extent(minLong, minLat, maxLong, maxLat)
+
+    val productNames = featureIdList.mkString(",")
+    val metaData = VectorGridLayerMetadata[SpaceTimeKey](gridConf, extent, bounds, crs, productNames)
+
+    // 建立RDD
+    val featureRdd: ArrayBuffer[(SpaceTimeKey, Iterable[GeoObject])] = ArrayBuffer[(SpaceTimeKey, Iterable[GeoObject])]()
+    data.foreach {
+      rdd =>
+        val startTime = System.nanoTime()
+        val res = getFeatureCube(rdd, metaData)
+        featureRdd.appendAll(res)
+        val endTime = System.nanoTime()
+        val executionTime = (endTime - startTime) / 1e9
+        println(s"执行时间: $executionTime seconds")
+    }
+    (sc.makeRDD(featureRdd), metaData)
+  }
+
+
+  def getGeomGridInfo(geom: Geometry, gridDimX: Long, gridDimY: Long, extent: Extent,
+                      colRow: Array[Int], longLat: Array[Double],cellSize:Double): Unit = {
+    val spatialKeyResults: ArrayBuffer[SpatialKey] = new ArrayBuffer[SpatialKey]()
+    print("geom" + geom.toString)
+    val mbr = (geom.getEnvelopeInternal.getMinX,geom.getEnvelopeInternal.getMaxX,
+      geom.getEnvelopeInternal.getMinY, geom.getEnvelopeInternal.getMaxY)
+    val gridSizeX = (extent.xmax - extent.xmin) / gridDimX.toDouble
+    val gridSizeY = (extent.ymax - extent.ymin) / gridDimY.toDouble
+    val _xmin: Int = (math.floor((mbr._1 - extent.xmin) / gridSizeX) max 0).toInt
+    val _xmax: Int = (math.ceil((mbr._2 - extent.xmin) / gridSizeX) min gridDimX).toInt
+    val _ymin: Int = (math.floor((mbr._3 - extent.ymin) / gridSizeY) max 0).toInt
+    val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
+    val tl = TileLayout(gridDimX.toInt, gridDimY.toInt, ((extent.xmax - extent.xmin) / cellSize).toInt, ((extent.ymax - extent.ymin) / cellSize).toInt)
+    val ld = LayoutDefinition(extent, tl)
+
+    for (i <- _xmin to _xmax; j <- _ymin to _ymax) {
+      val geotrellis_j = (gridDimY - 1 - j).toInt
+      val gridExtent = ld.mapTransform.keyToExtent(i, geotrellis_j)
+      if (gridExtent.intersects(geom)) {
+        spatialKeyResults.append(SpatialKey(i, geotrellis_j))
+      }
+    }
+    val cols = spatialKeyResults.map(_.col)
+    val minCol = cols.min
+    val maxCol = cols.max
+    val rows = spatialKeyResults.map(_.row)
+    val minRow = rows.min
+    val maxRow = rows.max
+    colRow(0) = minCol; colRow(1) = minRow;colRow(2) = maxCol; colRow(3) = maxRow
+
+    val longtitude = spatialKeyResults.flatMap(x => Array(x.extent(ld).xmin, x.extent(ld).xmax))
+    val minLongtitude = longtitude.min
+    val maxLongtitude = longtitude.max
+    val latititude = spatialKeyResults.flatMap(x => Array(x.extent(ld).ymin, x.extent(ld).ymax))
+    val minLatititude = latititude.min
+    val maxLatititude = latititude.max
+    longLat(0) = minLongtitude; longLat(1) = minLatititude; longLat(2) = maxLongtitude; longLat(3) = maxLatititude
+  }
+
+
+  def NDVI(tileLayerRddWithMeta: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]),
+           bandNames: List[String]): (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
+    if (bandNames.length != 2) {
+      throw new IllegalArgumentException(s"输入的波段数量不为2，输入了${bandNames.length}个波段")
+    }
+    else {
+      println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is submitted")
+      println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date) + " --- NDVI task is running ...")
+      //    val bandsArray: Array[String] = bands.replace("[", "").replace("]", "").replace(" ", "").split(",")
+      val redBand = bandNames.head
+      val nirRedBand = bandNames(1)
+
+      def ndviTile(redBandTile: Tile, nirBandTile: Tile): Tile = {
+
+        //convert stored tile with constant Float.NaN to Double.NaN
+        val doubleRedBandTile = DoubleArrayTile(redBandTile.toArrayDouble(), redBandTile.cols, redBandTile.rows)
+          .convert(DoubleConstantNoDataCellType)
+        val doubleNirBandTile = DoubleArrayTile(nirBandTile.toArrayDouble(), nirBandTile.cols, nirBandTile.rows)
+          .convert(DoubleConstantNoDataCellType)
+
+        //calculate ndvi tile
+        val ndviTile = Divide(
+          Subtract(doubleNirBandTile, doubleRedBandTile),
+          Add(doubleNirBandTile, doubleRedBandTile))
+        ndviTile
+      }
+
+      val analysisBegin = System.currentTimeMillis()
+      val RedOrNearRdd: RDD[(SpaceTimeBandKey, Tile)] = tileLayerRddWithMeta._1.filter { x => {
+        x._1.measurementName == redBand || x._1.measurementName == nirRedBand
+      }
+      }
+      val ndviRDD: RDD[(SpaceTimeBandKey, Tile)] = RedOrNearRdd.map(x => (x._1.spaceTimeKey, x._1.measurementName, x._2)).groupBy(_._1).map {
+        x => {
+          val tilePair = x._2.toArray
+          val spaceTimeBandKey: SpaceTimeBandKey = SpaceTimeBandKey(x._1, "ndvi")
+          val RedTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+          val NearInfraredTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+          tilePair.foreach { ele =>
+            if (ele._2 == redBand) RedTiles.append(ele._3)
+            if (ele._2 == nirRedBand) NearInfraredTiles.append(ele._3)
+          }
+          (spaceTimeBandKey, ndviTile(RedTiles(0), NearInfraredTiles(0)).withNoData(Some(0)))
+        }
+      }
+      println("求解ndvi的时间为：" + (System.currentTimeMillis() - analysisBegin) + "ms")
+      (ndviRDD, tileLayerRddWithMeta._2)
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("Simple Application").setMaster("local[*]")
+    val sc = new SparkContext(conf)
+
+    val coverage1: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = Cube.load(sc, cubeName = "SENTINEL-2 Level-2A MSI", extent = "[4.7, 51.7, 4.71, 51.71]", dateTime = "[2019-01-17 08:9:59,2019-01-18 21:00:01]")
+//    coverage1._1.map{x => x._1.measurementName}.foreach(x => println(x))
+
+    var vis = new VisualizationParam
+    vis.setAllParam(bands = "[B3,B4]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
+
+//    val coverage2:(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Cube.addStyles(coverage1, vis)
+    Cube.visualizeOnTheFly(sc, coverage1, vis)
+
+  }
+
+
+    def geoJson2Shape(jsonSting: String, shpPath: String): Unit = {
+      val map: mutable.Map[String, String] = mutable.Map[String, String]()
+      val gjson: GeometryJSON = new GeometryJSON()
+      try {
+        val json: JSONObject = JSON.parseObject(jsonSting)
+        val features: JSONArray = json.get("features").asInstanceOf[JSONArray]
+        val feature0: JSONObject = JSON.parseObject(features.get(0).toString)
+        val properties: util.Set[String] = JSON.parseObject(feature0.getString("properties")).keySet()
+        val strType: String = feature0.get("geometry").asInstanceOf[JSONObject].getString("type").toString
+        var geoType: Class[_] = null
+        strType match {
+          case "Point" =>
+            geoType = classOf[Point]
+          case "MultiPoint" =>
+            geoType = classOf[MultiPoint]
+          case "LineString" =>
+            geoType = classOf[LineString]
+          case "MultiLineString" =>
+            geoType = classOf[MultiLineString]
+          case "Polygon" =>
+            geoType = classOf[Polygon]
+          case "MultiPolygon" =>
+            geoType = classOf[MultiPolygon]
+        }
+        val file: File = new File(shpPath)
+        val params: util.Map[String, java.io.Serializable] = new util.HashMap[String, java.io.Serializable]()
+        params.put(ShapefileDataStoreFactory.URLP.key, file.toURI.toURL)
+        val ds: ShapefileDataStore = new ShapefileDataStoreFactory().createNewDataStore(params).asInstanceOf[ShapefileDataStore]
+        val tb: SimpleFeatureTypeBuilder = new SimpleFeatureTypeBuilder()
+        tb.setCRS(DefaultGeographicCRS.WGS84)
+        tb.setName("shapefile")
+        tb.add("the_geom", geoType)
+        val propertiesIter: util.Iterator[String] = properties.iterator()
+        while (propertiesIter.hasNext) {
+          var str: String = propertiesIter.next
+          if (str == "省") str = "Province"
+          if (str == "省代码")  str = "PCode"
+          if (str == "市代码")  str = "CCode"
+          if (str == "市") str = "City"
+          if (str == "类型") str = "Type"
+          tb.add(str, classOf[String])
+        }
+        val charset: Charset = Charset.forName("utf-8")
+        ds.setCharset(charset)
+        ds.createSchema(tb.buildFeatureType)
+        val writer: FeatureWriter[SimpleFeatureType, SimpleFeature] = ds.getFeatureWriter(ds.getTypeNames()(0), Transaction.AUTO_COMMIT)
+        println(writer.getFeatureType)
+        for (i <- 0 until features.size) {
+          val strFeature: String = features.get(i).toString
+          val reader: Reader = new StringReader(strFeature)
+          val feature: SimpleFeature = writer.next
+          strType match {
+            case "Point" =>
+              feature.setAttribute("the_geom", gjson.readPoint(reader))
+            case "MultiPoint" =>
+              feature.setAttribute("the_geom", gjson.readMultiPoint(reader))
+            case "LineString" =>
+              feature.setAttribute("the_geom", gjson.readLine(reader))
+            case "MultiLineString" =>
+              feature.setAttribute("the_geom", gjson.readMultiLine(reader))
+            case "Polygon" =>
+              feature.setAttribute("the_geom", gjson.readPolygon(reader))
+            case "MultiPolygon" =>
+              feature.setAttribute("the_geom", gjson.readMultiPolygon(reader))
+          }
+          val propertiesset: util.Iterator[String] = properties.iterator()
+          while (propertiesset.hasNext) {
+            var str: String = propertiesset.next
+            val featurei: JSONObject = JSON.parseObject(features.get(i).toString)
+            val propValue = JSON.parseObject(featurei.getString("properties")).get(str)
+            if (str == "省") str = "Province"
+            if (str == "省代码")  str = "PCode"
+            if (str == "市代码")  str = "CCode"
+            if (str == "市") str = "City"
+            if (str == "类型") str = "Type"
+            try {
+              feature.setAttribute(str, propValue.toString)
+            } catch {
+              case e: Exception =>
+                //              feature.setAttribute(str, "")
+                println(e)
+            }
+          }
+          writer.write()
+        }
+        writer.close()
+        ds.dispose()
+        map.put("status", "success")
+        map.put("message", shpPath)
+      } catch {
+        case e: Exception =>
+          map.put("status", "failure")
+          map.put("message", e.getMessage)
+          e.printStackTrace()
+      }
+      println(map)
+    }
+
+
+
+
+
 }

@@ -37,6 +37,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>2.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.compat.version}</artifactId>
             <version>3.0.0</version>
@@ -45,6 +50,17 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.5.4</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.scalanlp/breeze -->
+        <dependency>
+            <groupId>org.scalanlp</groupId>
+            <artifactId>breeze_2.12</artifactId>
+            <version>1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scalanlp</groupId>
+            <artifactId>breeze-viz_2.12</artifactId>
+            <version>1.3</version>
         </dependency>
         <!-- hbase -->
         <dependency>
@@ -179,7 +195,11 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/netcdfAll-5.5.3.jar</systemPath>
         </dependency>
-
+        <dependency>
+            <groupId>com.baidubce</groupId>
+            <artifactId>bce-java-sdk</artifactId>
+            <version>0.10.283</version>
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>

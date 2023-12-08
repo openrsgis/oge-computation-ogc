@@ -3,6 +3,7 @@ package whu.edu.cn.jsonparser
 import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
 import com.alibaba.fastjson.JSONArray
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.Node
 
 import scala.collection.mutable
@@ -11,7 +12,7 @@ import scala.util.control.Breaks
 
 // TODO lrx: 解析的时候加上数据类型？
 object JsonToArg {
-  var jsonAlgorithms: String = "/mnt/storage/algorithms_ogc.json"
+  var jsonAlgorithms: String = GlobalConfig.Others.jsonAlgorithms
   var dagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
 
   def numberOfArgs(functionName: String): Int = {

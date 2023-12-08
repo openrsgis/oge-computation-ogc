@@ -15,18 +15,13 @@ import scala.collection.mutable.ListBuffer
  *
  */
 object HbaseUtil {
-  //  System.setProperty("hadoop.home.dir", "/usr/local/hadoop-2.7.4")
-  //  System.setProperty("hadoop.home.dir", "/usr/local/hadoop-2.7.4")
+  System.setProperty("hadoop.home.dir", "/home/geocube/hadoop")
 
   //configuration for hbase
   val configuration = HBaseConfiguration.create()
 
   //set zookeeper cluster
   configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
-//  configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb3:2181,gisweb4:2181")
-
-  //  configuration.set(HConstants.ZOOKEEPER_QUORUM, "master:2181,server01:2181,server02:2181")
-  //  configuration.set(HConstants.ZOOKEEPER_QUORUM, "bd2015.whrdc:2181,bd2016.whrdc:2181,bd2017.whrdc:2181,bd2018.whrdc:2181")
 
   //set RPC timeout
   configuration.set("hbase.rpc.timeout", "200000")
@@ -40,11 +35,17 @@ object HbaseUtil {
   //set mapreduce task timeout
   configuration.setInt("mapreduce.task.timeout", 60000)
 
+  //  configuration.setInt("hbase.client.retries.number",3)
+
   //set maximum allowed size of a KeyValue instance, default 10485760
   configuration.set("hbase.client.keyvalue.maxsize", "104857600")
 
   //set maximum allowed size of an individual cell, inclusive of value and all key components, default 10485760
   configuration.set("hbase.server.keyvalue.maxsize", "104857600")
+
+  configuration.set("hbase.client.retries.number", "3")
+
+  configuration.setInt("hbase.client.operation.timeout",200000)
 
   //establish connection and adimin
   val connection = ConnectionFactory.createConnection(configuration)

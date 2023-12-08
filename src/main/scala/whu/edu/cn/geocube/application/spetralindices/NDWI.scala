@@ -7,17 +7,18 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.ColorRamp
 import geotrellis.spark._
+
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
-
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 
 import sys.process._
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.{DistributedQueryRasterTiles, QueryRasterTiles}
-import whu.edu.cn.geocube.util.{GcConstant, TileUtil}
+import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.view.Info
 
 /**
@@ -294,8 +295,6 @@ object NDWI {
       val outputMetaPath = executorOutputDir + "NDWI_" + instantRet + ".json"
       val objectMapper =new ObjectMapper()
       val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
       node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("time", instantRet)
@@ -397,8 +396,6 @@ object NDWI {
       val outputMetaPath = executorOutputDir + "NDWI_" + instantRet + ".json"
       val objectMapper =new ObjectMapper()
       val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
       node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("time", instantRet)

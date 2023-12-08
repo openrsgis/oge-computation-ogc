@@ -1,7 +1,6 @@
 package whu.edu.cn.util
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream, OutputStreamWriter, PrintWriter}
-
 import geotrellis.layer.{Bounds, FloatingLayoutScheme, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.raster.{DoubleCellType, MultibandTile, Raster, Tile}
@@ -14,17 +13,16 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Geometry, LineString}
+import whu.edu.cn.algorithms.terrain.core.TypeAliases.RDDImage
 import whu.edu.cn.entity
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.util.ShapeFileUtil.readShp
+
 import java.text.SimpleDateFormat
 import java.time.ZoneOffset
 import java.util
 import java.io.BufferedReader
 import java.io.InputStreamReader
-
-
-
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
@@ -103,7 +101,6 @@ object RDDTransformerUtil {
   }
 
 
-
   def makeChangedRasterRDDFromTif(sc: SparkContext, sourceTiffpath: String) = {
     val hadoopPath = "file://" + sourceTiffpath
     val inputRdd = sc.hadoopMultibandGeoTiffRDD(new Path(hadoopPath))
@@ -134,7 +131,9 @@ object RDDTransformerUtil {
     val data = input.map(t => {
       t._2._2 + (ShapeFileUtil.DEF_GEOM_KEY -> t._2._1)
     }).collect().map(_.asJava).toList.asJava
-    ShapeFileUtil.createShp(outputShpPath, "utf-8", classOf[LineString], data)
+
+    val geomClass = input.first()._2._1.getClass
+    ShapeFileUtil.createShp(outputShpPath, "utf-8", geomClass, data)
     println("成功落地shp")
   }
 

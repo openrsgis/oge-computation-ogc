@@ -5,7 +5,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
 import geotrellis.raster.mapalgebra.local.{LocalTileBinaryOp, LocalTileComparatorOp}
-import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleConstantNoDataCellType, FloatConstantNoDataCellType, GridBounds, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, isNoData}
+import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleCellType, DoubleConstantNoDataCellType, FloatCellType, FloatConstantNoDataCellType, GridBounds, IntCellType, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, byteNODATA, doubleNODATA, floatNODATA, isNoData, shortNODATA}
 import geotrellis.spark._
 import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
@@ -16,8 +16,12 @@ import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
 import java.time.{Instant, ZoneOffset}
 import scala.collection.mutable
 import scala.math.{max, min}
+import whu.edu.cn.oge.Coverage
 
 object CoverageUtil {
+  // 检查coverage的完整性，包括每个瓦片是否包括所有的波段，以及每个瓦片波段数是否与实际一致。
+  def checkValidity(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Boolean = ???
+
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
   def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {
@@ -34,12 +38,28 @@ object CoverageUtil {
     //      throw new InternalError(s"内部错误！瓦片序号出错或时间不一致！请查看$colRowInstant")
     //    }
 
+    val measurementResoMap: Map[String, Double] = tileRDDReP.map(tile => {
+      Map(tile.getMeasurement -> tile.getResolutionCol)
+    }).collect().flatten.toMap
+    // 根据key值进行排序
+    val resoMeasurementListMap = mutable.ListMap(measurementResoMap.groupBy(_._2).map {
+      case (value, pairs) =>
+        value -> pairs.keys.toList
+    }.toSeq.sortBy(_._1):_*)
+    val resoMeasurementMap = mergeLists(resoMeasurementListMap)
+    val resoMin = resoMeasurementMap.keys.min
+    //    if (resoMeasurementMap.size != 1) {
+    //      //存在不同分辨率的波段,先根据波段名，组成多个rdd，再根据波段及分辨率进行重投影
+    //      tileRdd = tileRdd.map()
+    //    }
+    //    else
 
+    //先不考虑横纵向分辨率大小不一样的情况
     val firstTile: RawTile = tileRDDReP.first()
-    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - firstTile.getResolutionCol) / firstTile.getResolutionCol / 256.0).toInt, 1)
-    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - firstTile.getResolutionRow) / firstTile.getResolutionRow / 256.0).toInt, 1)
+    val layoutCols: Int = math.max(math.ceil((extents._3 - extents._1 - resoMin) / resoMin / 256.0).toInt, 1)
+    val layoutRows: Int = math.max(math.ceil((extents._4 - extents._2 - resoMin) / resoMin / 256.0).toInt, 1)
 
-    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * firstTile.getResolutionCol * 256.0, extents._2 + layoutRows * firstTile.getResolutionRow * 256.0)
+    val extent: Extent = geotrellis.vector.Extent(extents._1, extents._2, extents._1 + layoutCols * resoMin * 256.0, extents._2 + layoutRows * resoMin * 256.0)
 
     val tl: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
     val ld: LayoutDefinition = LayoutDefinition(extent, tl)
@@ -50,8 +70,9 @@ object CoverageUtil {
 
     val tileRdd: RDD[(SpaceTimeKey, (Int, String, Tile))] = tileRDDReP.map(tile => {
       val phenomenonTime: Long = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-      val rowNum: Int = tile.getSpatialKey.row
-      val colNum: Int = tile.getSpatialKey.col
+      // 所有值减去最小的key，得到以0开始的key的位置
+      val rowNum: Int = tile.getSpatialKey.row - colRowInstant._2
+      val colNum: Int = tile.getSpatialKey.col - colRowInstant._1
       val measurementRank: Int = tile.getMeasurementRank
       val measurement: String = tile.getMeasurement
       val Tile: Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
@@ -68,26 +89,107 @@ object CoverageUtil {
       (SpaceTimeBandKey(t._1, listBuffer), MultibandTile(tileArray))
     })
     var coverage = (multibandTileRdd, tileLayerMetadata)
+    // select出来，再将metadata中的layout修改为对应的值，最后reporject到指定分辨率下
+    if(resoMeasurementMap.size != 1){
+      var coverage_not_reproject = Coverage.selectBandsForMakingRDD(coverage,resoMeasurementMap(resoMin)) //最小的不需要重投影
+      for((key,values) <- resoMeasurementMap){
+        if(key != resoMin){
+          //select出来
+          var coverage_to_be_rejected = Coverage.selectBandsForMakingRDD(coverage,values)
+          // 计算新的metadata,实际上是计算新的ld
+          val layoutCols_r: Int = math.max(math.ceil((extents._3 - extents._1 - key) / key / 256.0).toInt, 1)
+          val layoutRows_r: Int = math.max(math.ceil((extents._4 - extents._2 - key) / key / 256.0).toInt, 1)
+          val tl_r: TileLayout = TileLayout(layoutCols_r, layoutRows_r, 256, 256)
+          val ld_r: LayoutDefinition = LayoutDefinition(extent, tl_r)
+          val tileLayerMetadata_r: TileLayerMetadata[SpaceTimeKey] = TileLayerMetadata(cellType, ld_r, extent, crs, bounds)
 
+          //替换metadata，并reproject
+          coverage_to_be_rejected = Coverage.reproject((coverage_to_be_rejected._1,tileLayerMetadata_r),crs,resoMin)
+          //添加进coverage_not_reproject
+          coverage_not_reproject = (addBandstoRDD(coverage_not_reproject,coverage_to_be_rejected),tileLayerMetadata)
+        }
+      }
+      coverage = coverage_not_reproject
+    }
+
+    //去黑边
     if (coverage._2.cellType.equalDataType(UByteConstantNoDataCellType) || coverage._2.cellType.equalDataType(UByteCellType))
       coverage = toInt8(coverage)
     else if (coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
       coverage = toInt16(coverage)
 
-    val coverage1 = removeZeroFromCoverage(coverage)
+    removeZeroFromCoverage(coverage)
+  }
 
-    coverage1
+  def mergeLists(resoMeasurementMap: mutable.ListMap[Double, List[String]]): mutable.Map[Double, List[String]] = {
+
+    // 定义一个辅助函数，用于合并List[String]
+    def mergeListsHelper(lists: List[List[String]]): List[String] = lists.flatten.distinct
+
+    // 使用foldLeft遍历sortedMap，合并相对差距小于万分之一的List[String]
+    val mergedMap = resoMeasurementMap.foldLeft(mutable.Map.empty[Double, List[String]]) {
+      case (acc, (key, value)) =>
+        acc.lastOption match {
+          case Some((prevKey, prevValue)) if math.abs((key - prevKey)/key) < 0.0001 =>
+            acc.init + (prevKey -> mergeListsHelper(List(prevValue, value)))
+          case _ =>
+            acc + (key -> value)
+        }
+    }
+
+    mergedMap
+  }
+  def addBandstoRDD(coverage1:RDD[(SpaceTimeBandKey, MultibandTile)],coverage2:RDD[(SpaceTimeBandKey, MultibandTile)]):RDD[(SpaceTimeBandKey, MultibandTile)]={
+    val c2 = coverage2.collect().map( t=>{
+      (t._1.spaceTimeKey.spatialKey,(t._1.measurementName,t._2))
+    }).toMap
+    coverage1.map(c=>{
+      val res = c2(c._1.spaceTimeKey.spatialKey)
+      (SpaceTimeBandKey(c._1.spaceTimeKey,c._1.measurementName.union(res._1)),MultibandTile(c._2.bands.union(res._2.bands)))
+    })
   }
 
   def removeZeroFromCoverage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    coverageTemplate(coverage, (tile) => removeZeroFromTile(tile))
+    if(coverage._2.cellType == UByteConstantNoDataCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(ByteConstantNoDataCellType))
+      }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,byteNODATA))
+    else if (coverage._2.cellType == IntCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(IntConstantNoDataCellType))
+      }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,NODATA))
+    else if (coverage._2.cellType == FloatCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(FloatConstantNoDataCellType))
+      }), TileLayerMetadata(FloatConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,floatNODATA))
+    else if (coverage._2.cellType == DoubleCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(DoubleConstantNoDataCellType))
+      }), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile,doubleNODATA))
+
+    else if (coverage._2.cellType == ByteConstantNoDataCellType)
+      coverageTemplate(coverage,tile => removeZeroFromTile(tile,ByteConstantNoDataCellType.noDataValue))
+    else if (coverage._2.cellType == ShortConstantNoDataCellType || coverage._2.cellType == UShortCellType)
+      coverageTemplate((coverage._1.map(t => {
+        (t._1, t._2.convert(IntConstantNoDataCellType))
+      }), TileLayerMetadata(IntConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds)), (tile) => removeZeroFromTile(tile, NODATA))
+    else if (coverage._2.cellType == IntConstantNoDataCellType)
+      coverageTemplate(coverage, tile => removeZeroFromTile(tile, IntConstantNoDataCellType.noDataValue))
+    else if (coverage._2.cellType == FloatConstantNoDataCellType)
+      coverageTemplate(coverage, tile => removeZeroFromTile(tile, FloatConstantNoDataCellType.noDataValue))
+    else if (coverage._2.cellType == DoubleConstantNoDataCellType)
+      coverageTemplate(coverage, tile => removeZeroFromTile(tile, DoubleConstantNoDataCellType.noDataValue))
+
+    else
+      coverage
   }
 
-  def removeZeroFromTile(tile: Tile): Tile = {
-    if (tile.cellType.isFloatingPoint)
-      tile.mapDouble(i => if (i.equals(0.0)) Double.NaN else i)
-    else
-      tile.map(i => if (i == 0) NODATA else i)
+  def removeZeroFromTile(tile: Tile,value:Int): Tile = {
+    tile.map(i => if (i.equals(0)) value else i)
+  }
+
+  def removeZeroFromTile(tile: Tile, value: Double): Tile = {
+      tile.mapDouble(i => if (i.equals(0.0)) value else i)
   }
 
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
@@ -406,12 +508,9 @@ object CoverageUtil {
   def coverageTemplate(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), func: Tile => Tile): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     def funcMulti(multibandTile: MultibandTile): MultibandTile = {
-      val bands: Vector[Tile] = multibandTile.bands
-      val bandsFunc: mutable.ArrayBuffer[Tile] = mutable.ArrayBuffer.empty[Tile]
-      for (i <- bands.indices) {
-        bandsFunc.append(func(bands(i)))
-      }
-      MultibandTile(bandsFunc)
+      multibandTile.mapBands((_,tile)=>{
+        func(tile)
+      })
     }
 
     val cellType: CellType = coverage._1.first()._2.cellType

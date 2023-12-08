@@ -68,7 +68,7 @@ object CoverageCollectionDubug {
   }
 
   def loadCoverageCollection(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
-    val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, extent, crs)
+    val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime.toString, endTime.toString, extent, crs)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
     val rawTileRdd: Map[String, RDD[RawTile]] = metaListGrouped.map(t => {
       val metaListCoverage: ListBuffer[CoverageMetadata] = t._2
@@ -78,7 +78,7 @@ object CoverageCollectionDubug {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
             val client: MinioClient = MinIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, extent)
+            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, extent,metaList.head.getGeom)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -96,7 +96,7 @@ object CoverageCollectionDubug {
         val time1: Long = System.currentTimeMillis()
         val client: MinioClient = MinIOUtil.getMinioClient
         val tile: RawTile = getTileBuf(client, t)
-        MinIOUtil.releaseMinioClient(client)
+//        MinIOUtil.releaseMinioClient(client)
         val time2: Long = System.currentTimeMillis()
         println("Get Tile Time1 is " + (time2 - time1))
         tile

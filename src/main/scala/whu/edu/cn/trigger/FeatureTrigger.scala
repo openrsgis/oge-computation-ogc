@@ -81,9 +81,9 @@ object FeatureTrigger {
       }
       case "Feature.geometry" => {
         if (argOrNot(args, "crs") != null)
-          rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"), args("properties"), args("crs")))
+          return
         else
-          rdd_list_feature += (UUID -> Feature.geometry(sc, args("coors"), args("properties")))
+          return
       }
       case "Feature.area" => {
         if (argOrNot(args, "crs") != null)
@@ -135,9 +135,9 @@ object FeatureTrigger {
       }
       case "Feature.getLength" => {
         if (argOrNot(args, "crs") != null)
-          rdd_list_feature += (UUID -> Feature.getLength(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
+          rdd_list_feature += (UUID -> Feature.length(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("crs")))
         else
-          rdd_list_feature += (UUID -> Feature.getLength(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
+          rdd_list_feature += (UUID -> Feature.length(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))
       }
       case "Feature.geometries" => {
         rdd_list_feature += (UUID -> Feature.geometries(rdd_list_feature(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]]))

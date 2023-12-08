@@ -4,8 +4,8 @@ import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util
 import java.util.{Date, UUID}
-
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import geotrellis.layer._
 import geotrellis.raster.{Tile, _}
 import geotrellis.raster.io.geotiff.GeoTiff
@@ -13,9 +13,10 @@ import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.render.{ColorRamp, RGB}
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot}
 import whu.edu.cn.geocube.core.entity.{QueryParams, RasterTileLayerMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles
-import whu.edu.cn.geocube.util.{GcConstant, TileUtil}
+import whu.edu.cn.geocube.util.TileUtil
 import whu.edu.cn.geocube.view.Info
 
 import scala.collection.mutable.ListBuffer
@@ -231,15 +232,13 @@ object MaxAggregate {
       val executorOutputFile = new File(executorOutputDir)
       if (!executorOutputFile.exists()) executorOutputFile.mkdir()
 
-      val outputPath = executorOutputDir + "Max_" + band + ".png"
+      val outputPath: String = executorOutputDir + "Max_" + band + ".png"
       stitched.tile.renderPng(colorRamp).write(outputPath)
-      val scpPngCommand = "scp " + outputPath + " geocube@gisweb1:" + outputDir
+      val scpPngCommand: String = "scp " + outputPath + " geocube@gisweb1:" + outputDir
 
-      val outputMetaPath = executorOutputDir + "Max_" + band + ".json"
+      val outputMetaPath: String = executorOutputDir + "Max_" + band + ".json"
       val objectMapper =new ObjectMapper()
-      val node = objectMapper.createObjectNode()
-      val localDataRoot = GcConstant.localDataRoot
-      val httpDataRoot = GcConstant.httpDataRoot
+      val node: ObjectNode = objectMapper.createObjectNode()
       node.put("path", outputPath.replace(localDataRoot, httpDataRoot))
       node.put("meta", outputMetaPath.replace(localDataRoot, httpDataRoot))
       node.put("band", band)

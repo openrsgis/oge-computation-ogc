@@ -6,12 +6,13 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.render.{Exact, RGB}
 import geotrellis.raster.{ColorMap, Raster, Tile}
 import geotrellis.spark._
+
 import java.io.{File, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
-
 import org.apache.spark._
 import org.apache.spark.rdd._
+import whu.edu.cn.config.GlobalConfig.GcConf.{httpDataRoot, localDataRoot, localHtmlRoot}
 
 import scala.sys.process.ProcessLogger
 import sys.process._
@@ -23,7 +24,6 @@ import whu.edu.cn.geocube.core.io.Output._
 import whu.edu.cn.geocube.core.raster.query.{DistributedQueryRasterTiles, QueryRasterTiles}
 import whu.edu.cn.geocube.core.cube.vector.GeoObjectRDD
 import whu.edu.cn.geocube.core.vector.query.QueryVectorObjects
-import whu.edu.cn.geocube.util.GcConstant
 import whu.edu.cn.geocube.view.Info
 
 import scala.collection.mutable.ArrayBuffer
@@ -144,7 +144,7 @@ object Flood{
 
     //save raster tiff
     val stitched: Raster[Tile] = changedRdd.stitch()
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_flooded.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_flooded.TIF"
     GeoTiff(stitched, changedRdd.metadata.crs).write(outputTiffPath)
 
     //save raster clip tiff
@@ -152,18 +152,18 @@ object Flood{
     val stderr = new StringBuilder
     val extent = changedRdd.metadata.extent
 
-    val outputClipTiffPath = GcConstant.localHtmlRoot + uuid + "_clip_flooded.TIF"
+    val outputClipTiffPath = localHtmlRoot + uuid + "_clip_flooded.TIF"
     val (xmin, ymin, xmax, ymax) = (extent.xmin, extent.ymin, extent.xmax, extent.ymax)
     Seq("gdalwarp", "-overwrite", "-wm", "20", "-of", "GTiff", "-te", s"$xmin", s"$ymin", s"$xmax", s"$ymax", s"$outputTiffPath", s"$outputClipTiffPath") ! ProcessLogger(stdout append _, stderr append _)
 
     //save vector
     val affectedFeaturesRdd = affectedRdd.map(x => x.feature)
     val affectedFeatures = affectedFeaturesRdd.collect()
-    val outputVectorPath = GcConstant.localHtmlRoot + uuid + "_" + layerType + "_flooded.geojson"
+    val outputVectorPath = localHtmlRoot + uuid + "_" + layerType + "_flooded.geojson"
     saveAsGeojson(affectedFeatures, outputVectorPath)
 
     //save raster clip tiff and vector as thematic png
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_flooded_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_flooded_thematic.png"
 
     Seq("/home/geocube/qgis/run.sh", "-r", s"$outputClipTiffPath", "-v", s"$outputVectorPath", "-o", s"$outputThematicPngPath", "-t", "Flood", "-n", s"$layerType") ! ProcessLogger(stdout append _, stderr append _)
     val ret = Array(Info(outputThematicPngPath, 0, "Flooded Region"))
@@ -206,14 +206,14 @@ object Flood{
 
     //save raster tiff
     val stitched: Raster[Tile] = changedRdd.stitch()
-    val outputTiffPath = GcConstant.localHtmlRoot + uuid + "_flooded.TIF"
+    val outputTiffPath = localHtmlRoot + uuid + "_flooded.TIF"
     GeoTiff(stitched, changedRdd.metadata.crs).write(outputTiffPath)
 
     //save raster clip tiff
     val stdout = new StringBuilder
     val stderr = new StringBuilder
     val extent = changedRdd.metadata.extent
-    val outputClipTiffPath = GcConstant.localHtmlRoot + uuid + "_clip_flooded.TIF"
+    val outputClipTiffPath = localHtmlRoot + uuid + "_clip_flooded.TIF"
     val (xmin, ymin, xmax, ymax) = (extent.xmin, extent.ymin, extent.xmax, extent.ymax)
     Seq("gdalwarp", "-overwrite", "-wm", "20", "-of", "GTiff", "-te", s"$xmin", s"$ymin", s"$xmax", s"$ymax", s"$outputTiffPath", s"$outputClipTiffPath") ! ProcessLogger(stdout append _, stderr append _)
 
@@ -221,11 +221,11 @@ object Flood{
     //save vector
     val affectedFeaturesRdd = affectedRdd.map(x => x.feature)
     val affectedFeatures = affectedFeaturesRdd.collect()
-    val outputVectorPath = GcConstant.localHtmlRoot + uuid + "_flooded.geojson"
+    val outputVectorPath = localHtmlRoot + uuid + "_flooded.geojson"
     saveAsGeojson(affectedFeatures, outputVectorPath)
 
     //save raster clip tiff and vector as thematic png
-    val outputThematicPngPath = GcConstant.localHtmlRoot + uuid + "_flooded_thematic.png"
+    val outputThematicPngPath = localHtmlRoot + uuid + "_flooded_thematic.png"
 
     Seq("/home/geocube/qgis/run.sh", "-r", s"$outputClipTiffPath", "-v", s"$outputVectorPath", "-o", s"$outputThematicPngPath", "-t", "Flood", "-n", s"$layerType") ! ProcessLogger(stdout append _, stderr append _)
     val ret = Array(Info(outputThematicPngPath, 0, "Flooded Region"))
@@ -303,8 +303,6 @@ object Flood{
     //save meta
     val objectMapper =new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
     node.put("vectorPath", outputVectorPath.replace(localDataRoot, httpDataRoot))
     node.put("rasterPath", outputRasterPath.replace(localDataRoot, httpDataRoot))
     node.put("metaPath", outputMetaPath.replace(localDataRoot, httpDataRoot))
@@ -382,8 +380,7 @@ object Flood{
     //save meta
     val objectMapper =new ObjectMapper()
     val node = objectMapper.createObjectNode()
-    val localDataRoot = GcConstant.localDataRoot
-    val httpDataRoot = GcConstant.httpDataRoot
+
     node.put("vectorPath", outputVectorPath.replace(localDataRoot, httpDataRoot))
     node.put("rasterPath", outputRasterPath.replace(localDataRoot, httpDataRoot))
     node.put("metaPath", outputMetaPath.replace(localDataRoot, httpDataRoot))
