@@ -9558,7 +9558,7 @@
   },
   "SpatialStats.GWModels.GWAverage": {
     "description": "Geographically weighted Statistic Summary: Average",
-    "returns": "String",
+    "returns": "Feature",
     "args": [
       {
         "name": "featureRDD",
@@ -9602,7 +9602,7 @@
   },
   "SpatialStats.GWModels.GWCorrelation": {
     "description": "Geographically weighted Statistic Summary: Correlation",
-    "returns": "String",
+    "returns": "Feature",
     "args": [
       {
         "name": "featureRDD",

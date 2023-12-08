@@ -62,7 +62,12 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
    * @return 返回拟合值（Array）形式
    */
   def fit(): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
-    val interval = get_interval()
+    var interval = (0.0, 1.0)
+    try {
+      interval = get_interval()
+    } catch {
+      case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
+    }
     val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)._1
     _lagY = _Y - rho * _wy
     val betas = get_betas(X = _1X, Y = _lagY)
