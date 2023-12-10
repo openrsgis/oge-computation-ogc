@@ -367,7 +367,7 @@ object Feature {
       val sIterator = jsonObject.keySet.iterator
       while (sIterator.hasNext()) {
         val key = sIterator.next()
-        val value = jsonObject.getString(key)
+        val value = jsonObject.get(key)
         map += (key -> value)
       }
     }
