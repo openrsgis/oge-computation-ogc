@@ -2113,6 +2113,86 @@
       }
     ]
   },
+  "Feature.convertFromStringByQGIS": {
+    "description": "Simplifies the geometries in a line or polygon layer.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "inputString",
+        "type": "String",
+        "description": "Simplification method",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+  "Feature.rasterizeByGDAL": {
+    "description": "Converts vector geometries (points, lines and polygons) into a raster image.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "The feature as the input data "
+      },
+      {
+        "name": "field",
+        "type": "String",
+        "description": "Defines the attribute field from which the attributes for the pixels should be chosen",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "burn",
+        "type": "Double",
+        "description": "A fixed value to burn into a band for all features.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "useZ",
+        "type": "String",
+        "description": "Indicates that a burn value should be extracted from the “Z” values",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "units",
+        "type": "String",
+        "description": "Units to use when defining the output raster size/resolution. ",
+        "optional": "True",
+        "default": "0"
+      },
+      {
+        "name": "width",
+        "type": "Double",
+        "description": "Sets the width (if size units is “Pixels”) or horizontal resolution",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "height",
+        "type": "Double",
+        "description": "Sets the height (if size units is “Pixels”) or vertical resolution",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "Extent of the output raster layer.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "nodata",
+        "type": "Double",
+        "description": "Assigns a specified NoData value to output bands",
+        "optional": "True",
+        "default": 0
+      }
+    ]
+  },
   "Feature.smoothByQGIS": {
     "description": "Smooths the geometries in a line or polygon layer by adding more vertices and corners to the feature geometries.",
     "returns": "Feature",

@@ -1,8 +1,9 @@
 package whu.edu.cn.oge
 
-import java.io.{BufferedReader, InputStreamReader, OutputStreamWriter, PrintWriter}
+import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
 
-import com.alibaba.fastjson.{JSON, JSONArray}
+import com.alibaba.fastjson.serializer.SerializerFeature
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.mapalgebra.focal.ZFactor
 import geotrellis.raster.{MultibandTile, Tile}
@@ -18,6 +19,7 @@ import whu.edu.cn.config.GlobalConfig
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
+import scala.io.Source
 
 object QGIS {
   def main(args: Array[String]): Unit = {
@@ -3626,6 +3628,104 @@ object QGIS {
 
     makeChangedRasterRDDFromTif(sc, writePath)
 
+  }
+
+  /**
+   *
+   * @param sc Alias object for SparkContext
+   * @param inputString carbon result
+   * @return
+   */
+  def convertFromString(implicit sc: SparkContext,inputString:String): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val result: JSONObject = JSON.parseObject(inputString)
+    val jsonData = JSON.toJSONString(result, SerializerFeature.DisableCircularReferenceDetect)
+    val carbonData  = jsonData.replace("'", "\"")//去除转义符
+
+    val carbonJson: JSONObject = JSON.parseObject(carbonData)
+    val array:JSONObject = carbonJson.getJSONObject("prefectureCarbons")
+    val entries = array.entrySet().iterator()
+
+    val cityExent = Source.fromFile("/mnt/storage/qgis/data/boundary.geojson").mkString
+    val cityJsonObject: JSONObject = JSON.parseObject(cityExent)
+    val city = cityJsonObject.getJSONArray("features")
+
+    while (entries.hasNext) {
+      val entry = entries.next()
+      val value = entry.getValue.asInstanceOf[JSONObject]
+      val cityEntries = value.entrySet().iterator()
+      while (cityEntries.hasNext) {
+        val cityEntry = cityEntries.next()
+        for(i <- 0 until city.size()){
+          if(cityEntry.getKey == city.getJSONObject(i).getJSONObject("properties").getString("name")){
+            val cityValue = cityEntry.getValue.asInstanceOf[JSONObject]
+            val carbonEmission = cityValue.getDouble("carbonEmission")
+            city.getJSONObject(i).getJSONObject("properties").put("carbon",carbonEmission)
+          }
+        }
+      }
+    }
+
+    val geoJSONString: String = cityJsonObject.toJSONString()
+
+    val feature = geometry(sc, geoJSONString, "EPSG:4326")
+    feature
+
+  }
+
+  /**
+   *
+   * @param sc Alias object for SparkContext
+   * @param input Input vector layer
+   * @param field Defines the attribute field from which the attributes for the pixels should be chosen
+   * @param burn A fixed value to burn into a band for all features.
+   * @param useZ Indicates that a burn value should be extracted from the “Z” values
+   * @param units Units to use when defining the output raster size/resolution.
+   * @param width Sets the width (if size units is “Pixels”) or horizontal resolution
+   * @param height Sets the height (if size units is “Pixels”) or vertical resolution
+   * @param extent Extent of the output raster layer.
+   * @param nodata Assigns a specified NoData value to output bands
+   * @return
+   */
+  def gdalRasterize(implicit sc: SparkContext,
+                        input: RDD[(String, (Geometry, Map[String, Any]))],
+                        field: String = "",
+                        burn: Double = 0,
+                        useZ: String = "False",
+                        units: String = "0",
+                        width: Double = 1,
+                        height: Double = 1,
+                        extent:String = "",
+                        nodata: Double = 0)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val geoJSONString = toGeoJSONString(input)
+    val time = System.currentTimeMillis()
+    val outputShpPath = algorithmData+"gdalRasterize_" + time + ".json"
+
+    // 创建PrintWriter对象
+    val writer: BufferedWriter = new BufferedWriter(new FileWriter(outputShpPath))
+
+    // 写入JSON字符串
+    writer.write(geoJSONString)
+
+    // 关闭PrintWriter
+    writer.close()
+
+    val writePath = algorithmData+"gdalRasterize_" + time + "_out.tif"
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize.py --input "$outputShpPath" --field "$field" --burn $burn --use-z "$useZ" --units "$units" --width $width --height $height --extent "$extent" --nodata $nodata --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 }
 
