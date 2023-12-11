@@ -15,10 +15,10 @@ import scala.util.control.Breaks.{break, breakable}
  * @param paddingSize paddingSize for current splice
  */
 final case class OgeTerrainTile(
-    arr: Array[Double], cols: Int, rows: Int,
-    metaData: TileLayerMetadata[SpaceTimeKey],
-    paddingSize: Int = 0
-) extends DoubleArrayTile(arr, cols, rows) {
+                                 arr: Array[Double], cols: Int, rows: Int,
+                                 metaData: TileLayerMetadata[SpaceTimeKey],
+                                 paddingSize: Int = 0
+                               ) extends DoubleArrayTile(arr, cols, rows) {
 
   override val cellType: DoubleCells with NoDataHandling = DoubleCellType
 
@@ -438,7 +438,8 @@ final case class OgeTerrainTile(
   /**
    * cellSize of the raster, we expect x y directions of the raster to have consistent resolutions.
    */
-  val cellSize: Double = metaData.cellSize.width
+  val cellSize: Double = if(metaData.cellSize.width < 1) metaData.cellSize.width * 111192.41337043587 else metaData.cellSize.width
+  //  val cellSize: Double = metaData.cellSize.width
 
   /**
    * area of each cell
@@ -468,7 +469,7 @@ final case class OgeTerrainTile(
   /**
    * noDataValue of the raster
    */
-  val noDataValue: Double = metaData.cellType match {
+  var noDataValue: Double = metaData.cellType match {
     case x: DoubleUserDefinedNoDataCellType => x.noDataValue
     case x: FloatUserDefinedNoDataCellType => x.noDataValue.toDouble
     case x: IntUserDefinedNoDataCellType => x.noDataValue.toDouble
@@ -505,8 +506,8 @@ object OgeTerrainTile {
    * @return [[OgeTerrainTile]]
    */
   def from(arr: Array[Double], cols: Int, rows: Int,
-    metaData: TileLayerMetadata[SpaceTimeKey], paddingSize: Int
-  ): OgeTerrainTile = {
+           metaData: TileLayerMetadata[SpaceTimeKey], paddingSize: Int
+          ): OgeTerrainTile = {
     new OgeTerrainTile(arr, cols, rows, metaData, paddingSize)
   }
 
