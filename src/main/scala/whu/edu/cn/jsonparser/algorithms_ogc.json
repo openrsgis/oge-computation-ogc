@@ -8908,6 +8908,142 @@
       }
     ]
   },
+  "Coverage.terrPitrouter": {
+    "description": "DEM洼地探测.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the pitrouter."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrPiteliminator": {
+    "description": "DEM洼地填充.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the piteliminator."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the piteliminator, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct piteliminator calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowdirection": {
+    "description": "DEM流向.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowdirection."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowdirection, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowdirection calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowaccumulation": {
+    "description": "DEM流量.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The dem coverage to compute the flowaccumulation."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowaccumulation calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrChannelnetwork": {
+    "description": "DEM河网矢量化.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "DEM",
+        "type": "Coverage",
+        "description": "The dem coverage to compute the channelnetwork."
+      },
+      {
+        "name": "FlowAccumulation",
+        "type": "Coverage",
+        "description": "The flowaccumulation coverage to compute the channelnetwork.(Necessary.)"
+      },
+      {
+        "name": "FlowDirection",
+        "type": "Coverage",
+        "description": "The flowdirection coverage to compute the channelnetwork.(Optional.If it does not exist, it will be calculated based on DEM.)"
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct channelnetwork calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "threshold",
+        "type": "Double",
+        "description": "Filter rivers with flow accumulation greater than the threshold."
+      }
+    ]
+  },
+  "Coverage.terrFilter": {
+    "description": "栅格值筛选.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to filter."
+      },
+      {
+        "name": "min",
+        "type": "List[Double]",
+        "description": "condition filter list min(include min), for example, '(10)' for an interval min, '(0, 180)' for two interval min"
+      },
+      {
+        "name": "max",
+        "type": "List[Double]",
+        "description": "condition filter list max(include max), for example, '(20)' for an interval max, '(90, 270)' for two interval max"
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct filter calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
   "Cube.normalize": {
     "description": "Calculate the normalize index from the cube",
     "returns": "Cube",
