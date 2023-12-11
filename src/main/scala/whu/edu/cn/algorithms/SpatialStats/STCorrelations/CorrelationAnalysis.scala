@@ -35,14 +35,11 @@ object CorrelationAnalysis {
     } else {
       throw new IllegalArgumentException("only support person and spearman correlation now")
     }
-    //    cor.map(t=>t.foreach(println))
-    val corrMat = Matrix.create(rows = n, cols = n, data = cor.flatten)
+    val crrStr = cor.map(t => t.map(i => i.formatted("%-10.4f")))
+    val corrMat = Matrix.create(rows = n, cols = n, data = crrStr.flatten)
     var outStr = s"$method correlation result:\n"
-    //    println(s"$method correlation result:")
-    //    propertyArr.foreach(t => printf("%-20s\t", t))
-    //    print("\n")
     //    println(corrMat)
-    propertyArr.foreach(t => outStr += f"$t%-22s")
+    propertyArr.foreach(t => outStr += f"$t%-12s")
     outStr += "\n" + corrMat.toString()
     println(outStr)
     //    corrMat

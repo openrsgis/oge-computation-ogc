@@ -46,7 +46,7 @@ object TemporalAutoCorrelation {
     } else {
       throw new IllegalArgumentException("Illegal Argument of time lag")
     }
-    val str = acfarr.mkString("ACF-list(", ", ", ")")
+    val str = acfarr.map(t=>t.formatted("%.4f")).mkString("ACF-list(", ", ", ")")
     println(str)
     str
   }

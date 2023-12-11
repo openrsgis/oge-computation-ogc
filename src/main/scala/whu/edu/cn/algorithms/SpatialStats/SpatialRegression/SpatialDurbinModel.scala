@@ -143,14 +143,19 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
   }
 
   private def firstvalue(): Array[Double] = {
-    if (_eigen == null) {
-      _eigen = breeze.linalg.eig(spweight_dmat.t)
+    try {
+      if (_eigen == null) {
+        _eigen = breeze.linalg.eig(spweight_dmat.t)
+      }
+      val eigvalue = _eigen.eigenvalues.copy
+      //    val min = eigvalue.toArray.min
+      //    val max = eigvalue.toArray.max
+      val median = (eigvalue.toArray.min + eigvalue.toArray.max) / 2.0
+      Array(median, median)
     }
-    val eigvalue = _eigen.eigenvalues.copy
-    //    val min = eigvalue.toArray.min
-    //    val max = eigvalue.toArray.max
-    val median = (eigvalue.toArray.min + eigvalue.toArray.max) / 2.0
-    Array(median, median)
+    catch {
+      case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
+    }
   }
 
   private def paras4optimize(optarr: Array[Double]): Double = {
