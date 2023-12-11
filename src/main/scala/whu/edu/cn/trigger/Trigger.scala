@@ -665,8 +665,10 @@ object Trigger {
         case "Coverage.bufferByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_buffer(sc, input = coverageRddList(args("input")), distances = args("distances"), unit = args("unit")))
         case "Coverage.crossByGrass" =>
+          isActioned(sc, args("input"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> GrassUtil.r_cross(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.patchByGrass" =>
+          isActioned(sc, args("input"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> GrassUtil.r_patch(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.latlongByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_latlong(sc, input = coverageRddList(args("input"))))
