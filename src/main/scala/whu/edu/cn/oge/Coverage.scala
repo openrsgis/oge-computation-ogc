@@ -39,7 +39,7 @@ import whu.edu.cn.util._
 
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZonedDateTime}
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -570,7 +570,7 @@ object Coverage {
    * @return
    */
   def date(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
-    coverage._1.first()._1.getSpaceTimeKey().time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    Instant.ofEpochMilli(coverage._1.first()._1.getSpaceTimeKey().time.toInstant.toEpochMilli.*(1000L)).atZone(ZoneId.systemDefault()).toLocalDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
   }
 
   /**
@@ -1201,18 +1201,63 @@ object Coverage {
       return (coverage._1.filter(t => false), coverage._2)
     }
 
-    val indexList: List[Int] = bands.map(bandsAlready.indexOf)
+
 
     (coverage._1.map(t => {
       val bandNames: mutable.ListBuffer[String] = t._1.measurementName
       val tileBands: Vector[Tile] = t._2.bands
       val newBandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
       var newTileBands: Vector[Tile] = Vector.empty[Tile]
-      for (index <- indexList) {
-        newBandNames += bandNames(index)
-        newTileBands :+= tileBands(index)
+      for (index <- bandNames.indices) {
+        if(bands.contains(bandNames(index))){
+          newBandNames += bandNames(index)
+          newTileBands :+= tileBands(index)
+        }
       }
       (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(newTileBands))
+    }), coverage._2)
+
+  }
+
+  def selectBandsForMakingRDD(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), bands: List[String])
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val bandsAlready: mutable.ListBuffer[String] = coverage._1.map(t => {
+      t._1.measurementName
+    }).reduce((a, b) => {
+      a.union(b)
+    }).distinct
+    val duplicates: List[String] = bands.diff(bands.distinct)
+    if (duplicates.nonEmpty) {
+      val errorMessage = s"Error: Duplicate bands found: ${duplicates.mkString(", ")}"
+      throw new IllegalArgumentException(errorMessage)
+    }
+    val missingElements: List[String] = bands.filterNot(bandsAlready.contains)
+    if (missingElements.nonEmpty) {
+      //      val errorMessage = s"Error: Bands not found: ${missingElements.mkString(", ")}"
+      return (coverage._1.filter(t => false), coverage._2)
+    }
+
+
+    (coverage._1.map(t => {
+      val bandNames: mutable.ListBuffer[String] = t._1.measurementName
+      val tileBands: Vector[Tile] = t._2.bands
+      val newBandNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+      var newTileBands: Vector[Tile] = Vector.empty[Tile]
+      for (index <- bandNames.indices) {
+        if (bands.contains(bandNames(index))) {
+          newBandNames += bandNames(index)
+          newTileBands :+= tileBands(index)
+        }
+      }
+      if(newBandNames.isEmpty){
+        //先赋值，后面filter掉
+        newBandNames+="null"
+        (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(tileBands.head))
+      }else{
+        (SpaceTimeBandKey(t._1.spaceTimeKey, newBandNames), MultibandTile(newTileBands))
+      }
+    }).filter(c =>{
+      c._1.measurementName.head != "null"
     }), coverage._2)
 
   }
@@ -1223,14 +1268,14 @@ object Coverage {
    * @param coverage The coverage from which the left operand bands are taken.
    * @return Map[String, String]  key: band name, value: band type
    */
-  def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Map[String, String] = {
-    var bandTypesMap: mutable.Map[String, String] = mutable.Map.empty[String, String]
+  def bandTypes(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): String = {
+    var res :String = new String()
     var bandNames: mutable.ListBuffer[String] = coverage._1.first()._1.measurementName
     coverage._1.first()._2.bands.foreach(tile => {
-      bandTypesMap += (bandNames.head -> tile.cellType.toString())
+      res += s"${bandNames.head} -> ${tile.cellType.toString()} \n"
       bandNames = bandNames.tail
     })
-    bandTypesMap.toMap
+    res
   }
 
 
@@ -1405,15 +1450,16 @@ object Coverage {
    * @return
    */
   def remap(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), from: List[Int],
-            to: List[Double], defaultValue: Option[Double] = None): (RDD[(SpaceTimeBandKey, MultibandTile)],
+            to: List[Double], defaultValue: String = null): (RDD[(SpaceTimeBandKey, MultibandTile)],
     TileLayerMetadata[SpaceTimeKey]) = {
     if (to.length != from.length) {
       throw new IllegalArgumentException("The length of two lists not same!")
     }
-    if (defaultValue.isEmpty) {
+
+    if (defaultValue == null) {
       coverageTemplate(coverage, (tile) => RemapWithoutDefaultValue(tile, from.zip(to).toMap))
     } else {
-      coverageTemplate(coverage, (tile) => RemapWithDefaultValue(tile, from.zip(to).toMap, defaultValue.get))
+      coverageTemplate(coverage, (tile) => RemapWithDefaultValue(tile, from.zip(to).toMap, defaultValue.toDouble))
     }
   }
 
@@ -2544,7 +2590,13 @@ object Coverage {
    */
   def metadata(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : String = {
-    TileLayerMetadata.toString
+    val crs = coverage._2.crs.toString()
+    val extent = coverage._2.extent.toString()
+    val cellSize = coverage._2.cellheight
+
+    val string = s"CRS: $crs \nExtent: $extent \nResolution: $cellSize"
+
+    string
   }
 
   /**
@@ -2800,7 +2852,7 @@ object Coverage {
       }
       else {
         //用户没选波段,且原coverage波段数>3
-        val bandsDefault: List[String] = List[String]("B4", "B3", "B2")
+        val bandsDefault: List[String] = coverageVis1._1.first()._1.measurementName.slice(0,3).toList
         val coverageVis3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = selectBands(coverageVis1, bandsDefault)
         resultCoverage = addStyles3Band(coverageVis3, visParam)
       }
@@ -3288,46 +3340,19 @@ object Coverage {
     else {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
-    jsonObject.put("raster", rasterJsonObject)
+//    jsonObject.put("raster", rasterJsonObject)
+//
+//    val outJsonObject: JSONObject = new JSONObject
+//    outJsonObject.put("workID", Trigger.dagId)
+//    outJsonObject.put("json", jsonObject)
 
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
+    PostSender.shelvePost("raster",rasterJsonObject)
 
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+//    println("outputJSON: ", outJsonObject.toJSONString)
 
-    println("outputJSON: ", outJsonObject.toJSONString)
-
-    try{
-//      val jedis: Jedis = new JedisUtil().getJedis
-//      zIndexStrArray.foreach(zIndexStr => {
-//        val key: String = Trigger.dagMd5 + ":solvedTile:" + Trigger.level + zIndexStr
-//        jedis.sadd(key, "cached")
-//        jedis.expire(key, REDIS_CACHE_TTL)
-//      })
-//      jedis.close()
-    }
-
-
-
-    // 清空list
-    Trigger.optimizedDagMap.clear()
-    Trigger.coverageCollectionMetadata.clear()
-    Trigger.lazyFunc.clear()
-    Trigger.coverageCollectionRddList.clear()
-    Trigger.coverageRddList.clear()
-    Trigger.zIndexStrArray.clear()
-    JsonToArg.dagMap.clear()
-    //    // TODO lrx: 以下为未检验
-    Trigger.tableRddList.clear()
-    Trigger.kernelRddList.clear()
-    Trigger.featureRddList.clear()
-    Trigger.cubeRDDList.clear()
-    Trigger.cubeLoad.clear()
-
-    if (sc.master.contains("local")) {
-      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
-    }
+//    if (sc.master.contains("local")) {
+//      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
+//    }
 
   }
 
@@ -3352,7 +3377,11 @@ object Coverage {
 
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
-
+    //通知前端
+    val outJsonObject: JSONObject = new JSONObject
+    outJsonObject.put("dagId", Trigger.dagId)
+    outJsonObject.put("state", "success")
+    sendPost(DAG_ROOT_URL + "/updateStatus", outJsonObject.toJSONString)
     //    minIOUtil.releaseMinioClient(client)
 
   }

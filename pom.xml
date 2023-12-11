@@ -195,7 +195,11 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/netcdfAll-5.5.3.jar</systemPath>
         </dependency>
-
+        <dependency>
+            <groupId>com.baidubce</groupId>
+            <artifactId>bce-java-sdk</artifactId>
+            <version>0.10.283</version>
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>

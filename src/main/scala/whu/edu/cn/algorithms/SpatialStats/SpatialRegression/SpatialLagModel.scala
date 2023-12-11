@@ -7,6 +7,7 @@ import org.locationtech.jts.geom.Geometry
 
 import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+import whu.edu.cn.oge.Service
 
 import scala.collection.mutable
 
@@ -61,7 +62,12 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
    * @return 返回拟合值（Array）形式
    */
   def fit(): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
-    val interval = get_interval()
+    var interval = (0.0, 1.0)
+    try {
+      interval = get_interval()
+    } catch {
+      case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
+    }
     val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)._1
     _lagY = _Y - rho * _wy
     val betas = get_betas(X = _1X, Y = _lagY)
@@ -73,7 +79,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     val llrho = rho4optimize(rho)
 
     fitvalue = (_Y - res).toArray
-    var printStr = "------------------------------Spatial Lag Model------------------------------\n" +
+    var printStr = "\n------------------------------Spatial Lag Model------------------------------\n" +
       f"rho is $rho%.6f\n"
     printStr += try_LRtest(-llrho, lly)
     printStr += f"coeffients:\n$betas_map\n"
@@ -174,13 +180,14 @@ object SpatialLagModel {
    * @return featureRDD and diagnostic String
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String)
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
     val mdl = new SpatialLagModel
     mdl.init(featureRDD)
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    (sc.makeRDD(re._1), re._2)
+    Service.print(re._2,"Spatial Lag Model","String")
+    sc.makeRDD(re._1)
   }
 
 }

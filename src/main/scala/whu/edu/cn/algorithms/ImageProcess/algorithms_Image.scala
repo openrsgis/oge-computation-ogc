@@ -4,8 +4,7 @@ import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalizeDouble}
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalize, globalNormalizeDouble}
 import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.paddingRDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
@@ -23,43 +22,36 @@ object algorithms_Image {
   //双边滤波
 
   //高斯滤波
-  def gaussianBlur(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), ksize: List[Int], sigmaX: Double, sigmaY: Double, borderType: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def gaussianBlur(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), d: Int, sigmaX: Double, sigmaY: Double, borderType: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     //ksize：高斯核的大小，正奇数；sigmaX sigmaY：X和Y方向上的方差
     // 构建高斯核矩阵
-    var kernel = Array.ofDim[Double](ksize(0), ksize(1))
-    for (i <- 0 until ksize(0); j <- 0 until ksize(1)) {
-      val x = math.abs(i - ksize(0) / 2) //模糊距离x
-      val y = math.abs(j - ksize(1) / 2) //模糊距离y
+    var kernel = Array.ofDim[Double](d, d)
+    for (i <- 0 until d; j <- 0 until d) {
+      val x = math.abs(i - d / 2) //模糊距离x
+      val y = math.abs(j - d / 2) //模糊距离y
       kernel(i)(j) = math.exp(-x * x / (2 * sigmaX * sigmaX) - y * y / (2 * sigmaY * sigmaY)) //距离中心像素的模糊距离
     }
     // 归一化高斯核函数
     val sum = kernel.flatten.sum
     kernel = kernel.map(_.map(_ / sum))
-    val radius: Int = math.max(ksize(0) / 2, ksize(1) / 2)
-    //    val nnn = coverage._1.map(t=>{
-    //      println(t._1.measurementName) //为什么这里不能打印，后面map中就可以打印，给我重定向到哪儿去了
-    //    })
-    val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(coverage, radius,borderType)
+    val radius: Int = d / 2
+    val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(coverage, radius, borderType)
     val cellType: CellType = coverage._1.first()._2.cellType
-    println(cellType)
 
     //遍历每个像素，对其进行高斯滤波
     def gaussian_single(image: Tile, kernel: Array[Array[Double]]): Tile = {
-      //      println(image.isNoDataTile)
       val numRows = image.rows
       val numCols = image.cols
-      //      val newImage = Array.ofDim[Double](numRows, numCols)
       val doubleArrayTile: DoubleArrayTile = DoubleArrayTile.empty(numCols, numRows)
       for (i <- radius until numRows - radius; j <- radius until numCols - radius) { //处理区域内的像素
         var sum: Double = 0.0
         var weightSum: Double = 1.0 //TODO 11.9 用于解决边缘像素进行高斯滤波，周边有nodata的情况，padding内的处理策略先没管
         breakable {
-          for (k <- 0 until ksize(0); l <- 0 until ksize(1)) {
-            val x = i - ksize(0) / 2 + k
-            val y = j - ksize(1) / 2 + l
+          for (k <- 0 until d; l <- 0 until d) {
+            val x = i - d / 2 + k
+            val y = j - d / 2 + l
             if (isNoData(image.getDouble(j, i))) {
               doubleArrayTile.setDouble(j, i, Double.NaN) // 因为newImage是Double的数组，所以即使赋给它NoData，它也会化为一个最小数
-              //            println(i,j,image.get(j,i), Double.NaN)
               break
             }
             if (isNoData(image.getDouble(y, x))) {
@@ -68,7 +60,6 @@ object algorithms_Image {
             }
             else sum += kernel(k)(l) * image.getDouble(y, x)
           }
-          //        val roundedSum: Double = BigDecimal(sum).setScale(0, BigDecimal.RoundingMode.HALF_UP).toDouble
           doubleArrayTile.setDouble(j, i, sum / weightSum) //TODO 权重相加，不需要再做除法，逻辑还有待确认
         }
       }
@@ -351,7 +342,7 @@ object algorithms_Image {
 
 
   //canny边缘提取
-  def cannyEdgeDetection(coverage: RDDImage,lowCoefficient:Double= -1.0,highCoefficient:Double = -1.0)
+  def cannyEdgeDetection(coverage: RDDImage, lowCoefficient: Double = -1.0, highCoefficient: Double = -1.0)
   : RDDImage = {
     def gradXTileCalculate(tile: Tile, radius: Int): Tile = {
       val rows = tile.rows
@@ -643,13 +634,13 @@ object algorithms_Image {
     val normalizedGrad: RDDImage = globalNormalizeDouble(singleBandGradRDDImage, 0, 255)
     val threshold255 = OTSU(normalizedGrad)
     val minMaxMap = findMinMaxValueDouble(singleBandGradRDDImage)
-    println("thewshold:" + threshold255.toString)
+    println("threshold:" + threshold255.toString)
     val minGrad = minMaxMap(0)._1
     val maxGrad = minMaxMap(0)._2
     val normalThreshold = (threshold255.toDouble / 255.0) * (maxGrad - minGrad) + minGrad
     println(normalThreshold)
     val maxGradient = processedRDD.map(_.max).reduce(math.max)
-
+    //    println("经过非极大抑制后的最大幅值为：" + maxGradient)
 
     val newRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = PaddingVriable._1.map(
       image => {
@@ -664,13 +655,14 @@ object algorithms_Image {
         var highThreshold: Double = 6 * normalThreshold
         var lowThreshold: Double = 3 * normalThreshold
         if (highCoefficient != -1) {
-          highThreshold = highThreshold * highCoefficient
+          highThreshold = normalThreshold * highCoefficient
         }
-        if (lowCoefficient == -1) {
-          lowThreshold = lowThreshold * lowCoefficient
+        if (lowCoefficient != -1) {
+          lowThreshold = normalThreshold * lowCoefficient
         }
+        if (image._1.spaceTimeKey.col == 0 && image._1.spaceTimeKey.row == 0) println("Low threshold: " + lowThreshold.toString + ",high threshold: " + highThreshold.toString)
 
-        val cannyEdgeExtraction = doubleThresholdDetection(NMS, 0.3 * maxGradient, 0.1 * maxGradient, radius)
+        val cannyEdgeExtraction = doubleThresholdDetection(NMS, highThreshold, lowThreshold, radius)
 
 
         (image._1, MultibandTile(cannyEdgeExtraction).crop(radius, radius, cols - radius - 1, rows - radius - 1))
