@@ -7472,6 +7472,11 @@
         "description": "feature"
       },
       {
+        "name": "distance",
+        "type": "Double",
+        "description": "distance"
+      },
+      {
         "name": "crs",
         "type": "String",
         "description": "CRS"
@@ -7565,7 +7570,7 @@
   },
   "Feature.propertyNames": {
     "description": "Returns the names of properties on this element.",
-    "returns": "List[List[String]]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -7629,7 +7634,7 @@
   },
   "Feature.area": {
     "description": "compute area",
-    "returns": "List[Double]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
