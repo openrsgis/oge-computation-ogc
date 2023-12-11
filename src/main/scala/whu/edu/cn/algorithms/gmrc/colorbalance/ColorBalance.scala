@@ -1,19 +1,18 @@
 package whu.edu.cn.algorithms.gmrc.colorbalance
 
+import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.gdal.gdal.{Band, Dataset, Driver, gdal}
 import org.gdal.gdalconst.gdalconstConstants
 import org.gdal.ogr.ogr
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
-import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance.{WeightMapRDD, getDimensionSize}
-import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection.whu_geometric_correction
+import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger.dagId
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 
-import java.awt.image.BufferedImage
 import java.io.File
-import javax.imageio.ImageIO
 import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, ceil, sqrt}
 
@@ -111,13 +110,13 @@ object ColorBalance {
     colorBalance(sc, null)
     val endTime = System.nanoTime()
     val costTime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
-    println("\nspark cost time is: " + costTime.toString + "s")
+    println("spark cost time is: " + costTime.toString + "s")
 
     sc.stop()
   }
 
-  def colorBalance(sc: SparkContext, coverage: RDDImage): Any = {
-    val isTest = true // 此变量为 true 时，本算子在本地可以正常正确运行
+  def colorBalance(sc: SparkContext, coverage: RDDImage): RDDImage = {
+    val isTest = false // 此变量为 true 时，本算子在本地可以正常正确运行
 
     if (isTest) {
       val inputImgPath: String = new String("./data\\testdata\\colorbalance\\input\\Ortho_8bit.tiff")
@@ -128,7 +127,12 @@ object ColorBalance {
 
       val outputfile_absolute_path = new File(outputImgPath).getAbsolutePath
       val hadoop_file_path = "/" + outputfile_absolute_path
-      makeChangedRasterRDDFromTif(sc, hadoop_file_path)  // 此函数耗时为本算法的 40% 到 50%
+      val startTime = System.nanoTime()
+      val tuple: RDDImage = makeChangedRasterRDDFromTif(sc, hadoop_file_path) // 此函数耗时为本算法的 30% 以上
+      val endTime = System.nanoTime()
+      val costTime = ((endTime.toDouble - startTime.toDouble) / 1e6d) / 1000
+      println("makeChangedRasterRDDFromTif() cost time is: " + costTime.toString + "s")
+      tuple
     } else {
       val inputSavePath = s"/mnt/storage/${dagId}_colorBalance.tiff"
       saveRasterRDDToTif(coverage, inputSavePath)

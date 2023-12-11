@@ -30,6 +30,7 @@ import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 
@@ -1017,6 +1018,8 @@ object Trigger {
           coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
+        case "algorithms.gmrc.colorbalance.ColorBalance.colorBalance" =>
+          coverageRddList += (UUID -> ColorBalance.colorBalance(sc, coverageRddList(args("coverage"))))
 
         //Cube
         //        case "Service.getCollections" =>

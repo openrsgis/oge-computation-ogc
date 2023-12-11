@@ -9227,23 +9227,34 @@
   },
   "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection": {
     "description": "image geometric correction",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",
-        "type": "RDDImage",
+        "type": "Coverage",
         "description": "image to be geometrically corrected"
       }
     ]
   },
   "algorithms.gmrc.mosaic.Mosaic.splitMosaic": {
     "description": "image split mosaic",
-    "returns": "RDDImage",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverageCollection",
-        "type": "Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]",
+        "type": "Collections",
         "description": "map of image paths to be mosaiced"
+      }
+    ]
+  },
+  "algorithms.gmrc.colorbalance.ColorBalance.colorBalance": {
+    "description": "image color balance",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "image to be color balance"
       }
     ]
   }
