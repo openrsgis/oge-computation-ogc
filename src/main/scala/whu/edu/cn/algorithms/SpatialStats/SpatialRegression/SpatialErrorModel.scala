@@ -65,7 +65,12 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
    * @return 返回拟合值（Array）形式
    */
   def fit(): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
-    val interval = get_interval()
+    var interval = (0.0, 1.0)
+    try {
+      interval = get_interval()
+    } catch {
+      case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
+    }
     val lambda = goldenSelection(interval._1, interval._2, function = lambda4optimize)._1
     //    println(s"lambda is $lambda")
     _errorX = _1X - lambda * _wx
