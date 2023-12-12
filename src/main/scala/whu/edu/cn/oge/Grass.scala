@@ -335,8 +335,7 @@ object GrassUtil {
   }
 
 
-  def r_cross(sc: SparkContext, input: Map[String,
-    (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])])={
+  def r_cross(sc: SparkContext, input: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])])={
     var outputTiffPath_1: ListBuffer[String] = ListBuffer.empty
     var outputTiffPath_1_out: ListBuffer[String] = ListBuffer.empty
     for(img <-input) {
@@ -397,8 +396,7 @@ object GrassUtil {
     tif
   }
 
-  def r_patch(sc: SparkContext, input: Map[String,
-    (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])])={
+  def r_patch(sc: SparkContext, input: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])])={
     var outputTiffPath_1: ListBuffer[String] = ListBuffer.empty
     var outputTiffPath_1_out: ListBuffer[String] = ListBuffer.empty
     for(img <-input) {
