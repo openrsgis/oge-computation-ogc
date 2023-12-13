@@ -7521,7 +7521,7 @@
   },
   "Feature.withDistance": {
     "description": "Returns true iff the geometries are within a specified distance.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7562,7 +7562,8 @@
       {
         "name": "properties",
         "type": "List[String]",
-        "description": "The properties to copy. If omitted, all properties are copied."
+        "description": "The properties to copy. If omitted, all properties are copied.",
+        "default": "None"
       }
     ]
   },

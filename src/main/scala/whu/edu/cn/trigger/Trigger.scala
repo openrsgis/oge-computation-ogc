@@ -1011,8 +1011,12 @@ object Trigger {
             stringList += (UUID -> Feature.withDistance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
               featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble))
         case "Feature.copyProperties" =>
-          val propertyList = args("properties").replace("[", "").replace("]", "")
-            .replace("\"", "").split(",").toList
+          val propertyList: List[String] =
+            if (args("properties") == "[]") {
+              Nil // 表示空列表
+            } else {
+              args("properties").replace("[", "").replace("]", "").replace("\"", "").split(",").toList
+            }
           featureRddList += (UUID -> Feature.copyProperties(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], propertyList))
         case "Feature.get" =>

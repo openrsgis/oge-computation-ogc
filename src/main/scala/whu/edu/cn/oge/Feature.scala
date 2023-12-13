@@ -193,7 +193,15 @@ object Feature {
 
   private def getMapFromStr(str: String): Map[String, Any] = {
     val map = Map.empty[String, Any]
-    map += (str.stripPrefix("{").split(':')(0) -> str.stripSuffix("}").split(':')(1))
+    val keyValuePairs = str.stripPrefix("{").stripSuffix("}").split(',')
+    keyValuePairs.foreach { pair =>
+      val keyValue = pair.split(':')
+      if (keyValue.length == 2) {
+        val key = keyValue(0).trim
+        val value = keyValue(1).trim
+        map += (key -> value)
+      }
+    }
     map
   }
 
@@ -794,7 +802,7 @@ object Feature {
                      featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], properties: List[String] = null): RDD[(String, (Geometry, Map[String, Any]))] = {
     var destnation = featureRDD1.first()._2._2
     var source = featureRDD2.first()._2._2
-    if (properties == null)
+    if (properties == null || properties.isEmpty)
       destnation = destnation ++ source
     else {
       for (property <- properties)
@@ -868,7 +876,7 @@ object Feature {
    */
   def set(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): RDD[(String, (Geometry, Map[String, Any]))] = {
     featureRDD.map(t => {
-      (t._1, (t._2._1, t._2._2 ++ getMapFromJsonStr(property)))
+      (t._1, (t._2._1, t._2._2 ++ getMapFromStr(property)))
     })
   }
 
