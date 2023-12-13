@@ -2951,7 +2951,6 @@ object QGIS {
 
     val outputShpPath = algorithmData+"gdalRasterizeOver_" + time + ".shp"
     val outputTiffPath = algorithmData+"gdalRasterizeOver_" + time + ".tif"
-    val writePath = algorithmData+"gdalRasterizeOver_" + time + "_out.tif"
 
     saveFeatureRDDToShp(input, outputShpPath)
     saveRasterRDDToTif(inputRaster, outputTiffPath)
@@ -2960,7 +2959,7 @@ object QGIS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add "$add" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add "$add"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2970,7 +2969,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, inputRaster, writePath)
+    makeRasterRDDFromTif(sc, inputRaster, outputTiffPath)
   }
 
   /**

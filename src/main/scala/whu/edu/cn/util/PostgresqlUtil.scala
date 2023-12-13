@@ -66,11 +66,11 @@ object PostgresqlUtil {
   //  val user = "geocube"
   ////  val password = "ypfamily608"
   //  val password = "ypfamilysouthgis"
-  var url = ""
-  var driver = ""
-  var user = ""
+  var url = POSTGRESQL_URL
+  var driver = POSTGRESQL_DRIVER
+  var user = POSTGRESQL_USER
   //  val password = "ypfamily608"
-  var password = ""
+  var password = POSTGRESQL_PWD
 
   def get(): Unit = {
     //    val prop = new Properties()
