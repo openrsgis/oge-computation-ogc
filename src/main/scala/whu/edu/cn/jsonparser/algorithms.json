@@ -6749,11 +6749,6 @@
         "description": "The cube to visualize"
       },
       {
-        "name": "products",
-        "type": "Object",
-        "description": "The products in cube to visualize"
-      },
-      {
         "name": "bands",
         "type": "Object",
         "description": "",
