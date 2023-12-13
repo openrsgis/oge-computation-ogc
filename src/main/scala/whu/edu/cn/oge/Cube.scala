@@ -49,7 +49,7 @@ import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
-import whu.edu.cn.util.{JedisUtil, MinIOUtil}
+import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender}
 
 import java.io.{File, FileWriter, Reader, StringReader}
 import java.nio.charset.Charset
@@ -752,15 +752,15 @@ object Cube {
       tol_urljson.append(urlObject)
 
 
-      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
-      val jedis: Jedis = new JedisUtil().getJedis
-      jedis.select(1)
-      zIndexStrArray.foreach(zIndexStr => {
-        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
-        jedis.sadd(key, "cached")
-        jedis.expire(key, REDIS_CACHE_TTL)
-      })
-      jedis.close()
+//      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+//      val jedis: Jedis = new JedisUtil().getJedis
+//      jedis.select(1)
+//      zIndexStrArray.foreach(zIndexStr => {
+//        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+//        jedis.sadd(key, "cached")
+//        jedis.expire(key, REDIS_CACHE_TTL)
+//      })
+//      jedis.close()
 
       if (sc.master.contains("local")) {
         whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube")
@@ -795,13 +795,8 @@ object Cube {
     jsonObject.put("bands", bands)
     jsonObject.put("dimension", dim.toArray)
 
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("status", "success")
-    outJsonObject.put("cube", jsonObject)
 
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-
-    println(outJsonObject.toJSONString)
+    PostSender.shelvePost("cube",jsonObject)
 
 
 
