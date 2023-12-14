@@ -806,9 +806,9 @@ object Trigger {
         case "Coverage.terrHillshade" =>
           coverageRddList += (UUID -> calculator.HillShade(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrPitrouter" =>
-          coverageRddList += (UUID -> calculator.PitRouter(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.PitRouter(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-factor").toDouble))
         case "Coverage.terrPiteliminator" =>
-          coverageRddList += (UUID -> calculator.PitEliminator(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.PitEliminator(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-factor").toDouble))
         case "Coverage.terrFlowdirection" =>
           coverageRddList += (UUID -> calculator.FlowDirection(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
         case "Coverage.terrFlowaccumulation" =>
