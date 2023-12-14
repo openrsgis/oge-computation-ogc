@@ -1,14 +1,11 @@
 package whu.edu.cn.algorithms.gmrc.colorbalance
 
-import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.gdal.gdal.{Band, Dataset, Driver, gdal}
 import org.gdal.gdalconst.gdalconstConstants
 import org.gdal.ogr.ogr
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
-import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger.dagId
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 
@@ -119,7 +116,7 @@ object ColorBalance {
     val isTest = false // 此变量为 true 时，本算子在本地可以正常正确运行
 
     if (isTest) {
-      val inputImgPath: String = new String("./data\\testdata\\colorbalance\\input\\Ortho_8bit.tiff")
+      val inputImgPath: String = new String("./data\\testdata\\colorbalance\\input\\Ortho_8bit.tif")
       //      val inputImgPath: String = new String("./data/testdata/geometric_correction/input/GF1_WFV3_E115.6_N38.9_20160529_L1A0001610300__1.tiff")
       val outputImgPath: String = new String("./data\\testdata\\colorbalance\\output\\Ortho_8bit_output_spark.tif")
 
@@ -160,10 +157,17 @@ object ColorBalance {
     }
 
     m_data.m_image_scale = (dataset.getRasterXSize, dataset.getRasterYSize)
-    println("image size (x = " + m_data.m_image_scale._1 + ", y = " + m_data.m_image_scale._2 + ")")
-    m_data.m_splitBlock_total_count = (5, 4)
-    if (m_data.m_image_scale._1 < m_data.m_image_scale._2) {
-      m_data.m_splitBlock_total_count = (m_data.m_splitBlock_total_count._2, m_data.m_splitBlock_total_count._1)
+//    println("image size (x = " + m_data.m_image_scale._1 + ", y = " + m_data.m_image_scale._2 + ")")
+    m_data.m_splitBlock_total_count = (5, 5)
+    if (0 == m_data.m_image_scale._1 % m_data.m_splitBlock_total_count._1) {
+      m_data.m_splitBlock_total_count = (6, 5)
+    }
+    if (0 == m_data.m_image_scale._2 % m_data.m_splitBlock_total_count._2) {
+      m_data.m_splitBlock_total_count = (5, 6)
+    }
+    if ((0 == m_data.m_image_scale._1 % m_data.m_splitBlock_total_count._1) &&
+      (0 == m_data.m_image_scale._2 % m_data.m_splitBlock_total_count._2)) {
+      m_data.m_splitBlock_total_count = (6, 6)
     }
 
     val blockSizeX = m_data.m_image_scale._1 / m_data.m_splitBlock_total_count._1
@@ -175,7 +179,7 @@ object ColorBalance {
     m_data.setRealScale_general()
     //    m_data.setRealScale_special((1, 5), (1, 3))
     m_data.setCounts()
-    println("split block (x = " + m_data.m_splitBlock_total_count._1 + ", y = " + m_data.m_splitBlock_total_count._2 + ")")
+//    println("split block (x = " + m_data.m_splitBlock_total_count._1 + ", y = " + m_data.m_splitBlock_total_count._2 + ")")
 
     val imgBlkPixelArr: ImagesPixelArr = readSplitImage(dataset, imgBlkGeoArr)
     val lineImgBlkArr: Array[Array[((Int, Int), Array[Array[Short]])]] = lineSplitImgBlk(imgBlkPixelArr)
@@ -358,7 +362,7 @@ object ColorBalance {
 
     val xWriteScale: (Int, Int) = (cbdImgBlkSortArr(0)._1._1, cbdImgBlkSortArr(cbdImgBlkSortArr.length - 1)._1._1)
     val yWriteScale: (Int, Int) = (cbdImgBlkSortArr(0)._1._2, cbdImgBlkSortArr(cbdImgBlkSortArr.length - 1)._1._2)
-//    val xBlockCounts = xWriteScale._2 - xWriteScale._1 + 1
+    //    val xBlockCounts = xWriteScale._2 - xWriteScale._1 + 1
     val yBlockCounts = yWriteScale._2 - yWriteScale._1 + 1
 
     for (xWrite <- xWriteScale._1 to xWriteScale._2) {
@@ -802,16 +806,16 @@ object ColorBalance {
                 meanImgBlk = bigImageVariance
               }
 
-//              val a1 = weight_meanVar_nbh_arr(m)(n)
-//              val a2 = weightNbhArr(m)(n)(i)(j)
-//              val a3 = bigImageVariance
-//              val a4 = meanImgBlk
-//              val b1 = bigImageMean
-//              val b2 = meanVarianceNbhArr(m)(n)._1
-//              val tempa = (a1 * a2 * a3 / a4).toFloat
-//              val tempb = (a1 * a2 * (b1 - a3 / a4 * b2)).toFloat
-//              aParameter(i)(j) += tempa // a 系数公式
-//              bParameter(i)(j) += tempb // b 系数公式
+              //              val a1 = weight_meanVar_nbh_arr(m)(n)
+              //              val a2 = weightNbhArr(m)(n)(i)(j)
+              //              val a3 = bigImageVariance
+              //              val a4 = meanImgBlk
+              //              val b1 = bigImageMean
+              //              val b2 = meanVarianceNbhArr(m)(n)._1
+              //              val tempa = (a1 * a2 * a3 / a4).toFloat
+              //              val tempb = (a1 * a2 * (b1 - a3 / a4 * b2)).toFloat
+              //              aParameter(i)(j) += tempa // a 系数公式
+              //              bParameter(i)(j) += tempb // b 系数公式
 
               aParameter(i)(j) += (weight_meanVar_nbh_arr(m)(n) * weightNbhArr(m)(n)(i)(j) * bigImageVariance / meanImgBlk).toFloat // a 系数公式
               bParameter(i)(j) += (weight_meanVar_nbh_arr(m)(n) * weightNbhArr(m)(n)(i)(j) *
