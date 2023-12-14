@@ -1,0 +1,19 @@
+package whu.edu.cn.util;
+
+import com.baidubce.auth.DefaultBceCredentials;
+import com.baidubce.services.bos.BosClient;
+import com.baidubce.services.bos.BosClientConfiguration;
+
+public class BosClientUtil {
+    String ACCESS_KEY_ID = "ALTAKetCGvRVdSsIa1C9CR81Cm";
+    String SECRET_ACCESS_ID = "45624b0ae0c94c66877f75c6219b25f7";
+    String ENDPOINT = "https://s3.bj.bcebos.com";
+    public BosClient getClient() {
+        BosClientConfiguration config = new BosClientConfiguration();
+        config.setCredentials(new DefaultBceCredentials(ACCESS_KEY_ID, SECRET_ACCESS_ID));
+        config.setEndpoint(ENDPOINT);
+        BosClient client = new BosClient(config);
+        return client;
+    }
+
+}

@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Geometry
 
 import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+import whu.edu.cn.oge.Service
 
 import scala.collection.mutable
 
@@ -79,7 +80,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     val lly = get_logLik(get_res(X = _1X))
 
     fitvalue = (_Y - res).toArray
-    var printStr = "-----------------------------Spatial Durbin Model-----------------------------\n" +
+    var printStr = "\n-----------------------------Spatial Durbin Model-----------------------------\n" +
       f"rho is $rho%.6f\nlambda is $lambda%.6f\n"
     printStr += try_LRtest(-llopt, lly, chi_pama = 2)
     printStr += f"coeffients:\n$betas_map\n"
@@ -142,14 +143,19 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
   }
 
   private def firstvalue(): Array[Double] = {
-    if (_eigen == null) {
-      _eigen = breeze.linalg.eig(spweight_dmat.t)
+    try {
+      if (_eigen == null) {
+        _eigen = breeze.linalg.eig(spweight_dmat.t)
+      }
+      val eigvalue = _eigen.eigenvalues.copy
+      //    val min = eigvalue.toArray.min
+      //    val max = eigvalue.toArray.max
+      val median = (eigvalue.toArray.min + eigvalue.toArray.max) / 2.0
+      Array(median, median)
     }
-    val eigvalue = _eigen.eigenvalues.copy
-    //    val min = eigvalue.toArray.min
-    //    val max = eigvalue.toArray.max
-    val median = (eigvalue.toArray.min + eigvalue.toArray.max) / 2.0
-    Array(median, median)
+    catch {
+      case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
+    }
   }
 
   private def paras4optimize(optarr: Array[Double]): Double = {
@@ -187,13 +193,14 @@ object SpatialDurbinModel {
    * @return featureRDD and diagnostic String
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String)
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))]= {
     val mdl = new SpatialDurbinModel
     mdl.init(featureRDD)
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    (sc.makeRDD(re._1), re._2)
+    Service.print(re._2,"Spatial Durbin Model","String")
+    sc.makeRDD(re._1)
   }
 
 }

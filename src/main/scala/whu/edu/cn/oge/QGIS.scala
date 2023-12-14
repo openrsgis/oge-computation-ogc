@@ -1,8 +1,9 @@
 package whu.edu.cn.oge
 
-import java.io.{BufferedReader, InputStreamReader, OutputStreamWriter, PrintWriter}
+import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
 
-import com.alibaba.fastjson.{JSON, JSONArray}
+import com.alibaba.fastjson.serializer.SerializerFeature
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.mapalgebra.focal.ZFactor
 import geotrellis.raster.{MultibandTile, Tile}
@@ -18,6 +19,7 @@ import whu.edu.cn.config.GlobalConfig
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
+import scala.io.Source
 
 object QGIS {
   def main(args: Array[String]): Unit = {
@@ -655,6 +657,112 @@ object QGIS {
       versouSshUtil(host, userName, password, port)
       val st =
         raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_polygonstolines.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+
+  }
+
+  /**
+   *
+   * @param sc    Alias object for SparkContext
+   * @param input Input line vector layer
+   * @param valueForward Value set in the direction field to identify edges with a forward direction
+   * @param valueBoth Value set in the direction field to identify bidirectional edges
+   * @param startPoint Point feature representing the start point of the routes
+   * @param defaultDirection If a feature has no value set in the direction field or if no direction field is set, then this direction value is used. One of: 0 — Forward direction 1 — Backward direction 2 — Both directions
+   * @param strategy The type of path to calculate. One of: 0 — Shortest 1 — Fastest
+   * @param tolerance  Two lines with nodes closer than the specified tolerance are considered connected
+   * @param defaultSpeed  Value to use to calculate the travel time if no speed field is provided for an edge
+   * @param directionField  The field used to specify directions for the network edges.
+   * @param endPoint  Point feature representing the end point of the routes.
+   * @param valueBackward  Value set in the direction field to identify edges with a backward direction.
+   * @param speedField  Field providing the speed value (in ) for the edges of the network when looking for the fastest path.
+   * @return The output line vector layer from polygons
+   */
+  def nativeShortestPathPointToPoint(implicit sc: SparkContext,
+                                   input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                     valueForward: String = "",
+                                     valueBoth: String = "",
+                                     startPoint: String = "",
+                                     defaultDirection: String = "2",
+                                     strategy: String = "0",
+                                     tolerance: Double = 0.0,
+                                     defaultSpeed: Double = 50.0,
+                                     directionField: String = "",
+                                     endPoint: String = "",
+                                     valueBackward: String = "",
+                                     speedField: String = ""):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val strategyInput: String = Map(
+      "0" -> "0",
+      "1" -> "1"
+    ).getOrElse(strategy, "0")
+
+    val defaultDirectionInput: String = Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2"
+    ).getOrElse(defaultDirection, "0")
+
+    val time = System.currentTimeMillis()
+
+    val outputTiffPath = algorithmData + "nativeShortestPathPointToPoint_" + time + ".shp"
+    val writePath = algorithmData + "nativeShortestPathPointToPoint_" + time + "_out.shp"
+
+    saveFeatureRDDToShp(input, outputTiffPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_shortestpathpointtopoint.py --input "$outputTiffPath" --value-forward "$valueForward" --value-both "$valueBoth" --start-point "$startPoint" --default-direction "$defaultDirectionInput" --strategy "$strategyInput" --tolerance $tolerance --default-speed $defaultSpeed --direction-field "$directionField" --end-point "$endPoint" --value-backward "$valueBackward" --speed-field "$speedField" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+
+  }
+
+  /**
+   *
+   * @param sc           Alias object for SparkContext
+   * @param input        Point vector layer to use for sampling.
+   * @param rasterCopy   Raster layer to sample at the given point locations.
+   * @param columnPrefix Prefix for the names of the added columns.
+   * @return The output layer containing the sampled values.
+   */
+  def nativeRasterSampling(implicit sc: SparkContext,
+                           input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                           rasterCopy: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                           columnPrefix: String = ""):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+    val outputShpPath = algorithmData + "nativeRasterSampling_" + time + ".shp"
+    val outputTiffPath = algorithmData+"nativeRasterSamplingRater_" + time + ".tif"
+    val writePath = algorithmData + "nativeRasterSampling_" + time + "_out.shp"
+    
+    saveFeatureRDDToShp(input, outputShpPath)
+    saveRasterRDDToTif(rasterCopy, outputTiffPath)
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rastersampling.py --input "$outputShpPath" --rastercopy "$outputTiffPath" --column-prefix "$columnPrefix" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3410,36 +3518,24 @@ object QGIS {
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
-
-    val outputTiffPath = algorithmData+"ndvi_" + time + ".tif"
+    val writePath = algorithmData+"rsNDVI_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"rsNDVI_" + time + ".tif"
     saveRasterRDDToTif(input, outputTiffPath)
-    val rsPath = rsAlgorithm + "calculate_ndvi.py"
-    val pb = new ProcessBuilder(pythonPath, rsPath)
-    pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectError(ProcessBuilder.Redirect.PIPE)
-    System.out.println("Process start")
-    val process = pb.start
-    // 获取子进程的输入输出流
-    val inputStream = process.getInputStream
-    val outputStream = process.getOutputStream
-    val writer = new PrintWriter(new OutputStreamWriter(outputStream), true)
-    writer.println(outputTiffPath)
-    writer.close()
 
-    // 读取子进程的输出
-    val reader = new BufferedReader(new InputStreamReader(inputStream))
-    var line : String = ""
-    var writePath: String = ""
-    while (line != null) {
-      println(line)
-      writePath = line
-      line = reader.readLine
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_ndvi.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
     }
-    // 等待子进程结束并检查退出代码
-    val exitCode = process.waitFor
-    println("Exited with error code " + exitCode)
-    reader.close()
+
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
@@ -3454,46 +3550,50 @@ object QGIS {
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
-
-    val outputTiffPath = algorithmData+"lswi_" + time + ".tif"
+    val writePath = algorithmData+"rsLSWI_" + time + "_out.tif"
+    val outputTiffPath = algorithmData+"rsLSWI_" + time + ".tif"
     saveRasterRDDToTif(input, outputTiffPath)
-    val rsPath = rsAlgorithm + "calculate_lswi.py"
-    val pb = new ProcessBuilder(pythonPath, rsPath)
-    pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectError(ProcessBuilder.Redirect.PIPE)
-    System.out.println("Process start")
-    val process = pb.start
-    // 获取子进程的输入输出流
-    val inputStream = process.getInputStream
-    val outputStream = process.getOutputStream
-    val writer = new PrintWriter(new OutputStreamWriter(outputStream), true)
-    writer.println(outputTiffPath)
-    writer.close()
 
-    // 读取子进程的输出
-    val reader = new BufferedReader(new InputStreamReader(inputStream))
-    var line : String = ""
-    var writePath: String = ""
-    while (line != null) {
-      println(line)
-      writePath = line
-      line = reader.readLine
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --input "$outputTiffPath" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
     }
-    // 等待子进程结束并检查退出代码
-    val exitCode = process.waitFor
-    println("Exited with error code " + exitCode)
-    reader.close()
+
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
+  /**
+   *
+   * @param extend
+   * @return
+   */
   def energyUtilisation(extend:String):String= {
-    val dataPath:mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty[String]
-    dataPath.append("/home/geocube/oge/oge-server/dag-boot/qgis/data/")
-    dataPath.append("/home/geocube/oge/oge-server/dag-boot/qgis/data/")
-    dataPath(0)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --input $extend""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    "extend"
   }
+
 
   /**
    *
@@ -3503,42 +3603,129 @@ object QGIS {
    * @return
    */
   def calNPP(implicit sc: SparkContext,
-              inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),energyPara :String):
+             inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),energyPara :String):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
+    val writePath = algorithmData+"rsNPP_" + time + "_out.tif"
+    val outputLSWIPath = algorithmData+"rsLSWI_" + time + ".tif"
+    val outputNDVIPath = algorithmData+"rsNDVI_" + time + ".tif"
+    saveRasterRDDToTif(inputLSWI, outputLSWIPath)
+    saveRasterRDDToTif(inputNDVI, outputNDVIPath)
 
-    val outputTiffPath = algorithmData+"npp_" + time + ".tif"
-    saveRasterRDDToTif(inputLSWI, outputTiffPath)
-    val rsPath = rsAlgorithm + "calculate_npp.py"
-    val pb = new ProcessBuilder(pythonPath, rsPath)
-    pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-    pb.redirectError(ProcessBuilder.Redirect.PIPE)
-    System.out.println("Process start")
-    val process = pb.start
-    // 获取子进程的输入输出流
-    val inputStream = process.getInputStream
-    val outputStream = process.getOutputStream
-    val writer = new PrintWriter(new OutputStreamWriter(outputStream), true)
-    writer.println(outputTiffPath)
-    writer.close()
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --inputLSWI "$outputLSWIPath" --inputNDVI "$outputNDVIPath"   --output "$writePath"""".stripMargin
 
-    // 读取子进程的输出
-    val reader = new BufferedReader(new InputStreamReader(inputStream))
-    var line : String = ""
-    var writePath: String = ""
-    while (line != null) {
-      println(line)
-      writePath = line
-      line = reader.readLine
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
     }
-    // 等待子进程结束并检查退出代码
-    val exitCode = process.waitFor
-    println("Exited with error code " + exitCode)
-    reader.close()
+
     makeChangedRasterRDDFromTif(sc, writePath)
 
+  }
+
+  /**
+   *
+   * @param sc Alias object for SparkContext
+   * @param inputString carbon result
+   * @return
+   */
+  def convertFromString(implicit sc: SparkContext,inputString:String): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val result: JSONObject = JSON.parseObject(inputString)
+    val jsonData = JSON.toJSONString(result, SerializerFeature.DisableCircularReferenceDetect)
+    val carbonData  = jsonData.replace("'", "\"")//去除转义符
+
+    val carbonJson: JSONObject = JSON.parseObject(carbonData)
+    val array:JSONObject = carbonJson.getJSONObject("prefectureCarbons")
+    val entries = array.entrySet().iterator()
+
+    val cityExent = Source.fromFile("/mnt/storage/qgis/data/boundary.geojson").mkString
+    val cityJsonObject: JSONObject = JSON.parseObject(cityExent)
+    val city = cityJsonObject.getJSONArray("features")
+
+    while (entries.hasNext) {
+      val entry = entries.next()
+      val value = entry.getValue.asInstanceOf[JSONObject]
+      val cityEntries = value.entrySet().iterator()
+      while (cityEntries.hasNext) {
+        val cityEntry = cityEntries.next()
+        for(i <- 0 until city.size()){
+          if(cityEntry.getKey == city.getJSONObject(i).getJSONObject("properties").getString("name")){
+            val cityValue = cityEntry.getValue.asInstanceOf[JSONObject]
+            val carbonEmission = cityValue.getDouble("carbonEmission")
+            city.getJSONObject(i).getJSONObject("properties").put("carbon",carbonEmission)
+          }
+        }
+      }
+    }
+
+    val geoJSONString: String = cityJsonObject.toJSONString()
+
+    val feature = geometry(sc, geoJSONString, "EPSG:4326")
+    feature
+
+  }
+
+  /**
+   *
+   * @param sc Alias object for SparkContext
+   * @param input Input vector layer
+   * @param field Defines the attribute field from which the attributes for the pixels should be chosen
+   * @param burn A fixed value to burn into a band for all features.
+   * @param useZ Indicates that a burn value should be extracted from the “Z” values
+   * @param units Units to use when defining the output raster size/resolution.
+   * @param width Sets the width (if size units is “Pixels”) or horizontal resolution
+   * @param height Sets the height (if size units is “Pixels”) or vertical resolution
+   * @param extent Extent of the output raster layer.
+   * @param nodata Assigns a specified NoData value to output bands
+   * @return
+   */
+  def gdalRasterize(implicit sc: SparkContext,
+                        input: RDD[(String, (Geometry, Map[String, Any]))],
+                        field: String = "",
+                        burn: Double = 0,
+                        useZ: String = "False",
+                        units: String = "0",
+                        width: Double = 1,
+                        height: Double = 1,
+                        extent:String = "",
+                        nodata: Double = 0)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val geoJSONString = toGeoJSONString(input)
+    val time = System.currentTimeMillis()
+    val outputShpPath = algorithmData+"gdalRasterize_" + time + ".json"
+
+    // 创建PrintWriter对象
+    val writer: BufferedWriter = new BufferedWriter(new FileWriter(outputShpPath))
+
+    // 写入JSON字符串
+    writer.write(geoJSONString)
+
+    // 关闭PrintWriter
+    writer.close()
+
+    val writePath = algorithmData+"gdalRasterize_" + time + "_out.tif"
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize.py --input "$outputShpPath" --field "$field" --burn $burn --use-z "$useZ" --units "$units" --width $width --height $height --extent "$extent" --nodata $nodata --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 }
 
