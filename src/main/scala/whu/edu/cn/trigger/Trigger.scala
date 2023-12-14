@@ -36,6 +36,7 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 import whu.edu.cn.oge.Sheet.CsvData
+import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -1092,6 +1093,8 @@ object Trigger {
           coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
+        case "algorithms.gmrc.colorbalance.ColorBalance.colorBalance" =>
+          coverageRddList += (UUID -> ColorBalance.colorBalance(sc, coverageRddList(args("coverage"))))
 
         //Cube
         //        case "Service.getCollections" =>

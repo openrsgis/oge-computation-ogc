@@ -10099,5 +10099,16 @@
         "description": "The point feature to convert."
       }
     ]
+  },
+  "algorithms.gmrc.colorbalance.ColorBalance.colorBalance": {
+    "description": "image color balance",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "image to be color balance"
+            }
+    ]
   }
 }
