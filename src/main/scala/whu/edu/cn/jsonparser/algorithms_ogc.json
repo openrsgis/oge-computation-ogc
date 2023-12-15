@@ -8995,7 +8995,7 @@
   },
   "Coverage.terrChannelnetwork": {
     "description": "DEM河网矢量化.",
-    "returns": "Cube",
+    "returns": "Feature",
     "args": [
       {
         "name": "DEM",
@@ -9005,12 +9005,12 @@
       {
         "name": "FlowAccumulation",
         "type": "Coverage",
-        "description": "The flowaccumulation coverage to compute the channelnetwork.(Necessary.)"
+        "description": "The flowaccumulation coverage to compute the channelnetwork."
       },
       {
         "name": "FlowDirection",
         "type": "Coverage",
-        "description": "The flowdirection coverage to compute the channelnetwork.(Optional.If it does not exist, it will be calculated based on DEM.)"
+        "description": "The flowdirection coverage to compute the channelnetwork."
       },
       {
         "name": "z-Factor",
