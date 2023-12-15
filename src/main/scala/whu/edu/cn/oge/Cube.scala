@@ -486,7 +486,7 @@ object Cube {
         // get the first image
         val rasterTileLayerRddFirstDim: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = (rasterTileLayerRdd.filter {
           rdd => {
-            rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions) && rdd._1.measurementName == xband
+            rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && (if (rdd._1.additionalDimensions != null) isAddDimensionSame(rdd._1.additionalDimensions) else true) && rdd._1.measurementName == xband
           }
         }, rasterTileLayerRdd._2)
         var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim._1.map {
@@ -587,7 +587,7 @@ object Cube {
         // get the first image
         val rasterTileLayerRddFirstDim: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = (rasterTileLayerRdd.filter {
           rdd => {
-            rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && isAddDimensionSame(rdd._1.additionalDimensions) && rdd._1.measurementName == xband
+            rdd._1.spaceTimeKey.time.toInstant.toEpochMilli == minTime && (if (rdd._1.additionalDimensions != null) isAddDimensionSame(rdd._1.additionalDimensions) else true) && rdd._1.measurementName == xband
           }
         }, rasterTileLayerRdd._2)
         var rasterMultiBandTileRdd: RDD[(SpaceTimeKey, MultibandTile)] = rasterTileLayerRddFirstDim._1.map {
@@ -720,7 +720,6 @@ object Cube {
       Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
         if (z == Trigger.level) {
           val layerId: LayerId = LayerId(Trigger.dagId, z)
-          println(layerId)
           // If the layer exists already, delete it out before writing
           if (attributeStore.layerExists(layerId)) {
             //        new FileLayerManager(attributeStore).delete(layerId)
@@ -743,13 +742,11 @@ object Cube {
       //    val TimeUtcString: String = dateTimeFormatter.format(Time)
       tol_Time.append(Time)
       val Extent: String = tileRdd._2.extent.toString()
-      println(Extent)
       val subExtent: String = Extent.substring(6, Extent.length).replace("(", "[").replace(")", "]")
       tol_Extent.append(subExtent)
 
       val urlObject: JSONObject = new JSONObject
       urlObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId + "/{z}/{x}/{y}.png")
-      println(urlObject.toJSONString)
       tol_urljson.append(urlObject)
 
 
@@ -1299,10 +1296,11 @@ object Cube {
 //    coverage1._1.map{x => x._1.measurementName}.foreach(x => println(x))
 
     var vis = new VisualizationParam
-    vis.setAllParam(bands = "[B3,B4]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
+    vis.setAllParam(bands = "ndvi", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
 
 //    val coverage2:(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Cube.addStyles(coverage1, vis)
-    Cube.visualizeOnTheFly(sc, coverage1, vis)
+    val coverage2: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = Cube.NDVI(tileLayerRddWithMeta = coverage1, bandNames = List("B3", "B4"))
+    visualizeOnTheFly(sc, coverage2, vis)
 
   }
 
