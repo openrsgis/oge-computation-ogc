@@ -7454,7 +7454,7 @@
   },
   "Feature.withDistance": {
     "description": "Returns true iff the geometries are within a specified distance.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7495,7 +7495,8 @@
       {
         "name": "properties",
         "type": "List[String]",
-        "description": "The properties to copy. If omitted, all properties are copied."
+        "description": "The properties to copy. If omitted, all properties are copied.",
+        "default": "None"
       }
     ]
   },
@@ -9052,7 +9053,7 @@
   },
   "Coverage.terrChannelnetwork": {
     "description": "DEM河网矢量化.",
-    "returns": "Cube",
+    "returns": "Feature",
     "args": [
       {
         "name": "DEM",
@@ -9062,12 +9063,12 @@
       {
         "name": "FlowAccumulation",
         "type": "Coverage",
-        "description": "The flowaccumulation coverage to compute the channelnetwork.(Necessary.)"
+        "description": "The flowaccumulation coverage to compute the channelnetwork."
       },
       {
         "name": "FlowDirection",
         "type": "Coverage",
-        "description": "The flowdirection coverage to compute the channelnetwork.(Optional.If it does not exist, it will be calculated based on DEM.)"
+        "description": "The flowdirection coverage to compute the channelnetwork."
       },
       {
         "name": "z-Factor",
@@ -9994,6 +9995,16 @@
         "description": "The point feature to convert."
       }
     ]
-  }
-
+  },
+  "algorithms.gmrc.colorbalance.ColorBalance.colorBalance": {
+    "description": "image color balance",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "image to be color balance"
+      }
+    ]
+  },
 }

@@ -24,3 +24,8 @@ data/testdata/mosaic/output/project.prj
 data/testdata/mosaic/output/project.seam
 data/testdata/mosaic/output/project.txt
 *.log
+src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/temp.scala
+src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/ColorBalanceNoSpark.scala
+src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/ColorBalanceNoSpark.scala
+src/main/scala/whu/edu/cn/algorithms/gmrc/util/temp.java
+src/main/scala/whu/edu/cn/algorithms/gmrc/util/tempScala.scala

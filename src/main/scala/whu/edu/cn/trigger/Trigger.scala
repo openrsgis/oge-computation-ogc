@@ -36,6 +36,7 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 import whu.edu.cn.oge.Sheet.CsvData
+import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 
 import scala.collection.mutable.ArrayBuffer
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
@@ -822,17 +823,17 @@ object Trigger {
         case "Coverage.terrHillshade" =>
           coverageRddList += (UUID -> calculator.HillShade(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrPitrouter" =>
-          coverageRddList += (UUID -> calculator.PitRouter(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.PitRouter(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrPiteliminator" =>
-          coverageRddList += (UUID -> calculator.PitEliminator(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.PitEliminator(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrFlowdirection" =>
-          coverageRddList += (UUID -> calculator.FlowDirection(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.FlowDirection(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
         case "Coverage.terrFlowaccumulation" =>
-          coverageRddList += (UUID -> calculator.FlowAccumulation(rddImage = coverageRddList(args("coverage")), zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.FlowAccumulation(rddImage = coverageRddList(args("coverage")), zFactor = args("z-Factor").toDouble))
         case "Coverage.terrChannelnetwork" =>
-          featureRddList += (UUID -> calculator.ChannelNetwork(rddImage = coverageRddList(args("DEM")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), dirImage = coverageRddList(args("FlowDirection")), zFactor = args("z-factor").toDouble, threshold = args("threshold").toDouble))
+          featureRddList += (UUID -> calculator.ChannelNetwork(rddImage = coverageRddList(args("DEM")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), dirImage = coverageRddList(args("FlowDirection")), zFactor = args("z-Factor").toDouble, threshold = args("threshold").toDouble))
         case "Coverage.terrFilter" =>
-          coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").replaceAll("[()]", "").split(",").map(_.toDouble).toList, max = args("max").replaceAll("[()]", "").split(",").map(_.toDouble).toList, zFactor = args("z-factor").toDouble))
+          coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").replaceAll("[()]", "").split(",").map(_.toDouble).toList, max = args("max").replaceAll("[()]", "").split(",").map(_.toDouble).toList, zFactor = args("z-Factor").toDouble))
 
 
         case "Coverage.addStyles" =>
@@ -1021,8 +1022,12 @@ object Trigger {
             stringList += (UUID -> Feature.withDistance(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
               featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("distance").toDouble))
         case "Feature.copyProperties" =>
-          val propertyList = args("properties").replace("[", "").replace("]", "")
-            .replace("\"", "").split(",").toList
+          val propertyList: List[String] =
+            if (args("properties") == "[]") {
+              Nil // 表示空列表
+            } else {
+              args("properties").replace("[", "").replace("]", "").replace("\"", "").split(",").toList
+            }
           featureRddList += (UUID -> Feature.copyProperties(featureRddList(args("featureRDD1")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], propertyList))
         case "Feature.get" =>
@@ -1098,6 +1103,8 @@ object Trigger {
 //          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
+        case "algorithms.gmrc.colorbalance.ColorBalance.colorBalance" =>
+          coverageRddList += (UUID -> ColorBalance.colorBalance(sc, coverageRddList(args("coverage"))))
 
         //Cube
         //        case "Service.getCollections" =>

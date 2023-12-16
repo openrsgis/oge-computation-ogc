@@ -12,7 +12,7 @@ package whu.edu.cn.algorithms.gmrc.geocorrection
 import com.sun.jna.{Library, Native, Pointer, StringArray}
 
 object GdalCorrectionLibrary {
-  val GDAL_CORRECTION_LIBRARY: GdalCorrectionLibrary = Native.load("./lib/dll/geocorrection/WhuGdalDll", classOf[GdalCorrectionLibrary])
+  val GDAL_CORRECTION_LIBRARY: GdalCorrectionLibrary = Native.load("./lib/dll/geocorrection/libgdalgeocor.so", classOf[GdalCorrectionLibrary])
 }
 
 trait GdalCorrectionLibrary extends Library {
