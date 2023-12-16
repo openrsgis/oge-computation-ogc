@@ -10108,7 +10108,7 @@
         "name": "coverage",
         "type": "Coverage",
         "description": "image to be color balance"
-            }
+      }
     ]
   }
 }
