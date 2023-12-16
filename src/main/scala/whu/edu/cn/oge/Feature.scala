@@ -166,7 +166,9 @@ object Feature {
       val userData = t._2._3
       val reader = new WKTReader()
       val geometry = reader.read(geomStr)
-      val metaMap = getMapFromJsonStr(meta)
+      val jsonobject: JSONObject = JSON.parseObject(meta)
+      val prop = jsonobject.getJSONArray("properties").getJSONObject(0).toString
+      val metaMap = getMapFromJsonStr(prop)
       val userMap = getMapFromJsonStr(userData)
       (rowkey, (geometry, metaMap ++ userMap))
     })
