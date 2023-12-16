@@ -921,7 +921,15 @@ object Cube {
 
   // 为rawTile进行处理
   def genCubeRDD(implicit sc: SparkContext, rdd: RDD[RawTile], meta: TileLayerMetadata[SpaceTimeKey]): ArrayBuffer[(SpaceTimeBandKey, Tile)] = {
-    val mbr: (Double, Double, Double, Double) = rdd.map(t => {
+    val reprojectRdd = rdd.map(t => {
+      if (t.getCrs.toString() != "EPSG:4326") {
+        val reprojectedExtent: Extent = t.getExtent.reproject(t.getCrs, CRS.fromName("EPSG:4326"))
+        t.setCrs(CRS.fromName("EPSG:4326"))
+        t.setExtent(reprojectedExtent)
+      }
+      t
+    })
+    val mbr: (Double, Double, Double, Double) = reprojectRdd.map(t => {
       (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
@@ -940,27 +948,52 @@ object Cube {
     val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
 
     val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
-    var measurement: String = ""
-    var timeKey: Long = 0L
-    val tileArray: ArrayBuffer[(Tile, SpatialKey)] = rdd.map { tile =>
-      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      measurement = tile.getCoverageId
-      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-      (Tile, tile.getSpatialKey)
-    }.collect().to[ArrayBuffer]
-    val tileInfoArray = tileArray.map(t => (t._2, t._1))
-    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileInfoArray)
+//    var measurement: String = ""
+//    var timeKey: Long = 0L
+//    val tileArray: ArrayBuffer[(SpatialKey, Tile)] = reprojectRdd.map { tile =>
+//      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+//      measurement = tile.getCoverageId
+//      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+//      (tile.getSpatialKey, Tile)
+//    }.collect().to[ArrayBuffer]
+//    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
     val ld = meta.layout
+//    val totalTileArray: ArrayBuffer[(String, Tile, Extent, Long)] = ArrayBuffer[(String, Tile, Extent, Long)]()
+    val groupedRdd = reprojectRdd.groupBy(t => t.getMeasurement)
+    val totalTileArray: Array[(String, Tile, Extent, Long)] = groupedRdd.aggregate[Array[(String, Tile, Extent, Long)]](Array.empty[(String, Tile, Extent, Long)])(
+      (acc, group) => {
+        val measurement = group._1
+        val tiles = group._2
+        val tileArray: Array[(SpatialKey, Tile)] = tiles.map { tile =>
+          val tileGet = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+          (tile.getSpatialKey, tileGet)
+        }.toArray
+        val groupMbr: (Double, Double, Double, Double) = tiles.map(t => {
+          (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
+        }).reduce((a, b) => {
+          (math.min(a._1, b._1), math.min(a._2, b._2), math.max(a._3, b._3), math.max(a._4, b._4))
+        })
+        val timeKey = tiles.head.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+        val groupExtent: Extent = Extent(groupMbr._1, groupMbr._2, groupMbr._3, groupMbr._4)
+        val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
+        acc :+ (measurement, totalTile, groupExtent, timeKey)
+      },
+      (acc1, acc2) => acc1 ++ acc2
+    )
+
+    println("totalArray长度为" + totalTileArray.length)
 
     for (col <- _xmin until _xmax; row <- _ymin until _ymax) {
       val geotrellis_j = (gridDimY - 1 - row)
       val tempExtent = ld.mapTransform(SpatialKey(col, geotrellis_j))
-      if (tempExtent.intersects(rddExtent)) {
-        val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
-        val intersectTile: Tile = totalTile.crop(rddExtent, tempExtent)
-        val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
-        removeZeroFromTile(intersectTile)
-        result.append((bandKey, intersectTile))
+      totalTileArray.foreach { case (measurement, totalTile, ex, timeKey) =>
+        if (tempExtent.intersects(ex)) {
+          val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
+          val intersectTile: Tile = totalTile.crop(ex, tempExtent)
+          val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
+          removeZeroFromTile(intersectTile)
+          result.append((bandKey, intersectTile))
+        }
       }
     }
     result
@@ -976,8 +1009,10 @@ object Cube {
     var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
     val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
-    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-
+    var saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+    if (sc.master.contains("local")) {
+      saveFilePath = s"D:\\cog\\out\\${dagId}.tiff"
+    }
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
