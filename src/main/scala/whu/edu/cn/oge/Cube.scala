@@ -33,13 +33,16 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, VisualizationParam}
+import whu.edu.cn.geocube.application.conjoint.Flood.impactedFeaturesService
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
 import whu.edu.cn.geocube.application.gdc.gdcCoverage._
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
 import whu.edu.cn.geocube.core.cube.vector.{FeatureRDD, GeoObject}
 import whu.edu.cn.geocube.core.entity.{GcDimension, GcMeasurement, GcProduct, QueryParams, RasterTile, RasterTileLayerMetadata, SpaceTimeBandKey, VectorGridLayerMetadata}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
+import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
 import whu.edu.cn.geocube.core.vector.grid.GridConf
+import whu.edu.cn.geocube.core.vector.query.QueryVectorObjects
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
 import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.jsonparser.JsonToArg
@@ -1294,7 +1297,6 @@ object Cube {
 
   }
 
-
     def geoJson2Shape(jsonSting: String, shpPath: String): Unit = {
       val map: mutable.Map[String, String] = mutable.Map[String, String]()
       val gjson: GeometryJSON = new GeometryJSON()
@@ -1393,7 +1395,33 @@ object Cube {
       println(map)
     }
 
+  def floodServices(implicit sc: SparkContext, cubeId: String, rasterProductNames: ArrayBuffer[String], vectorProductNames: ArrayBuffer[String], extentString: String, startTime: String, endTime: String): Unit = {
+    //query and access
+    val extent: Array[Double] = extentString.replace("[", "").replace("]", "").split(",").map(_.toDouble)
+    val queryBegin = System.currentTimeMillis()
+    val queryParams = new QueryParams
+    queryParams.setCubeId(cubeId)
+    queryParams.setRasterProductNames(rasterProductNames)
+    queryParams.setVectorProductNames(vectorProductNames)
+    queryParams.setExtent(extent(0), extent(1), extent(2), extent(3))
+    queryParams.setTime(startTime, endTime)
+    val tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) = QueryRasterTiles.getRasterTileArray(queryParams)
+    val gridLayerGeoObjectArray: Array[(SpaceTimeKey, Iterable[GeoObject])] = QueryVectorObjects.getGeoObjectsArray(queryParams)
+    val queryEnd = System.currentTimeMillis()
+    var geoObjectsNum = 0
+    val outputDir = s"${GlobalConfig.Others.tempFilePath}"
+    gridLayerGeoObjectArray.foreach(x=> geoObjectsNum += x._2.size)
+    println("tiles sum: " + tileLayerArrayWithMeta._1.length)
+    println("geoObjects sum: " + geoObjectsNum)
 
+    //flood
+    val analysisBegin = System.currentTimeMillis()
+    impactedFeaturesService(sc, tileLayerArrayWithMeta, gridLayerGeoObjectArray, outputDir)
+    val analysisEnd = System.currentTimeMillis()
+
+    println("Query time of " + tileLayerArrayWithMeta._1.length + " raster tiles and " + geoObjectsNum + " vector geoObjects: " + (queryEnd - queryBegin))
+    println("Analysis time: " + (analysisEnd - analysisBegin))
+  }
 
 
 
