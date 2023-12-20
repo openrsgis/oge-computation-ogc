@@ -125,8 +125,8 @@ object GlobalConfig {
   object Others {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
-    final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
-    final var tmsHost = "120.48.147.38" //tms服务ip
+    final var tmsPath = "http://192.168.32.5/api/oge-tms-png/" //tms服务url
+    final var tmsHost = "192.168.32.5" //tms服务ip
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
