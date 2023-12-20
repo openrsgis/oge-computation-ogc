@@ -92,14 +92,13 @@ object GlobalConfig {
 
   object PostgreSqlConf {
     // PostgreSQL 基础配置
-    var POSTGRESQL_URL: String = "jdbc:postgresql://120.48.44.57:3306/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
+    var POSTGRESQL_URL: String = "jdbc:postgresql://postgresql14.rdsg9oxj6fshpns.rds.bj.baidubce.com:3306/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
     var POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
     var POSTGRESQL_USER: String = "oge"
     var POSTGRESQL_PWD: String = "ypfamily608"
     var POSTGRESQL_MAX_RETRIES: Int = 3
     var POSTGRESQL_RETRY_DELAY: Int = 500
   }
-
   // GcConst
   object GcConf {
     final val localDataRoot = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/data/gdc_api/"
