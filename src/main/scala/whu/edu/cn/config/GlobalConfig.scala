@@ -116,7 +116,7 @@ object GlobalConfig {
     // PostgreSQL 基础配置
     var QGIS_DATA: String = "/mnt/storage/algorithmData/"
     var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
-    var QGIS_HOST: String = "180.76.55.162"
+    var QGIS_HOST: String = "192.168.80.3"
     var QGIS_USERNAME: String = "root"
     var QGIS_PASSWORD: String = "Ypfamily608!"
     var QGIS_PORT: Int = 22
@@ -124,11 +124,13 @@ object GlobalConfig {
   object Others {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
-    final var tmsPath = "http://192.168.32.5/api/oge-tms-png/" //tms服务url
+    final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
     final var tmsHost = "192.168.32.5" //tms服务ip
+    final var tomcatHost = "120.48.147.38"
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "bmr"
+    final var hbaseHost = "192.168.80.10:2181"
   }
 }

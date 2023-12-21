@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
 import org.apache.hadoop.hbase.filter.{PrefixFilter, RowFilter, SubstringComparator}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{CellUtil, HBaseConfiguration, HColumnDescriptor, HConstants, HTableDescriptor, TableName}
+import whu.edu.cn.config.GlobalConfig.Others.hbaseHost
 
 import scala.collection.mutable.ListBuffer
 
@@ -21,7 +22,7 @@ object HbaseUtil {
   val configuration = HBaseConfiguration.create()
 
   //set zookeeper cluster
-  configuration.set(HConstants.ZOOKEEPER_QUORUM, "120.48.4.142:2181")
+  configuration.set(HConstants.ZOOKEEPER_QUORUM, hbaseHost)
 
   //set RPC timeout
   configuration.set("hbase.rpc.timeout", "200000")
