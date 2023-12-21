@@ -8952,12 +8952,12 @@
       {
         "name": "min",
         "type": "List[Double]",
-        "description": "condition filter list min(include min), for example, '(10)' for an interval min, '(0, 180)' for two interval min"
+        "description": "condition filter list min(include min)"
       },
       {
         "name": "max",
         "type": "List[Double]",
-        "description": "condition filter list max(include max), for example, '(20)' for an interval max, '(90, 270)' for two interval max"
+        "description": "condition filter list max(include max)"
       },
       {
         "name": "z-Factor",
