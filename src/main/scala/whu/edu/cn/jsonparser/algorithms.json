@@ -1418,7 +1418,7 @@
         "description": "raster layer."
       },
       {
-        "name": "extend",
+        "name": "energyPara",
         "type": "String",
         "description": "extend layer."
       }
