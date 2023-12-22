@@ -833,7 +833,7 @@ object Trigger {
         case "Coverage.terrChannelnetwork" =>
           featureRddList += (UUID -> calculator.ChannelNetwork(rddImage = coverageRddList(args("DEM")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), dirImage = coverageRddList(args("FlowDirection")), zFactor = args("z-Factor").toDouble, threshold = args("threshold").toDouble))
         case "Coverage.terrFilter" =>
-          coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").replaceAll("[()]", "").split(",").map(_.toDouble).toList, max = args("max").replaceAll("[()]", "").split(",").map(_.toDouble).toList, zFactor = args("z-Factor").toDouble))
+          coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").slice(1, args("min").length - 1).split(',').toList.map(_.toDouble), max = args("max").slice(1, args("max").length - 1).split(',').toList.map(_.toDouble), zFactor = args("z-Factor").toDouble))
 
 
         case "Coverage.addStyles" =>
