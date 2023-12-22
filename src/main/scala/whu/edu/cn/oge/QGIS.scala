@@ -3615,7 +3615,7 @@ object QGIS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --inputLSWI "$outputLSWIPath" --inputNDVI "$outputNDVIPath"   --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_npp.py --inputLSWI "$outputLSWIPath" --inputNDVI "$outputNDVIPath"   --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
