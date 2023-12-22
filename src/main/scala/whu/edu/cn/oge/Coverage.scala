@@ -39,6 +39,8 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
+import java.io.File
+import scala.sys.process._
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
@@ -2118,7 +2120,7 @@ object Coverage {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
     val extent = coverage._2.extent.reproject(coverage._2.crs, crs)
-    val tl = TileLayout(((extent.xmax - extent.xmin) / (scale * 256)).toInt, ((extent.ymax - extent.ymin) / (scale * 256)).toInt, 256, 256)
+    val tl = TileLayout(math.max(1,((extent.xmax - extent.xmin) / (scale * 256)).toInt), math.max(1,((extent.ymax - extent.ymin) / (scale * 256)).toInt), 256, 256)
     val ld = LayoutDefinition(extent, tl)
     val cellType = coverage._2.cellType
     val srcLayout = coverage._2.layout
@@ -2245,32 +2247,43 @@ object Coverage {
    * @return
    */
 
-  def resample(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), level: Int, mode: String
-              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO 重采样
+  def resample(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), level: Double, mode: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO 重采样
     val resampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
       case _ => geotrellis.raster.resample.NearestNeighbor
     }
-    if (level > 0) {
-      val coverageResampled = coverage._1.map(t => {
-        (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
-      })
-      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, coverage._2.tileCols * (1 << level),
-        coverage._2.tileRows * (1 << level))), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    }
-    else if (level < 0) {
-      val coverageResampled = coverage._1.map(t => {
-        val cols = if ((t._2.cols / (1 << -level)) > 1) Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt else 1
-        val rows = if ((t._2.rows / (1 << -level)) > 1) Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt else 1
-        (t._1, t._2.resample(cols, rows, resampleMethod))
-      })
-      var tileCols = if ((coverage._2.tileCols / (1 << -level)) > 1) Math.ceil(coverage._2.tileCols.toDouble / (1 << -level)).toInt else 1
-      var tileRows = if ((coverage._2.tileRows / (1 << -level)) > 1) Math.ceil(coverage._2.tileRows.toDouble / (1 << -level)).toInt else 1
-      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, tileCols,
-        tileRows)), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    }
-    else coverage
+    val crs = coverage._2.crs
+    val band = coverage._1.first()._1.measurementName
+    val resampleTime = Instant.now.getEpochSecond
+    val coverageTileRDD = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val extent = coverage._2.extent.reproject(coverage._2.crs, crs)
+    val tl = TileLayout(math.max(1, (coverage._2.layout.layoutCols*level).toInt), math.max(1, (coverage._2.layout.layoutCols*level).toInt), 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val cellType = coverage._2.cellType
+    val srcLayout = coverage._2.layout
+    val srcExtent = coverage._2.extent
+    val srcCrs = coverage._2.crs
+    val srcBounds = coverage._2.bounds
+    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
+    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val coverageTileLayerRDD = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData);
+
+
+
+    val (_, coverageTileRDDWithMetadata) = coverageTileLayerRDD.reproject(crs, ld, resampleMethod)
+    val coverageNoband = (coverageTileRDDWithMetadata.mapValues(tile => tile: MultibandTile), coverageTileRDDWithMetadata.metadata)
+    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
+    val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
+    val coverageRDD = coverageNoband.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
+    })
+    (coverageRDD, newMetadata)
   }
 
   /**
@@ -3306,6 +3319,16 @@ object Coverage {
 
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
+    val on_the_fly_path = GlobalConfig.Others.ontheFlyStorage + Trigger.dagId
+    val file = new File(on_the_fly_path)
+    if (file.exists() && file.isDirectory) {
+      println("Delete existed on_the_fly_path")
+      val command = s"rm -rf $on_the_fly_path"
+      println(command)
+      //调用系统命令
+      command.!!
+    }
+
 
     val outputPath: String = GlobalConfig.Others.ontheFlyStorage
     // Create the attributes store that will tell us information about our catalog.
@@ -3332,7 +3355,14 @@ object Coverage {
           }
         }
         else {
-          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+          try{
+            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+          } catch {
+            case e:Exception =>
+              println(e)
+              println("Continue writing Layers!")
+          }
+
         }
       }
     }

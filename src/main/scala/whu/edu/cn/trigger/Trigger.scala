@@ -467,7 +467,7 @@ object Trigger {
         case "Coverage.reproject" =>
           coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = CRS.fromEpsgCode(args("crsCode").toInt), scale = args("resolution").toDouble))
         case "Coverage.resample" =>
-          coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
+          coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toDouble, mode = args("mode")))
         case "Coverage.gradient" =>
           coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
         case "Coverage.clip" =>

@@ -6195,7 +6195,7 @@
       },
       {
         "name": "level",
-        "type": "Int",
+        "type": "Double",
         "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
       },
       {
