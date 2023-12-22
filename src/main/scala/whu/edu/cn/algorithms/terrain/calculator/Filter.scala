@@ -49,7 +49,7 @@ object Filter {
         for(x <- 0 until TIF.nX){
           for(i <- min.indices){
             if(TIF.getDouble(x, y) >= min(i) && TIF.getDouble(x, y) <= max(i))
-              Filter.setDouble(x, y, 1)
+              Filter.setDouble(x, y, TIF.getDouble(x, y))
           }
         }
       }
