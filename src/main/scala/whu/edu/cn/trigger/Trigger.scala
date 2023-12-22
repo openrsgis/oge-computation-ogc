@@ -1472,8 +1472,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/testCubeVis.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1488,8 +1487,8 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
-//    runMain(sc, workTaskJson, dagId, userId)
+//        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+    runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
     sc.stop()
