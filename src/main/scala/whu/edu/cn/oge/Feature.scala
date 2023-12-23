@@ -584,7 +584,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = s"http://${GlobalConfig.Others.tmsHost}:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = s"http://${GlobalConfig.Others.tomcatHost}:8080/oge_vector/vector_" + time + ".json"
 
     storageURL
   }
