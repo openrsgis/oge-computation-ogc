@@ -422,6 +422,7 @@ object ChannelNetwork {
 
           val lineString =
             geometryFactory.createLineString(coordinates.toArray)
+          lineString.setSRID(4326)
           val shape: (String, (Geometry, mutable.Map[String, Any])) = (
             UUID.randomUUID().toString,
             (lineString, getMapFromJsonStr(properties))
