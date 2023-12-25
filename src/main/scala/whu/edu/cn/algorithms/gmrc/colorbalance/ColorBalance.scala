@@ -131,10 +131,10 @@ object ColorBalance {
       println("makeChangedRasterRDDFromTif() cost time is: " + costTime.toString + "s")
       tuple
     } else {
-      val inputSavePath = s"/mnt/storage/${dagId}_colorBalance.tiff"
+      val inputSavePath = s"/mnt/storage/algorithmData/${dagId}_colorBalance.tiff"
       saveRasterRDDToTif(coverage, inputSavePath)
 
-      val resFile = s"/mnt/storage/${dagId}_colorBalance_output_temp.tiff"
+      val resFile = s"/mnt/storage/algorithmData/${dagId}_colorBalance_output_temp.tiff"
       colorBalance(sc, inputSavePath, resFile)
 
       makeChangedRasterRDDFromTif(sc, resFile)
@@ -152,6 +152,8 @@ object ColorBalance {
     initGdal()
 
     val dataset: Dataset = gdal.Open(inputImageFile, gdalconstConstants.GA_ReadOnly)
+    val geoTrans = dataset.GetGeoTransform()
+    val proj = dataset.GetProjection()
     if (null == dataset) {
       println("open input file [" + inputImageFile + "] failed")
     }
@@ -186,6 +188,11 @@ object ColorBalance {
 
     val driver: Driver = gdal.GetDriverByName("GTiff")
     val datasetDes = driver.Create(outputImageFile, m_data.m_image_scale._1, m_data.m_image_scale._2, m_data.m_band_counts, dataset.GetRasterBand(1).getDataType)
+
+    if (datasetDes != null) {
+      datasetDes.SetGeoTransform(geoTrans)
+      datasetDes.SetProjection(proj)
+    }
 
     // 分波段处理图片
     for (bandIndex <- m_data.m_band_scale._1 to m_data.m_band_scale._2) {
@@ -610,7 +617,6 @@ object ColorBalance {
   /**
    * 获取某块像素的邻域均值和方差
    * @param meanVarianceArr  像素块的均值和方差数组
-   * @param bandIndex  波段索引
    * @param x  像素块 x 方向的索引
    * @param y  像素块 y 方向的索引
    * @param xBlockCounts  像素块 x 方向的个数
@@ -835,7 +841,7 @@ object ColorBalance {
   /**
    * 计算匀光后的图像块
    * @param imageBlocksArr  分块后的图像块数组
-   * @param abParameterArr  计算的 a 系数和 b 系数
+   * @param abParameter_rdd  计算的 a 系数和 b 系数
    * @return  匀光后的分块图像
    */
   private def calColorBalancedImageBlocks(imageBlocksArr: Array[Array[Array[Array[Short]]]],
