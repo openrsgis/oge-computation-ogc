@@ -662,7 +662,7 @@ object Trigger {
         case "Coverage.energyUtilisation" =>
           stringList += (UUID -> QGIS.energyUtilisation(args("extend")))
         case "Coverage.calNPP" =>
-          coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),args("energyPara")))
+          coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),stringList(args("energyPara"))))
 
         //    GRASS
         case "Coverage.neighborsByGrass" =>
