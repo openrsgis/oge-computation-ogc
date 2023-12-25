@@ -264,7 +264,12 @@ object QueryVectorObjects {
           val geoObjects: ArrayBuffer[GeoObject] = new ArrayBuffer[GeoObject]()
           if(duplicated){
             geoObjectKeys.foreach { geoObjectkey =>
-              val featureStr = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
+              var featureStr = ""
+              if (cubeId == "27") {
+                featureStr = getVectorMeta("hbase_vector", geoObjectkey, "vectorData", "metaData")
+              } else {
+                featureStr = getVectorMeta("hbase_vector_"+cubeId, geoObjectkey, "vectorData", "metaData")
+              }
               val feature: SimpleFeature = fjson.readFeature(featureStr)
               val geoObject = new GeoObject(geoObjectkey, feature) //一个geoObject和多个网格相交，则该geoObject在多个网格中的geoObjectkey相等,但具有不同的(SpaceTimeKey(col, row, time)
               geoObjects.append(geoObject)
