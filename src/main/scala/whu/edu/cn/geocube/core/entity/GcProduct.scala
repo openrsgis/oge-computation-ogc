@@ -185,7 +185,7 @@ object GcProduct {
    * @return a GcProduct object
    */
   def getProductByKey(cubeId: String, productKey: String, connAddr: String, user: String, password: String,
-                      gcDimensionArray: ArrayBuffer[GcDimension] = null): GcProduct = {
+                      gcDimensionArray: ArrayBuffer[GcDimension] = new ArrayBuffer[GcDimension]()): GcProduct = {
 //    Class.forName("org.postgresql.Driver")
 //    val conn = DriverManager.getConnection(connAddr, user, password)
     Class.forName(POSTGRESQL_DRIVER)

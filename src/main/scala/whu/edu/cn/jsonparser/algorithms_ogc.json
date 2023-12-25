@@ -9118,6 +9118,42 @@
       }
     ]
   },
+  "Cube.floodFillAnalysis": {
+    "description": "Compute flood fill analysis of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cubeId",
+        "type": "String",
+        "description": "The ID of Cube."
+      },
+      {
+        "name": "rasterProductNames",
+        "type": "String",
+        "description": "The names of raster to analyse."
+      },
+      {
+        "name": "vectorProductNames",
+        "type": "String",
+        "description": "The names of vector to analyse."
+      },
+      {
+        "name": "vectorProductNames",
+        "type": "String",
+        "description": "The names of vector to analyse."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent to analyse."
+      },
+      {
+        "name": "timeRange",
+        "type": "List<String>",
+        "description": "The range of time to analyse."
+      }
+    ]
+  },
   "Cube.NDVI": {
     "description": "Compute NDWI of the Cube.",
     "returns": "Cube",

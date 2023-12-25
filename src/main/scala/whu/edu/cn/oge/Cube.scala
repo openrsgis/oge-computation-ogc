@@ -33,13 +33,16 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, VisualizationParam}
+import whu.edu.cn.geocube.application.conjoint.Flood.impactedFeaturesService
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
 import whu.edu.cn.geocube.application.gdc.gdcCoverage._
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
 import whu.edu.cn.geocube.core.cube.vector.{FeatureRDD, GeoObject}
 import whu.edu.cn.geocube.core.entity.{GcDimension, GcMeasurement, GcProduct, QueryParams, RasterTile, RasterTileLayerMetadata, SpaceTimeBandKey, VectorGridLayerMetadata}
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
+import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
 import whu.edu.cn.geocube.core.vector.grid.GridConf
+import whu.edu.cn.geocube.core.vector.query.QueryVectorObjects
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
 import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.jsonparser.JsonToArg
@@ -921,7 +924,15 @@ object Cube {
 
   // 为rawTile进行处理
   def genCubeRDD(implicit sc: SparkContext, rdd: RDD[RawTile], meta: TileLayerMetadata[SpaceTimeKey]): ArrayBuffer[(SpaceTimeBandKey, Tile)] = {
-    val mbr: (Double, Double, Double, Double) = rdd.map(t => {
+    val reprojectRdd = rdd.map(t => {
+      if (t.getCrs.toString() != "EPSG:4326") {
+        val reprojectedExtent: Extent = t.getExtent.reproject(t.getCrs, CRS.fromName("EPSG:4326"))
+        t.setCrs(CRS.fromName("EPSG:4326"))
+        t.setExtent(reprojectedExtent)
+      }
+      t
+    })
+    val mbr: (Double, Double, Double, Double) = reprojectRdd.map(t => {
       (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
     }).reduce((a, b) => {
       (min(a._1, b._1), min(a._2, b._2), max(a._3, b._3), max(a._4, b._4))
@@ -940,27 +951,52 @@ object Cube {
     val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
 
     val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
-    var measurement: String = ""
-    var timeKey: Long = 0L
-    val tileArray: ArrayBuffer[(Tile, SpatialKey)] = rdd.map { tile =>
-      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-      measurement = tile.getCoverageId
-      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-      (Tile, tile.getSpatialKey)
-    }.collect().to[ArrayBuffer]
-    val tileInfoArray = tileArray.map(t => (t._2, t._1))
-    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileInfoArray)
+//    var measurement: String = ""
+//    var timeKey: Long = 0L
+//    val tileArray: ArrayBuffer[(SpatialKey, Tile)] = reprojectRdd.map { tile =>
+//      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+//      measurement = tile.getCoverageId
+//      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+//      (tile.getSpatialKey, Tile)
+//    }.collect().to[ArrayBuffer]
+//    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
     val ld = meta.layout
+//    val totalTileArray: ArrayBuffer[(String, Tile, Extent, Long)] = ArrayBuffer[(String, Tile, Extent, Long)]()
+    val groupedRdd = reprojectRdd.groupBy(t => t.getMeasurement)
+    val totalTileArray: Array[(String, Tile, Extent, Long)] = groupedRdd.aggregate[Array[(String, Tile, Extent, Long)]](Array.empty[(String, Tile, Extent, Long)])(
+      (acc, group) => {
+        val measurement = group._1
+        val tiles = group._2
+        val tileArray: Array[(SpatialKey, Tile)] = tiles.map { tile =>
+          val tileGet = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+          (tile.getSpatialKey, tileGet)
+        }.toArray
+        val groupMbr: (Double, Double, Double, Double) = tiles.map(t => {
+          (t.getExtent.xmin, t.getExtent.ymin, t.getExtent.xmax, t.getExtent.ymax)
+        }).reduce((a, b) => {
+          (math.min(a._1, b._1), math.min(a._2, b._2), math.max(a._3, b._3), math.max(a._4, b._4))
+        })
+        val timeKey = tiles.head.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+        val groupExtent: Extent = Extent(groupMbr._1, groupMbr._2, groupMbr._3, groupMbr._4)
+        val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
+        acc :+ (measurement, totalTile, groupExtent, timeKey)
+      },
+      (acc1, acc2) => acc1 ++ acc2
+    )
+
+    println("totalArray长度为" + totalTileArray.length)
 
     for (col <- _xmin until _xmax; row <- _ymin until _ymax) {
       val geotrellis_j = (gridDimY - 1 - row)
       val tempExtent = ld.mapTransform(SpatialKey(col, geotrellis_j))
-      if (tempExtent.intersects(rddExtent)) {
-        val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
-        val intersectTile: Tile = totalTile.crop(rddExtent, tempExtent)
-        val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
-        removeZeroFromTile(intersectTile)
-        result.append((bandKey, intersectTile))
+      totalTileArray.foreach { case (measurement, totalTile, ex, timeKey) =>
+        if (tempExtent.intersects(ex)) {
+          val spaceTimeKey: SpaceTimeKey = SpaceTimeKey(col, geotrellis_j, timeKey)
+          val intersectTile: Tile = totalTile.crop(ex, tempExtent)
+          val bandKey = SpaceTimeBandKey(spaceTimeKey, measurement, null)
+          removeZeroFromTile(intersectTile)
+          result.append((bandKey, intersectTile))
+        }
       }
     }
     result
@@ -976,8 +1012,10 @@ object Cube {
     var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
     val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
-    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-
+    var saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+    if (sc.master.contains("local")) {
+      saveFilePath = s"D:\\cog\\out\\${dagId}.tiff"
+    }
     val minIOUtil = MinIOUtil
     val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
@@ -1259,7 +1297,6 @@ object Cube {
 
   }
 
-
     def geoJson2Shape(jsonSting: String, shpPath: String): Unit = {
       val map: mutable.Map[String, String] = mutable.Map[String, String]()
       val gjson: GeometryJSON = new GeometryJSON()
@@ -1358,7 +1395,33 @@ object Cube {
       println(map)
     }
 
+  def floodServices(implicit sc: SparkContext, cubeId: String, rasterProductNames: ArrayBuffer[String], vectorProductNames: ArrayBuffer[String], extentString: String, startTime: String, endTime: String): Unit = {
+    //query and access
+    val extent: Array[Double] = extentString.replace("[", "").replace("]", "").split(",").map(_.toDouble)
+    val queryBegin = System.currentTimeMillis()
+    val queryParams = new QueryParams
+    queryParams.setCubeId(cubeId)
+    queryParams.setRasterProductNames(rasterProductNames)
+    queryParams.setVectorProductNames(vectorProductNames)
+    queryParams.setExtent(extent(0), extent(1), extent(2), extent(3))
+    queryParams.setTime(startTime, endTime)
+    val tileLayerArrayWithMeta:(Array[(SpaceTimeBandKey, Tile)],RasterTileLayerMetadata[SpaceTimeKey]) = QueryRasterTiles.getRasterTileArray(queryParams)
+    val gridLayerGeoObjectArray: Array[(SpaceTimeKey, Iterable[GeoObject])] = QueryVectorObjects.getGeoObjectsArray(queryParams)
+    val queryEnd = System.currentTimeMillis()
+    var geoObjectsNum = 0
+    val outputDir = s"${GlobalConfig.Others.tempFilePath}"
+    gridLayerGeoObjectArray.foreach(x=> geoObjectsNum += x._2.size)
+    println("tiles sum: " + tileLayerArrayWithMeta._1.length)
+    println("geoObjects sum: " + geoObjectsNum)
 
+    //flood
+    val analysisBegin = System.currentTimeMillis()
+    impactedFeaturesService(sc, tileLayerArrayWithMeta, gridLayerGeoObjectArray, outputDir)
+    val analysisEnd = System.currentTimeMillis()
+
+    println("Query time of " + tileLayerArrayWithMeta._1.length + " raster tiles and " + geoObjectsNum + " vector geoObjects: " + (queryEnd - queryBegin))
+    println("Analysis time: " + (analysisEnd - analysisBegin))
+  }
 
 
 
