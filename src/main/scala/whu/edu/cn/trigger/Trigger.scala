@@ -659,10 +659,10 @@ object Trigger {
           coverageRddList += (UUID -> QGIS.calNDVI(sc, coverageRddList(args("input"))))
         case "Coverage.calLSWI" =>
           coverageRddList += (UUID -> QGIS.calLSWI(sc, coverageRddList(args("input"))))
-        case "Coverage.energyUtilisation" =>
-          stringList += (UUID -> QGIS.energyUtilisation(args("extend")))
+        case "Coverage.getParaData" =>
+          coverageRddList += (UUID -> QGIS.getParaData(sc,args("year"),args("quarter")))
         case "Coverage.calNPP" =>
-          coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),stringList(args("energyPara"))))
+          coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),coverageRddList(args("paraData"))))
 
         //    GRASS
         case "Coverage.neighborsByGrass" =>
