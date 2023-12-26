@@ -25,6 +25,7 @@ import scala.util.control.Breaks._
 import java.nio.file._
 import java.util.concurrent.TimeUnit
 
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.util.RDDTransformerUtil._
 
 /**
@@ -161,9 +162,13 @@ object GrassUtil {
     * @param startShFile 待执行的脚本
     */
   def runGrassSh2(startShFile:String): Unit ={
+    val host = GlobalConfig.QGISConf.QGIS_HOST
+    val userName = GlobalConfig.QGISConf.QGIS_USERNAME
+    val password = GlobalConfig.QGISConf.QGIS_PASSWORD
+    val port = GlobalConfig.QGISConf.QGIS_PORT
 
     try {
-      versouSshUtil("180.76.55.162", "root", "Ypfamily608!", 22)
+      versouSshUtil(host, userName, password, port)
       val st =
         raw"sh "+startShFile
       //        raw"""conda activate qgis;d /home/geocube/oge/oge-server/dag-boot/qgis;python algorithmCodeByQGIS/gdal_onesidebuffer.py --input "$outputShpPath" --distance $distance --explodecollections $explodeCollections --field $field --bufferSide $bufferSideInput --dissolve $dissolve --geometry $geometry --options $options --output "$writePath"""".stripMargin

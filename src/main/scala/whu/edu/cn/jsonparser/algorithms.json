@@ -1392,14 +1392,19 @@
       }
     ]
   },
-  "Coverage.energyUtilisation": {
+  "Coverage.getParaData": {
     "description": "Calculates the aspect of the Digital Terrain Model in input.",
     "returns": "Coverage",
     "args": [
       {
-        "name": "extend",
+        "name": "year",
         "type": "String",
-        "description": "extend layer."
+        "description": "NPP year."
+      },
+      {
+        "name": "quarter",
+        "type": "String",
+        "description": "NPP quarter."
       }
     ]
   },
@@ -1418,9 +1423,9 @@
         "description": "raster layer."
       },
       {
-        "name": "energyPara",
-        "type": "String",
-        "description": "extend layer."
+        "name": "paraData",
+        "type": "Coverage",
+        "description": "parameter layer."
       }
     ]
   },

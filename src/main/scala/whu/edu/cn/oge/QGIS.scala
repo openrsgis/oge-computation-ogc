@@ -3574,24 +3574,17 @@ object QGIS {
 
   /**
    *
-   * @param extend
+   * @param sc Alias object for SparkContext
+   * @param year Input query year
+   * @param quarter Input query quarter
    * @return
    */
-  def energyUtilisation(extend:String):String= {
+  def getParaData(implicit sc: SparkContext,
+                  year:String,
+                  quarter:String):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])= {
 
-    try {
-      versouSshUtil(host, userName, password, port)
-      val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --input $extend""".stripMargin
-
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
-
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-    "extend"
+    makeChangedRasterRDDFromTif(sc, "/mnt/storage/qgis/data/SOL_1_clip_csx.tif")
   }
 
 
@@ -3603,7 +3596,7 @@ object QGIS {
    * @return
    */
   def calNPP(implicit sc: SparkContext,
-             inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),energyPara :String):
+             inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),paraData: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()

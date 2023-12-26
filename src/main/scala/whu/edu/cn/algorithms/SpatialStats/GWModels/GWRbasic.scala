@@ -32,7 +32,7 @@ class GWRbasic extends GWRbase {
     _nameX = properties.split(split)
     _nameUsed = _nameX
     val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
+      DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(s).toString.toDouble).collect())
     })
     _X = x
     _xcols = x.length
@@ -55,7 +55,7 @@ class GWRbasic extends GWRbase {
 
   override def setY(property: String): Unit = {
     _nameY = property
-    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
+    _Y = DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect())
   }
 
   def auto(kernel: String = "gaussian", approach: String = "AICc", adaptive: Boolean = true): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
