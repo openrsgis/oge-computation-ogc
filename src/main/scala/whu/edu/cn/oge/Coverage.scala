@@ -1437,9 +1437,9 @@ object Coverage {
    */
   def slice(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), start: Int, end: Int):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    if (start < 0 || start > coverage._1.count())
+    if (start < 0 || start > coverage._1.first()._1.measurementName.length)
       throw new IllegalArgumentException("Start index out of range!")
-    if (end < 0 || end > coverage._1.count())
+    if (end < 0 || end > coverage._1.first()._1.measurementName.length)
       throw new IllegalArgumentException("End index out of range!")
     if (end <= start)
       throw new IllegalArgumentException("End index should be greater than the start index!")
@@ -2851,15 +2851,12 @@ object Coverage {
     if (bandNumber <= 3) {
       if (bandNumber == 1) {
         resultCoverage = addStyles1Band(coverageVis2, visParam)
-        resultCoverage
       }
       else if (bandNumber == 2) {
         resultCoverage = addStyles2Band(coverageVis2, visParam)
-        resultCoverage
       }
       else {
         resultCoverage = addStyles3Band(coverageVis2, visParam)
-        resultCoverage
       }
     }
     else {
@@ -2875,8 +2872,8 @@ object Coverage {
         val coverageVis3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = selectBands(coverageVis1, bandsDefault)
         resultCoverage = addStyles3Band(coverageVis3, visParam)
       }
-      resultCoverage
     }
+    Coverage.toUint8(resultCoverage)
   }
 
   def addStyles1Band(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -2931,20 +2928,8 @@ object Coverage {
           }))), coverageOneBand._2)
         }
         // 设置默认的调色盘
-        var paletteVis: List[String] = List[String]("#808080", "#949494", "#a9a9a9", "#bdbebd", "#d3d3d3", "#e9e9e9")
-        if (visParam.getPalette.nonEmpty) {
-          paletteVis = visParam.getPalette
-        }
-        val colorVis: List[Color] = paletteVis.map(t => {
-          try {
-            val color: Color = Color.valueOf(t)
-            color
-          } catch {
-            case e: Exception =>
-              throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
-          }
-        })
-        val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+//        var paletteVis: List[String] = List[String]("#808080", "#949494", "#a9a9a9", "#bdbebd", "#d3d3d3", "#e9e9e9")
+        // 计算最大最小值
         val minMaxBand: (Double, Double) = coverageOneBand._1.map(t => {
           val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
           if (noNaNArray.nonEmpty) {
@@ -2954,29 +2939,68 @@ object Coverage {
             (Int.MaxValue.toDouble, Int.MinValue.toDouble)
           }
         }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+        if (visParam.getPalette.nonEmpty) {
+          val paletteVis = visParam.getPalette
+          val colorVis: List[Color] = paletteVis.map(t => {
+            try {
+              val color: Color = Color.valueOf(t)
+              color
+            } catch {
+              case e: Exception =>
+                throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+            }
+          })
+          val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
 
-        val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
-        coverageOneBand = (coverageOneBand._1.map(t => {
-          val bandR: Tile = t._2.bands(0).mapDouble(d => {
-            if (d.isNaN)
-              d
-            else
-              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._1
-          })
-          val bandG: Tile = t._2.bands(0).mapDouble(d => {
-            if (d.isNaN)
-              d
-            else
-              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._2
-          })
-          val bandB: Tile = t._2.bands(0).mapDouble(d => {
-            if (d.isNaN)
-              d
-            else
-              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._3
-          })
-          (t._1, MultibandTile(bandR, bandG, bandB))
-        }), coverageOneBand._2)
+
+          val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+          coverageOneBand = (coverageOneBand._1.map(t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._1
+            })
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._2
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._3
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }), coverageOneBand._2)
+        }
+        else {
+          //没有调色盘的情况,保证值不为0
+          val interval: Double = (minMaxBand._2 - minMaxBand._1)
+          coverageOneBand = (coverageOneBand._1.map(t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval
+            })
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }), coverageOneBand._2)
+        }
       }
     }
     makeTIFF(coverageOneBand,"coverage")
@@ -3005,6 +3029,47 @@ object Coverage {
       // 判断数量是否对应
       if (minNum > 2 || maxNum > 2 || gainNum > 2 || biasNum > 2 || gammaNum > 2) {
         throw new IllegalArgumentException("波段数量与参数数量不相符")
+      }
+      else if(minNum == 0 && maxNum == 0 && gainNum == 0 && biasNum == 0){
+        //默认渲染模式
+        // 计算最大最小值，分别为波段1、2的最小值和波段1、2的最大值
+        val minMaxBand: (Double, Double, Double, Double) = coverageTwoBand._1.map(t => {
+          val noNaNArray1: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+          val noNaNArray2: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+          if (noNaNArray1.nonEmpty && noNaNArray1.nonEmpty) {
+            (noNaNArray1.min, noNaNArray2.min, noNaNArray1.max,noNaNArray2.max)
+          }
+          else {
+            (Int.MinValue.toDouble, Int.MinValue.toDouble, Int.MaxValue.toDouble, Int.MaxValue.toDouble)
+          }
+        }).reduce((a, b) => (math.min(a._1, b._1), math.min(a._2, b._2), math.max(a._3,b._3), math.max(a._4,b._4)))
+
+        // 拉伸图像
+        val interval1: Double = (minMaxBand._3 - minMaxBand._1)
+        val interval2: Double = (minMaxBand._4 - minMaxBand._2)
+
+        coverageTwoBand = (coverageTwoBand._1.map(
+          t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval1
+            })
+            val bandG: Tile = t._2.bands(1).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._2) / interval2
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                63
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }),coverageTwoBand._2)
       }
       else {
         // 判断是否同时存在最小最大值拉伸和线性拉伸
@@ -3129,8 +3194,50 @@ object Coverage {
       if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
         throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
       }
+      else if (minNum == 0 && maxNum == 0 && gainNum == 0 && biasNum == 0) {
+        //默认渲染模式
+        // 计算最大最小值，分别为波段1、2、3的最小值和波段1、2、3的最大值
+        val minMaxBand: (Double, Double, Double, Double, Double, Double) = coverageThreeBand._1.map(t => {
+          val noNaNArray1: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+          val noNaNArray2: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+          val noNaNArray3: Array[Double] = t._2.bands(2).toArrayDouble().filter(!_.isNaN)
+          if (noNaNArray1.nonEmpty && noNaNArray1.nonEmpty) {
+            (noNaNArray1.min, noNaNArray2.min, noNaNArray3.min,noNaNArray1.max, noNaNArray2.max, noNaNArray3.max)
+          }
+          else {
+            (Int.MinValue.toDouble, Int.MinValue.toDouble,Int.MinValue.toDouble, Int.MaxValue.toDouble, Int.MaxValue.toDouble,Int.MaxValue.toDouble)
+          }
+        }).reduce((a, b) => (math.min(a._1, b._1), math.min(a._2, b._2), math.min(a._3, b._3), math.max(a._4, b._4), math.max(a._5, b._5), math.max(a._6, b._6)))
+
+        // 拉伸图像
+        val interval1: Double = (minMaxBand._4 - minMaxBand._1)
+        val interval2: Double = (minMaxBand._5 - minMaxBand._2)
+        val interval3: Double = (minMaxBand._6 - minMaxBand._3)
+        coverageThreeBand = (coverageThreeBand._1.map(
+          t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval1
+            })
+            val bandG: Tile = t._2.bands(1).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._2) / interval2
+            })
+            val bandB: Tile = t._2.bands(2).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._3) / interval3
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }), coverageThreeBand._2)
+      }
       else {
-        // 如果存在线性拉伸
+        // 如果存在线性拉伸,默认为线性拉伸
         if (gainNum * biasNum != 0) {
           var gainVis0: Double = 1.0
           var gainVis1: Double = 1.0
