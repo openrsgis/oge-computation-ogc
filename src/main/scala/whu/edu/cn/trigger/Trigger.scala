@@ -795,7 +795,7 @@ object Trigger {
 
         // Terrain
         case "Coverage.slope" =>
-          coverageRddList += (UUID -> Coverage.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> Coverage.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toDouble.toInt, zFactor = args("Z_factor").toDouble))
         case "Coverage.aspect" =>
           coverageRddList += (UUID -> Coverage.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
