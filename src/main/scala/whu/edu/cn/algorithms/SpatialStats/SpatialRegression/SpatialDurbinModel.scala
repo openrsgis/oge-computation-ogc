@@ -16,12 +16,7 @@ import scala.collection.mutable
  * 空间杜宾模型，同时考虑自变量误差项λ与因变量滞后项ρ。
  */
 class SpatialDurbinModel  extends SpatialAutoRegressionBase {
-  var _xrows = 0
-  var _xcols = 0
-  private var _df = _xcols
 
-  private var _dX: DenseMatrix[Double] = _
-  private var _1X: DenseMatrix[Double] = _
   private var _durbinX: DenseMatrix[Double] = _
   private var _durbinY: DenseVector[Double] = _
 
@@ -29,33 +24,6 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
   private var _wwy: DenseVector[Double] = _
   private var _wx: DenseMatrix[Double] = _
   private var _eigen: eig.DenseEig = _
-
-  /** set x
-   *
-   * @param properties String
-   * @param split      default:","
-   */
-  override def setX(properties: String, split: String = ","): Unit = {
-    _nameX = properties.split(split)
-    val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
-    })
-    _X = x
-    _xcols = x.length
-    _xrows = _X(0).length
-    _dX = DenseMatrix.create(rows = _xrows, cols = _X.length, data = _X.flatMap(t => t.toArray))
-    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
-    _1X = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
-    _df = _xcols + 1 + 1
-  }
-
-  /** set y
-   *
-   * @param property String
-   */
-  override def setY(property: String): Unit = {
-    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
-  }
 
   /**
    * 回归计算
@@ -73,7 +41,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     _durbinY = _Y - rho * _wy - lambda * _wy + rho * lambda * _wwy
     val betas = get_betas(X = _durbinX, Y = _durbinY)
     //    println(betas)
-    val betas_map = betasMap(betas)
+    val betas_map = betasPrint(betas)
     val res = get_res(X = _durbinX, Y = _durbinY)
     //log likelihood
     val llopt = paras4optimize(optresult)
@@ -96,6 +64,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     val shpRDDidx = shpRDD.collect().zipWithIndex
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+      t._1._2._2 += ("residual" -> res(t._2))
     })
     (shpRDDidx.map(t => t._1), printStr)
   }

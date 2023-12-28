@@ -23,11 +23,11 @@ object DescriptiveStatistics {
     var str = f"\n**********descriptive statistics result**********\n"
     //println(str)
     for (m <- 0.to(n - 1)) {
-      val list = featureRDD.map(t => t._2._2(name(m)).asInstanceOf[String])
+      val list = featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(name(m)).toString)
       val b = list.first().toCharArray
 
       if (b(0) <= 57 && b(0) >= 48) {
-        val list = featureRDD.map(t => t._2._2(name(m)).asInstanceOf[String].toDouble)
+        val list = featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(name(m)).toString.toDouble)
         val stats = list.stats()
 
         str += f"property : ${name(m)}\n"

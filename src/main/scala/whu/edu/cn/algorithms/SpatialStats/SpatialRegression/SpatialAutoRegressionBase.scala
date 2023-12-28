@@ -22,6 +22,12 @@ abstract class SpatialAutoRegressionBase {
   protected var spweight_dvec: Array[DenseVector[Double]] = _
   protected var spweight_dmat: DenseMatrix[Double] = _
 
+  var _xrows = 0
+  var _xcols = 0
+  protected var _df = _xcols
+  protected var _dX: DenseMatrix[Double] = _
+  protected var _1X: DenseMatrix[Double] = _
+
   /**
    * 拟合值
    */
@@ -56,12 +62,31 @@ abstract class SpatialAutoRegressionBase {
     setweight(style = style)
   }
 
+  /** set x
+   *
+   * @param properties String
+   * @param split      default:","
+   */
   protected def setX(properties: String, split: String = ","): Unit = {
-
+    _nameX = properties.split(split)
+    val x = _nameX.map(s => {
+      DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(s).toString.toDouble).collect())
+    })
+    _X = x
+    _xcols = x.length
+    _xrows = _X(0).length
+    _dX = DenseMatrix.create(rows = _xrows, cols = _X.length, data = _X.flatMap(t => t.toArray))
+    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
+    _1X = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
+    _df = _xcols + 1 + 1
   }
 
+  /** set y
+   *
+   * @param property String
+   */
   protected def setY(property: String): Unit = {
-
+    _Y = DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect())
   }
 
   /**
@@ -115,7 +140,7 @@ abstract class SpatialAutoRegressionBase {
     val score = 2.0 * (LLx - LLy)
     val pchi = breeze.stats.distributions.ChiSquared
     val pvalue = 1 - pchi.distribution(chi_pama).cdf(abs(score))
-    f"ChiSquared test, score is $score%.4f, p value is $pvalue%.6f\n"
+    f"ChiSquared test, score is $score%.4f, p value is $pvalue%.6g\n"
     //    println(s"ChiSquared test, score is $score, p value is $pvalue")
   }
 
@@ -130,6 +155,16 @@ abstract class SpatialAutoRegressionBase {
     }
     //    println(betas_map)
     betas_map
+  }
+
+  protected def betasPrint(coef: DenseVector[Double]): String = {
+    val coefname = Array("Intercept") ++ _nameX
+    val coefvalue = coef.toArray
+    var str: String = ""
+    for (i <- 0 until coef.length) {
+      str += coefname(i) + ":" + coefvalue(i).formatted("%.6g").toString + "    "
+    }
+    str
   }
 
 }

@@ -20,26 +20,36 @@ object Geodetector {
   private var _X: List[List[Any]] = _
   private var _Y: List[Double] = _
 
+  def fget(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[Any] = {
+    featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property)).collect().toList
+  }
+
+  private def setX(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], x_titles: String): Unit = {
+    _nameX = x_titles.split(",").toList
+    _X = _nameX.map(t => fget(featureRDD, t))
+  }
+
+  private def setY(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], y_title: String): Unit = {
+    _nameY = y_title
+    _Y = shpToList(featureRDD, _nameY)
+  }
+
   /**
    * 因子探测器
    *
    * @param featureRDD RDD
    * @param y_title    因变量名称
    * @param x_titles   自变量名称
-   * @return （变量名、q值和p值）各自以List形式储存
+   * @param is_print   是否打印，默认为true
+   * @return           String
    */
   def factorDetector(featureRDD: RDD[(String, (Geometry, Map[String, Any]))],
-                     y_title: String, x_titles: String)
-  : String = {
-    _nameX = x_titles.split(",").toList
-    _nameY = y_title
-    _X = _nameX.map(t => Feature.get(featureRDD, t))
-    _Y = Feature.getNumber(featureRDD, _nameY)
-    //_Y = shpToList(featureRDD, _nameY)
+                     y_title: String, x_titles: String): String = {
+    setX(featureRDD, x_titles)
+    setY(featureRDD, y_title)
     val QandP = _X.map(t => FD_single(_Y, t))
     val res = (_nameX, QandP.map(t => t._1), QandP.map(t => t._2))
-    val str=FD_print(res)
-    println(str)
+    val str = FD_print(res)
     str
   }
 
@@ -81,16 +91,14 @@ object Geodetector {
    * @param featureRDD RDD
    * @param y_title    因变量名称
    * @param x_titles   自变量名称
-   * @return 自变量名、q值（矩阵）、增强类型（矩阵）
+   * @param is_print   是否打印，默认为true
+   * @return           String
    */
   def interactionDetector(featureRDD: RDD[(String, (Geometry, Map[String, Any]))],
                           y_title: String, x_titles: String)
   : String = {
-    _nameX = x_titles.split(",").toList
-    _nameY = y_title
-    _X = _nameX.map(t => Feature.get(featureRDD, t))
-    _Y = Feature.getNumber(featureRDD, _nameY)
-    //_Y = shpToList(featureRDD, _nameY)
+    setX(featureRDD, x_titles)
+    setY(featureRDD, y_title)
     val interactions = linalg.Matrix.zeros[Double](_nameX.length, _nameX.length)
     val enhancement = linalg.Matrix.zeros[String](_nameX.length, _nameX.length)
     for (i <- 0 until _nameX.length) {
@@ -122,8 +130,9 @@ object Geodetector {
       }
     }
     val res = (_nameX, interactions, enhancement)
-    val str=ID_print(res)
-    println(str)
+    //if (is_print) {
+    val str = ID_print(res)
+    //}
     str
   }
 
@@ -166,16 +175,14 @@ object Geodetector {
    * @param featureRDD RDD
    * @param y_title    因变量名称
    * @param x_titles   自变量名称
-   * @return           变量名、是否显著（矩阵）
+   * @param is_print   是否打印，默认为true
+   * @return           String
    */
   def ecologicalDetector(featureRDD: RDD[(String, (Geometry, Map[String, Any]))],
-                         y_title: String, x_titles: String)
-  : String = {
-    _nameX = x_titles.split(",").toList
-    _nameY = y_title
-    _X = _nameX.map(t => Feature.get(featureRDD, t))
-    _Y = Feature.getNumber(featureRDD, _nameY)
-    //_Y = shpToList(featureRDD, _nameY)
+                         y_title: String, x_titles: String) :String = {
+    //(List[String], linalg.Matrix[Boolean])
+    setX(featureRDD, x_titles)
+    setY(featureRDD, y_title)
     //val F_mat = linalg.Matrix.zeros[Double](x_titles.length, x_titles.length) // Matrix of Statistic F
     val SigMat = linalg.Matrix.zeros[Boolean](_nameX.length, _nameX.length) // Matrix of True or False
     for (i <- 0 until _nameX.length) {
@@ -190,8 +197,9 @@ object Geodetector {
       }
     }
     val res = (_nameX, SigMat)
-    val str=  ED_print(res)
-    println(str)
+    //if (is_print) {
+    val str = ED_print(res)
+    //}
     str
   }
 
@@ -211,9 +219,17 @@ object Geodetector {
   }
 
   protected def ED_print(res: (List[String], linalg.Matrix[Boolean])): String = {
-    var str="*****************************Results of Ecological Detector*****************************\n"
-    str+=printMatrixWithTitles_Boolean(res)
-    str+=("\n****************************************************************************************\n")
+    var str = "*****************************Results of Ecological Detector*****************************\n"
+    var no = 1
+    //println("*****************************Results of Ecological Detector*****************************")
+    for (i <- 0 until res._2.rows) {
+      for (j <- 0 until res._2.cols) {
+        str += f"${no} variable1: ${res._1(i)}%-10s, variable2: ${res._1(i)}%-10s, significance: ${res._2(i, j)}\n"
+        no += 1
+      }
+    }
+    // printMatrixWithTitles_Boolean(res)
+    str += "****************************************************************************************\n"
     str
   }
 
@@ -224,16 +240,13 @@ object Geodetector {
    * @param y_title    因变量名称
    * @param x_titles   自变量名称
    * @param is_print   是否打印，默认为true
-   * @return 变量名、各变量的子区域、各变量子区域对应的y均值，各变量不同子区域之间的显著性
+   * @return           String
    */
   def riskDetector(featureRDD: RDD[(String, (Geometry, Map[String, Any]))],
-                   y_title: String, x_titles: String, is_print: Boolean = true):
-  String = {
-    _nameX = x_titles.split(",").toList
-    _nameY = y_title
-    _X = _nameX.map(t => Feature.get(featureRDD, t))
-    _Y = Feature.getNumber(featureRDD, _nameY)
-    //_Y = shpToList(featureRDD, _nameY)
+                   y_title: String, x_titles: String): String= {
+    //(List[String], List[List[String]], List[List[Double]], List[linalg.Matrix[Boolean]])
+    setX(featureRDD, x_titles)
+    setY(featureRDD, y_title)
     val lst1 = ListBuffer("")
     val lst2 = ListBuffer(List(""))
     val lst3 = ListBuffer(List(0.0))
@@ -246,8 +259,9 @@ object Geodetector {
       lst4.append(res._3)
     }
     val res = (lst1.drop(1).toList, lst2.drop(1).toList, lst3.drop(1).toList, lst4.drop(1).toList)
+    //if (is_print) {
     val str = RD_print(res)
-    println(str)
+    //}
     str
   }
 
@@ -302,18 +316,48 @@ object Geodetector {
 
   protected def RD_print(res: (List[String], List[List[String]], List[List[Double]], List[linalg.Matrix[Boolean]])):
   String = {
-    var str0 = "******************************Result of Risk Detector******************************\n"
-    str0 += "***********************************************************************************\n"
+    var str = "******************************Result of Risk Detector******************************\n"
+    val str_split = "***********************************************************************************\n"
+    //print(str0)
     val N_var = res._1.length
     for (no <- 0 until N_var) {
-      str0 += f"\nVariable ${no + 1}: ${res._1(no)}\n" + "\n" + "Means of Strata: \n"
+      str += f"Variable ${no + 1}: ${res._1(no)}\n" + "\n" + "Means of Strata: \n"
       for (i <- 0 until res._2(no).length) {
-        str0 += f"stratum ${i + 1}: ${res._2(no)(i)}, mean: ${res._3(no)(i)}%10f\n"
+        str += f"stratum ${i + 1}: ${res._2(no)(i)}, mean: ${res._3(no)(i)}%10f\n"
       }
-      str0 += "\nSignificance: \n"
-      str0 += printMatrixWithTitles_Boolean((res._2(no), res._4(no)))
+      str += "\nSignificance: \n"
+      var no_MatElem = 1
+      for (i <- 0 until res._2(no).length) {
+        for (j <- 0 until res._2(no).length) {
+          str += f"${no_MatElem} stratum1: ${res._2(no)(i)}, stratum2: ${res._2(no)(j)}, significance: ${res._4(no)(i, j)}\n"
+          no_MatElem += 1
+        }
+      }
+      str += str_split
+      // printMatrixWithTitles_Boolean((res._2(no), res._4(no)))
+      //print(str_split)
     }
-    str0
+    str
+  }
+
+  //***********************************************************************************************
+
+  /**
+   * 从RDD中得到对应属性p的数据
+   *
+   * @param testshp RDD[(String, (Geometry, Map[String, Any]))]的形式
+   * @param p       String的形式
+   * @return List[Double]
+   */
+  protected def shpToList(testshp: RDD[(String, (Geometry, Map[String, Any]))], p: String): List[Double] = {
+    val list: List[Any] = fget(testshp, p)
+    val typeOfElement = list(0).getClass.getSimpleName
+    var lst: List[Double] = List.empty
+    typeOfElement match {
+      case "String" => lst = list.collect({ case (i: String) => (i.toDouble) }) //shp原始数据
+      case "Double" => lst = list.collect({ case (i: Double) => (i.toDouble) }) //后期写入shp的属性
+    }
+    lst
   }
 
   /**
@@ -321,7 +365,7 @@ object Geodetector {
    *
    * @param Y List
    * @param X List
-   * @return  Y的分层结果
+   * @return Y的分层结果
    */
   protected def Grouping(Y: List[Double], X: List[Any]): List[List[Double]] = {
     if (Y.length != X.length) {
@@ -331,7 +375,9 @@ object Geodetector {
     for (i <- 0 until Y.length) {
       list_xy.append((X(i), Y(i)))
     }
-    val sorted_xy = list_xy.drop(1).toList.groupBy(_._1).mapValues(r => r.map(r => {r._2})).map(r => r._2)
+    val sorted_xy = list_xy.drop(1).toList.groupBy(_._1).mapValues(r => r.map(r => {
+      r._2
+    })).map(r => r._2)
     sorted_xy.toList
   }
 
@@ -350,7 +396,9 @@ object Geodetector {
     for (i <- 0 until Y.length) {
       list_xy.append((X(i).toString, Y(i)))
     }
-    val sorted_xy = list_xy.drop(1).sortBy(_._1).toList.groupBy(_._1).mapValues(r => r.map(r => {r._2}))
+    val sorted_xy = list_xy.drop(1).sortBy(_._1).toList.groupBy(_._1).mapValues(r => r.map(r => {
+      r._2
+    }))
     sorted_xy.toList.sortBy(_._1)
   }
 
@@ -439,7 +487,7 @@ object Geodetector {
    *
    * @param res 包含自变量名（List）及其显著性（Matrix[Boolean]）
    */
-  protected def printMatrixWithTitles_Boolean(res: (List[String], linalg.Matrix[Boolean])): String = {
+  protected def printMatrixWithTitles_Boolean(res: (List[String], linalg.Matrix[Boolean])): Unit = {
     val len = res._1.length
     val mat_print = linalg.Matrix.zeros[String](len + 1, len + 1)
     for (i <- 0 until len + 1) {
@@ -454,7 +502,7 @@ object Geodetector {
         }
       }
     }
-    mat_print.toString()
+    println(mat_print)
   }
 
 }
