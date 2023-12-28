@@ -18,7 +18,7 @@ object TemporalAutoCorrelation {
    * @return pic, ACF list
    */
   def ACF(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, timelag: Int = 20): String = {
-    val timeArr = featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
+    val timeArr = featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect()
     timeSeriesACF(timeArr, timelag.toInt)
   }
 
