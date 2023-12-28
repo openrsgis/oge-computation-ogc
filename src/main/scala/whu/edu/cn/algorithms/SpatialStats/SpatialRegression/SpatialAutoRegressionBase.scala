@@ -140,7 +140,7 @@ abstract class SpatialAutoRegressionBase {
     val score = 2.0 * (LLx - LLy)
     val pchi = breeze.stats.distributions.ChiSquared
     val pvalue = 1 - pchi.distribution(chi_pama).cdf(abs(score))
-    f"ChiSquared test, score is $score%.4f, p value is $pvalue%.6f\n"
+    f"ChiSquared test, score is $score%.4f, p value is $pvalue%.6g\n"
     //    println(s"ChiSquared test, score is $score, p value is $pvalue")
   }
 
@@ -155,6 +155,16 @@ abstract class SpatialAutoRegressionBase {
     }
     //    println(betas_map)
     betas_map
+  }
+
+  protected def betasPrint(coef: DenseVector[Double]): String = {
+    val coefname = Array("Intercept") ++ _nameX
+    val coefvalue = coef.toArray
+    var str: String = ""
+    for (i <- 0 until coef.length) {
+      str += coefname(i) + ":" + coefvalue(i).formatted("%.6g").toString + "    "
+    }
+    str
   }
 
 }

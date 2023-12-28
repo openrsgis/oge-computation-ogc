@@ -38,7 +38,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)._1
     _lagY = _Y - rho * _wy
     val betas = get_betas(X = _1X, Y = _lagY)
-    val betas_map = betasMap(betas)
+    val betas_map = betasPrint(betas)
     val res = get_res(X = _1X, Y = _lagY)
     //log likelihood
     val lly = get_logLik(get_res(X = _1X))
@@ -63,6 +63,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     shpRDDidx.foreach(t => t._1._2._2.clear())
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+      t._1._2._2 += ("residual" -> res(t._2))
     })
     (shpRDDidx.map(t => t._1), printStr)
   }

@@ -41,7 +41,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     _durbinY = _Y - rho * _wy - lambda * _wy + rho * lambda * _wwy
     val betas = get_betas(X = _durbinX, Y = _durbinY)
     //    println(betas)
-    val betas_map = betasMap(betas)
+    val betas_map = betasPrint(betas)
     val res = get_res(X = _durbinX, Y = _durbinY)
     //log likelihood
     val llopt = paras4optimize(optresult)
@@ -64,6 +64,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     val shpRDDidx = shpRDD.collect().zipWithIndex
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+      t._1._2._2 += ("residual" -> res(t._2))
     })
     (shpRDDidx.map(t => t._1), printStr)
   }
