@@ -6726,17 +6726,6 @@
       }
     ]
   },
-  "Feature.addStyles": {
-    "description": "Add the feature to the coverage",
-    "returns": "Feature",
-    "args": [
-      {
-        "name": "feature",
-        "type": "Feature",
-        "description": "The feature to add styles"
-      }
-    ]
-  },
   "Coverage.addStyles": {
     "description": "Add the styles to the coverage.",
     "returns": "Coverage",
@@ -7574,7 +7563,7 @@
   },
   "Feature.get": {
     "description": "Extract a property from a feature.",
-    "returns": "List[Any]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
