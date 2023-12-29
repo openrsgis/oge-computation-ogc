@@ -821,7 +821,7 @@ object Feature {
    * @return
    */
   def get(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[Any] = {
-    featureRDD.map(t => t._2._2(property)).collect().toList.mkString(",")
+    featureRDD.map(t => t._2._2(property)).collect().toList
   }
 
   /**

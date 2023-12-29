@@ -7507,7 +7507,7 @@
   },
   "Feature.get": {
     "description": "Extract a property from a feature.",
-    "returns": "List[Any]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
