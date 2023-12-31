@@ -27,7 +27,7 @@ object SpatialAutoCorrelation {
   def globalMoranI(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, plot: Boolean = false, test: Boolean = false, weightstyle: String = "W"): String = {
     val nb_weight = getNeighborWeight(featureRDD, weightstyle)
     val sum_weight = sumWeight(nb_weight)
-    val arr = featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect()
+    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     val arr_mean = meandiff(arr)
     val arr_mul = arr_mean.map(t => {
       val re = new Array[Double](arr_mean.length)
@@ -79,7 +79,7 @@ object SpatialAutoCorrelation {
   def localMoranI(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, adjust: Boolean = false):
   RDD[(String, (Geometry, Map[String, Any]))] = {
     val nb_weight = getNeighborWeight(featureRDD)
-    val arr = featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect()
+    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     val arr_mean = meandiff(arr)
     val arr_mul = arr_mean.map(t => {
       val re = arr_mean.clone()

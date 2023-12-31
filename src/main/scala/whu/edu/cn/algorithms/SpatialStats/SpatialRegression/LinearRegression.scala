@@ -21,7 +21,7 @@ object LinearRegression {
   private def setX(properties: String, split: String = ",", Intercept: Boolean): Unit = {
     _nameX = properties.split(split)
     val x = _nameX.map(s => {
-      _data.map(t => t("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(s).toString.toDouble).collect()
+      _data.map(t => t(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     })
     _rows = x(0).length
     _df = x.length
@@ -33,7 +33,7 @@ object LinearRegression {
   }
 
   private def setY(property: String): Unit = {
-    _Y = DenseVector(_data.map(t => t("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect())
+    _Y = DenseVector(_data.map(t => t(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
   }
 
   /**

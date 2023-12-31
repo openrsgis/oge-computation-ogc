@@ -21,7 +21,7 @@ object Geodetector {
   private var _Y: List[Double] = _
 
   def fget(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): List[Any] = {
-    featureRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property)).collect().toList
+    featureRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal]).collect().toList
   }
 
   private def setX(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], x_titles: String): Unit = {

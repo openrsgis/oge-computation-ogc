@@ -70,7 +70,7 @@ abstract class SpatialAutoRegressionBase {
   protected def setX(properties: String, split: String = ","): Unit = {
     _nameX = properties.split(split)
     val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(s).toString.toDouble).collect())
+      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
     })
     _X = x
     _xcols = x.length
@@ -86,7 +86,7 @@ abstract class SpatialAutoRegressionBase {
    * @param property String
    */
   protected def setY(property: String): Unit = {
-    _Y = DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect())
+    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
   }
 
   /**

@@ -62,7 +62,7 @@ class GWRbase {
   protected def setX(properties: String, split: String = ","): Unit = {
     _nameX = properties.split(split)
     val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(s).toString.toDouble).collect())
+      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
     })
     _X = x
     _xcols = x.length
@@ -73,7 +73,7 @@ class GWRbase {
 
   protected def setY(property: String): Unit = {
     _nameY = property
-    _Y = DenseVector(shpRDD.map(t => t._2._2("properties").asInstanceOf[com.alibaba.fastjson.JSONArray].getJSONObject(0).get(property).toString.toDouble).collect())
+    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
   }
 
   def setcoords(lat: Array[Double], lon: Array[Double]): Unit = {
