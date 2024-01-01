@@ -585,6 +585,10 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativeDelaunayTriangulation(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.voronoiPolygonsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeVoronoiPolygons(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], buffer = args("buffer").toDouble))
+        case "Feature.extractFromLocationByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeExtractFromLocation(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("intersect")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predicate = args("predicate")))
+        case "Feature.intersectionByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeIntersection(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("overlay")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], inputFields = args("inputFields"),overlayFields = args("overlayFields"),overlayFieldsPrefix = args("overlayFieldsPrefix"),gridSize = args("gridSize").toDouble))
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
