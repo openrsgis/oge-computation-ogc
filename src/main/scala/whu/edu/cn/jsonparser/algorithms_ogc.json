@@ -2818,6 +2818,73 @@
       }
     ]
   },
+  "Feature.extractFromLocationByQGIS": {
+    "description": "Geometric predicates are boolean functions used to determine the spatial relation a feature has with another by comparing whether and how their geometries share a portion of space.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Input point vector layer."
+      },
+      {
+        "name": "intersect",
+        "type": "Feature",
+        "description": "Intersection vector layer."
+      },
+      {
+        "name": "predicate",
+        "type": "String",
+        "description": "Type of spatial relation the input feature should have with an intersect feature so that it could be selected.",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+  "Feature.intersectionByQGIS": {
+    "description": "Extracts the portions of features from the input layer that overlap features in the overlay layer.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Input point vector layer."
+      },
+      {
+        "name": "overlay",
+        "type": "Feature",
+        "description": "Layer containing the features to check for overlap. Its features"
+      },
+      {
+        "name": "inputFields",
+        "type": "String",
+        "description": "Field(s) of the input layer to keep in the output.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "overlayFields",
+        "type": "String",
+        "description": "Field(s) of the overlay layer to keep in the output.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "overlayFieldsPrefix",
+        "type": "String",
+        "description": "Add a prefix to identify fields of the overlay layer. ",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "gridSize",
+        "type": "Double",
+        "description": "Add a prefix to identify fields of the overlay layer. ",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
   "Coverage.aspectByGDAL": {
     "description": "Generates an aspect map from any GDAL-supported elevation raster.",
     "returns": "Coverage",

@@ -356,6 +356,7 @@ object Geodetector {
     typeOfElement match {
       case "String" => lst = list.collect({ case (i: String) => (i.toDouble) }) //shp原始数据
       case "Double" => lst = list.collect({ case (i: Double) => (i.toDouble) }) //后期写入shp的属性
+      case "BigDecimal" => lst = list.collect({case (i: java.math.BigDecimal) => (i.asInstanceOf[java.math.BigDecimal].doubleValue)}) //后期写入shp的属性
     }
     lst
   }
