@@ -16,26 +16,7 @@ import scala.collection.mutable
 
 class GWCorrelation extends GWRbase {
 
-  var _xrows = 0
-  var _xcols = 0
   private var shpRDDidx: Array[((String, (Geometry, mutable.Map[String, Any])), Int)] = _
-  private var _dX: DenseMatrix[Double] = _
-
-  override def setX(properties: String, split: String = ","): Unit = {
-    _nameX = properties.split(split)
-    val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
-    })
-    _X = x
-    _xcols = x.length
-    _xrows = _X(0).length
-    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
-    _dX = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
-  }
-
-  override def setY(property: String): Unit = {
-    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
-  }
 
   def calCorrelation(bw: Double = 100, kernel: String = "gaussian", adaptive: Boolean = true): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
     setweight(bw = bw, kernel = kernel, adaptive = adaptive)

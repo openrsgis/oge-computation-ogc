@@ -585,6 +585,10 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativeDelaunayTriangulation(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.voronoiPolygonsByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeVoronoiPolygons(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], buffer = args("buffer").toDouble))
+        case "Feature.extractFromLocationByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeExtractFromLocation(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("intersect")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predicate = args("predicate")))
+        case "Feature.intersectionByQGIS" =>
+          featureRddList += (UUID -> QGIS.nativeIntersection(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("overlay")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], inputFields = args("inputFields"),overlayFields = args("overlayFields"),overlayFieldsPrefix = args("overlayFieldsPrefix"),gridSize = args("gridSize").toDouble))
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
@@ -1063,7 +1067,7 @@ object Trigger {
         case "SpatialStats.STCorrelations.SpatialAutoCorrelation.globalMoranI" =>
           stringList += (UUID -> SpatialAutoCorrelation.globalMoranI(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("plot").toBoolean, args("test").toBoolean, args("weightstyle")))
         case "SpatialStats.STCorrelations.SpatialAutoCorrelation.localMoranI" =>
-          featureRddList += (UUID -> SpatialAutoCorrelation.localMoranI(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("adjust").toBoolean))
+          featureRddList += (UUID -> SpatialAutoCorrelation.localMoranI(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("adjust").toBoolean))
         case "SpatialStats.STCorrelations.TemporalAutoCorrelation.ACF" =>
           stringList += (UUID -> TemporalAutoCorrelation.ACF(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property"), args("timelag").toInt))
         case "SpatialStats.SpatialRegression.SpatialLagModel.fit" =>
@@ -1076,7 +1080,7 @@ object Trigger {
           val re_sdm = SpatialDurbinModel.fit(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"))
           featureRddList += (UUID -> re_sdm)
         case "SpatialStats.SpatialRegression.LinearRegression.feature" =>
-          featureRddList += (UUID -> LinearRegression.LinearReg(featureRddList(args("data")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y"), args("x"), args("Intercept").toBoolean))
+          featureRddList += (UUID -> LinearRegression.LinearReg(sc, featureRddList(args("data")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y"), args("x"), args("Intercept").toBoolean))
         case "SpatialStats.GWModels.GWAverage" =>
           featureRddList += (UUID -> GWModels.GWAverage.cal(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("propertyY"), args("propertiesX"), args("bandwidth").toDouble, args("kernel"), args("adaptive").toBoolean, args("quantile").toBoolean))
         case "SpatialStats.GWModels.GWCorrelation" =>

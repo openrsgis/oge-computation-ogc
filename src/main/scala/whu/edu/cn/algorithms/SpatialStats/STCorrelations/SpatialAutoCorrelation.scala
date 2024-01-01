@@ -27,7 +27,7 @@ object SpatialAutoCorrelation {
   def globalMoranI(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, plot: Boolean = false, test: Boolean = false, weightstyle: String = "W"): String = {
     val nb_weight = getNeighborWeight(featureRDD, weightstyle)
     val sum_weight = sumWeight(nb_weight)
-    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
+    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     val arr_mean = meandiff(arr)
     val arr_mul = arr_mean.map(t => {
       val re = new Array[Double](arr_mean.length)
@@ -61,7 +61,7 @@ object SpatialAutoCorrelation {
       //      println(s"global Moran's I is: $moran_i")
       //      println(s"Z-Score is: $Z_I , p-value is: $Pvalue")
       outStr += s"Z-Score is: ${Z_I.formatted("%.4f")} , "
-      outStr += s"p-value is: ${Pvalue.formatted("%.6f")}"
+      outStr += s"p-value is: ${Pvalue.formatted("%.4g")}"
     }
     println(outStr)
     outStr
@@ -76,10 +76,10 @@ object SpatialAutoCorrelation {
    * @param adjust   是否调整n的取值。false(默认):n；true:n-1
    * @return RDD内含局部莫兰指数和预测值等
    */
-  def localMoranI(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, adjust: Boolean = false):
+  def localMoranI(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, adjust: Boolean = false):
   RDD[(String, (Geometry, Map[String, Any]))] = {
     val nb_weight = getNeighborWeight(featureRDD)
-    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
+    val arr = featureRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     val arr_mean = meandiff(arr)
     val arr_mul = arr_mean.map(t => {
       val re = arr_mean.clone()
@@ -110,16 +110,16 @@ object SpatialAutoCorrelation {
     val Z_I = (local_moranI - expectation) / var_I.map(t => sqrt(t))
     val gaussian = breeze.stats.distributions.Gaussian(0, 1)
     val pv_I = Z_I.map(t => 2 * (1.0 - gaussian.cdf(t)))
-    val featRDDidx = featureRDD.zipWithIndex()
+    val featRDDidx = featureRDD.collect().zipWithIndex
     featRDDidx.map(t => {
-      t._1._2._2 += ("local_moranI" -> local_moranI(t._2.toInt))
-      t._1._2._2 += ("expectation" -> expectation(t._2.toInt))
-      t._1._2._2 += ("local_var" -> var_I(t._2.toInt))
-      t._1._2._2 += ("local_z" -> Z_I(t._2.toInt))
-      t._1._2._2 += ("local_pv" -> pv_I(t._2.toInt))
+      t._1._2._2 += ("local_moranI" -> local_moranI(t._2))
+      t._1._2._2 += ("expectation" -> expectation(t._2))
+      t._1._2._2 += ("local_var" -> var_I(t._2))
+      t._1._2._2 += ("local_z" -> Z_I(t._2))
+      t._1._2._2 += ("local_pv" -> pv_I(t._2))
     })
     //    (local_moranI.toArray, expectation.toArray, var_I.toArray, Z_I.toArray, pv_I.toArray)
-    featRDDidx.map(_._1)
+    sc.makeRDD(featRDDidx.map(_._1))
   }
 
 

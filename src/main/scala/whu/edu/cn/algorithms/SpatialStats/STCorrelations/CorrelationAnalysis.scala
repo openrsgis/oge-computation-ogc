@@ -22,7 +22,7 @@ object CorrelationAnalysis {
     val propertyArr = properties.split(",")
     val n = propertyArr.length
     var cor = new Array[Array[Double]](n)
-    val arrList = propertyArr.map(p => featureRDD.map(t => t._2._2(p).asInstanceOf[String].toDouble).collect())
+    val arrList = propertyArr.map(p => featureRDD.map(t => t._2._2(p).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
     if (method == "pearson") {
       cor = arrList.map(t => {
         arrList.map(t2 => pcorr2arr(t2, t))

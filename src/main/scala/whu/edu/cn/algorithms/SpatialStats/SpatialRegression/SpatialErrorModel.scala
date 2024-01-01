@@ -17,12 +17,6 @@ import scala.collection.mutable
  */
 class SpatialErrorModel extends SpatialAutoRegressionBase {
 
-  var _xrows = 0
-  var _xcols = 0
-  private var _df = _xcols
-
-  private var _dX: DenseMatrix[Double] = _
-  private var _1X: DenseMatrix[Double] = _
   private var _errorX: DenseMatrix[Double] = _
   private var _errorY: DenseVector[Double] = _
 
@@ -31,33 +25,6 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
   private var _wy: DenseVector[Double] = _
   private var _wx: DenseMatrix[Double] = _
   private var _eigen: eig.DenseEig = _
-
-  /** set x
-   *
-   * @param properties String
-   * @param split      default:","
-   */
-  override def setX(properties: String, split: String = ","): Unit = {
-    _nameX = properties.split(split)
-    val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
-    })
-    _X = x
-    _xcols = x.length
-    _xrows = _X(0).length
-    _dX = DenseMatrix.create(rows = _xrows, cols = _X.length, data = _X.flatMap(t => t.toArray))
-    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
-    _1X = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
-    _df = _xcols + 1 + 1
-  }
-
-  /** set y
-   *
-   * @param property String
-   */
-  override def setY(property: String): Unit = {
-    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
-  }
 
   /**
    * 回归计算
@@ -76,7 +43,7 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
     _errorX = _1X - lambda * _wx
     _errorY = _Y - lambda * _wy
     val betas = get_betas(X = _errorX, Y = _errorY)
-    val betas_map = betasMap(betas)
+    val betas_map = betasPrint(betas)
     val res = get_res(X = _errorX, Y = _errorY)
     //log likelihood
     val lly = get_logLik(get_res(X = _1X))
@@ -101,6 +68,7 @@ class SpatialErrorModel extends SpatialAutoRegressionBase {
     val shpRDDidx = shpRDD.collect().zipWithIndex
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+      t._1._2._2 += ("residual" -> res(t._2))
     })
     (shpRDDidx.map(t => t._1), printStr)
   }
