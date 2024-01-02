@@ -34,7 +34,8 @@ object QGIS {
   val userName = GlobalConfig.QGISConf.QGIS_USERNAME
   val password = GlobalConfig.QGISConf.QGIS_PASSWORD
   val port = GlobalConfig.QGISConf.QGIS_PORT
-
+//  val pythonPath = GlobalConfig.QGISConf.QGIS_PYTHON
+//  val rsAlgorithm = GlobalConfig.QGISConf.QGIS_RS
   /**
    *
    * Calculated slope direction
@@ -1784,6 +1785,89 @@ object QGIS {
 
     makeFeatureRDDFromShp(sc, writePath)
   }
+
+
+  /**
+   * Geometric predicates are boolean functions used to determine the spatial relation a feature has with another by comparing whether and how their geometries share a portion of space.
+   *
+   * @param sc     Alias object for SparkContext.
+   * @param input  Input point vector layer.
+   * @param overlay Intersection vector layer.
+   * @param inputFields Type of spatial relation the input feature should have with an intersect feature so that it could be selected.
+   * @return       Voronoi polygons of the input point vector layer.
+   */
+  def nativeIntersection(implicit sc: SparkContext,
+                            input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                            overlay: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                            inputFields: String = "",
+                            overlayFields: String = "",
+                            overlayFieldsPrefix: String = "",
+                            gridSize: Double = 1):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+    val inputShpPath = algorithmData+"qgisIntersectionInput_" + time + ".shp"
+    val overlayShpPath = algorithmData+"qgisIntersectionOverlay_" + time + ".shp"
+    val writePath = algorithmData+"qgisIntersection_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, inputShpPath)
+    saveFeatureRDDToShp(overlay, overlayShpPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_intersection.py --input "$inputShpPath" --overlay "$overlay" --input-fields "$inputFields"  --overlay-fields "$overlayFields" --overlay-fields-prefix "$overlayFieldsPrefix" --grid-size "$gridSize" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+  /**
+   * Geometric predicates are boolean functions used to determine the spatial relation a feature has with another by comparing whether and how their geometries share a portion of space.
+   *
+   * @param sc     Alias object for SparkContext.
+   * @param input  Input point vector layer.
+   * @param intersect Intersection vector layer.
+   * @param predicate Type of spatial relation the input feature should have with an intersect feature so that it could be selected.
+   * @return       Voronoi polygons of the input point vector layer.
+   */
+  def nativeExtractFromLocation(implicit sc: SparkContext,
+                                input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                intersect: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                predicate: String = ""):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+    val inputShpPath = algorithmData+"qgisExtractInput_" + time + ".shp"
+    val intersectShpPath = algorithmData+"qgisExtractIntersect_" + time + ".shp"
+    val writePath = algorithmData+"qgisExtractFromLocation_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, inputShpPath)
+    saveFeatureRDDToShp(intersect, intersectShpPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_extractbylocation.py --input "$inputShpPath" --intersect "$intersectShpPath" --predicate "$predicate" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
 
   /**
    *
@@ -3537,8 +3621,6 @@ object QGIS {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
-
-
   /**
    *
    * @param sc Alias object for SparkContext

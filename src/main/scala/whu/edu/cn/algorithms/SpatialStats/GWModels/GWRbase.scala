@@ -26,6 +26,9 @@ class GWRbase {
   protected var max_dist: Double = _
   var _kernel:String=_
   var _adaptive:Boolean=_
+  var _xrows = 0
+  var _xcols = 0
+  protected var _dX: DenseMatrix[Double] = _
 
   protected def calDiagnostic(X: DenseMatrix[Double], Y: DenseVector[Double], residual: DenseVector[Double], shat: DenseMatrix[Double]): String = {
     val shat0 = trace(shat)
@@ -56,18 +59,21 @@ class GWRbase {
     }
   }
 
-  protected def setX(properties: String, split:String=","): Unit = {
-    _nameX=properties.split(split)
-    val x=_nameX.map(s=>{
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
+  protected def setX(properties: String, split: String = ","): Unit = {
+    _nameX = properties.split(split)
+    val x = _nameX.map(s => {
+      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
     })
     _X = x
+    _xcols = x.length
+    _xrows = _X(0).length
+    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
+    _dX = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
   }
 
   protected def setY(property: String): Unit = {
     _nameY = property
-    val y = shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
-    _Y = DenseVector(y)
+    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
   }
 
   def setcoords(lat: Array[Double], lon: Array[Double]): Unit = {
