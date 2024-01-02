@@ -1816,7 +1816,7 @@ object QGIS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_intersection.py --input "$inputShpPath" --overlay "$overlay" --input-fields "$inputFields"  --overlay-fields "$overlayFields" --overlay-fields-prefix "$overlayFieldsPrefix" --grid-size "$gridSize" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_intersection.py --input "$inputShpPath" --overlay "$overlayShpPath" --input-fields "$inputFields"  --overlay-fields "$overlayFields" --overlay-fields-prefix "$overlayFieldsPrefix" --grid-size "$gridSize" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
