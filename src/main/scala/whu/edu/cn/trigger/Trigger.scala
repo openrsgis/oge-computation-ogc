@@ -1253,6 +1253,13 @@ object Trigger {
               curWorkTaskJson: String,
               curDagID: String, userID: String): Unit = {
 
+    // Check if the SparkContext is active
+    if(sc.isStopped){
+      sendPost(DAG_ROOT_URL + "/deliverUrl","ERROR")
+      println("Send to boot!")
+      return
+    }
+
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
     dagId = curDagID
