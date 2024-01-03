@@ -340,7 +340,87 @@ object algorithms_Image {
     (newCoverage, coverage._2)
   }
 
+  def dilate(coverage: RDDImage, length: Int): RDDImage = {
+    val radius = (length - 1) / 2
+    val paddingCoverage = paddingRDD(coverage, radius)
+    val newRDDImage: RDD[(SpaceTimeBandKey, MultibandTile)] = paddingCoverage._1.map(image => {
+      val rawTile = image._2.band(0)
 
+      val cols = rawTile.cols
+      val rows = rawTile.rows
+      val newTile: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
+
+      for (col <- 0 until (cols)) {
+        for (row <- 0 until (rows)) {
+          var flag: Boolean = false
+          val pixel = rawTile.getDouble(col, row)
+          if (pixel > 0) {
+            flag = true
+          }
+          if (flag == false) {
+            for (icol <- -radius to (radius)) {
+              for (irow <- -radius to (radius)) {
+                if (icol + col >= 0 && icol + col < cols && irow + row >= 0 && irow + row < rows) {
+                  if (rawTile.getDouble(icol + col, irow + row) > 0)
+                    flag = true
+                }
+              }
+            }
+          }
+
+
+          if (flag)
+            newTile.setDouble(col, row, 255)
+          else
+            newTile.setDouble(col, row, 0)
+        }
+
+      }
+      val crop_tile = MultibandTile(newTile).crop(radius, radius, cols - radius - 1, rows - radius - 1)
+      (image._1, crop_tile)
+    })
+
+    val newCoverage = (newRDDImage, coverage._2)
+    newCoverage
+  }
+
+  def erosion(coverage: RDDImage, k: Int): RDDImage = {
+    val radius: Int = k / 2
+    val group: RDDImage = paddingRDD(coverage, radius)
+    val newRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = group._1.map(
+      image => {
+        val tile = image._2.band(0)
+        val rows = tile.rows
+        val cols = tile.cols
+        val newTile: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
+
+        for (y <- 0 until rows; x <- 0 until cols) {
+          var flag: Boolean = false
+          //val pixel = tile.getDouble(x, y)
+          if (!flag) {
+            for (i <- -radius to radius; j <- -radius to radius) {
+              if (x + j >= 0 && x + j < cols && y + i >= 0 && y + i < rows) {
+                if (tile.getDouble(x + j, y + i) == 255) {
+                  flag = true
+                }
+              }
+            }
+          }
+          if (flag) {
+            newTile.setDouble(x, y, 255)
+          }
+          else {
+            newTile.setDouble(x, y, 0)
+          }
+        }
+        val croppedTile = MultibandTile(newTile).crop(radius, radius, cols - radius - 1, rows - radius - 1)
+
+        (image._1, croppedTile)
+      })
+    val newCoverage = (newRDD, coverage._2)
+    newCoverage
+
+  }
   //canny边缘提取
   def cannyEdgeDetection(coverage: RDDImage, lowCoefficient: Double = -1.0, highCoefficient: Double = -1.0)
   : RDDImage = {
