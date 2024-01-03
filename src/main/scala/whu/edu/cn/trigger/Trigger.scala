@@ -31,7 +31,7 @@ import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,erosion,dilate}
 import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
 import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
 import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
@@ -395,6 +395,10 @@ object Trigger {
           coverageRddList += (UUID -> falseColorComposite(coverage = coverageRddList(args("coverage")), BandRed = args("BandRed").toInt, BandGreen = args("BandGreen").toInt, BandBlue = args("BandBlue").toInt))
         case "Coverage.linearTransformation" =>
           coverageRddList += (UUID -> linearTransformation(coverage = coverageRddList(args("coverage")), k = args("k").toDouble, b = args("b").toInt))
+        case "Coverage.erosion" =>
+          coverageRddList += (UUID -> erosion(coverage = coverageRddList(args("coverage")), k = args("k").toInt))
+        case "Coverage.dilate" =>
+          coverageRddList += (UUID -> dilate(coverage = coverageRddList(args("coverage")), length = args("length").toInt))
         case "Coverage.atan" =>
           coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
         case "Coverage.atan2" =>
@@ -1262,6 +1266,13 @@ object Trigger {
   def runMain(implicit sc: SparkContext,
               curWorkTaskJson: String,
               curDagID: String, userID: String): Unit = {
+
+    // Check if the SparkContext is active
+    if(sc.isStopped){
+      sendPost(DAG_ROOT_URL + "/deliverUrl","ERROR")
+      println("Send to boot!")
+      return
+    }
 
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson

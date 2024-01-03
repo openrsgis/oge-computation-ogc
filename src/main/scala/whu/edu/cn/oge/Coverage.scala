@@ -2936,7 +2936,7 @@ object Coverage {
             (noNaNArray.min, noNaNArray.max)
           }
           else {
-            (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+            (Int.MinValue.toDouble, Int.MaxValue.toDouble)
           }
         }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
         if (visParam.getPalette.nonEmpty) {
