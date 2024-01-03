@@ -395,13 +395,13 @@ object algorithms_Image {
         val newTile: DoubleArrayTile = DoubleArrayTile.empty(cols, rows)
 
         for (y <- 0 until rows; x <- 0 until cols) {
-          var flag: Boolean = false
+          var flag: Boolean = true
           //val pixel = tile.getDouble(x, y)
-          if (!flag) {
+          if (flag) {
             for (i <- -radius to radius; j <- -radius to radius) {
               if (x + j >= 0 && x + j < cols && y + i >= 0 && y + i < rows) {
-                if (tile.getDouble(x + j, y + i) == 255) {
-                  flag = true
+                if (tile.getDouble(x + j, y + i) == 0) {
+                  flag = false
                 }
               }
             }
