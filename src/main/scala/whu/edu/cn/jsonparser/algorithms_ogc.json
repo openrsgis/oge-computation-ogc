@@ -9535,6 +9535,46 @@
       }
     ]
   },
+  "Coverage.dilate": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "length",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.erosion": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "k",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
   "SpatialStats.GWModels.GWRbasic.autoFit": {
     "description": "Basic GWR calculation with bandwidth auto selection",
     "returns": "Feature",
