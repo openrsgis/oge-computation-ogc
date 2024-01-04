@@ -29,3 +29,13 @@ src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/ColorBalanceNoSpark.scala
 src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/ColorBalanceNoSpark.scala
 src/main/scala/whu/edu/cn/algorithms/gmrc/util/temp.java
 src/main/scala/whu/edu/cn/algorithms/gmrc/util/tempScala.scala
+src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/ColorBalance_single_band_rdd.scala
+src/main/scala/whu/edu/cn/algorithms/gmrc/colorbalance/ColorBalance_all_block_rdd.scala
+lib/ubuntu/libgdalgeocor.so
+lib/ubuntu/libgdalalljni.so
+lib/ubuntu/gdal.jar
+lib/ubuntu/gdal-3.2.0.tar.gz
+data/testdata/mosaic/input_little/result.zip
+data/testdata/mosaic/output_little/project.prj
+data/testdata/mosaic/output_little/project.seam
+data/testdata/mosaic/output_little/project.txt

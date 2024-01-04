@@ -89,6 +89,8 @@ object GeoCorrection {
 
     GDAL_CORRECTION_LIBRARY.whu_gdal_GDALClose(inputDataset)
 
+    println("geometric correction end")
+
     resultImg
   }
 
