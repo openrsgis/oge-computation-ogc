@@ -1869,6 +1869,20 @@ object Coverage {
     (convolvedRDD, coverage._2)
   }
 
+  def filter(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), min: Double,max: Double):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    (coverage._1.map(t =>{
+      (t._1,t._2.mapBands((_,tile) =>{
+        tile.mapDouble(p =>{
+          if(p>max || p<min){
+            doubleNODATA
+          }else{
+            p
+          }
+        })
+      }))
+    }),coverage._2)
+  }
+
   /**
    * Calculates the aspect of the coverage.
    *
@@ -2936,7 +2950,7 @@ object Coverage {
             (noNaNArray.min, noNaNArray.max)
           }
           else {
-            (Int.MinValue.toDouble, Int.MaxValue.toDouble)
+            (Int.MaxValue.toDouble, Int.MinValue.toDouble)
           }
         }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
         if (visParam.getPalette.nonEmpty) {
@@ -3003,7 +3017,7 @@ object Coverage {
         }
       }
     }
-    makeTIFF(coverageOneBand,"coverage")
+//    makeTIFF(coverageOneBand,"coverage")
     coverageOneBand
 
   }
@@ -3040,7 +3054,7 @@ object Coverage {
             (noNaNArray1.min, noNaNArray2.min, noNaNArray1.max,noNaNArray2.max)
           }
           else {
-            (Int.MinValue.toDouble, Int.MinValue.toDouble, Int.MaxValue.toDouble, Int.MaxValue.toDouble)
+            (Int.MaxValue.toDouble, Int.MaxValue.toDouble, Int.MinValue.toDouble, Int.MinValue.toDouble)
           }
         }).reduce((a, b) => (math.min(a._1, b._1), math.min(a._2, b._2), math.max(a._3,b._3), math.max(a._4,b._4)))
 
@@ -3205,7 +3219,7 @@ object Coverage {
             (noNaNArray1.min, noNaNArray2.min, noNaNArray3.min,noNaNArray1.max, noNaNArray2.max, noNaNArray3.max)
           }
           else {
-            (Int.MinValue.toDouble, Int.MinValue.toDouble,Int.MinValue.toDouble, Int.MaxValue.toDouble, Int.MaxValue.toDouble,Int.MaxValue.toDouble)
+            (Int.MaxValue.toDouble, Int.MaxValue.toDouble,Int.MaxValue.toDouble, Int.MinValue.toDouble, Int.MinValue.toDouble,Int.MinValue.toDouble)
           }
         }).reduce((a, b) => (math.min(a._1, b._1), math.min(a._2, b._2), math.min(a._3, b._3), math.max(a._4, b._4), math.max(a._5, b._5), math.max(a._6, b._6)))
 
@@ -3443,9 +3457,9 @@ object Coverage {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
-    if (zoom < Trigger.level) {
-      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-    }
+//    if (zoom < Trigger.level) {
+//      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+//    }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
       if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
