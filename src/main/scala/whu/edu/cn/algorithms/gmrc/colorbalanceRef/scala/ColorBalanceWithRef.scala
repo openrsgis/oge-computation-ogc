@@ -1058,13 +1058,13 @@ object ColorBalanceWithRef {
       val inputFileArr: ArrayBuffer[String] = new ArrayBuffer[String]()
 
       coverageCollection.foreach(file_coverage => {
-        val inputSaveFile = s"/mnt/storage/${dagId}_mosaic.tiff"
+        val inputSaveFile = s"/mnt/storage/algorithmData/${dagId}_colorbalanceRef.tiff"
         saveRasterRDDToTif(file_coverage._2, inputSaveFile)
         inputFileArr.append(inputSaveFile)
       })
 
       val inputFleArray: Array[String] = inputFileArr.toArray
-      val resInitFile = s"/mnt/storage/${dagId}_mosaic_temp.tiff"
+      val resInitFile = s"/mnt/storage/algorithmData/${dagId}_colorbalanceRef_output_temp.tiff"
       val tool = new ColorBalanceWithRef
       tool.ColorBalanceFun(sc, inputFleArray(0), inputFleArray(1), resInitFile)
 
