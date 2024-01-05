@@ -39,3 +39,6 @@ data/testdata/mosaic/input_little/result.zip
 data/testdata/mosaic/output_little/project.prj
 data/testdata/mosaic/output_little/project.seam
 data/testdata/mosaic/output_little/project.txt
+data/testdata/colorbalanceRef/output/project.prj
+data/testdata/colorbalanceRef/output/project.seam
+data/testdata/colorbalanceRef/output/project.txt
