@@ -71,7 +71,7 @@ object Mosaic {
    * 进行图像镶嵌操作
    *
    * @param sc        Spark 环境
-   * @param coverage 图像保存在这里
+   * @param coverageCollection 图像保存在这里
    * @param
    * @return 图像的RDD
    */
@@ -100,13 +100,13 @@ object Mosaic {
       val inputFileArr: ArrayBuffer[String] = new ArrayBuffer[String]()
 
       coverageCollection.foreach(file_coverage => {
-        val inputSaveFile = s"/mnt/storage/${dagId}_mosaic.tiff"
+        val inputSaveFile = s"/mnt/storage/algorithmData/${dagId}_mosaic.tiff"
         saveRasterRDDToTif(file_coverage._2, inputSaveFile)
         inputFileArr.append(inputSaveFile)
       })
 
       val inputFleArray: Array[String] = inputFileArr.toArray
-      val resInitFile = s"/mnt/storage/${dagId}_mosaic_temp.tiff"
+      val resInitFile = s"/mnt/storage/algorithmData/${dagId}_mosaic_temp.tiff"
       val resFile = splitMosaic(sc, inputFleArray, resInitFile, 1)
 
       makeChangedRasterRDDFromTif(sc, resFile)
@@ -208,7 +208,6 @@ object Mosaic {
    * @param si_dataset_rdd ： 输入影像数组rdd
    * @param pszOutFile  ：   输出影像文件路径
    * @param nBlockCount ：  x、y方向的块个数
-   * @param listDataset ：  最终得到的Dataset列表
    * @return
    */
   private def splitGDALWarpOutputDs(sc: SparkContext, si_dataset_rdd: RDD[(Boolean, Dataset)], pszOutFile: String, nBlockCount: Integer): RDD[(String, Dataset)] = {

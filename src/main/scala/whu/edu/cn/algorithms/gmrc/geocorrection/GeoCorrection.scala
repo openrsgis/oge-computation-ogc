@@ -59,10 +59,10 @@ object GeoCorrection {
       val hadoop_file_path = "/" + outputfile_absolute_path
       makeChangedRasterRDDFromTif(sc, hadoop_file_path)
     } else {
-      val inputSavePath = s"/mnt/storage/${dagId}_geometricCorrection.tiff"
+      val inputSavePath = s"/mnt/storage/algorithmData/${dagId}_geometricCorrection.tiff"
       saveRasterRDDToTif(coverage,inputSavePath)
 
-      val resFile = s"/mnt/storage/${dagId}_geometricCorrection_temp.tiff"
+      val resFile = s"/mnt/storage/algorithmData/${dagId}_geometricCorrection_temp.tiff"
       whu_geometric_correction(inputSavePath, resFile)
 
       makeChangedRasterRDDFromTif(sc, resFile)

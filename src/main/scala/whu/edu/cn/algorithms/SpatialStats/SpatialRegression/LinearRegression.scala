@@ -1,6 +1,7 @@
 package whu.edu.cn.algorithms.SpatialStats.SpatialRegression
 
 import breeze.linalg.{DenseMatrix, DenseVector, inv, sum}
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.oge.Service
@@ -20,7 +21,7 @@ object LinearRegression {
   private def setX(properties: String, split: String = ",", Intercept: Boolean): Unit = {
     _nameX = properties.split(split)
     val x = _nameX.map(s => {
-      _data.map(t => t(s).asInstanceOf[String].toDouble).collect()
+      _data.map(t => t(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     })
     _rows = x(0).length
     _df = x.length
@@ -32,7 +33,7 @@ object LinearRegression {
   }
 
   private def setY(property: String): Unit = {
-    _Y = DenseVector(_data.map(t => t(property).asInstanceOf[String].toDouble).collect())
+    _Y = DenseVector(_data.map(t => t(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
   }
 
   /**
@@ -44,7 +45,7 @@ object LinearRegression {
    * @param Intercept 是否需要截距项，默认：是（true）
    * @return          （系数，预测值，残差）各自以Array形式储存
    */
-  def LinearRegression(data: RDD[mutable.Map[String, Any]], y: String, x: String, Intercept: Boolean =true)
+  def LinearRegression(sc: SparkContext, data: RDD[mutable.Map[String, Any]], y: String, x: String, Intercept: Boolean =true)
   : RDD[mutable.Map[String, Any]] = {
     _data=data
     val split = ","
@@ -71,13 +72,13 @@ object LinearRegression {
     }
     str += diagnostic(X, Y, res, _df)
     print(str)
-    val shpRDDidx = data.zipWithIndex
+    val shpRDDidx = data.collect().zipWithIndex
     shpRDDidx.map(t => {
-      t._1 += ("yhat" -> y_hat(t._2.toInt))
-      t._1 += ("residual" -> res(t._2.toInt))
+      t._1 += ("yhat" -> y_hat(t._2))
+      t._1 += ("residual" -> res(t._2))
     })
     Service.print(str, "Linear Regression", "String")
-    shpRDDidx.map(t => t._1)
+    sc.makeRDD(shpRDDidx.map(t => t._1))
   }
 
   /** Linear Regression for feature
@@ -88,7 +89,7 @@ object LinearRegression {
    * @param Intercept 是否需要截距项，默认：是（true）
    * @return （系数，预测值，残差）各自以Array形式储存
    */
-  def LinearReg(data: RDD[(String, (Geometry, mutable.Map[String, Any]))], y: String, x: String, Intercept: Boolean = true)
+  def LinearReg(sc: SparkContext, data: RDD[(String, (Geometry, mutable.Map[String, Any]))], y: String, x: String, Intercept: Boolean = true)
   : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
     _data=data.map(t=>t._2._2)
     val split=","
@@ -115,13 +116,13 @@ object LinearRegression {
     }
     str += diagnostic(X,Y,res,_df)
     print(str)
-    val shpRDDidx = data.zipWithIndex
+    val shpRDDidx = data.collect().zipWithIndex
     shpRDDidx.map(t => {
-      t._1._2._2 += ("yhat" -> y_hat(t._2.toInt))
-      t._1._2._2 += ("residual" -> res(t._2.toInt))
+      t._1._2._2 += ("yhat" -> y_hat(t._2))
+      t._1._2._2 += ("residual" -> res(t._2))
     })
     Service.print(str,"Linear Regression for feature","String")
-    shpRDDidx.map(t=>t._1)
+    sc.makeRDD(shpRDDidx.map(t=>t._1))
   }
 
   protected def diagnostic(X: DenseMatrix[Double], Y: DenseVector[Double], residuals: DenseVector[Double], df: Double): String = {

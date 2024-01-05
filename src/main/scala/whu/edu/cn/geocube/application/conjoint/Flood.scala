@@ -2,6 +2,7 @@ package whu.edu.cn.geocube.application.conjoint
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import geotrellis.layer._
+import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.render.{Exact, RGB}
 import geotrellis.raster.{ColorMap, Raster, Tile}
@@ -340,7 +341,8 @@ object Flood{
     if (!executorOutputFile.exists()) executorOutputFile.mkdir()
 
     val outputVectorPath = executorOutputDir + "affectedObjects.geojson"
-    val outputRasterPath = executorOutputDir + "flooded.png"
+    val outputRasterPngPath = executorOutputDir + "flooded.png"
+    val outputRasterPath = executorOutputDir + "flooded.tiff"
     val outputMetaPath = executorOutputDir + "Metadata.json"
 
     //calculate flooded regions using pre- and post-disaster ndwi tiles
@@ -374,8 +376,9 @@ object Flood{
       )
     val stitched = changedRdd.stitch()
     val extentRet = stitched.extent
-    stitched.tile.renderPng(colorMap).write(outputRasterPath)
 
+    stitched.tile.renderPng().write(outputRasterPngPath)
+    GeoTiff(stitched, CRS.fromName("EPSG:4326")).write(outputRasterPath)
 
     //save meta
     val objectMapper =new ObjectMapper()

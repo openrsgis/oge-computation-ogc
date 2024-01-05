@@ -1392,14 +1392,19 @@
       }
     ]
   },
-  "Coverage.energyUtilisation": {
+  "Coverage.getParaData": {
     "description": "Calculates the aspect of the Digital Terrain Model in input.",
     "returns": "Coverage",
     "args": [
       {
-        "name": "extend",
+        "name": "year",
         "type": "String",
-        "description": "extend layer."
+        "description": "NPP year."
+      },
+      {
+        "name": "quarter",
+        "type": "String",
+        "description": "NPP quarter."
       }
     ]
   },
@@ -1418,9 +1423,9 @@
         "description": "raster layer."
       },
       {
-        "name": "extend",
-        "type": "String",
-        "description": "extend layer."
+        "name": "paraData",
+        "type": "Coverage",
+        "description": "parameter layer."
       }
     ]
   },
@@ -2779,6 +2784,73 @@
         "description": "The extent of the output layer will be this much bigger than the extent of the input layer.",
         "optional": "True",
         "default": 0.0
+      }
+    ]
+  },
+  "Feature.extractFromLocationByQGIS": {
+    "description": "Geometric predicates are boolean functions used to determine the spatial relation a feature has with another by comparing whether and how their geometries share a portion of space.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Input point vector layer."
+      },
+      {
+        "name": "intersect",
+        "type": "Feature",
+        "description": "Intersection vector layer."
+      },
+      {
+        "name": "predicate",
+        "type": "String",
+        "description": "Type of spatial relation the input feature should have with an intersect feature so that it could be selected.",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+  "Feature.intersectionByQGIS": {
+    "description": "Extracts the portions of features from the input layer that overlap features in the overlay layer.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Feature",
+        "description": "Input point vector layer."
+      },
+      {
+        "name": "overlay",
+        "type": "Feature",
+        "description": "Layer containing the features to check for overlap. Its features"
+      },
+      {
+        "name": "inputFields",
+        "type": "String",
+        "description": "Field(s) of the input layer to keep in the output.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "overlayFields",
+        "type": "String",
+        "description": "Field(s) of the overlay layer to keep in the output.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "overlayFieldsPrefix",
+        "type": "String",
+        "description": "Add a prefix to identify fields of the overlay layer. ",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "gridSize",
+        "type": "Double",
+        "description": "Add a prefix to identify fields of the overlay layer. ",
+        "optional": "True",
+        "default": 1
       }
     ]
   },
@@ -6749,11 +6821,6 @@
         "description": "The cube to visualize"
       },
       {
-        "name": "products",
-        "type": "Object",
-        "description": "The products in cube to visualize"
-      },
-      {
         "name": "bands",
         "type": "Object",
         "description": "",
@@ -7459,7 +7526,7 @@
   },
   "Feature.withDistance": {
     "description": "Returns true iff the geometries are within a specified distance.",
-    "returns": "Boolean",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD1",
@@ -7470,6 +7537,11 @@
         "name": "featureRDD2",
         "type": "Feature",
         "description": "feature"
+      },
+      {
+        "name": "distance",
+        "type": "Double",
+        "description": "distance"
       },
       {
         "name": "crs",
@@ -7495,13 +7567,14 @@
       {
         "name": "properties",
         "type": "List[String]",
-        "description": "The properties to copy. If omitted, all properties are copied."
+        "description": "The properties to copy. If omitted, all properties are copied.",
+        "default": "None"
       }
     ]
   },
   "Feature.get": {
     "description": "Extract a property from a feature.",
-    "returns": "List[Any]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -7565,7 +7638,7 @@
   },
   "Feature.propertyNames": {
     "description": "Returns the names of properties on this element.",
-    "returns": "List[List[String]]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -7629,7 +7702,7 @@
   },
   "Feature.area": {
     "description": "compute area",
-    "returns": "List[Double]",
+    "returns": "String",
     "args": [
       {
         "name": "featureRDD",
@@ -8694,6 +8767,47 @@
       }
     ]
   },
+  "Cube.floodFillAnalysis": {
+    "description": "Compute flood fill analysis of the Cube.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cubeId",
+        "type": "String",
+        "description": "The ID of Cube."
+      },
+      {
+        "name": "rasterProductNames",
+        "type": "String",
+        "description": "The names of raster to analyse."
+      },
+      {
+        "name": "vectorProductNames",
+        "type": "String",
+        "description": "The names of vector to analyse."
+      },
+      {
+        "name": "extent",
+        "type": "String",
+        "description": "The extent to analyse."
+      },
+      {
+        "name": "vectorProductNames",
+        "type": "String",
+        "description": "The names of vector to analyse."
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "description": "The start time to analyse."
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "description": "The end time to analyse."
+      }
+    ]
+  },
   "Cube.NDWI": {
     "description": "Compute NDWI of the Cube.",
     "returns": "Cube",
@@ -9052,7 +9166,7 @@
   },
   "Coverage.terrChannelnetwork": {
     "description": "DEM河网矢量化.",
-    "returns": "Cube",
+    "returns": "Feature",
     "args": [
       {
         "name": "DEM",
@@ -9062,12 +9176,12 @@
       {
         "name": "FlowAccumulation",
         "type": "Coverage",
-        "description": "The flowaccumulation coverage to compute the channelnetwork.(Necessary.)"
+        "description": "The flowaccumulation coverage to compute the channelnetwork."
       },
       {
         "name": "FlowDirection",
         "type": "Coverage",
-        "description": "The flowdirection coverage to compute the channelnetwork.(Optional.If it does not exist, it will be calculated based on DEM.)"
+        "description": "The flowdirection coverage to compute the channelnetwork."
       },
       {
         "name": "z-Factor",
@@ -9093,12 +9207,12 @@
       {
         "name": "min",
         "type": "List[Double]",
-        "description": "condition filter list min(include min), for example, '(10)' for an interval min, '(0, 180)' for two interval min"
+        "description": "condition filter list min(include min)"
       },
       {
         "name": "max",
         "type": "List[Double]",
-        "description": "condition filter list max(include max), for example, '(20)' for an interval max, '(90, 270)' for two interval max"
+        "description": "condition filter list max(include max)"
       },
       {
         "name": "z-Factor",
@@ -9327,6 +9441,46 @@
       {
         "name": "borderType",
         "type": "String",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.dilate": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "length",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.erosion": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "k",
+        "type": "Int",
         "description": "111",
         "default": "None",
         "optional": "False"
@@ -10005,7 +10159,8 @@
         "description": "image to be color balance"
       }
     ]
-  },
+  }，
+   },
   "algorithms.gmrc.colorbalanceRef.ColorBalanceWithRef.colorBalanceRef": {
     "description": "image color balance with reference",
     "returns": "Coverage",
@@ -10016,5 +10171,4 @@
         "description": "image to be color balance and reference"
       }
     ]
-  }
 }
