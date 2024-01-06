@@ -1099,7 +1099,7 @@ object Trigger {
         case "SpatialStats.SpatialHeterogeneity.GeoEcologicalDetector" =>
           stringList += (UUID -> Geodetector.ecologicalDetector(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y_title"), args("x_titles")))
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
-          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageRddList(args("coverage"))))
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageCollectionRddList(args("coverageCollection"))))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
         case "algorithms.gmrc.colorbalance.ColorBalance.colorBalance" =>

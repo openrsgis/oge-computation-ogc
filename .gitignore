@@ -42,3 +42,5 @@ data/testdata/mosaic/output_little/project.txt
 data/testdata/colorbalanceRef/output/project.prj
 data/testdata/colorbalanceRef/output/project.seam
 data/testdata/colorbalanceRef/output/project.txt
+lib/dll/geocorrection/WhuGdalDll_dem.dll
+lib/dll/geocorrection/libgdalgeocor.so.bak
