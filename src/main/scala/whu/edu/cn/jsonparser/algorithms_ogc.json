@@ -10084,8 +10084,8 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "coverage",
-        "type": "Coverage",
+        "name": "coverageCollection",
+        "type": "Collections",
         "description": "image to be geometrically corrected"
       }
     ]

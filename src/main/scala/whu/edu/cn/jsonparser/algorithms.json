@@ -10159,8 +10159,7 @@
         "description": "image to be color balance"
       }
     ]
-  }，
-   },
+  },
   "algorithms.gmrc.colorbalanceRef.ColorBalanceWithRef.colorBalanceRef": {
     "description": "image color balance with reference",
     "returns": "Coverage",
@@ -10171,4 +10170,5 @@
         "description": "image to be color balance and reference"
       }
     ]
+  }
 }
