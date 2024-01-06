@@ -910,6 +910,7 @@ object Cube {
     val styledRasterRDD: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Cube.addStyles(rasterTileLayerRdd, visualizationParam)
 
     val bands: Array[String] = visualizationParam.getBands.toArray
+    val tol_bands: ArrayBuffer[String] = ArrayBuffer()
     val tol_Extent: ArrayBuffer[String] = ArrayBuffer()
     val tol_Time: ArrayBuffer[Instant] = ArrayBuffer()
     val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
@@ -918,7 +919,6 @@ object Cube {
 
       val tileRdd: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = styledRasterRDD(i)
       val styledRasterRDDtime = (tileRdd.map (_._1.time.toInstant.toEpochMilli)).collect().distinct(0)
-      println("styledRasterRDDtime:", styledRasterRDDtime)
 
       val spatialMetadata = TileLayerMetadata(
         tileRdd._2.cellType,
@@ -978,8 +978,8 @@ object Cube {
         }
       }
 
-
-      val Time: Instant = rasterTileLayerRdd._2.tileLayerMetadata.bounds.get.minKey.time.toInstant
+      tol_bands.append(bands(0))
+      val Time: Instant = tileRdd.map(_._1.time.toInstant).collect().distinct(0)
       //    val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
       //    val TimeUtcString: String = dateTimeFormatter.format(Time)
       tol_Time.append(Time)
