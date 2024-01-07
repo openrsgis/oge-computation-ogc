@@ -13,9 +13,13 @@ import com.sun.jna.{Library, Native, Pointer, StringArray}
 
 object GdalCorrectionLibrary {
   val GDAL_CORRECTION_LIBRARY: GdalCorrectionLibrary = Native.load("./lib/dll/geocorrection/libgdalgeocor.so", classOf[GdalCorrectionLibrary])
+//  val GDAL_CORRECTION_LIBRARY: GdalCorrectionLibrary = Native.load("./lib/dll/geocorrection/WhuGdalDll_dem.dll", classOf[GdalCorrectionLibrary])
 }
 
 trait GdalCorrectionLibrary extends Library {
+
+  def whu_gdal_CSLSetNameValue(rpcOptions: Pointer, dem: String, demPath: String): Pointer
+
   def whu_gdal_GDALAllRegister(): Unit
 
   def whu_gdal_CPLSetConfigOption(key: String, value: String): Unit

@@ -10084,8 +10084,8 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "coverage",
-        "type": "Coverage",
+        "name": "coverageCollection",
+        "type": "Collections",
         "description": "image to be geometrically corrected"
       }
     ]
@@ -10245,6 +10245,17 @@
         "name": "coverage",
         "type": "Coverage",
         "description": "image to be color balance"
+      }
+    ]
+  },
+  "algorithms.gmrc.colorbalanceRef.ColorBalanceWithRef.colorBalanceRef": {
+    "description": "image color balance with reference",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "Collections",
+        "description": "image to be color balance and reference"
       }
     ]
   }

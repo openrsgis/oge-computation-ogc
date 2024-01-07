@@ -80,9 +80,13 @@ object Mosaic {
 
     if (isTest) {
       val inputImgArray = new Array[String](2)
-      inputImgArray(0) = "./data/testdata/mosaic/input/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit.tif"
-      inputImgArray(1) = "./data/testdata/mosaic/input/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit.tif"
-      val sOutoutFile = "./data/testdata/mosaic/output/mosaic_test.tif"
+//      inputImgArray(0) = "./data/testdata/mosaic/input/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit.tif"
+//      inputImgArray(1) = "./data/testdata/mosaic/input/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit.tif"
+//      val sOutoutFile = "./data/testdata/mosaic/output/mosaic_test.tif"
+
+      inputImgArray(0) = "./data/testdata/mosaic/input_little/GF1_WFV1_E109.8_N29.6_20160208_L1A0001398813_ortho_8bit_little.tif"
+      inputImgArray(1) = "./data/testdata/mosaic/input_little/GF1_WFV1_E110.1_N31.3_20160208_L1A0001398820_ortho_8bit_little.tif"
+      val sOutoutFile = "./data/testdata/mosaic/output_little/mosaic_test.tif"
 
       val outputfile_relative_path: String = splitMosaic(sc, inputImgArray, sOutoutFile, 1)
 
@@ -192,6 +196,8 @@ object Mosaic {
     }).collect()
 
     destroyGdal()
+
+    println("mosaic end")
 
     outputfile_relative_path
   }
