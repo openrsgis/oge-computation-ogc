@@ -39,8 +39,6 @@ import whu.edu.cn.oge.Sheet.CsvData
 import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 
 import scala.collection.mutable.ArrayBuffer
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
-import whu.edu.cn.oge.Sheet.CsvData
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -161,7 +159,11 @@ object Trigger {
           if(args("coverageID").startsWith("myData/")){
             coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
-          } else {
+          } else if(args("coverageID").startsWith("OGE_Case_Data/")){
+            coverageReadFromUploadFile = true
+            coverageRddList += (UUID -> Coverage.loadCoverageFromCaseData(sc, args("coverageID"),  dagId))
+          }
+          else {
             coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
@@ -1108,7 +1110,7 @@ object Trigger {
         case "SpatialStats.SpatialHeterogeneity.GeoEcologicalDetector" =>
           stringList += (UUID -> Geodetector.ecologicalDetector(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("y_title"), args("x_titles")))
         case "algorithms.gmrc.geocorrection.GeoCorrection.geometricCorrection" =>
-//          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, args("inputFile"), args("outPutDir"), args("outputSuf").toBoolean))
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.mosaic.Mosaic.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverageCollection"))))
         case "algorithms.gmrc.colorbalance.ColorBalance.colorBalance" =>

@@ -32,7 +32,7 @@ import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.{layerName, windowExtent}
+import whu.edu.cn.trigger.Trigger.{dagId, layerName, windowExtent}
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -3557,6 +3557,20 @@ object Coverage {
     tempfile.createNewFile()
     val bosObject = client.getObject(getObjectRequest,tempfile)
     println(filePath)
+    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+
+    coverage
+  }
+
+  def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val path = "/" + coverageId
+    val client = BosClientUtil_scala.getClient
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}.tiff"
+    val getObjectRequest = new GetObjectRequest("ogebos",path)
+    val tempfile = new File(filePath)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest,tempfile)
     val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
