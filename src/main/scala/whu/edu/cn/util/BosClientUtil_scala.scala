@@ -6,7 +6,7 @@ import com.baidubce.services.bos.{BosClient, BosClientConfiguration}
 object BosClientUtil_scala {
   val ACCESS_KEY_ID = "ALTAKetCGvRVdSsIa1C9CR81Cm"
   val SECRET_ACCESS_ID = "45624b0ae0c94c66877f75c6219b25f7"
-  val ENDPOINT_1 = "https://ogebos.bj.bcebos.com"
+  val ENDPOINT_1 = "https://ogebos.bj.bcebos.com" // 使用这个endpoint貌似也可以bj.bcebos.com
   val ENDPOINT_2 = "https://s3.bj.bcebos.com"
   def getClient ={
     val config = new BosClientConfiguration
