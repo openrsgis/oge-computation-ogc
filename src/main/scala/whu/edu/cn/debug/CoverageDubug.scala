@@ -18,7 +18,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{cannyEdgeDetection, falseColorComposite, reduction, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{cannyEdgeDetection, reduction}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.{Coverage, CoverageCollection}
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -37,18 +37,7 @@ object CoverageDubug {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
     test1(sc)
-    //    val time1: Long = System.currentTimeMillis()
-    //
-    //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days
-    //    // LC08_L1TP_124038_20181211_20181226_01_T1
-    //    // LE07_L1TP_125039_20130110_20161126_01_T1
-    //
-//    loadLandsat8()
-    //    val time2: Long = System.currentTimeMillis()
-    //    println("Total Time is " + (time2 - time1))
-    //
-    //
-    //    println("_")
+
   }
 
   //  def ndviLandsat7(): Unit = {
@@ -106,10 +95,10 @@ object CoverageDubug {
 
     val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LC81220392015275LGN00", "LC08_L1T" ,7)
 
-    val newCoverage=cannyEdgeDetection(coverage1,7,9)
+    val newCoverage=reduction(coverage1,1)
 
 
-      makeTIFF(newCoverage,"cannyTest"    )
+      makeTIFF(newCoverage,"reductionDebugTest" )
 
 
 

@@ -9467,6 +9467,61 @@
       }
     ]
   },
+  "Coverage.GLCM": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "d",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "dist",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "orient",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "greyLevels",
+        "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "feature",
+        "type": "String",
+        "description": "111",
+        "default": "Mean",
+        "optional": "True"
+      },
+      {
+        "name": "borderType",
+        "type": "String",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
   "Coverage.erosion": {
     "description": "1111",
     "returns": "Coverage",

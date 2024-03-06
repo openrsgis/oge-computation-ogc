@@ -1,7 +1,7 @@
 package whu.edu.cn.algorithms.ImageProcess
 
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
-import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, isNoData}
+import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, UShortConstantNoDataCellType, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalize, globalNormalizeDouble}
@@ -86,6 +86,7 @@ object algorithms_Image {
 
   def reduction(coverage: RDDImage, option: Int): RDDImage = {
     var outcome: RDDImage = coverage
+    val time=coverage.first()._1.spaceTimeKey.time
     option match {
       case 1 => outcome = reductionAverage(coverage)
       case 2 => outcome = reductionAll(coverage)
@@ -111,6 +112,9 @@ object algorithms_Image {
           }
           statuteImage.setDouble(j, i, pixelList / bandCount)
         }
+        val aspect: ListBuffer[String] = new ListBuffer[String]()
+        aspect.append("Aspect")
+        (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col,t._1.spaceTimeKey.row,time),aspect),MultibandTile(statuteImage))
         (t._1, MultibandTile(statuteImage))
       })
       (statute, coverage._2)
@@ -134,7 +138,9 @@ object algorithms_Image {
           }
           statuteImage.setDouble(j, i, pixelList)
         }
-        (t._1, MultibandTile(statuteImage))
+        val aspect: ListBuffer[String] = new ListBuffer[String]()
+        aspect.append("Aspect")
+        (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, time), aspect), MultibandTile(statuteImage))
       })
       (statute, coverage._2)
     }
@@ -158,7 +164,9 @@ object algorithms_Image {
           val maxValue = arrayBuffer.max
           statuteImage.setDouble(j, i, maxValue)
         }
-        (t._1, MultibandTile(statuteImage))
+        val aspect: ListBuffer[String] = new ListBuffer[String]()
+        aspect.append("Aspect")
+        (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, time), aspect), MultibandTile(statuteImage))
       })
       (statute, coverage._2)
     }
@@ -183,7 +191,9 @@ object algorithms_Image {
           val minValue = arrayBuffer.min
           statuteImage.setDouble(j, i, minValue)
         }
-        (t._1, MultibandTile(statuteImage))
+        val aspect: ListBuffer[String] = new ListBuffer[String]()
+        aspect.append("Aspect")
+        (SpaceTimeBandKey(SpaceTimeKey(t._1.spaceTimeKey.col, t._1.spaceTimeKey.row, time), aspect), MultibandTile(statuteImage))
       })
       (statute, coverage._2)
     }
@@ -721,7 +731,7 @@ object algorithms_Image {
     println(normalThreshold)
     val maxGradient = processedRDD.map(_.max).reduce(math.max)
     //    println("经过非极大抑制后的最大幅值为：" + maxGradient)
-
+    val time=PaddingVriable._1.first()._1.spaceTimeKey.instant
     val newRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = PaddingVriable._1.map(
       image => {
         val cols = image._2.cols
@@ -744,8 +754,9 @@ object algorithms_Image {
 
         val cannyEdgeExtraction = doubleThresholdDetection(NMS, highThreshold, lowThreshold, radius)
 
-
-        (image._1, MultibandTile(cannyEdgeExtraction).crop(radius, radius, cols - radius - 1, rows - radius - 1))
+        val aspect:ListBuffer[String]=new ListBuffer[String]()
+        aspect.append("Aspect")
+        (SpaceTimeBandKey(SpaceTimeKey(image._1.spaceTimeKey.col,image._1.spaceTimeKey.row,time),aspect), MultibandTile(cannyEdgeExtraction).crop(radius, radius, cols - radius - 1, rows - radius - 1))
       })
     (newRDD, coverage._2)
   }
@@ -899,6 +910,7 @@ object algorithms_Image {
       StrenchedTile
     }
     val MinMaxMap=findMinMaxValue(coverage)
+    val time=coverage._1.first()._1.spaceTimeKey.instant
     val Changed_Image:RDD[(SpaceTimeBandKey, MultibandTile)]=coverage._1.map(x=>{
       val ColorTile=Array.ofDim[IntArrayTile](3)
       val RedTile=x._2.band(BandRed)
@@ -926,8 +938,9 @@ object algorithms_Image {
       ColorTile(0)=RedOutputTile
       ColorTile(1)=BlueOutputTile
       ColorTile(2)=GreenOutputTile
-
-      (x._1,MultibandTile(ColorTile))
+      val aspect: ListBuffer[String] = new ListBuffer[String]()
+      aspect.append("Aspect")
+      (SpaceTimeBandKey(SpaceTimeKey(x._1.spaceTimeKey.col,x._1.spaceTimeKey.row,time),aspect),MultibandTile(ColorTile))
     })
     (Changed_Image,coverage._2)
   }
@@ -1161,4 +1174,190 @@ object algorithms_Image {
     (newCoverageRdd, coverage._2)
   }
 
+  //主成分分析
+  def GLCM(coverage: RDDImage, d: Int, dist: Int, orient: Int, greyLevels: Int, feature: String = "Mean", borderType: String): RDDImage = {
+    //coverage可以有多波段，分别为每个波段生成GLCM纹理
+    //d表示核的宽度；dist和orient表示探索灰度相关性的距离和方向；feature表示所选择的特征量（先默认为能量"ASM"）；borderType指接边策略
+    if (d % 2 != 1) throw new IllegalArgumentException("Error: d应为正奇数")
+    if (dist > d - 1) throw new IllegalArgumentException("Error: dist应小于等于d-1")
+    if (greyLevels > 65536) throw new IllegalArgumentException("Error: 设置的灰度阶数过大，UShort数据类型不支持")
+    val (di, dj): (Int, Int) = orient match {
+
+      case 45 => (-dist, dist)
+      case 90 => (-dist, 0)
+      case 135 => (-dist, -dist)
+      case _ => throw new IllegalArgumentException("Error: orient输入不符合要求")
+    }
+    // TODO Correlation和Dissimilarity根据结果图像来看有点问题，还差Homogeneity同质性
+    val featureFunc: (Array[Array[Double]] => Double) = feature match {
+      case "Mean" => (GLCM: Array[Array[Double]]) => { //均值
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) * i
+        }
+        sum
+      }
+      case "Variance" => (GLCM: Array[Array[Double]]) => { //方差
+        var mean: Double = 0;
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          mean += GLCM(i)(j) * i
+        }
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) * (i - mean) * (i - mean)
+        }
+        sum / greyLevels
+      }
+      case "Std" => (GLCM: Array[Array[Double]]) => { //标准差
+        var mean: Double = 0;
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          mean += GLCM(i)(j) * i
+        }
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += math.pow(GLCM(i)(j) * (i - mean) * (i - mean), 0.5)
+        }
+        sum
+      }
+      case "ASM" => (GLCM: Array[Array[Double]]) => { //角二阶矩 Angular Second Moment 体现了图像纹理的整体强度或能量分布情况
+        var sum: Double = 0
+        GLCM.flatten.foreach(t => sum += t * t)
+        sum
+      }
+      case "Energy" => (GLCM: Array[Array[Double]]) => { //能量 =根号ASM
+        var sum: Double = 0
+        GLCM.flatten.foreach(t => sum += t * t)
+        math.pow(sum, 0.5)
+      }
+      case "Contrast" => (GLCM: Array[Array[Double]]) => { //对比度 反映了图像中灰度级对比程度的强度
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) * (i - j) * (i - j)
+        }
+        sum
+      }
+      case "Dissimilarity" => (GLCM: Array[Array[Double]]) => { //非相似性
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) * math.abs(i - j)
+        }
+        sum
+      }
+      case "Homogeneity" => (GLCM: Array[Array[Double]]) => { //反差分矩阵 Inverse Different Moment 同质度 衡量了图像中灰度级相似的像素对之间的密集程度
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) / (1 + (i - j) * (i - j))
+        }
+        sum
+      }
+      case "Entropy" => (GLCM: Array[Array[Double]]) => { //熵 描述了图像纹理的复杂性和不规则性
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) * math.log(GLCM(i)(j)) / math.log(2)
+        }
+        sum
+      }
+      case "Correlation" => (GLCM: Array[Array[Double]]) => { //相关性（局部灰度相关性），值越大相关性越大 反映了图像中像素对之间的线性相关性
+        var mean_i: Double = 0;
+        var mean_j: Double = 0;
+        var variance_i: Double = 0;
+        var variance_j: Double = 0;
+        var sum: Double = 0
+        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          mean_i += GLCM(i)(j) * i
+        }
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          mean_j += GLCM(i)(j) * j
+        }
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          variance_i += GLCM(i)(j) * (i - mean_i) * (i - mean_i)
+        }
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          variance_j += GLCM(i)(j) * (j - mean_j) * (j - mean_j)
+        }
+        //        if(variance_i==0||variance_j==0) sum会得到NaN的值
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          sum += GLCM(i)(j) * (i - mean_i) * (j - mean_j) / (math.pow(variance_i * variance_j, 0.5))
+        }
+        //        println(mean_i, mean_j, variance_i, variance_j, sum)
+        sum
+      }
+      case _ => throw new IllegalArgumentException("Error: 其它特征量的求解暂未实现")
+    }
+    //grayLevels表示量化的灰度阶数，通常为8
+    val bandCount: Int = coverage._1.first()._2.bandCount
+    val radius: Int = d / 2
+    val group: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = paddingRDD(coverage, radius, borderType)
+    //先得到各波段的最大最小像素值
+    val minMaxValue: Map[Int, (Double, Double)] = findMinMaxValueDouble(coverage)
+    //计算灰度量化后的coverage，量化完后像素值变为了整型（Tile是IntArrayTile）
+    val reduceGreyLevelRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = group._1.map(image => {
+      val numRows = image._2.rows
+      val numCols = image._2.cols
+      val band_ArrayTile = Array.ofDim[Tile](bandCount)
+      for (bandIndex <- 0 until bandCount) {
+        val bandTile: Tile = image._2.band(bandIndex)
+        val intArrayTile: IntArrayTile = IntArrayTile.empty(numCols, numRows)
+        val min: Double = minMaxValue(bandIndex)._1
+        val rate: Double = (minMaxValue(bandIndex)._2 - minMaxValue(bandIndex)._1) / greyLevels
+        //        println(rate, min, minMaxValue(bandIndex)._2)
+        for (i <- 0 until numRows; j <- 0 until numCols) {
+          if (isNoData(bandTile.getDouble(j, i))) intArrayTile.set(j, i, UShortConstantNoDataCellType.noDataValue) //NODATA先这样设置
+          else {
+            val value: Int = math.min(((bandTile.getDouble(j, i) - min) / rate).toInt, greyLevels - 1)
+            //            println(value)
+            intArrayTile.set(j, i, value)
+          }
+        }
+        band_ArrayTile(bandIndex) = intArrayTile.convert(UShortConstantNoDataCellType) //暂时这样设CellType，这就要求用户输入的greyLevels<=65536，不过一般设这么大也没有意义
+      }
+      (image._1, MultibandTile(band_ArrayTile.toList))
+    })
+    //计算特征量
+    val featureRDD: RDD[(SpaceTimeBandKey, MultibandTile)] = reduceGreyLevelRDD.map(image => {
+      val numRows = image._2.rows
+      val numCols = image._2.cols
+      val band_ArrayTile = Array.ofDim[Tile](bandCount)
+      for (bandIndex <- 0 until bandCount) {
+        val doubleArrayTile: DoubleArrayTile = DoubleArrayTile.empty(numCols, numRows)
+        val bandTile: Tile = image._2.band(bandIndex)
+        for (i <- radius until numRows - radius; j <- radius until numCols - radius) {
+          //灰度共生矩阵的长宽均为灰度阶数
+          val GLCM = Array.fill[Int](greyLevels, greyLevels)(0)
+          //计算灰度共生矩阵
+          for (m <- 0 until d; n <- 0 until d) {
+            if (i - radius + m + di >= i - radius && j - radius + n + dj >= j - radius && j - radius + n + dj <= j + radius) {
+              val value1: Int = bandTile.get(j - radius + n, i - radius + m)
+              val value2: Int = bandTile.get(j - radius + n + dj, i - radius + m + di)
+              if ((!isNoData(value1)) && (!isNoData(value2))) GLCM(value1)(value2) += 1 //当前是进去NoData，出来也是NoData的策略
+              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
+              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
+              else GLCM(value1)(0) += 1
+            }
+          }
+          //灰度共生矩阵归一化
+          val sum = GLCM.flatten.sum.toDouble
+          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, 0) //当前是进去NoData，出来也是NoData的策略  Double.NaN-》0，就是opencv的处理策略
+          else {
+            val GLCM_1: Array[Array[Double]] = GLCM.map(_.map(_ / sum))
+            //计算特征量
+            val featureValue: Double = featureFunc(GLCM_1)
+            doubleArrayTile.setDouble(j, i, featureValue)
+          }
+        }
+        band_ArrayTile(bandIndex) = doubleArrayTile.convert(DoubleConstantNoDataCellType) //对cellType进行了改变，因为结果取值范围可能与初始像素取值范围完全不同，不能再使用原先像素值类型
+      }
+      //组合各波段的运算结果
+      (image._1, MultibandTile(band_ArrayTile.toList).crop(radius, radius, numCols - radius - 1, numRows - radius - 1)) //需确保传递给它的 Tile 对象数量和顺序与所希望组合的波段顺序一致
+    })
+    (featureRDD, coverage._2)
+  }
 }
