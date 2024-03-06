@@ -18,7 +18,7 @@ import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{cannyEdgeDetection, reduction}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{cannyEdgeDetection, falseColorComposite, reduction, standardDeviationStretching}
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.{Coverage, CoverageCollection}
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
@@ -37,7 +37,18 @@ object CoverageDubug {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
     test1(sc)
-
+    //    val time1: Long = System.currentTimeMillis()
+    //
+    //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days
+    //    // LC08_L1TP_124038_20181211_20181226_01_T1
+    //    // LE07_L1TP_125039_20130110_20161126_01_T1
+    //
+    //    loadLandsat8()
+    //    val time2: Long = System.currentTimeMillis()
+    //    println("Total Time is " + (time2 - time1))
+    //
+    //
+    //    println("_")
   }
 
   //  def ndviLandsat7(): Unit = {
@@ -78,16 +89,16 @@ object CoverageDubug {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
 
-//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056",
-//      "ASTER_GDEM_DEM30", 10)
-//    makeTIFF(coverage1, "dem")
+    //    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = loadCoverage(sc, "ASTGTM_N28E056",
+    //      "ASTER_GDEM_DEM30", 10)
+    //    makeTIFF(coverage1, "dem")
     val coverageCollection1 = CoverageCollection.load(sc,"ASTER_GDEM_DEM30",null,ArrayBuffer.empty[String],"2000-01-01 00:00:00","2000-01-01 00:00:00",extent = Extent(108.5, 18.1, 111, 20.1),level = 7)
     val coverage1 = CoverageCollection.mosaic(coverageCollection1)
     println(coverageCollection1.size)
-//    coverageCollection1.foreach(coverage =>{
-//      println(coverage._1)
-//      makeTIFF(coverage._2,coverage._1)
-//    })
+    //    coverageCollection1.foreach(coverage =>{
+    //      println(coverage._1)
+    //      makeTIFF(coverage._2,coverage._1)
+    //    })
     makeTIFF(coverage1,"dem")
     println("Finish")
   }
@@ -95,14 +106,23 @@ object CoverageDubug {
 
     val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LC81220392015275LGN00", "LC08_L1T" ,7)
 
-    val newCoverage=reduction(coverage1,1)
+    val newCoverage=cannyEdgeDetection(coverage1,7,9)
 
 
-      makeTIFF(newCoverage,"reductionDebugTest" )
+    makeTIFF(newCoverage,"cannyTest"    )
 
+    //    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "T49REK_20231004T030551","S2A_MSIL1C", 10)
+    //    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LE07_L1TP_124039_20130612_20161124_01_T1","LE07_L1TP_C01_T1", 10)
+    //    val coverage2 = Coverage.toFloat(coverage1)
+    //    val res = Coverage.normalizedDifference(coverage2,List("B3","B5"))
+    //    println(res._1.first()._2.cellType)
+    //    val coverage = Coverage.selectBands(coverage1,List("B01"))
+    makeTIFF(coverage1,"dem1")
 
+    //    makeTIFF(coverage2, "lc07")
 
-
+    //    val coverage = Coverage.add(coverage1, coverage2)
+    //    makeTIFF(coverage, "add")
     println("Finish")
   }
 
@@ -161,7 +181,7 @@ object CoverageDubug {
         val rawTiles: mutable.ArrayBuffer[RawTile] = {
           val client: MinioClient = MinIOUtil.getMinioClient
           val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, queryGeometry.getEnvelopeInternal,queryGeometry)
-//          MinIOUtil.releaseMinioClient(client)
+          //          MinIOUtil.releaseMinioClient(client)
           tiles
         }
         val time2: Long = System.currentTimeMillis()
@@ -179,7 +199,7 @@ object CoverageDubug {
       val time1: Long = System.currentTimeMillis()
       val client: MinioClient = MinIOUtil.getMinioClient
       val tile: RawTile = getTileBuf(client, t)
-//      MinIOUtil.releaseMinioClient(client)
+      //      MinIOUtil.releaseMinioClient(client)
       val time2: Long = System.currentTimeMillis()
       println("Get Tile Time2 is " + (time2 - time1))
       tile
@@ -198,7 +218,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
+    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
