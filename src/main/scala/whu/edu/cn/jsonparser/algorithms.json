@@ -2905,7 +2905,6 @@
         "optional": "True",
         "default": ""
       }
-
     ]
   },
   "Coverage.contourByGDAL": {
@@ -4025,7 +4024,6 @@
         "description": "Set the coordinate reference to use for the mask layer.",
         "optional": "True",
         "default": ""
-
       },
       {
         "name": "keepResolution",
@@ -4061,7 +4059,6 @@
         "description": "Defines the format of the output raster file.",
         "optional": "True",
         "default": "0"
-
       },
       {
         "name": "sourceCrs",
@@ -4688,7 +4685,6 @@
       }
     ]
   },
-
   "Coverage.bufferByGrass": {
     "description": "Creates a raster map showing buffer zones surrounding cells that contain non-NULL category values.",
     "returns": "Coverage",
@@ -4741,7 +4737,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       }
     ]
   },
@@ -4752,12 +4748,12 @@
       {
         "name": "first",
         "type": "Coverage",
-        "description":"Name of first raster map for blending"
+        "description": "Name of first raster map for blending"
       },
       {
         "name": "second",
         "type": "Coverage",
-        "description":"Name of second raster map for blending"
+        "description": "Name of second raster map for blending"
       },
       {
         "name": "percent",
@@ -4775,17 +4771,17 @@
       {
         "name": "red",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <red>"
+        "description": "Name of raster map to be used for <red>"
       },
       {
         "name": "green",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <green>"
+        "description": "Name of raster map to be used for <green>"
       },
       {
         "name": "blue",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <blue>"
+        "description": "Name of raster map to be used for <blue>"
       },
       {
         "name": "levels",
@@ -5059,7 +5055,6 @@
       }
     ]
   },
-
   "Coverage.surfIdwByGrass": {
     "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
     "returns": "Coverage",
@@ -5067,7 +5062,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "npoints",
@@ -5085,7 +5080,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"The name of the raster map to be rescaled"
+        "description": "The name of the raster map to be rescaled"
       },
       {
         "name": "to",
@@ -5101,7 +5096,7 @@
       {
         "name": "map",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "vscale",
@@ -5119,7 +5114,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of raster map to report on"
+        "description": "Name of raster map to report on"
       },
       {
         "name": "flags",
@@ -5156,12 +5151,12 @@
       {
         "name": "first",
         "type": "Coverage",
-        "description":"Name of first raster map"
+        "description": "Name of first raster map"
       },
       {
         "name": "second",
         "type": "Coverage",
-        "description":"Name of second raster map"
+        "description": "Name of second raster map"
       },
       {
         "name": "units",
@@ -5177,12 +5172,12 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map representing data that will be summed within clumps"
+        "description": "Name of input raster map representing data that will be summed within clumps"
       },
       {
         "name": "clump",
         "type": "Coverage",
-        "description":"Name of input clump raster map"
+        "description": "Name of input clump raster map"
       }
     ]
   },
@@ -5193,12 +5188,12 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "compression",
         "type": "String",
-        "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
+        "description": "Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
         "optional": "True",
         "default": "6"
       }
@@ -5417,7 +5412,6 @@
         "description": "Rotations to make (negative numbers rotate counterclockwise)."
       }
     ]
-
   },
   "Kernel.chebyshev": {
     "description": "Generates a distance kernel based on Chebyshev distance (greatest distance along any dimension).",
@@ -9086,26 +9080,26 @@
     ]
   },
   "Coverage.terrPitrouter": {
-  "description": "DEM洼地探测.",
-  "returns": "Coverage",
-  "args": [
-    {
-      "name": "coverage",
-      "type": "Coverage",
-      "description": "The coverage to compute the pitrouter."
-    },
-    {
-      "name": "radius",
-      "type": "Int",
-      "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
-    },
-    {
-      "name": "z-Factor",
-      "type": "Double",
-      "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
-    }
-  ]
-},
+    "description": "DEM洼地探测.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the pitrouter."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
   "Coverage.terrPiteliminator": {
     "description": "DEM洼地填充.",
     "returns": "Coverage",
@@ -9309,9 +9303,10 @@
     "returns": "Coverage",
     "args": [
       {
-        "name":"coverage",
-        "type":"Coverage",
-        "description":"The coverage to be stretched based on standard deviation."}
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be stretched based on standard deviation."
+      }
     ]
   },
   "Coverage.histogramEqualization": {
@@ -9686,7 +9681,7 @@
         "name": "weightstyle",
         "type": "String",
         "description": "neighbor weight type, including: W, B, C, U, default: W",
-          "default": "\"W\"",
+        "default": "\"W\"",
         "optional": "True"
       }
     ]
