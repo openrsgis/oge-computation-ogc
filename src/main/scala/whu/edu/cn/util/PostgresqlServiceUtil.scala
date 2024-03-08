@@ -38,13 +38,11 @@ object PostgresqlServiceUtil {
         val statement: Statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
 
         val sql = new mutable.StringBuilder
-        sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, st_astext(oge_image.geom) AS geom,oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.dtype"
+        sql ++= "select oge_image.product_key, oge_image.image_identification, oge_image.crs, oge_image.path, st_astext(oge_image.geom) AS geom,oge_image.phenomenon_time, oge_data_resource_product.name, oge_data_resource_product.product_type, oge_data_resource_product.description, oge_data_resource_product.dtype, oge_sensor.platform_name"
         sql ++= ", oge_product_measurement.band_num, oge_product_measurement.band_rank, oge_product_measurement.band_train, oge_product_measurement.resolution_m"
         sql ++= " from oge_image "
         sql ++= "join oge_data_resource_product on oge_image.product_key= oge_data_resource_product.id "
-        if (sensorName != "" && sensorName != null) {
-          sql ++= "join oge_sensor on oge_data_resource_product.sensor_Key=oge_sensor.sensor_Key "
-        }
+        sql ++= "join oge_sensor on oge_data_resource_product.sensor_key=oge_sensor.sensor_key "
         sql ++= "join oge_product_measurement on oge_product_measurement.product_key=oge_data_resource_product.id join oge_measurement on oge_product_measurement.measurement_key=oge_measurement.measurement_key "
         // productName is not null
         var t = "where"
@@ -123,6 +121,10 @@ object PostgresqlServiceUtil {
             coverageMetadata.setCrs(extentResults.getString("crs"))
             coverageMetadata.setGeom(extentResults.getString("geom"))
             coverageMetadata.setDataType(extentResults.getString("dtype"))
+            coverageMetadata.setProduct(extentResults.getString("name"))
+            coverageMetadata.setProductType(extentResults.getString("product_type"))
+            coverageMetadata.setProductDescription(extentResults.getString("description"))
+            coverageMetadata.setPlatformName(extentResults.getString("platform_name"))
             coverageMetadata.setResolution(extentResults.getDouble("resolution_m"))
             metaData.append(coverageMetadata)
           }
