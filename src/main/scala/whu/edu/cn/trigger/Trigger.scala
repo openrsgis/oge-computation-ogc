@@ -25,7 +25,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,GLCM}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -402,6 +402,8 @@ object Trigger {
           coverageRddList += (UUID -> erosion(coverage = coverageRddList(args("coverage")), k = args("k").toInt))
         case "Coverage.dilate" =>
           coverageRddList += (UUID -> dilate(coverage = coverageRddList(args("coverage")), length = args("length").toInt))
+        case "Coverage.GLCM" =>
+          coverageRddList += (UUID -> GLCM(coverage = coverageRddList(args("coverage")), d = args("d").toInt,dist = args("dist").toInt,orient =args("orient").toInt,greyLevels = args("greyLevels").toInt ,feature=args("feature").toString,borderType = args("borderType").toString))
         case "Coverage.atan" =>
           coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
         case "Coverage.atan2" =>

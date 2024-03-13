@@ -214,7 +214,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
+    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
