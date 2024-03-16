@@ -1174,7 +1174,7 @@ object algorithms_Image {
     (newCoverageRdd, coverage._2)
   }
 
-  //主成分分析
+  //灰度共生纹理矩阵
   def GLCM(coverage: RDDImage, d: Int, dist: Int, orient: Int, greyLevels: Int, feature: String = "Mean", borderType: String): RDDImage = {
     //coverage可以有多波段，分别为每个波段生成GLCM纹理
     //d表示核的宽度；dist和orient表示探索灰度相关性的距离和方向；feature表示所选择的特征量（先默认为能量"ASM"）；borderType指接边策略
@@ -1182,7 +1182,7 @@ object algorithms_Image {
     if (dist > d - 1) throw new IllegalArgumentException("Error: dist应小于等于d-1")
     if (greyLevels > 65536) throw new IllegalArgumentException("Error: 设置的灰度阶数过大，UShort数据类型不支持")
     val (di, dj): (Int, Int) = orient match {
-
+      case 0 => (0, dist)
       case 45 => (-dist, dist)
       case 90 => (-dist, 0)
       case 135 => (-dist, -dist)
@@ -1312,7 +1312,7 @@ object algorithms_Image {
         for (i <- 0 until numRows; j <- 0 until numCols) {
           if (isNoData(bandTile.getDouble(j, i))) intArrayTile.set(j, i, UShortConstantNoDataCellType.noDataValue) //NODATA先这样设置
           else {
-            val value: Int = math.min(((bandTile.getDouble(j, i) - min) / rate).toInt, greyLevels - 1)
+            val value: Int = math.max(0, math.min(((bandTile.getDouble(j, i) - min) / rate).toInt, greyLevels - 1))
             //            println(value)
             intArrayTile.set(j, i, value)
           }
