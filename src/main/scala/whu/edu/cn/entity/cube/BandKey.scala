@@ -14,5 +14,4 @@ class BandKey(_bandName: String, _bandPlatform: String) extends Serializable {
       case _ => false
     }
   }
-
 }
