@@ -3,8 +3,13 @@ package whu.edu.cn.algorithms.ImageProcess
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, UShortConstantNoDataCellType, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
+import org.apache.spark.ml.clustering.KMeans
+import org.apache.spark.ml.feature.{PCA, VectorAssembler}
+import org.apache.spark.ml.linalg.DenseVector
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findTotalPixel, globalNormalize, globalNormalizeDouble}
+import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
+import org.apache.spark.sql.{Row, SparkSession}
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findSpatialKeyMinMax, findTotalPixel, globalNormalize, globalNormalizeDouble}
 import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.paddingRDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
@@ -1338,14 +1343,14 @@ object algorithms_Image {
               val value1: Int = bandTile.get(j - radius + n, i - radius + m)
               val value2: Int = bandTile.get(j - radius + n + dj, i - radius + m + di)
               if ((!isNoData(value1)) && (!isNoData(value2))) GLCM(value1)(value2) += 1 //当前是进去NoData，出来也是NoData的策略
-              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
-              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
-              else GLCM(value1)(0) += 1
+//              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
+//              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
+//              else GLCM(value1)(0) += 1
             }
           }
           //灰度共生矩阵归一化
           val sum = GLCM.flatten.sum.toDouble
-          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, 0) //当前是进去NoData，出来也是NoData的策略  Double.NaN-》0，就是opencv的处理策略
+          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, Double.NaN) //当前是进去NoData，出来也是NoData的策略  Double.NaN-》0，就是opencv的处理策略
           else {
             val GLCM_1: Array[Array[Double]] = GLCM.map(_.map(_ / sum))
             //计算特征量
@@ -1360,4 +1365,162 @@ object algorithms_Image {
     })
     (featureRDD, coverage._2)
   }
+
+  def PCA(coverage: RDDImage, num: Int): RDDImage = {
+    // 创建SparkSession对象
+    val spark = SparkSession.builder().appName("SparkStatCleanJob").getOrCreate()
+    val numRows: Int = findSpatialKeyMinMax(coverage)._1 //瓦片行数
+    val numCols: Int = findSpatialKeyMinMax(coverage)._2 //瓦片列数
+    //    println(coverage._1.first()._1._measurementName)
+    val bandCount: Int = coverage._1.first()._2.bandCount
+    val cellType: CellType = coverage._1.first()._2.cellType
+    val time: Long = coverage._1.first()._1.spaceTimeKey.instant
+    // 将RDD转换为DataFrame
+    val IntVectorRdd: RDD[(Int, Int, Int, Int, List[Double])] = coverage._1.flatMap(t => {
+      val list: ListBuffer[(Int, Int, Int, Int, List[Double])] = ListBuffer.empty[(Int, Int, Int, Int, List[Double])]
+      //定位瓦片
+      val row = t._1.spaceTimeKey.spatialKey.row
+      val col = t._1.spaceTimeKey.spatialKey.col
+      //定位像素
+      for (i <- 0 until 256; j <- 0 until 256) { // (i, j)是像素在该瓦片中的定位
+        val pixelBands: ListBuffer[Double] = ListBuffer.empty[Double] //TODO 类型先写作Double，后面改成与cellType同
+        for (bandIndex <- 0 until bandCount) {
+          pixelBands.append(t._2.band(bandIndex).getDouble(j, i))
+        }
+        list.append((row, col, i, j, pixelBands.toList)) //使用4个label标识像素在哪个瓦片的哪个位置
+      }
+      list.toList
+    })
+    val rowRdd: RDD[Row] = IntVectorRdd.map(t => {
+      val list = List(t._1.toDouble, t._2.toDouble, t._3.toDouble, t._4.toDouble) ::: t._5
+      Row(list: _*)
+    })
+    val fieldTypes = List.fill(bandCount + 4)(DoubleType)
+    val colNames: ListBuffer[String] = ListBuffer.empty[String]
+    for (i <- 1 to bandCount) {
+      colNames.append(s"col$i")
+    }
+    val labelColNames = List("label1", "label2", "label3", "label4") ::: colNames.toList
+    val fields = labelColNames.zip(fieldTypes).map { case (name, dataType) =>
+      StructField(name, dataType)
+    }
+    val schema = StructType(fields)
+    val df = spark.createDataFrame(rowRdd, schema).toDF(labelColNames: _*)
+    val assembler = new VectorAssembler()
+      .setInputCols(colNames.toArray)
+      .setOutputCol("features")
+      .setHandleInvalid("skip")
+    val assembledDF = assembler.transform(df)
+
+    val pca = new PCA()
+      .setInputCol("features")
+      .setOutputCol("pcaFeatures")
+      .setK(num)
+      .fit(assembledDF)
+    val result = pca.transform(assembledDF) //.drop("pcaFeatures")
+
+    val colSelect: RDD[Row] = result.select("label1", "label2", "label3", "label4", "pcaFeatures").rdd
+    val groupRdd: RDD[((Double, Double), Iterable[((Double, Double), DenseVector)])] =
+      colSelect.map(t => ((t.getDouble(0), t.getDouble(1)), ((t.getDouble(2), t.getDouble(3)), t.getAs[DenseVector](4)))) //.getAs[List[Double]](4))
+        .groupByKey()
+    val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRdd.map(t => {
+      val multibandTileArray = Array.ofDim[Tile](num)
+      //定位瓦片
+      val row = t._1._1.toInt
+      val col = t._1._2.toInt
+      val newBand: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //TODO 需要改成新的波段列表
+      val arr: Iterable[((Double, Double), DenseVector)] = t._2 // 取消 新增.toArray ; java.util.List ; DenseVector[Double] ; Vector
+      //分波段计算新像素值
+      for (bandIndex <- 0 until num) {
+        newBand.append(bandIndex.toString())
+        val doubleArrayTile: DoubleArrayTile = DoubleArrayTile.empty(256, 256)
+        doubleArrayTile.fill(Double.NaN)
+        for (list <- arr) {
+          doubleArrayTile.setDouble(list._1._2.toInt, list._1._1.toInt, -list._2(bandIndex)) //加个负号，否则结果会是负数，原因还不明
+        }
+        multibandTileArray(bandIndex) = doubleArrayTile.convert(cellType)
+      }
+      (SpaceTimeBandKey(SpaceTimeKey(col, row, time), newBand), MultibandTile(multibandTileArray))
+    })
+
+    (newCoverageRdd, coverage._2)
+  }
+
+
+  def kMeans(coverage: RDDImage, k: Int, seed: Long, maxIter: Int, distanceMeasure: String): RDDImage = {
+    val spark = SparkSession.builder().appName("SparkKMeansJob").getOrCreate()
+    val bandCount: Int = coverage._1.first()._2.bandCount
+    val cellType: CellType = coverage._1.first()._2.cellType
+    val time: Long = coverage._1.first()._1.spaceTimeKey.instant
+
+    val IntVectorRdd: RDD[(Int, Int, Int, Int, List[Double])] = coverage._1.flatMap(t => {
+      val list: ListBuffer[(Int, Int, Int, Int, List[Double])] = ListBuffer.empty[(Int, Int, Int, Int, List[Double])]
+      //定位瓦片
+      val row = t._1.spaceTimeKey.spatialKey.row
+      val col = t._1.spaceTimeKey.spatialKey.col
+      //定位像素
+      for (i <- 0 until 256; j <- 0 until 256) { // (i, j)是像素在该瓦片中的定位
+        val pixelBands: ListBuffer[Double] = ListBuffer.empty[Double] //TODO 类型先写作Double，后面改成与cellType同
+        for (bandIndex <- 0 until bandCount) {
+          pixelBands.append(t._2.band(bandIndex).getDouble(j, i))
+        }
+        list.append((row, col, i, j, pixelBands.toList)) //使用4个label标识像素在哪个瓦片的哪个位置
+      }
+      list.toList
+    })
+    val rowRdd: RDD[Row] = IntVectorRdd.map(t => {
+      val list = List(t._1.toDouble, t._2.toDouble, t._3.toDouble, t._4.toDouble) ::: t._5
+      Row(list: _*)
+    })
+    val fieldTypes = List.fill(bandCount + 4)(DoubleType)
+    val colNames: ListBuffer[String] = ListBuffer.empty[String]
+    for (i <- 1 to bandCount) {
+      colNames.append(s"col$i")
+    }
+    val labelColNames = List("label1", "label2", "label3", "label4") ::: colNames.toList
+    val fields = labelColNames.zip(fieldTypes).map { case (name, dataType) =>
+      StructField(name, dataType)
+    }
+    val schema = StructType(fields)
+    val df = spark.createDataFrame(rowRdd, schema).toDF(labelColNames: _*)
+    val assembler = new VectorAssembler()
+      .setInputCols(colNames.toArray)
+      .setOutputCol("features")
+      .setHandleInvalid("skip")
+    val assembledDF = assembler.transform(df)
+
+    val kmeans = new KMeans()
+      .setK(k)
+      .setSeed(seed)
+      .setMaxIter(maxIter)
+      .setDistanceMeasure(distanceMeasure)
+      .setFeaturesCol("features")
+      .setPredictionCol("cluster")
+
+    val model = kmeans.fit(assembledDF)
+    val predictions = model.transform(assembledDF)
+    // 选择需要的列并进行分组
+    val colSelect: RDD[Row] = predictions.select("label1", "label2", "label3", "label4", "cluster").rdd
+    val groupRdd: RDD[((Double, Double), Iterable[((Double, Double), Int)])] =
+      colSelect.map(t => ((t.getDouble(0), t.getDouble(1)), ((t.getDouble(2), t.getDouble(3)), t.getInt(4))))
+        .groupByKey()
+
+    // 构建新的覆盖范围RDD
+    val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = groupRdd.map(t => {
+      //定位瓦片
+      val row = t._1._1.toInt
+      val col = t._1._2.toInt
+      val arr: Iterable[((Double, Double), Int)] = t._2 // 取消 新增.toArray ; java.util.List ; DenseVector[Double] ; Vector
+      val doubleArrayTile: DoubleArrayTile = DoubleArrayTile.empty(256, 256)
+      doubleArrayTile.fill(Double.NaN)
+      for (list <- arr) {
+        doubleArrayTile.setDouble(list._1._2.toInt, list._1._1.toInt, list._2) //加个负号，否则结果会是负数，原因还不明
+      }
+      val tile: Tile = doubleArrayTile.convert(cellType)
+      (SpaceTimeBandKey(SpaceTimeKey(col, row, time), ListBuffer("cluster")), MultibandTile(tile))
+    })
+    (newCoverageRdd, coverage._2)
+  }
+
+
 }
