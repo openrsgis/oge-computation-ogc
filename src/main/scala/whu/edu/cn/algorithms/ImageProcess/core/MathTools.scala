@@ -11,6 +11,19 @@ import scala.collection.mutable.ListBuffer
 import scala.math.sqrt
 
 object MathTools {
+
+  def findSpatialKeyMinMax(coverage: RDDImage): (Int, Int) = {
+    val rowCol: RDD[(Int, Int)] = coverage._1.map(t => {
+      val row: Int = t._1.spaceTimeKey.spatialKey.row
+      val col: Int = t._1.spaceTimeKey.spatialKey.col
+      (row, col)
+    })
+    val rowColMax: (Int, Int) = rowCol.reduce((a, b) => {
+      (math.max(a._1, b._1), math.max(a._2, b._2))
+    })
+    //map里面运算的row和col好像带不出来
+    (rowColMax._1 + 1, rowColMax._2 + 1)
+  }
   def findMinMaxValueDouble(coverage: RDDImage): Map[Int, (Double, Double)] = {
     //计算每个瓦片的最大最小值
     val minmaxValue: RDD[(Int, (Double, Double))] = coverage._1.flatMap(t => {

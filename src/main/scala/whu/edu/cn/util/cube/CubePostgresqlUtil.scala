@@ -1,17 +1,20 @@
 package whu.edu.cn.util.cube
 
-import com.alibaba.fastjson.JSONObject
+import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.proj4.CRS
 import geotrellis.raster.Tile
 import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 import whu.edu.cn.entity.cube._
+import whu.edu.cn.util.cube.CubeUtil.cogHeaderBytesParse
 import whu.edu.cn.util.{MinIOUtil, PostgresqlUtilDev}
 
 import java.sql.{Connection, ResultSet, Statement}
 import scala.collection.mutable.ArrayBuffer
+import scala.util.matching.Regex
 
 object CubePostgresqlUtil {
   private final val conn: Connection = PostgresqlUtilDev.getConnection
@@ -50,7 +53,7 @@ object CubePostgresqlUtil {
     if (conn != null) {
       val statement: Statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
       val sql = new StringBuilder
-      sql ++= "DROP TABLE "
+      sql ++= "DROP TABLE IF EXISTS "
       sql ++= tableName
       println(sql)
       statement.execute(sql.toString())
@@ -79,7 +82,7 @@ object CubePostgresqlUtil {
    * @param tableName 表名
    * @param keyName   Key名
    */
-  def resetKeySeq(tableName: String, keyName: String): Unit = {
+  def resetKeySeq(tableName: String, keyName: String, cubeId: Int): Unit = {
     if (conn != null) {
       val statement: Statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
       val sql = new StringBuilder
@@ -87,8 +90,9 @@ object CubePostgresqlUtil {
       sql ++= tableName
       sql ++= "_"
       sql ++= keyName
-      sql ++= "_seq restart with 1 "
-      sql ++= "cache 1"
+      sql ++= "_seq restart with "
+      sql ++= cubeId.toString
+      sql ++= " cache 1"
       println(sql)
       statement.execute(sql.toString())
     }
@@ -268,7 +272,7 @@ object CubePostgresqlUtil {
    * @param cubeDescription Cube描述
    * @return CubeId Cube的唯一标识
    */
-  def createCubeMetaTableGroup(cubeName: String, tms: String, cubeDescription: String): Int = {
+  def createCubeMetaTableGroupByTile(cubeName: String, tms: String, cubeDescription: String): Int = {
     // 凡是查询维度，都不能作为共享表
     // 创建oc_cube表 —— 共享表 —— 假设已经有了
     // createTable("oc_cube", Array("cube_key SERIAL PRIMARY KEY", "cube_name TEXT", "tms TEXT", "cube_description TEXT"))
@@ -299,6 +303,47 @@ object CubePostgresqlUtil {
         // 时间的具体值下沉到了oc_tile_fact表
         // 创建oc_tile_fact表
         createTable("oc_tile_fact_" + cubeId, Array("tile_key SERIAL PRIMARY KEY", "tile_offset INT", "tile_byte_count INT", "compression INT", "product_key INT", "band_key INT", "extent_key INT", "time_key INT", "data_type TEXT", "path TEXT"))
+        cubeId
+      } finally {
+        conn.close()
+      }
+    }
+    else {
+      -1
+    }
+  }
+
+  def createCubeMetaTableGroupByImage(cubeName: String, tms: String, cubeDescription: String): Int = {
+    // 凡是查询维度，都不能作为共享表
+    // 创建oc_cube表 —— 共享表 —— 假设已经有了
+    // createTable("oc_cube", Array("cube_key SERIAL PRIMARY KEY", "cube_name TEXT", "tms TEXT", "cube_description TEXT"))
+    // 插入oc_cube表
+    insertDataToTable("oc_cube", Array("cube_name", "tms", "cube_description"), Array(cubeName, tms, cubeDescription))
+    val conn: Connection = PostgresqlUtilDev.getConnection
+    if (conn != null) {
+      try {
+        val statement: Statement = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+        val resultSet: ResultSet = statement.executeQuery("SELECT max(cube_key) FROM oc_cube")
+        resultSet.next()
+        val cubeId: Int = resultSet.getInt(1)
+        println("新建的Cube的ID是" + cubeId)
+        // 创建oc_extent_level表 —— 共享表 —— 假设已经有了
+        // createTable("oc_extent_level", Array("extent_level_key SERIAL PRIMARY KEY", "extent_level INT", "resolution FLOAT", "tms TEXT", "extent" TEXT))
+        // 创建oc_extent表
+        createTable("oc_extent_" + cubeId, Array("extent_key SERIAL PRIMARY KEY", "extent_level_key INT", "min_x FLOAT", "min_y FLOAT", "max_x FLOAT", "max_y FLOAT", "row INT", "col INT"))
+        // 创建oc_product表
+        createTable("oc_product_" + cubeId, Array("product_key SERIAL PRIMARY KEY", "product_name TEXT", "product_type TEXT", "product_description TEXT"))
+        // 创建oc_band总表 —— 共享表 —— 假设已经有了
+        // createTable("oc_band", Array("band_key SERIAL PRIMARY KEY", "band_name TEXT", "band_unit TEXT", "band_min FLOAT", "band_max FLOAT", "band_scale FLOAT", "band_offset FLOAT", "band_description TEXT", "band_resolution FLOAT", "band_wavelength TEXT", "band_platform TEXT"))
+        // 创建oc_band表
+        createTable("oc_band_" + cubeId, Array("band_key SERIAL PRIMARY KEY", "band_name TEXT", "band_unit TEXT", "band_min FLOAT", "band_max FLOAT", "band_scale FLOAT", "band_offset FLOAT", "band_description TEXT", "band_resolution FLOAT", "band_wavelength TEXT", "band_platform TEXT"))
+        // 创建oc_time_level表 —— 共享表 —— 假设已经有了
+        // createTable("oc_time_level", Array("time_level_key SERIAL PRIMARY KEY", "time_level TEXT", "resolution INT"))
+        // 创建oc_time表
+        createTable("oc_time_" + cubeId, Array("time_key SERIAL PRIMARY KEY", "time_level_key INT", "time TIMESTAMP"))
+        // 时间的具体值下沉到了oc_tile_fact表
+        // 创建oc_image_fact表
+        createTable("oc_image_fact_" + cubeId, Array("image_key SERIAL PRIMARY KEY", "compression INT", "product_key INT", "band_key INT", "extent_key INT[]", "time_key INT", "data_type TEXT", "path TEXT"))
         cubeId
       } finally {
         conn.close()
@@ -340,7 +385,7 @@ object CubePostgresqlUtil {
     // 首先清空表格
     truncateTable("oc_extent_level")
     // 然后重置KeySeq
-    resetKeySeq("oc_extent_level", "extent_level_key")
+    resetKeySeq("oc_extent_level", "extent_level_key", 1)
     // WGS1984Quad的范围
     val extentWGS1984Quad: JSONObject = new JSONObject
     extentWGS1984Quad.put("min_x", -180.0)
@@ -375,7 +420,7 @@ object CubePostgresqlUtil {
     // 首先清空表格
     truncateTable("oc_time_level")
     // 然后重置KeySeq
-    resetKeySeq("oc_time_level", "time_level_key")
+    resetKeySeq("oc_time_level", "time_level_key", 1)
     // 插入time_level_type是average的
     // Y表示年，M表示月，D表示日，H表示小时，M表示分钟，S表示秒
     insertDataToTable("oc_time_level", Array("time_level", "resolution"), Array("D", 1))
@@ -388,18 +433,19 @@ object CubePostgresqlUtil {
    * @param cubeId Cube的唯一标识
    */
   def dropCubeMetaTableGroup(cubeId: Int): Unit = {
-    // 首先清空表格
-    truncateTable("oc_cube")
+    // 首先删除oc_cube元素
+    deleteDataInTable("oc_cube", Array("cube_key"), Array(cubeId))
     // 然后重置KeySeq
-    resetKeySeq("oc_cube", "cube_key")
+    resetKeySeq("oc_cube", "cube_key", cubeId)
     dropTable("oc_extent_" + cubeId)
     dropTable("oc_time_" + cubeId)
     dropTable("oc_product_" + cubeId)
     dropTable("oc_band_" + cubeId)
     dropTable("oc_tile_fact_" + cubeId)
+    dropTable("oc_image_fact_" + cubeId)
   }
 
-  def loadCubeSubsetAlone(cubeId: String, product: Array[String], band: Array[String], time: Array[String], minX: Double, minY: Double, maxX: Double, maxY: Double, tms: String, resolution: Double): Unit = {
+  def loadCubeSubsetAloneByTile(cubeId: String, product: Array[String], band: Array[String], time: Array[String], minX: Double, minY: Double, maxX: Double, maxY: Double, tms: String, resolution: Double): Unit = {
     // 1. 首先通过波段找到对应的波段分辨率的最小值
     val bandResolutionList: ArrayBuffer[Double] = new ArrayBuffer[Double]()
     for (i <- band.indices) {
@@ -485,7 +531,7 @@ object CubePostgresqlUtil {
     tileKeyList.foreach(println)
   }
 
-  def loadCubeSubsetJoint(implicit sc: SparkContext, cubeId: String, product: Array[String], band: Array[String], time: Array[String], minX: Double, minY: Double, maxX: Double, maxY: Double, tms: String, resolution: Double): RDD[(CubeTileKey, Tile)] = {
+  def loadCubeSubsetJointByTile(implicit sc: SparkContext, cubeId: String, product: Array[String], band: Array[String], time: Array[String], minX: Double, minY: Double, maxX: Double, maxY: Double, tms: String, resolution: Double): RDD[(CubeTileKey, Tile)] = {
     // 1. 首先通过波段找到对应的波段分辨率的最小值
     val bandResolutionList: ArrayBuffer[Double] = new ArrayBuffer[Double]()
     for (i <- band.indices) {
@@ -538,11 +584,10 @@ object CubePostgresqlUtil {
     timeLevelAll.next()
     val timeLevelKey: Int = timeLevelAll.getInt("time_level_key")
     // 8. 找到所有的tile_key
-    val tileKeyList: ArrayBuffer[Int] = new ArrayBuffer[Int]()
     val tileAll: ResultSet = selectDataFromTableBySql("select oc_tile_fact_" + cubeId + ".tile_offset,oc_tile_fact_" + cubeId + ".tile_byte_count, oc_tile_fact_" + cubeId + ".compression, oc_tile_fact_" + cubeId + ".path, oc_tile_fact_" + cubeId + ".data_type, oc_time_" + cubeId + ".time, oc_extent_" + cubeId + ".min_x, oc_extent_" + cubeId + ".min_y, oc_extent_" + cubeId + ".max_x, oc_extent_" + cubeId + ".max_y, oc_extent_" + cubeId + ".row, oc_extent_" + cubeId + ".col,oc_product_" + cubeId + ".product_name,oc_product_" + cubeId + ".product_type,oc_band_" + cubeId + ".band_name, oc_band_" + cubeId + ".band_platform from oc_tile_fact_" + cubeId + " join oc_band_" + cubeId + " on oc_tile_fact_" + cubeId + ".band_key=oc_band_" + cubeId + ".band_key join oc_time_" + cubeId + " on oc_tile_fact_" + cubeId + ".time_key=oc_time_" + cubeId + ".time_key join oc_extent_" + cubeId + " on oc_tile_fact_" + cubeId + ".extent_key=oc_extent_" + cubeId + ".extent_key join oc_product_" + cubeId + " on oc_tile_fact_" + cubeId + ".product_key=oc_product_" + cubeId + ".product_key where oc_time_" + cubeId + ".time>'" + time(0) + "' and oc_time_" + cubeId + ".time<'" + time(1) + "' and oc_extent_" + cubeId + ".min_x<" + maxXQuery + " and oc_extent_" + cubeId + ".max_x>" + minXQuery + " and oc_extent_" + cubeId + ".min_y<" + maxYQuery + " and oc_extent_" + cubeId + ".max_y>" + minYQuery + " and oc_band_" + cubeId + ".band_name in ('" + band.mkString("','") + "')" + " and oc_product_" + cubeId + ".product_name in ('" + product.mkString("','") + "')" + " and oc_extent_" + cubeId + ".extent_level_key=" + extentLevelKey)
     val cubeTileMetaList: ArrayBuffer[CubeTileMeta] = new ArrayBuffer[CubeTileMeta]()
     while (tileAll.next()) {
-      val cubeTileKey: CubeTileKey = new CubeTileKey(new SpaceKey(tileAll.getInt("row"), tileAll.getInt("col"), tileAll.getDouble("min_x"), tileAll.getDouble("max_x"), tileAll.getDouble("min_y"), tileAll.getDouble("max_y")), new TimeKey(tileAll.getTimestamp("time").getTime), new ProductKey(tileAll.getString("product_name"), tileAll.getString("product_type")), new BandKey(tileAll.getString("band_name"), tileAll.getString("band_platform")))
+      val cubeTileKey: CubeTileKey = new CubeTileKey(new SpaceKey(tms, tileAll.getInt("col"), tileAll.getInt("row"), tileAll.getDouble("min_x"), tileAll.getDouble("max_x"), tileAll.getDouble("min_y"), tileAll.getDouble("max_y")), new TimeKey(tileAll.getTimestamp("time").getTime), new ProductKey(tileAll.getString("product_name"), tileAll.getString("product_type")), new BandKey(tileAll.getString("band_name"), tileAll.getString("band_platform")))
       val tileOffset: Int = tileAll.getInt("tile_offset")
       val tileByteCount: Int = tileAll.getInt("tile_byte_count")
       val compression: Int = tileAll.getInt("compression")
@@ -562,9 +607,220 @@ object CubePostgresqlUtil {
     cubeRDD
   }
 
+  def loadCubeSubsetJointByImage(implicit sc: SparkContext, cubeId: String, product: Array[String], band: Array[String], time: Array[String], minX: Double, minY: Double, maxX: Double, maxY: Double, tms: String, resolution: Double): RDD[(CubeTileKey, Tile)] = {
+    // 1. 首先通过波段找到对应的波段分辨率的最小值
+    val bandResolutionList: ArrayBuffer[Double] = new ArrayBuffer[Double]()
+    for (i <- band.indices) {
+      val bandResolutionAll: ResultSet = selectDataFromTableBySql("SELECT band_resolution FROM oc_band_" + cubeId + " WHERE band_name='" + band(i) + "'")
+      bandResolutionAll.next()
+      bandResolutionList.append(bandResolutionAll.getDouble("band_resolution"))
+    }
+    var bandResolutionMin: Double = bandResolutionList.min
+    var resolutionWeb: Double = resolution
+    if (tms == "WGS1984Quad") {
+      bandResolutionMin = bandResolutionMin * 180 / math.Pi / 6378137
+      resolutionWeb = resolutionWeb * 180 / math.Pi / 6378137
+    }
+
+    // 2. 找到extent_level_key
+    val extentLevelAll: ResultSet = selectDataFromTableBySql("SELECT * FROM oc_extent_level WHERE tms='" + tms + "' AND resolution > " + math.max(resolutionWeb, bandResolutionMin) + " ORDER BY resolution LIMIT 1")
+    extentLevelAll.next()
+    val extentLevelKey: Int = extentLevelAll.getInt("extent_level_key")
+    // 3. 找到所有的extent_key
+    var minXQuery: Double = 0.0
+    var minYQuery: Double = 0.0
+    var maxXQuery: Double = 0.0
+    var maxYQuery: Double = 0.0
+    // 3.1 然后前端4326的空间范围转为对应的坐标系
+    if (tms == "WGS1984Quad") {
+      minXQuery = minX
+      minYQuery = minY
+      maxXQuery = maxX
+      maxYQuery = maxY
+    }
+    else if (tms == "WebMercatorQuad") {
+      val extentWeb: Extent = Extent(minX, minY, maxX, maxY)
+      val extentWebMercator: Extent = extentWeb.reproject(CRS.fromEpsgCode(4326), CRS.fromEpsgCode(3857))
+      minXQuery = extentWebMercator.xmin
+      minYQuery = extentWebMercator.ymin
+      maxXQuery = extentWebMercator.xmax
+      maxYQuery = extentWebMercator.ymax
+    }
+    // TODO rHEALPix的查询
+    else if (tms == "rHEALPixCustom") {
+      val extentWeb: Extent = Extent(minX, minY, maxX, maxY)
+      val extentWebMercator: Extent = extentWeb.reproject(CRS.fromEpsgCode(4326), CRS.fromEpsgCode(3857))
+      minXQuery = extentWebMercator.xmin
+      minYQuery = extentWebMercator.ymin
+      maxXQuery = extentWebMercator.xmax
+      maxYQuery = extentWebMercator.ymax
+    }
+    val extentKeyList: ArrayBuffer[Int] = new ArrayBuffer[Int]()
+    val extentAll: ResultSet = selectDataFromTableBySql("SELECT * FROM oc_extent_" + cubeId + " WHERE extent_level_key=" + extentLevelKey + " AND min_x<" + maxXQuery + " AND max_x>" + minXQuery + " AND min_y<" + maxYQuery + " AND max_y>" + minYQuery)
+    while (extentAll.next()) {
+      extentKeyList.append(extentAll.getInt("extent_key"))
+    }
+    // 4. 找到time_level_key
+    val timeLevelAll: ResultSet = selectDataFromTableBySql("SELECT * FROM oc_time_level WHERE resolution = " + 1 + " AND time_level = 'D'")
+    timeLevelAll.next()
+    val timeLevelKey: Int = timeLevelAll.getInt("time_level_key")
+    // 8. 找到所有的image_key
+    val imageAll: ResultSet = selectDataFromTableBySql("select oc_image_fact_" + cubeId + ".compression, oc_image_fact_" + cubeId + ".path, oc_image_fact_" + cubeId + ".data_type, oc_time_" + cubeId + ".time, oc_product_" + cubeId + ".product_name,oc_product_" + cubeId + ".product_type,oc_band_" + cubeId + ".band_name, oc_band_" + cubeId + ".band_platform from oc_image_fact_" + cubeId + " join oc_band_" + cubeId + " on oc_image_fact_" + cubeId + ".band_key=oc_band_" + cubeId + ".band_key join oc_time_" + cubeId + " on oc_image_fact_" + cubeId + ".time_key=oc_time_" + cubeId + ".time_key join oc_product_" + cubeId + " on oc_image_fact_" + cubeId + ".product_key=oc_product_" + cubeId + ".product_key where oc_time_" + cubeId + ".time>'" + time(0) + "' and oc_time_" + cubeId + ".time<'" + time(1) + "' and oc_band_" + cubeId + ".band_name in ('" + band.mkString("','") + "')" + " and oc_product_" + cubeId + ".product_name in ('" + product.mkString("','") + "') and oc_image_fact_" + cubeId + ".extent_key && ARRAY[" + extentKeyList.mkString(",") + "]")
+    val cubeTileMetaList: ArrayBuffer[CubeTileStripeMeta] = new ArrayBuffer[CubeTileStripeMeta]()
+    val tileStripeOffsets: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+    val tileStripeByteCounts: ArrayBuffer[Long] = new ArrayBuffer[Long]()
+    // 所有影像的stripe一起统计
+    var startStripe: Int = -1
+    while (imageAll.next()) {
+      startStripe = startStripe + 1
+      val compression: Int = imageAll.getInt("compression")
+      val dataType: String = imageAll.getString("data_type")
+      val path: String = imageAll.getString("path")
+      val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", path, 0, MINIO_HEAD_SIZE)
+      val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
+      // 这里通过之前找到的extent_key的列表，对应到tms的row和col，再去COG里面换算成他自己的row和col
+      // 先通过cubeImagePath得到extent_level
+      val pattern: Regex = "z(\\d+)\\.tif".r
+      val matchResult: String = pattern.findFirstMatchIn(path).get.toString()
+      val extentLevel: Int = matchResult.replace("z", "").replace(".tif", "").toInt
+      // 然后通过extentLevel和tms，在oc_extent_level表得到extent_level_key
+      val extentLevelKeyResultSet: ResultSet = selectDataFromTable("oc_extent_level", Array("extent_level", "tms"), Array(extentLevel.toString, tms))
+      var extentLevelKey: Int = 0
+      var tmsExtent: String = ""
+      while (extentLevelKeyResultSet.next()) {
+        extentLevelKey = extentLevelKeyResultSet.getInt("extent_level_key")
+        tmsExtent = extentLevelKeyResultSet.getString("extent")
+      }
+      val tmsExtentJSONObject: JSONObject = JSON.parseObject(tmsExtent)
+      val minXTMSExtent: Double = tmsExtentJSONObject.getDouble("min_x")
+      val maxYTMSExtent: Double = tmsExtentJSONObject.getDouble("max_y")
+
+      // 计算extent
+      val geoTransform: Array[Double] = cubeCOGMetadata.getGeoTransform
+      val cellScale: Array[Double] = cubeCOGMetadata.getCellScale
+      val imageWidth: Int = cubeCOGMetadata.getImageWidth
+      val imageHeight: Int = cubeCOGMetadata.getImageHeight
+      val tileWidth: Int = cubeCOGMetadata.getTileWidth
+      val tileHeight: Int = cubeCOGMetadata.getTileHeight
+      val colImageTotal: Int = math.round(imageWidth.toDouble / tileWidth).toInt
+      val rowImageTotal: Int = math.round(imageHeight.toDouble / tileHeight).toInt
+      val colImageStart: Int = math.round((geoTransform(3) - minXTMSExtent) / cellScale(0) / 256).toInt
+      val rowImageStart: Int = math.round((maxYTMSExtent - geoTransform(4)) / cellScale(1) / 256).toInt
+
+      val colTotal: Int = math.round(2 * -minXTMSExtent / cellScale(0) / 256).toInt
+      val rowTotal: Int = math.round(2 * maxYTMSExtent / cellScale(0) / 256).toInt
+      val minColQuery: Int = math.floor((minXQuery - minXTMSExtent) / cellScale(0) / 256).toInt
+      val maxColQuery: Int = math.ceil((maxXQuery - minXTMSExtent) / cellScale(0) / 256).toInt
+      val minRowQuery: Int = math.floor((maxYTMSExtent - maxYQuery) / cellScale(1) / 256).toInt
+      val maxRowQuery: Int = math.ceil((maxYTMSExtent - minYQuery) / cellScale(1) / 256).toInt
+
+      // 针对某个影像的offset是否能拼接上
+      var startOffset: Long = 0
+      // 针对某个stripe里面的offset
+      var stripeOffset: Long = 0
+      var tileByteCountLast: Long = 0
+      for (rowImage <- math.max(0, minRowQuery - rowImageStart) until math.min(rowImageTotal, maxRowQuery - rowImageStart)) {
+        for (colImage <- math.max(0, minColQuery - colImageStart) until math.min(colImageTotal, maxColQuery - colImageStart)) {
+          val cubeTileKey: CubeTileKey = new CubeTileKey(new SpaceKey(tms, colImage + colImageStart, rowImage + rowImageStart, minXTMSExtent + 2 * -minXTMSExtent / colTotal * (colImage + colImageStart), minXTMSExtent + 2 * -minXTMSExtent / colTotal * (colImage + colImageStart + 1), maxYTMSExtent - 2 * maxYTMSExtent / rowTotal * (rowImage + rowImageStart + 1), maxYTMSExtent - 2 * maxYTMSExtent / rowTotal * (rowImage + rowImageStart)), new TimeKey(imageAll.getTimestamp("time").getTime), new ProductKey(imageAll.getString("product_name"), imageAll.getString("product_type")), new BandKey(imageAll.getString("band_name"), imageAll.getString("band_platform")))
+          val tileOffset: Int = cubeCOGMetadata.getTileOffsets(rowImage)(colImage)
+          val tileByteCount: Int = cubeCOGMetadata.getTileByteCounts(rowImage)(colImage)
+          if (startOffset == 0) {
+            tileByteCountLast = tileByteCount
+            startOffset = tileOffset - tileByteCount
+            tileStripeOffsets.append(tileOffset)
+          }
+          if (startOffset + tileByteCountLast == tileOffset) {
+            startOffset = tileOffset
+            stripeOffset = stripeOffset + tileByteCount
+          }
+          else {
+            tileStripeByteCounts.append(stripeOffset)
+            startStripe = startStripe + 1
+            startOffset = tileOffset
+            stripeOffset = tileByteCount
+            tileStripeOffsets.append(tileOffset)
+          }
+          tileByteCountLast = tileByteCount
+          cubeTileMetaList.append(new CubeTileStripeMeta(cubeTileKey, path, startStripe, stripeOffset - tileByteCount, tileByteCount, dataType, compression))
+          if (rowImage == (math.min(rowImageTotal, maxRowQuery - rowImageStart) - 1) && colImage == (math.min(colImageTotal, maxColQuery - colImageStart) - 1)) {
+            tileStripeByteCounts.append(stripeOffset)
+          }
+        }
+      }
+    }
+    val cubeTileMetaRDD: RDD[CubeTileStripeMeta] = sc.parallelize(cubeTileMetaList)
+    val cubeRDD: RDD[(CubeTileKey, Tile)] = cubeTileMetaRDD.groupBy((cubeTileMeta: CubeTileStripeMeta) => {
+      (cubeTileMeta.tilePath, cubeTileMeta.stripe)
+    }).map(t => {
+      (MinIOUtil.getMinioObject("oge-cube", t._1._1, tileStripeOffsets(t._1._2), tileStripeByteCounts(t._1._2)), t._2)
+    }).map(t => {
+      t._2.map(x => {
+        val cubeTileKey: CubeTileKey = x.cubeTileKey
+        val tileCompressed: Array[Byte] = t._1.slice(x.tileStripeOffset.toInt, (x.tileStripeOffset + x.tileByteCount).toInt)
+        var tileDecompressed: Array[Byte] = CubeUtil.decompress(tileCompressed)
+        val dataType: String = x.dataType
+        val cubeTile: Tile = CubeTileSerializerUtil.deserializeTileData(tileDecompressed, 256, dataType)
+        (cubeTileKey, cubeTile)
+      })
+    }).flatMap((x: Iterable[(CubeTileKey, Tile)]) => x)
+
+
+    /*val cubeProcess1 = cubeTileMetaRDD.groupBy((cubeTileMeta: CubeTileStripeMeta) => {
+      (cubeTileMeta.tilePath, cubeTileMeta.stripe)
+    })
+    val cubeProcessArray1 = cubeProcess1.collect()
+    val cubeProcess2 = cubeProcess1.map(t => {
+      println(t._1._1)
+      println(t._1._2)
+      println(tileStripeOffsets(t._1._2))
+      println(tileStripeByteCounts(t._1._2))
+      try {
+        (MinIOUtil.getMinioObject("oge-cube", t._1._1, tileStripeOffsets(t._1._2), tileStripeByteCounts(t._1._2)), t._2)
+      } catch {
+        case e: Exception => {
+          println("出问题的路径是：" + t._1._1)
+          println("出问题的条带编号是：" + t._1._2)
+          println("出问题的起始offset是：" + tileStripeOffsets(t._1._2))
+          println("出问题的byte_count是：" + tileStripeByteCounts(t._1._2))
+          println(e)
+          (new Array[Byte](0), t._2)
+        }
+      }
+    })
+    val cubeProcessArray2 = cubeProcess2.collect()
+    val cubeProcess3 = cubeProcess2.map(t => {
+      t._2.map(x => {
+        val cubeTileKey: CubeTileKey = x.cubeTileKey
+        val tileCompressed: Array[Byte] = t._1.slice(x.tileStripeOffset.toInt, (x.tileStripeOffset + x.tileByteCount).toInt)
+        var tileDecompressed: Array[Byte] = new Array[Byte](0)
+        try {
+          tileDecompressed = CubeUtil.decompress(tileCompressed)
+        }
+        catch {
+          case e: Exception => {
+            println("出问题的路径是：" + x.tilePath)
+            println("出问题的条带编号是：" + x.stripe)
+            println("出问题的起始offset是：" + x.tileStripeOffset.toInt)
+            println("出问题的终止offset是：" + (x.tileStripeOffset + x.tileByteCount).toInt)
+            println(e)
+          }
+        }
+        val dataType: String = x.dataType
+        val cubeTile: Tile = CubeTileSerializerUtil.deserializeTileData(tileDecompressed, 256, dataType)
+        (cubeTileKey, cubeTile)
+      })
+    })
+    val cubeProcessArray3 = cubeProcess3.collect()
+    val cubeRDD = cubeProcess3.flatMap((x: Iterable[(CubeTileKey, Tile)]) => x)
+    val cubeArray = cubeRDD.collect()*/
+    cubeRDD
+  }
+
+
   def main(args: Array[String]): Unit = {
     // val interpreter = new PythonInterpreter
     // interpreter.exec("import pyproj")
+    MinIOUtil.getMinioObject("oge-cube", "Landsat/raw_scene/Landsat8/124/039/LC08_L2SP_124039_20230107_20230110_02_T1/LC08_L2SP_124039_20230107_20230110_02_T1_SR_B5/WebMercatorQuad/LC08_L2SP_124039_20230107_20230110_02_T1_SR_B5_WebMercatorQuad_z12.tif", 62540462, 193119)
   }
 
 }
