@@ -50,6 +50,8 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
 import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
+import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe._
 import java.io.File
 import sys.process._
 
@@ -602,11 +604,11 @@ object Coverage {
    * @return Coverage
    */
   def addNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-             i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    i match {
+             i: Any*): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    i.head match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Add(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Add(tile, x))
-      case _ => throw new IllegalArgumentException("Invalid arguments")
+      case _ => coverageTemplate(coverage, (tile) => Add(tile, i.head.asInstanceOf[Double]))
     }
   }
 
@@ -3576,4 +3578,22 @@ object Coverage {
     coverage
   }
 
+}
+
+object Relection extends App {
+
+
+  def reflectCall(functionName: String, params: Any*): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val mirror = ru.runtimeMirror(getClass.getClassLoader)
+
+    // 获取并调用方法
+    val moduleSymbol = ru.typeOf[Coverage.type].termSymbol.asModule
+    val moduleMirror = mirror.reflectModule(moduleSymbol)
+
+    val methodSymbol = ru.typeOf[Coverage.type].decl(ru.TermName(functionName)).asMethod
+    val instanceMirror = mirror.reflect(moduleMirror.instance)
+    val methodMirror = instanceMirror.reflectMethod(methodSymbol)
+    methodMirror(params: _*).asInstanceOf[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
+  }
 }
