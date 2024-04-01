@@ -39,7 +39,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{MinIOUtil, PostgresqlUtil}
+import whu.edu.cn.util.{MinIOUtil, PostSender, PostgresqlUtil}
 
 import java.nio.file.Paths
 import scala.collection.mutable
@@ -166,7 +166,9 @@ object Feature {
       val userData = t._2._3
       val reader = new WKTReader()
       val geometry = reader.read(geomStr)
-      val metaMap = getMapFromJsonStr(meta)
+      val jsonobject: JSONObject = JSON.parseObject(meta)
+      val prop = jsonobject.getJSONArray("properties").getJSONObject(0).toString
+      val metaMap = getMapFromJsonStr(prop)
       val userMap = getMapFromJsonStr(userData)
       (rowkey, (geometry, metaMap ++ userMap))
     })
@@ -193,7 +195,15 @@ object Feature {
 
   private def getMapFromStr(str: String): Map[String, Any] = {
     val map = Map.empty[String, Any]
-    map += (str.stripPrefix("{").split(':')(0) -> str.stripSuffix("}").split(':')(1))
+    val keyValuePairs = str.stripPrefix("{").stripSuffix("}").split(',')
+    keyValuePairs.foreach { pair =>
+      val keyValue = pair.split(':')
+      if (keyValue.length == 2) {
+        val key = keyValue(0).trim
+        val value = keyValue(1).trim
+        map += (key -> value)
+      }
+    }
     map
   }
 
@@ -367,7 +377,7 @@ object Feature {
       val sIterator = jsonObject.keySet.iterator
       while (sIterator.hasNext()) {
         val key = sIterator.next()
-        val value = jsonObject.getString(key)
+        val value = jsonObject.get(key)
         map += (key -> value)
       }
     }
@@ -794,7 +804,7 @@ object Feature {
                      featureRDD2: RDD[(String, (Geometry, Map[String, Any]))], properties: List[String] = null): RDD[(String, (Geometry, Map[String, Any]))] = {
     var destnation = featureRDD1.first()._2._2
     var source = featureRDD2.first()._2._2
-    if (properties == null)
+    if (properties == null || properties.isEmpty)
       destnation = destnation ++ source
     else {
       for (property <- properties)
@@ -868,7 +878,7 @@ object Feature {
    */
   def set(featureRDD: RDD[(String, (Geometry, Map[String, Any]))], property: String): RDD[(String, (Geometry, Map[String, Any]))] = {
     featureRDD.map(t => {
-      (t._1, (t._2._1, t._2._2 ++ getMapFromJsonStr(property)))
+      (t._1, (t._2._1, t._2._2 ++ getMapFromStr(property)))
     })
   }
 
@@ -1097,12 +1107,13 @@ object Feature {
     val geoJSONString = toGeoJSONString(feature)
     val url = saveJSONToServer(geoJSONString)
     geoJson.put(Trigger.layerName, url)
-    val jsonObject = new JSONObject
-    jsonObject.put("vector", geoJson)
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("workID", Trigger.dagId)
-    outJsonObject.put("json", jsonObject)
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+//    val jsonObject = new JSONObject
+//    jsonObject.put("vector", geoJson)
+//    val outJsonObject: JSONObject = new JSONObject
+//    outJsonObject.put("workID", Trigger.dagId)
+//    outJsonObject.put("json", jsonObject)
+    PostSender.shelvePost("vector",geoJson)
+//    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
 //    println(outJsonObject.toJSONString)
   }
 

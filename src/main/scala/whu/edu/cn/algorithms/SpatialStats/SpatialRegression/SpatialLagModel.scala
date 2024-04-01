@@ -7,6 +7,7 @@ import org.locationtech.jts.geom.Geometry
 
 import scala.math._
 import whu.edu.cn.algorithms.SpatialStats.Utils.Optimize._
+import whu.edu.cn.oge.Service
 
 import scala.collection.mutable
 
@@ -15,12 +16,6 @@ import scala.collection.mutable
  */
 class SpatialLagModel extends SpatialAutoRegressionBase {
 
-  var _xrows = 0
-  var _xcols = 0
-  private var _df = _xcols
-
-  private var _dX: DenseMatrix[Double] = _
-  private var _1X: DenseMatrix[Double] = _
   private var _lagY: DenseVector[Double] = _
 
   private var lm_null: DenseVector[Double] = _
@@ -28,44 +23,22 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
   private var _wy: DenseVector[Double] = _
   private var _eigen: eig.DenseEig = _
 
-  /**set x
-   *
-   * @param properties  String
-   * @param split       default:","
-   */
-  override def setX(properties: String, split: String = ","): Unit = {
-    _nameX = properties.split(split)
-    val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[String].toDouble).collect())
-    })
-    _X = x
-    _xcols = x.length
-    _xrows = _X(0).length
-    _dX = DenseMatrix.create(rows = _xrows, cols = _X.length, data = _X.flatMap(t => t.toArray))
-    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
-    _1X = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
-    _df = _xcols + 1 + 1
-  }
-
-  /**set y
-   *
-   * @param property String
-   */
-  override def setY(property: String): Unit = {
-    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect())
-  }
-
   /**
    * 回归计算
    *
    * @return 返回拟合值（Array）形式
    */
   def fit(): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
-    val interval = get_interval()
+    var interval = (0.0, 1.0)
+    try {
+      interval = get_interval()
+    } catch {
+      case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
+    }
     val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)._1
     _lagY = _Y - rho * _wy
     val betas = get_betas(X = _1X, Y = _lagY)
-    val betas_map = betasMap(betas)
+    val betas_map = betasPrint(betas)
     val res = get_res(X = _1X, Y = _lagY)
     //log likelihood
     val lly = get_logLik(get_res(X = _1X))
@@ -73,7 +46,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     val llrho = rho4optimize(rho)
 
     fitvalue = (_Y - res).toArray
-    var printStr = "------------------------------Spatial Lag Model------------------------------\n" +
+    var printStr = "\n------------------------------Spatial Lag Model------------------------------\n" +
       f"rho is $rho%.6f\n"
     printStr += try_LRtest(-llrho, lly)
     printStr += f"coeffients:\n$betas_map\n"
@@ -90,6 +63,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     shpRDDidx.foreach(t => t._1._2._2.clear())
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
+      t._1._2._2 += ("residual" -> res(t._2))
     })
     (shpRDDidx.map(t => t._1), printStr)
   }
@@ -174,13 +148,14 @@ object SpatialLagModel {
    * @return featureRDD and diagnostic String
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String)
-  : (RDD[(String, (Geometry, mutable.Map[String, Any]))], String) = {
+  : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
     val mdl = new SpatialLagModel
     mdl.init(featureRDD)
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
     val re = mdl.fit()
-    (sc.makeRDD(re._1), re._2)
+    Service.print(re._2,"Spatial Lag Model","String")
+    sc.makeRDD(re._1)
   }
 
 }

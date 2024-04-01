@@ -1,0 +1,73 @@
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.export",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.addStyles",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "Coverage.focalMean",
+                  "arguments": {
+                    "coverage": {
+                      "functionInvocationValue": {
+                        "functionName": "Coverage.selectBands",
+                        "arguments": {
+                          "coverage": {
+                            "functionInvocationValue": {
+                              "functionName": "Service.getCoverage",
+                              "arguments": {
+                                "coverageID": {
+                                  "constantValue": "LC81220392015275LGN00"
+                                },
+                                "baseUrl": {
+                                  "constantValue": "http://localhost"
+                                },
+                                "productID": {
+                                  "constantValue": "LC08_L1T"
+                                }
+                              }
+                            }
+                          },
+                          "bands": {
+                            "constantValue": [
+                              "B3"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "radius": {
+                      "constantValue": 1
+                    },
+                    "kernelType": {
+                      "constantValue": "square"
+                    }
+                  }
+                }
+              },
+              "min": {
+                "constantValue": -1
+              },
+              "max": {
+                "constantValue": 1
+              },
+              "palette": {
+                "constantValue": [
+                  "gold",
+                  "yellow",
+                  "brown",
+                  "lightblue",
+                  "blue"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "isBatch": 1
+}

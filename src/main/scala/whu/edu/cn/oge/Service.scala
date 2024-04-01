@@ -11,6 +11,7 @@ import whu.edu.cn.entity.{CoverageCollectionMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.PostSender
 
 object Service {
 
@@ -62,7 +63,7 @@ object Service {
     outJsonObject.put("workID", Trigger.dagId)
     outJsonObject.put("json", jsonObject)
     println(outJsonObject)
-    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
+    PostSender.shelvePost("info",Trigger.outputInformationList.toArray)
   }
 
 

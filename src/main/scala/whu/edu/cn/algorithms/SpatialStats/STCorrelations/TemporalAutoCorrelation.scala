@@ -18,7 +18,7 @@ object TemporalAutoCorrelation {
    * @return pic, ACF list
    */
   def ACF(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], property: String, timelag: Int = 20): String = {
-    val timeArr = featureRDD.map(t => t._2._2(property).asInstanceOf[String].toDouble).collect()
+    val timeArr = featureRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect()
     timeSeriesACF(timeArr, timelag.toInt)
   }
 
@@ -32,21 +32,21 @@ object TemporalAutoCorrelation {
   def timeSeriesACF(timeArr: Array[Double], timelag: Int = 20): String = {
     val acfarr = DenseVector.zeros[Double](timelag + 1).toArray
     if (timelag > 0) {
-      val f = Figure()
-      val p = f.subplot(0)
+//      val f = Figure()
+//      val p = f.subplot(0)
       for (i <- 0 until timelag + 1) {
         acfarr(i) = getacf(timeArr, i)
-        val x = DenseVector.ones[Double](5) :*= i.toDouble
-        val y = linspace(0, acfarr(i), 5)
-        p += plot(x, y, colorcode = "[0,0,255]")
+//        val x = DenseVector.ones[Double](5) :*= i.toDouble
+//        val y = linspace(0, acfarr(i), 5)
+//        p += plot(x, y, colorcode = "[0,0,255]")
       }
-      p.xlim = (-0.1, timelag + 0.1)
-      p.xlabel = "lag"
-      p.ylabel = "ACF"
+//      p.xlim = (-0.1, timelag + 0.1)
+//      p.xlabel = "lag"
+//      p.ylabel = "ACF"
     } else {
       throw new IllegalArgumentException("Illegal Argument of time lag")
     }
-    val str = acfarr.mkString("ACF-list(", ", ", ")")
+    val str = acfarr.map(t=>t.formatted("%.4f")).mkString("ACF-list(", ", ", ")")
     println(str)
     str
   }

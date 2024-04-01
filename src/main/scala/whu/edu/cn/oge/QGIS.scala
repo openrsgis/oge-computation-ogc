@@ -1,8 +1,9 @@
 package whu.edu.cn.oge
 
-import java.io.{BufferedReader, InputStreamReader, OutputStreamWriter, PrintWriter}
+import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
 
-import com.alibaba.fastjson.{JSON, JSONArray}
+import com.alibaba.fastjson.serializer.SerializerFeature
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.mapalgebra.focal.ZFactor
 import geotrellis.raster.{MultibandTile, Tile}
@@ -18,6 +19,7 @@ import whu.edu.cn.config.GlobalConfig
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
+import scala.io.Source
 
 object QGIS {
   def main(args: Array[String]): Unit = {
@@ -32,8 +34,8 @@ object QGIS {
   val userName = GlobalConfig.QGISConf.QGIS_USERNAME
   val password = GlobalConfig.QGISConf.QGIS_PASSWORD
   val port = GlobalConfig.QGISConf.QGIS_PORT
-  val pythonPath = GlobalConfig.QGISConf.QGIS_PYTHON
-  val rsAlgorithm = GlobalConfig.QGISConf.QGIS_RS
+//  val pythonPath = GlobalConfig.QGISConf.QGIS_PYTHON
+//  val rsAlgorithm = GlobalConfig.QGISConf.QGIS_RS
   /**
    *
    * Calculated slope direction
@@ -715,8 +717,8 @@ object QGIS {
 
     val outputTiffPath = algorithmData + "nativeShortestPathPointToPoint_" + time + ".shp"
     val writePath = algorithmData + "nativeShortestPathPointToPoint_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputTiffPath)
 
+    saveFeatureRDDToShp(input, outputTiffPath)
 
     try {
       versouSshUtil(host, userName, password, port)
@@ -737,28 +739,30 @@ object QGIS {
 
   /**
    *
-   * @param sc               Alias object for SparkContext
-   * @param input            Point vector layer to use for sampling.
-   * @param rasterCopy Raster layer to sample at the given point locations.
-   * @param columnPrefix  Prefix for the names of the added columns.
+   * @param sc           Alias object for SparkContext
+   * @param input        Point vector layer to use for sampling.
+   * @param rasterCopy   Raster layer to sample at the given point locations.
+   * @param columnPrefix Prefix for the names of the added columns.
    * @return The output layer containing the sampled values.
    */
   def nativeRasterSampling(implicit sc: SparkContext,
-                                     input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
-                           rasterCopy: String = "",
+                           input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                           rasterCopy: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                            columnPrefix: String = ""):
   RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
 
     val time = System.currentTimeMillis()
 
-    val outputTiffPath = algorithmData + "nativeRasterSampling_" + time + ".shp"
+    val outputShpPath = algorithmData + "nativeRasterSampling_" + time + ".shp"
+    val outputTiffPath = algorithmData+"nativeRasterSamplingRater_" + time + ".tif"
     val writePath = algorithmData + "nativeRasterSampling_" + time + "_out.shp"
-    saveFeatureRDDToShp(input, outputTiffPath)
-
+    
+    saveFeatureRDDToShp(input, outputShpPath)
+    saveRasterRDDToTif(rasterCopy, outputTiffPath)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rastersampling.py --input "$outputTiffPath" --rastercopy "$rasterCopy" --column-prefix "$columnPrefix" --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_rastersampling.py --input "$outputShpPath" --rastercopy "$outputTiffPath" --column-prefix "$columnPrefix" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1781,6 +1785,89 @@ object QGIS {
 
     makeFeatureRDDFromShp(sc, writePath)
   }
+
+
+  /**
+   * Geometric predicates are boolean functions used to determine the spatial relation a feature has with another by comparing whether and how their geometries share a portion of space.
+   *
+   * @param sc     Alias object for SparkContext.
+   * @param input  Input point vector layer.
+   * @param overlay Intersection vector layer.
+   * @param inputFields Type of spatial relation the input feature should have with an intersect feature so that it could be selected.
+   * @return       Voronoi polygons of the input point vector layer.
+   */
+  def nativeIntersection(implicit sc: SparkContext,
+                            input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                            overlay: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                            inputFields: String = "",
+                            overlayFields: String = "",
+                            overlayFieldsPrefix: String = "",
+                            gridSize: Double = 1):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+    val inputShpPath = algorithmData+"qgisIntersectionInput_" + time + ".shp"
+    val overlayShpPath = algorithmData+"qgisIntersectionOverlay_" + time + ".shp"
+    val writePath = algorithmData+"qgisIntersection_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, inputShpPath)
+    saveFeatureRDDToShp(overlay, overlayShpPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_intersection.py --input "$inputShpPath" --overlay "$overlayShpPath" --input-fields "$inputFields"  --overlay-fields "$overlayFields" --overlay-fields-prefix "$overlayFieldsPrefix" --grid-size "$gridSize" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
+  /**
+   * Geometric predicates are boolean functions used to determine the spatial relation a feature has with another by comparing whether and how their geometries share a portion of space.
+   *
+   * @param sc     Alias object for SparkContext.
+   * @param input  Input point vector layer.
+   * @param intersect Intersection vector layer.
+   * @param predicate Type of spatial relation the input feature should have with an intersect feature so that it could be selected.
+   * @return       Voronoi polygons of the input point vector layer.
+   */
+  def nativeExtractFromLocation(implicit sc: SparkContext,
+                                input: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                intersect: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                predicate: String = ""):
+  RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+
+    val time = System.currentTimeMillis()
+
+    val inputShpPath = algorithmData+"qgisExtractInput_" + time + ".shp"
+    val intersectShpPath = algorithmData+"qgisExtractIntersect_" + time + ".shp"
+    val writePath = algorithmData+"qgisExtractFromLocation_" + time + "_out.shp"
+    saveFeatureRDDToShp(input, inputShpPath)
+    saveFeatureRDDToShp(intersect, intersectShpPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/native_extractbylocation.py --input "$inputShpPath" --intersect "$intersectShpPath" --predicate "$predicate" --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeFeatureRDDFromShp(sc, writePath)
+  }
+
 
   /**
    *
@@ -2948,7 +3035,6 @@ object QGIS {
 
     val outputShpPath = algorithmData+"gdalRasterizeOver_" + time + ".shp"
     val outputTiffPath = algorithmData+"gdalRasterizeOver_" + time + ".tif"
-    val writePath = algorithmData+"gdalRasterizeOver_" + time + "_out.tif"
 
     saveFeatureRDDToShp(input, outputShpPath)
     saveRasterRDDToTif(inputRaster, outputTiffPath)
@@ -2957,7 +3043,7 @@ object QGIS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add $add --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add "$add"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -2967,7 +3053,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, inputRaster, writePath)
+    makeRasterRDDFromTif(sc, inputRaster, outputTiffPath)
   }
 
   /**
@@ -3570,24 +3656,17 @@ object QGIS {
 
   /**
    *
-   * @param extend
+   * @param sc Alias object for SparkContext
+   * @param year Input query year
+   * @param quarter Input query quarter
    * @return
    */
-  def energyUtilisation(extend:String):String= {
+  def getParaData(implicit sc: SparkContext,
+                  year:String,
+                  quarter:String):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])= {
 
-    try {
-      versouSshUtil(host, userName, password, port)
-      val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --input $extend""".stripMargin
-
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
-
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-    "extend"
+    makeChangedRasterRDDFromTif(sc, "/mnt/storage/qgis/data/SOL_1_clip_csx.tif")
   }
 
 
@@ -3599,7 +3678,7 @@ object QGIS {
    * @return
    */
   def calNPP(implicit sc: SparkContext,
-             inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),energyPara :String):
+             inputLSWI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),inputNDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),paraData: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
@@ -3612,7 +3691,7 @@ object QGIS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_lswi.py --inputLSWI "$outputLSWIPath" --inputNDVI "$outputNDVIPath"   --output "$writePath"""".stripMargin
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/rs_npp.py --inputLSWI "$outputLSWIPath" --inputNDVI "$outputNDVIPath"   --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -3624,6 +3703,104 @@ object QGIS {
 
     makeChangedRasterRDDFromTif(sc, writePath)
 
+  }
+
+  /**
+   *
+   * @param sc Alias object for SparkContext
+   * @param inputString carbon result
+   * @return
+   */
+  def convertFromString(implicit sc: SparkContext,inputString:String): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val result: JSONObject = JSON.parseObject(inputString)
+    val jsonData = JSON.toJSONString(result, SerializerFeature.DisableCircularReferenceDetect)
+    val carbonData  = jsonData.replace("'", "\"")//去除转义符
+
+    val carbonJson: JSONObject = JSON.parseObject(carbonData)
+    val array:JSONObject = carbonJson.getJSONObject("prefectureCarbons")
+    val entries = array.entrySet().iterator()
+
+    val cityExent = Source.fromFile("/mnt/storage/qgis/data/boundary.geojson").mkString
+    val cityJsonObject: JSONObject = JSON.parseObject(cityExent)
+    val city = cityJsonObject.getJSONArray("features")
+
+    while (entries.hasNext) {
+      val entry = entries.next()
+      val value = entry.getValue.asInstanceOf[JSONObject]
+      val cityEntries = value.entrySet().iterator()
+      while (cityEntries.hasNext) {
+        val cityEntry = cityEntries.next()
+        for(i <- 0 until city.size()){
+          if(cityEntry.getKey == city.getJSONObject(i).getJSONObject("properties").getString("name")){
+            val cityValue = cityEntry.getValue.asInstanceOf[JSONObject]
+            val carbonEmission = cityValue.getDouble("carbonEmission")
+            city.getJSONObject(i).getJSONObject("properties").put("carbon",carbonEmission)
+          }
+        }
+      }
+    }
+
+    val geoJSONString: String = cityJsonObject.toJSONString()
+
+    val feature = geometry(sc, geoJSONString, "EPSG:4326")
+    feature
+
+  }
+
+  /**
+   *
+   * @param sc Alias object for SparkContext
+   * @param input Input vector layer
+   * @param field Defines the attribute field from which the attributes for the pixels should be chosen
+   * @param burn A fixed value to burn into a band for all features.
+   * @param useZ Indicates that a burn value should be extracted from the “Z” values
+   * @param units Units to use when defining the output raster size/resolution.
+   * @param width Sets the width (if size units is “Pixels”) or horizontal resolution
+   * @param height Sets the height (if size units is “Pixels”) or vertical resolution
+   * @param extent Extent of the output raster layer.
+   * @param nodata Assigns a specified NoData value to output bands
+   * @return
+   */
+  def gdalRasterize(implicit sc: SparkContext,
+                        input: RDD[(String, (Geometry, Map[String, Any]))],
+                        field: String = "",
+                        burn: Double = 0,
+                        useZ: String = "False",
+                        units: String = "0",
+                        width: Double = 1,
+                        height: Double = 1,
+                        extent:String = "",
+                        nodata: Double = 0)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val geoJSONString = toGeoJSONString(input)
+    val time = System.currentTimeMillis()
+    val outputShpPath = algorithmData+"gdalRasterize_" + time + ".json"
+
+    // 创建PrintWriter对象
+    val writer: BufferedWriter = new BufferedWriter(new FileWriter(outputShpPath))
+
+    // 写入JSON字符串
+    writer.write(geoJSONString)
+
+    // 关闭PrintWriter
+    writer.close()
+
+    val writePath = algorithmData+"gdalRasterize_" + time + "_out.tif"
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize.py --input "$outputShpPath" --field "$field" --burn $burn --use-z "$useZ" --units "$units" --width $width --height $height --extent "$extent" --nodata $nodata --output "$writePath"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 }
 

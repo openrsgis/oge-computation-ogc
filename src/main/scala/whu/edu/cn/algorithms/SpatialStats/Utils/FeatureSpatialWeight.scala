@@ -3,7 +3,7 @@ package whu.edu.cn.algorithms.SpatialStats.Utils
 import breeze.linalg.DenseVector
 import breeze.numerics._
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.geom.{Geometry, TopologyException}
 
 import scala.collection.mutable.{ArrayBuffer, Map}
 //import cern.colt.matrix._
@@ -17,11 +17,11 @@ object FeatureSpatialWeight {
   /**
    * 对距离RDD进行权重向量求解，尤其是通过getRDDDistRDD函数得到的距离
    *
-   * @param distRDD     \~english Distance RDD[Array[Double]] \~chinese 距离 RDD[Array[Double]]类型
-   * @param bw       \~english Bandwidth size \~chinese 带宽大小
-   * @param kernel   \~english Kernel function, default is "gaussian" \~chinese 核函数，默认为高斯核函数
-   * @param adaptive \~english bandwidth type: adaptive(true) or fixed(false, default) \~chinese 带宽类型，可变带宽为true，固定带宽为false，默认为固定带宽
-   * @return \~english Weight value of RDD \~chinese RDD形式的权重向量
+   * @param distRDD    Distance RDD
+   * @param bw       Bandwidth size
+   * @param kernel   Kernel function, default is "gaussian"
+   * @param adaptive bandwidth type: adaptive(true) or fixed(false, default)
+   * @return Weight value of RDD
    */
   def getSpatialweight(distRDD: RDD[Array[Double]], bw: Double, kernel: String = "gaussian", adaptive: Boolean = false): RDD[DenseVector[Double]] = {
     val RDDdvec = distRDD.map(t => Array2DenseVector(t))
@@ -174,13 +174,19 @@ object FeatureSpatialWeight {
   def testNeighborBool(poly1: Geometry, poly2: Array[Geometry]): Array[Boolean] = {
     val arr_isnb = new Array[Boolean](poly2.length)
     for (i <- 0 until poly2.length) {
-      arr_isnb(i) = poly1.touches(poly2(i))
+      try {
+        arr_isnb(i) = poly1.touches(poly2(i))
+      } catch {
+        case e: TopologyException => {
+          arr_isnb(i) = true//这里是有问题的，需要改
+        }
+      }
     }
     arr_isnb
   }
 
   def boolNeighborWeight(rdd_isnb: RDD[Array[Boolean]]): RDD[DenseVector[Double]] = {
-//    var nb_weight: DenseVector[Double] = DenseVector.zeros(rdd_isnb.take(0).length)
+    //    var nb_weight: DenseVector[Double] = DenseVector.zeros(rdd_isnb.take(0).length)
     val nb_w = rdd_isnb.map(t => {
       val arr_t=new Array[Double](t.length)
       for (i <- 0 until t.length) {
@@ -192,7 +198,7 @@ object FeatureSpatialWeight {
       dvec_t
     })
     nb_w
-//    nb_weight
+    //    nb_weight
   }
 
   def boolNeighborIndex(rdd_isnb: RDD[Array[Boolean]]): RDD[Array[String]] = {

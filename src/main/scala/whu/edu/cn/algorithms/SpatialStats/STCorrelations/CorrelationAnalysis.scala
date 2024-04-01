@@ -15,15 +15,14 @@ object CorrelationAnalysis {
    *
    * @param featureRDD   shapefile RDD
    * @param properties properties
-   * @param split      properties split, default: ","
    * @param method     pearson or spearman
    * @return correlation matrix
    */
-  def corrMat(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], properties: String, method: String = "pearson", split: String = ","): String = {
-    val propertyArr = properties.split(split)
+  def corrMat(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], properties: String, method: String = "pearson"): String = {
+    val propertyArr = properties.split(",")
     val n = propertyArr.length
     var cor = new Array[Array[Double]](n)
-    val arrList = propertyArr.map(p => featureRDD.map(t => t._2._2(p).asInstanceOf[String].toDouble).collect())
+    val arrList = propertyArr.map(p => featureRDD.map(t => t._2._2(p).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
     if (method == "pearson") {
       cor = arrList.map(t => {
         arrList.map(t2 => pcorr2arr(t2, t))
@@ -36,14 +35,11 @@ object CorrelationAnalysis {
     } else {
       throw new IllegalArgumentException("only support person and spearman correlation now")
     }
-    //    cor.map(t=>t.foreach(println))
-    val corrMat = Matrix.create(rows = n, cols = n, data = cor.flatten)
+    val crrStr = cor.map(t => t.map(i => i.formatted("%-10.4f")))
+    val corrMat = Matrix.create(rows = n, cols = n, data = crrStr.flatten)
     var outStr = s"$method correlation result:\n"
-    //    println(s"$method correlation result:")
-    //    propertyArr.foreach(t => printf("%-20s\t", t))
-    //    print("\n")
     //    println(corrMat)
-    propertyArr.foreach(t => outStr += s"    \t$t\t    ")
+    propertyArr.foreach(t => outStr += f"$t%-12s")
     outStr += "\n" + corrMat.toString()
     println(outStr)
     //    corrMat

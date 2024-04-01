@@ -33,3 +33,9 @@ case object ARRAYGROWTH0 extends ArrayGrowth
 case object ARRAYGROWTH1 extends ArrayGrowth
 case object ARRAYGROWTH2 extends ArrayGrowth
 case object ARRAYGROWTH3 extends ArrayGrowth
+
+sealed trait NODETYPE
+case object NODESPRING extends NODETYPE
+case object NODEJUNCTION extends NODETYPE
+case object NODEOUTLET extends NODETYPE
+case object NODEMOUTH extends NODETYPE
