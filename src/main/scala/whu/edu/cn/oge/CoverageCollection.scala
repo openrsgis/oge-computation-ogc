@@ -32,7 +32,7 @@ object CoverageCollection {
    * @param crs             crs of the images to query
    * @return ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
-  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
+  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null, level: Int = 0,cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
 //    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
 //
 //    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
@@ -56,7 +56,7 @@ object CoverageCollection {
 //      union = unionTileExtent.intersection(extent)
 //    }
     val union = extent
-    val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
+    val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs,cloudCoverMin, cloudCoverMax)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
     val rawTileRdd: Map[String, RDD[RawTile]] = metaListGrouped.map(t => {
       val metaListCoverage: ListBuffer[CoverageMetadata] = t._2
