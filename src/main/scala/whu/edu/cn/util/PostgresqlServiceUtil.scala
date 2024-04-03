@@ -147,7 +147,9 @@ object PostgresqlServiceUtil {
         conn.close()
       }
     } else throw new RuntimeException("connection failed")
-
+    if (metaData.isEmpty){
+      throw new RuntimeException("There is no data in the query range.")
+    }
     metaData
   }
 
