@@ -7797,9 +7797,16 @@
       },
       {
         "name": "color",
-        "type": "String",
+        "type": "List<String>",
         "description": "",
         "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "attribute",
+        "type": "String",
+        "description": "",
+        "default": "",
         "optional": "True"
       }
     ]
