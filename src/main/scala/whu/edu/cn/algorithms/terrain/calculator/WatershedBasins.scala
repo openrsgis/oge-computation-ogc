@@ -3,12 +3,12 @@ package whu.edu.cn.algorithms.terrain.calculator
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.{MultibandTile, Tile}
-
-import whu.edu.cn.algorithms.terrain.core.{OgeTerrainTile, TileToolGrid, SpaceTimeBandKey}
+import whu.edu.cn.algorithms.terrain.core.{OgeTerrainTile, TileToolGrid}
+import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.algorithms.terrain.core.TypeAliases.RDDImage
 
 import java.text.SimpleDateFormat
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.util.control.Breaks.{break, breakable}
 
 object WatershedBasins {
@@ -80,7 +80,7 @@ object WatershedBasins {
     val tiledSplit = subTiles.zipWithIndex.map { case (subTile, index) =>
       val col = index % newLayoutDefinition.layoutCols
       val row = index / newLayoutDefinition.layoutCols
-      val newKey = SpaceTimeBandKey(SpaceTimeKey(col, row, date), "Aspect")
+      val newKey = SpaceTimeBandKey(SpaceTimeKey(col, row, date), ListBuffer("Aspect"))
       (newKey, subTile)
     }
     val tiledSplitRDD = sc.parallelize(tiledSplit)

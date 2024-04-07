@@ -2753,7 +2753,6 @@
         "optional": "True",
         "default": ""
       }
-
     ]
   },
   "Coverage.contourByGDAL": {
@@ -3873,7 +3872,6 @@
         "description": "Set the coordinate reference to use for the mask layer.",
         "optional": "True",
         "default": ""
-
       },
       {
         "name": "keepResolution",
@@ -3909,7 +3907,6 @@
         "description": "Defines the format of the output raster file.",
         "optional": "True",
         "default": "0"
-
       },
       {
         "name": "sourceCrs",
@@ -4536,7 +4533,6 @@
       }
     ]
   },
-
   "Coverage.bufferByGrass": {
     "description": "Creates a raster map showing buffer zones surrounding cells that contain non-NULL category values.",
     "returns": "Coverage",
@@ -4589,7 +4585,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       }
     ]
   },
@@ -4600,12 +4596,12 @@
       {
         "name": "first",
         "type": "Coverage",
-        "description":"Name of first raster map for blending"
+        "description": "Name of first raster map for blending"
       },
       {
         "name": "second",
         "type": "Coverage",
-        "description":"Name of second raster map for blending"
+        "description": "Name of second raster map for blending"
       },
       {
         "name": "percent",
@@ -4623,17 +4619,17 @@
       {
         "name": "red",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <red>"
+        "description": "Name of raster map to be used for <red>"
       },
       {
         "name": "green",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <green>"
+        "description": "Name of raster map to be used for <green>"
       },
       {
         "name": "blue",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <blue>"
+        "description": "Name of raster map to be used for <blue>"
       },
       {
         "name": "levels",
@@ -4907,7 +4903,6 @@
       }
     ]
   },
-
   "Coverage.surfIdwByGrass": {
     "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
     "returns": "Coverage",
@@ -4915,7 +4910,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "npoints",
@@ -4933,7 +4928,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"The name of the raster map to be rescaled"
+        "description": "The name of the raster map to be rescaled"
       },
       {
         "name": "to",
@@ -4949,7 +4944,7 @@
       {
         "name": "map",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "vscale",
@@ -4967,7 +4962,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of raster map to report on"
+        "description": "Name of raster map to report on"
       },
       {
         "name": "flags",
@@ -5004,12 +4999,12 @@
       {
         "name": "first",
         "type": "Coverage",
-        "description":"Name of first raster map"
+        "description": "Name of first raster map"
       },
       {
         "name": "second",
         "type": "Coverage",
-        "description":"Name of second raster map"
+        "description": "Name of second raster map"
       },
       {
         "name": "units",
@@ -5025,12 +5020,12 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map representing data that will be summed within clumps"
+        "description": "Name of input raster map representing data that will be summed within clumps"
       },
       {
         "name": "clump",
         "type": "Coverage",
-        "description":"Name of input clump raster map"
+        "description": "Name of input clump raster map"
       }
     ]
   },
@@ -5041,12 +5036,12 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "compression",
         "type": "String",
-        "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
+        "description": "Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
         "optional": "True",
         "default": "6"
       }
@@ -5265,7 +5260,6 @@
         "description": "Rotations to make (negative numbers rotate counterclockwise)."
       }
     ]
-
   },
   "Kernel.chebyshev": {
     "description": "Generates a distance kernel based on Chebyshev distance (greatest distance along any dimension).",
@@ -8892,26 +8886,26 @@
     ]
   },
   "Coverage.terrPitrouter": {
-  "description": "DEM洼地探测.",
-  "returns": "Coverage",
-  "args": [
-    {
-      "name": "coverage",
-      "type": "Coverage",
-      "description": "The coverage to compute the pitrouter."
-    },
-    {
-      "name": "radius",
-      "type": "Int",
-      "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
-    },
-    {
-      "name": "z-Factor",
-      "type": "Double",
-      "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
-    }
-  ]
-},
+    "description": "DEM洼地探测.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the pitrouter."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
   "Coverage.terrPiteliminator": {
     "description": "DEM洼地填充.",
     "returns": "Coverage",
@@ -9027,6 +9021,168 @@
       }
     ]
   },
+  "Coverage.terrStrahlerOrder": {
+    "description": "河网分级.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the strahlerorder."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the strahlerorder, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct strahlerorder calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowConnectivity": {
+    "description": "河流连接.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowconnectivity."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowconnectivity, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowconnectivity calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowLength": {
+    "description": "水流长度.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowlength."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowlength, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowlength calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowWidth": {
+    "description": "水流宽度.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowwidth."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowwidth, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowwidth calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrWatershedBasins": {
+    "description": "流域分析.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The dem coverage to compute the WatershedBasins."
+      },
+      {
+        "name": "FlowAccumulation",
+        "type": "Coverage",
+        "description": "The flowaccumulation coverage to compute the WatershedBasins."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct WatershedBasins calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFeatureSelect": {
+    "description": "特征点提取.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the FeatureSelect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the FeatureSelect, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct FeatureSelect calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "vipValue",
+        "type": "Double",
+        "description": "Extract feature points whose importance is greater than value."
+      }
+    ]
+  },
+  "Coverage.terrTIN": {
+    "description": "TIN.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the TIN."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the TIN, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct TIN calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "vipValue",
+        "type": "Double",
+        "description": "Extract feature points whose importance is greater than value."
+      },
+      {
+        "name": "geometryType",
+        "type": "Int",
+        "description": "type of result (1: points, 2: lines, 3: polygons)."
+      }
+    ]
+  },
   "Coverage.linearTransformation": {
     "description": "Gray-level linear transformations",
     "returns": "Coverage",
@@ -9115,9 +9271,10 @@
     "returns": "Coverage",
     "args": [
       {
-        "name":"coverage",
-        "type":"Coverage",
-        "description":"The coverage to be stretched based on standard deviation."}
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be stretched based on standard deviation."
+      }
     ]
   },
   "Coverage.histogramEqualization": {
@@ -9452,7 +9609,7 @@
         "name": "weightstyle",
         "type": "String",
         "description": "neighbor weight type, including: W, B, C, U, default: W",
-          "default": "\"W\"",
+        "default": "\"W\"",
         "optional": "True"
       }
     ]
@@ -9915,5 +10072,4 @@
       }
     ]
   }
-
 }
