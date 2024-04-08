@@ -1115,7 +1115,7 @@ object Feature {
     render.put("color", colorArray)
     render.put("attribute", attribute)
     geoJson.put("render", render)
-    println(geoJson)
+    PostSender.shelvePost("vector",geoJson)
   }
 
 
