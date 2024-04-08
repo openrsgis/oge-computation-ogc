@@ -92,33 +92,19 @@ object CoverageDubug {
     "hostname".run
   }
   def test1(implicit sc: SparkContext):Unit={
+    val c0 = CoverageCollection.load(sc,"LC08_L1TP_C02_T1",null, startTime = "2016-02-01 00:00:00",endTime = "2016-03-01 00:00:00",extent = Extent(112.47632030703949, 28.970962363234158, 117.00549536957259, 31.413560053039767),cloudCoverMin = 0,cloudCoverMax = 15)
 
-//    val client: BosClient = BosClientUtil_scala.getClient2
-//    val tempPath = "D:\\cog"
-//    val filePath = "D:\\cog\\a.tiff"
-//
-//    val getObjectRequest = new GetObjectRequest("oge-user", "45607c22-dbce-4674-9abf-c9f906668dfa/myData/ASTGTM_N31E116.tiff")
-//    val bosObject = client.getObject(getObjectRequest, new File(filePath))
-    var coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "GLASS11B01.V42.A2003017.2019312_90.0_30.0","GLASS_ET_MODIS_0.05D", 4)
-//    var coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LC08_L1TP_119038_20211114_20211114_01_RT","LC08_L1TP_C01_RT", 10)
-//    val (coverage1r,coverage2r) = checkProjResoExtent(coverage1, coverage2)
+//    val c1 = CoverageCollection.map(sc,c,"addNum",100)
+    val c01 = CoverageCollection.mosaic(c0)
+    makeTIFF(c01,"LC08")
+    c0.foreach(c =>{
+      makeTIFF(c._2,c._1)
+    })
 
-//    val coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "T49REK_20231004T030551","S2A_MSIL1C", 10)
-//    val coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.load(sc, "LE07_L1TP_124039_20130612_20161124_01_T1","LE07_L1TP_C01_T1", 10)
-//    val coverage2 = Coverage.toFloat(coverage1)
-//    val res = Coverage.normalizedDifference(coverage2,List("B3","B5"))
-//    println(res._1.first()._2.cellType)
-//    val coverage = Coverage.selectBands(coverage1,List("B01"))
-//    coverage1 = Coverage.slope(coverage1,1,1)
-//    coverage1 = Coverage.filter(coverage1,1000,3000)
-    val coverage2 = Coverage.addStyles(coverage1,new VisualizationParam)
-    makeTIFF(coverage2,"glass")
-//    makeTIFF(coverage2r,"dem2")
-
-//    makeTIFF(coverage2, "lc07")
-
-//    val coverage = Coverage.add(coverage1, coverage2)
-//    makeTIFF(coverage, "add")
+//    val c = Coverage.load(sc, "LC08_L1GT_123038_20190105_20200830_02_T2","LC08_L1GT_C02_T2",10)
+//    makeTIFF(c,"LC08_1")
+//    val c2 = Coverage.load(sc, "LC08_L1GT_123039_20190105_20200830_02_T2","LC08_L1GT_C02_T2",10)
+//    makeTIFF(c2,"LC08_2")
     println("Finish")
   }
 
@@ -214,7 +200,7 @@ object CoverageDubug {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\data\\code_data\\JPG_data\\cog\\out\\" + name + ".tiff"
+    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 

@@ -32,7 +32,7 @@ object CoverageCollection {
    * @param crs             crs of the images to query
    * @return ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
-  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
+  def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null, level: Int = 0,cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
 //    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
 //
 //    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
@@ -56,7 +56,7 @@ object CoverageCollection {
 //      union = unionTileExtent.intersection(extent)
 //    }
     val union = extent
-    val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs)
+    val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs,cloudCoverMin, cloudCoverMax)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
     val rawTileRdd: Map[String, RDD[RawTile]] = metaListGrouped.map(t => {
       val metaListCoverage: ListBuffer[CoverageMetadata] = t._2
@@ -148,32 +148,35 @@ object CoverageCollection {
   }
 
   // TODO lrx: 这里要添加并行，并行之前的并行，需要写个调度
-  def map(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], baseAlgorithm: String): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
+  def map(implicit sc: SparkContext, coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])], baseAlgorithm: String, params: Any*): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
 
-    coverageCollection.foreach(coverage => {
-      val coverageId: String = coverage._1
-      val coverageRdd: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage._2
-      Trigger.coverageRddList += (coverageId -> coverageRdd)
+    coverageCollection.map(t =>{
+      (t._1,Relection.reflectCall(baseAlgorithm,t._2,params))
     })
-
-    val coverageIds: Iterable[String] = coverageCollection.keys
-
-    val coverageAfterComputation: mutable.ArrayBuffer[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))] = mutable.ArrayBuffer.empty[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))]
-
-    for (coverageId <- coverageIds) {
-      val dagChildren: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
-      Trigger.optimizedDagMap(baseAlgorithm).foreach(t => {
-        dagChildren += ((t._1, t._2, t._3.clone()))
-      })
-      dagChildren.foreach(algorithm => {
-        checkMapping(coverageId, algorithm)
-        Trigger.coverageRddList.remove(algorithm._1)
-        Trigger.func(sc, algorithm._1, algorithm._2, algorithm._3)
-      })
-      coverageAfterComputation.append(coverageId -> Trigger.coverageRddList(baseAlgorithm))
-    }
-
-    coverageAfterComputation.toMap
+//    coverageCollection.foreach(coverage => {
+//      val coverageId: String = coverage._1
+//      val coverageRdd: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage._2
+//      Trigger.coverageRddList += (coverageId -> coverageRdd)
+//    })
+//
+//    val coverageIds: Iterable[String] = coverageCollection.keys
+//
+//    val coverageAfterComputation: mutable.ArrayBuffer[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))] = mutable.ArrayBuffer.empty[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))]
+//
+//    for (coverageId <- coverageIds) {
+//      val dagChildren: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
+//      Trigger.optimizedDagMap(baseAlgorithm).foreach(t => {
+//        dagChildren += ((t._1, t._2, t._3.clone()))
+//      })
+//      dagChildren.foreach(algorithm => {
+//        checkMapping(coverageId, algorithm)
+//        Trigger.coverageRddList.remove(algorithm._1)
+//        Trigger.func(sc, algorithm._1, algorithm._2, algorithm._3)
+//      })
+//      coverageAfterComputation.append(coverageId -> Trigger.coverageRddList(baseAlgorithm))
+//    }
+//
+//    coverageAfterComputation.toMap
   }
 
   def filter(filter: String, collection: CoverageCollectionMetadata): CoverageCollectionMetadata = {

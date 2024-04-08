@@ -91,12 +91,13 @@ object Trigger {
     }
   }
 
+  // 实际的CoverageCollection的加载函数
   def isActioned(implicit sc: SparkContext, UUID: String, typeEnum: OGEClassType): Unit = {
     typeEnum match {
       case OGEClassType.CoverageCollection =>
         if (!coverageCollectionRddList.contains(UUID)) {
           val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
-          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level))
+          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax()))
         }
     }
   }
@@ -154,7 +155,7 @@ object Trigger {
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
-          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
+          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverage" =>
           if(args("coverageID").startsWith("myData/")){
             coverageReadFromUploadFile = true
@@ -240,10 +241,10 @@ object Trigger {
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> CoverageCollection.cat(coverageCollectionRddList(args("coverageCollection"))))
         case "CoverageCollection.map" =>
-          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
-            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
-            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
-          }
+//          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
+//            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
+//            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
+//          }
         case "CoverageCollection.addStyles" =>
           if (isBatch == 0) {
             isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
@@ -1506,7 +1507,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragecollection.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

@@ -28,7 +28,7 @@ object PostgresqlServiceUtil {
     //    queryCoverageCollection(md.getProductName, null, md.getMeasurementName, md.getStartTime, md.getEndTime, md.getExtent, md.getCrs)
   }
 
-  def queryCoverageCollection(productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Geometry = null, crs: CRS = null): ListBuffer[CoverageMetadata] = {
+  def queryCoverageCollection(productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Geometry = null, crs: CRS = null, cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): ListBuffer[CoverageMetadata] = {
     val metaData = new ListBuffer[CoverageMetadata]
     val postgresqlUtil = new PostgresqlUtil("")
     val conn: Connection = postgresqlUtil.getConnection
@@ -100,6 +100,19 @@ object PostgresqlServiceUtil {
           sql ++= "\'"
           t = " AND"
         }
+        if (cloudCoverMin != null && cloudCoverMax != null) {
+          sql ++= t
+          sql ++= " cover_cloud >="
+          sql ++= "\'"
+          sql ++= cloudCoverMin.toString()
+          sql ++= "\'"
+          t = " AND"
+          sql ++= t
+          sql ++= " cover_cloud <= "
+          sql ++= "\'"
+          sql ++= cloudCoverMax.toString()
+          sql ++= "\'"
+        }
         if (extent != null) {
           sql ++= t
           sql ++= " ST_Intersects(geom,'SRID=4326;"
@@ -134,7 +147,9 @@ object PostgresqlServiceUtil {
         conn.close()
       }
     } else throw new RuntimeException("connection failed")
-
+    if (metaData.isEmpty){
+      throw new RuntimeException("There is no data in the query range.")
+    }
     metaData
   }
 

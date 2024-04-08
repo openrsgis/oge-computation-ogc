@@ -1,3 +1,82 @@
-
-
-{"0":{"functionInvocationValue":{"functionName":"Coverage.addStyles","arguments":{"coverage":{"functionInvocationValue":{"functionName":"Coverage.cannyEdgeDetection","arguments":{"coverage":{"functionInvocationValue":{"functionName":"Coverage.divide","arguments":{"coverage2":{"functionInvocationValue":{"functionName":"Coverage.add","arguments":{"coverage2":{"valueReference":"3"},"coverage1":{"valueReference":"1"}}}},"coverage1":{"functionInvocationValue":{"functionName":"Coverage.subtract","arguments":{"coverage2":{"valueReference":"3"},"coverage1":{"valueReference":"1"}}}}}}},"highCoefficient":{"constantValue":5},"lowCoefficient":{"constantValue":5}}}},"min":{"constantValue":-1000000},"max":{"constantValue":1000000}}}},"1":{"functionInvocationValue":{"functionName":"Coverage.selectBands","arguments":{"coverage":{"valueReference":"2"},"bands":{"constantValue":["B1"]}}}},"2":{"functionInvocationValue":{"functionName":"Service.getCoverage","arguments":{"coverageID":{"constantValue":"LC08_L1TP_119038_20171205_20171222_01_T1"},"baseUrl":{"constantValue":"http://localhost"},"productID":{"constantValue":"LC08_L1TP_C01_T1"}}}},"3":{"functionInvocationValue":{"functionName":"Coverage.selectBands","arguments":{"coverage":{"valueReference":"2"},"bands":{"constantValue":["B3"]}}}},"layerName":"canny2017","isBatch":"0","map":{"level":7,"spatialRange":[113.907585,30.029745,126.65241,32.405327]}}
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.addStyles",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.terrHillshade",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "CoverageCollection.mosaic",
+                  "arguments": {
+                    "coverageCollection": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCoverageCollection",
+                        "arguments": {
+                          "baseUrl": {
+                            "constantValue": "http://localhost"
+                          },
+                          "datetime": {
+                            "constantValue": [
+                              "2000-01-01 00:00:00,2000-01-01 00:00:00"
+                            ]
+                          },
+                          "productID": {
+                            "constantValue": "ASTER_GDEM_DEM30"
+                          },
+                          "bbox": {
+                            "constantValue": [
+                              108.5,
+                              18.1,
+                              111,
+                              20.1
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "z-Factor": {
+                "constantValue": 1
+              },
+              "radius": {
+                "constantValue": 1
+              }
+            }
+          }
+        },
+        "min": {
+          "constantValue": -1
+        },
+        "max": {
+          "constantValue": 1
+        },
+        "palette": {
+          "constantValue": [
+            "#808080",
+            "#949494",
+            "#a9a9a9",
+            "#bdbebd",
+            "#d3d3d3",
+            "#e9e9e9"
+          ]
+        }
+      }
+    }
+  },
+  "layerName": "lc08",
+  "isBatch": "0",
+  "map": {
+    "level": 9,
+    "spatialRange": [
+      107.478424,
+      18.439892,
+      111.92157,
+      19.749302
+    ]
+  }
+}
