@@ -1,46 +1,41 @@
 package whu.edu.cn.trigger
 
 
-import whu.edu.cn.algorithms.SpatialStats.GWModels
-import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
-import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
-import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
-import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
-import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
-import io.minio.{MinioClient, PutObjectArgs}
+import org.apache.hadoop.fs.FileSystem
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-import redis.clients.jedis.Jedis
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image._
+import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
+import whu.edu.cn.algorithms.SpatialStats.GWModels
+import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
+import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
+import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
+import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 import whu.edu.cn.algorithms.terrain.calculator
+import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.entity.OGEClassType.OGEClassType
-import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
+import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.oge.Sheet.CsvData
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.util.PostSender
+import whu.edu.cn.util.RDDTransformerUtil.{makeRasterRDDFromTifBasedMeta, readRasterMetaData, savaRasterMetaData, saveRasterRDDToTif}
 
-import java.io.ByteArrayInputStream
+import java.io.File
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.{immutable, mutable}
 import scala.io.{BufferedSource, Source}
+import scala.language.postfixOps
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,erosion,dilate}
-import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
-import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
-import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
-import whu.edu.cn.oge.Sheet.CsvData
-import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
-
-import scala.collection.mutable.ArrayBuffer
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{bilateralFilter, broveyFusion, cannyEdgeDetection, falseColorComposite, gaussianBlur, histogramEqualization, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
-import whu.edu.cn.oge.Sheet.CsvData
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -161,6 +156,14 @@ object Trigger {
           if(args("coverageID").startsWith("myData/")){
             coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
+          } else if (args("coverageID").contains(GlobalConfig.DataCacheConfig.dataCachePath)) {
+            // 读取缓存的
+            val time1 = System.currentTimeMillis()
+            var fileName = args("coverageID").replace(".tiff", ".ser")
+            val rasterRDDMeta = readRasterMetaData(fileName)
+            coverageRddList += (UUID -> makeRasterRDDFromTifBasedMeta(sc, rasterRDDMeta, args("coverageID")))
+            val time2 = System.currentTimeMillis()
+            println("读取tiff缓存耗时：" + (time2 - time1) + "ms")
           } else {
             coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
@@ -849,12 +852,24 @@ object Trigger {
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           println("isBatch", isBatch)
           if (isBatch == 0) {
+
+            // 缓存结果
+            val dagCachePath: String = GlobalConfig.DataCacheConfig.dataCachePath + userId + File.separator + layerName +".tiff"
+            val dagCacheMetaPath: String = GlobalConfig.DataCacheConfig.dataCachePath + userId + File.separator + layerName + ".ser"
+
+            println("开始缓存计算结果")
+            val startTime = System.currentTimeMillis()
+            saveRasterRDDToTif(coverageRddList(args("coverage")), dagCachePath)
+            savaRasterMetaData(coverageRddList(args("coverage")), dagCacheMetaPath)
+            val endTime = System.currentTimeMillis()
+            println("缓存耗时: " + (endTime - startTime) + " ms")
+
+            // 可视化渲染
             Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
           } else {
             // TODO: 增加添加样式的函数
             coverageRddList += (UUID -> Coverage.addStyles(coverageRddList(args("coverage")), visParam = visParam))
           }
-
 
         //Feature
         case "Feature.load" =>
@@ -1342,7 +1357,8 @@ object Trigger {
     println("***********************************************************")
 
 
-    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
+    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */
+    if (sc.master.contains("local")) {
       JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
@@ -1496,8 +1512,13 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/ndvi_clip.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/aspect.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/detectorCache.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/detectorOri.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/shortPath.json")
+
       val line: String = fileSource.mkString
       fileSource.close()
       line

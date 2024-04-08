@@ -3,7 +3,6 @@ package whu.edu.cn.config
 import org.yaml.snakeyaml.Yaml
 
 import java.io.FileInputStream
-import java.net.URL
 import java.util
 
 object GlobalConfig {
@@ -62,8 +61,7 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://192.168.32.5:8085/oge-dag-22"
-
+    var DAG_ROOT_URL: String = "http://192.168.210.146:8085/oge-dag-22/"
   }
 
   object RedisConf {
@@ -124,13 +122,20 @@ object GlobalConfig {
   object Others {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
-    final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
+    final var tmsPath = "http://192.168.210.146:19100/" //tms服务url
     final var tmsHost = "192.168.32.5" //tms服务ip
     final var tomcatHost = "120.48.147.38"
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "bmr"
-    final var hbaseHost = "192.168.80.10:2181"
+    final var hbaseHost = "120.48.4.142:2181"
+//    final var hbaseHost = "192.168.80.10:2181"
   }
+
+  object DataCacheConfig{
+     final var dataCachePath = "/mnt/cache/outcome/"
+//    final var dataCachePath = "/Users/lingzy/Documents/projects/jupyter/oge/mydata/myCach/"
+  }
+
 }
