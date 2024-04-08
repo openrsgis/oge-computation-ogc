@@ -7811,9 +7811,16 @@
       },
       {
         "name": "color",
-        "type": "String",
+        "type": "List<String>",
         "description": "",
         "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "attribute",
+        "type": "String",
+        "description": "",
+        "default": "",
         "optional": "True"
       }
     ]
@@ -9120,6 +9127,168 @@
         "name": "z-Factor",
         "type": "Double",
         "description": "a z-factor for correct filter calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrStrahlerOrder": {
+    "description": "河网分级.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the strahlerorder."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the strahlerorder, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct strahlerorder calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowConnectivity": {
+    "description": "河流连接.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowconnectivity."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowconnectivity, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowconnectivity calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowLength": {
+    "description": "水流长度.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowlength."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowlength, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowlength calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowWidth": {
+    "description": "水流宽度.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowwidth."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowwidth, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowwidth calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrWatershedBasins": {
+    "description": "流域分析.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The dem coverage to compute the WatershedBasins."
+      },
+      {
+        "name": "FlowAccumulation",
+        "type": "Coverage",
+        "description": "The flowaccumulation coverage to compute the WatershedBasins."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct WatershedBasins calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFeatureSelect": {
+    "description": "特征点提取.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the FeatureSelect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the FeatureSelect, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct FeatureSelect calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "vipValue",
+        "type": "Double",
+        "description": "Extract feature points whose importance is greater than value."
+      }
+    ]
+  },
+  "Coverage.terrTIN": {
+    "description": "TIN.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the TIN."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the TIN, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct TIN calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "vipValue",
+        "type": "Double",
+        "description": "Extract feature points whose importance is greater than value."
+      },
+      {
+        "name": "geometryType",
+        "type": "Int",
+        "description": "type of result (1: points, 2: lines, 3: polygons)."
       }
     ]
   },

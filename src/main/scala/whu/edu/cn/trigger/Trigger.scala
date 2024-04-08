@@ -851,6 +851,20 @@ object Trigger {
           featureRddList += (UUID -> calculator.ChannelNetwork(rddImage = coverageRddList(args("DEM")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), dirImage = coverageRddList(args("FlowDirection")), zFactor = args("z-Factor").toDouble, threshold = args("threshold").toDouble))
         case "Coverage.terrFilter" =>
           coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").slice(1, args("min").length - 1).split(',').toList.map(_.toDouble), max = args("max").slice(1, args("max").length - 1).split(',').toList.map(_.toDouble), zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrStrahlerOrder" =>
+          coverageRddList += (UUID -> calculator.StrahlerOrder(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFlowConnectivity" =>
+          coverageRddList += (UUID -> calculator.FlowConnectivity(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFlowLength" =>
+          coverageRddList += (UUID -> calculator.FlowLength(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFlowWidth" =>
+          coverageRddList += (UUID -> calculator.FlowWidth(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrWatershedBasins" =>
+          coverageRddList += (UUID -> calculator.WatershedBasins(rddImage = coverageRddList(args("coverage")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFeatureSelect" =>
+          featureRddList += (UUID -> calculator.FeatureSelect(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble, vipValue = args("vipValue").toDouble))
+        case "Coverage.terrTIN" =>
+          featureRddList += (UUID -> calculator.TIN(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble, vipValue = args("vipValue").toDouble, geometryType = args("geometryType").toInt))
 
 
         case "Coverage.addStyles" =>
@@ -1065,7 +1079,7 @@ object Trigger {
         case "Feature.featureCollection" =>
           featureRddList += (UUID -> Feature.featureCollection(sc,args("featureList").stripPrefix("[").stripSuffix("]").split(",").toList.map(t =>{featureRddList(t).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]})))
         case "Feature.addStyles" =>
-          Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]])
+          Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],color = args("color").replace("[", "").replace("]", "").split(',').toList,attribute = args("attribute"))
         //      case "Feature.inverseDistanceWeighted" =>
         //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))

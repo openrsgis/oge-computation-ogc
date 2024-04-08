@@ -1110,19 +1110,20 @@ object Feature {
     (imageRDD, tileLayerMetadata)
   }
 
-  def visualize(feature: RDD[(String, (Geometry, Map[String, Any]))]): Unit = {
+  def visualize(feature: RDD[(String, (Geometry, Map[String, Any]))],color:List[String],attribute:String): Unit = {
     val geoJson = new JSONObject
+    val render = new JSONObject
     val geoJSONString = toGeoJSONString(feature)
     val url = saveJSONToServer(geoJSONString)
     geoJson.put(Trigger.layerName, url)
-//    val jsonObject = new JSONObject
-//    jsonObject.put("vector", geoJson)
-//    val outJsonObject: JSONObject = new JSONObject
-//    outJsonObject.put("workID", Trigger.dagId)
-//    outJsonObject.put("json", jsonObject)
-    PostSender.shelvePost("vector",geoJson)
-//    sendPost(DAG_ROOT_URL + "/deliverUrl", outJsonObject.toJSONString)
-//    println(outJsonObject.toJSONString)
+    val colorArray = new JSONArray()
+    for (st <- color) {
+      colorArray.add(st)
+    }
+    render.put("color", colorArray)
+    render.put("attribute", attribute)
+    geoJson.put("render", render)
+    println(geoJson)
   }
 
 
