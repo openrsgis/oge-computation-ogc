@@ -2885,6 +2885,32 @@
       }
     ]
   },
+  "Coverage.edgeExtractionByOTB": {
+    "description": "This application computes edge features on a selected channel of the input.It uses different filters such as gradient, Sobel and Touzi.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "filter",
+        "type": "String",
+        "description": "Choice of edge feature, which contains gradient, sobel, touzi.",
+        "optional": "True",
+        "default": "gradient"
+      }
+    ]
+  },
+
   "Coverage.aspectByGDAL": {
     "description": "Generates an aspect map from any GDAL-supported elevation raster.",
     "returns": "Coverage",

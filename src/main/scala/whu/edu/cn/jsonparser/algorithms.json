@@ -4660,6 +4660,34 @@
       }
     ]
   },
+  "Coverage.edgeExtractionByOTB": {
+    "description": "This application computes edge features on a selected channel of the input.It uses different filters such as gradient, Sobel and Touzi.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "filter",
+        "type": "String",
+        "description": "Choice of edge feature, which contains gradient, sobel, touzi.",
+        "optional": "True",
+        "default": "gradient"
+      }
+    ]
+  },
+
+
+
   "Coverage.neighborsByGrass": {
     "description": "Makes each cell category value a function of the category values assigned to the cells around it,and stores new cell values in an output raster map layers.",
     "returns": "Coverage",
