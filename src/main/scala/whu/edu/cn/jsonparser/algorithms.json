@@ -453,6 +453,20 @@
         "description": "The crs of bbox.",
         "default": "WGS84",
         "optional": "True"
+      },
+      {
+        "name": "cloudCoverMin",
+        "type": "Float",
+        "description": "The minimum value of cloud cover.",
+        "default": "0",
+        "optional": "True"
+      },
+      {
+        "name": "cloudCoverMax",
+        "type": "Float",
+        "description": "The maximum value of cloud cover.",
+        "default": "100",
+        "optional": "True"
       }
     ]
   },
@@ -6213,7 +6227,7 @@
       },
       {
         "name": "level",
-        "type": "Int",
+        "type": "Double",
         "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
       },
       {

@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
 import org.apache.hadoop.hbase.filter.{PrefixFilter, RowFilter, SubstringComparator}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{CellUtil, HBaseConfiguration, HColumnDescriptor, HConstants, HTableDescriptor, TableName}
+import whu.edu.cn.config.GlobalConfig.Others.hbaseHost
 
 import scala.collection.mutable.ListBuffer
 
@@ -15,13 +16,13 @@ import scala.collection.mutable.ListBuffer
  *
  */
 object HbaseUtil {
-  System.setProperty("hadoop.home.dir", "/home/geocube/hadoop")
+  System.setProperty("hadoop.home.dir", "/root/hadoop")
 
   //configuration for hbase
   val configuration = HBaseConfiguration.create()
 
   //set zookeeper cluster
-  configuration.set(HConstants.ZOOKEEPER_QUORUM, "gisweb1:2181,gisweb3:2181,gisweb4:2181")
+  configuration.set(HConstants.ZOOKEEPER_QUORUM, hbaseHost)
 
   //set RPC timeout
   configuration.set("hbase.rpc.timeout", "200000")
