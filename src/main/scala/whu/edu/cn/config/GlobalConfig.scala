@@ -124,6 +124,14 @@ object GlobalConfig {
     var QGIS_PYTHON: String = "/home/ogeStorage/miniconda3/bin/python"
     var QGIS_RS: String = "/home/geocube/oge/oge-server/dag-boot/qgis/rs/"
   }
+  object OTBConf{
+    var OTB_DATA: String = "/mnt/storage/algorithmData/"
+    var OTB_ALGORITHMCODE: String = "cd /root/otb/algorithmCodeByOTB;"
+    var OTB_HOST: String = "120.48.116.93"
+    var OTB_USERNAME: String = "root"
+    var OTB_PASSWORD: String = "Ypfamily608!"
+    var OTB_PORT: Int = 22
+  }
   object Others {
     final var jsonAlgorithms = "/home/ogeStorage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/home/ogeStorage/temp/" //各类临时文件的地址
