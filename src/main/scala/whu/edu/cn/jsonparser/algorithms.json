@@ -10478,5 +10478,16 @@
         "description": "image to be color balance and reference"
       }
     ]
+  },
+  "Dataset.encoding": {
+    "description": "TrainingDML-AI encoding of dataset in oge",
+    "returns": "String",
+    "args": [
+      {
+        "name": "datasetName",
+        "type": "String",
+        "description": "name of dataset for the encoding"
+      }
+    ]
   }
 }
