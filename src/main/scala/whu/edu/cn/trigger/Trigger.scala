@@ -1177,6 +1177,9 @@ object Trigger {
           Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
             args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
             args("extent"), args("startTime"), args("endTime"))
+        // TrainingDML-AI 新增算子
+        case "Dataset.encoding" =>
+          stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
       }
 
 

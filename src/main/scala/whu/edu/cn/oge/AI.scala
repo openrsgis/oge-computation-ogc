@@ -3,10 +3,18 @@ package whu.edu.cn.oge
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, FloatArrayTile, FloatCellType, MultibandTile, Tile}
 import geotrellis.raster.mapalgebra.local.{Add, Divide}
+import io.minio.GetPresignedObjectUrlArgs
+import io.minio.http.Method
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.util.MinIOUtil
 
 import java.text.SimpleDateFormat
+import scala.io.Source
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
+import scala.util.{Failure, Success, Try}
 
 object AI {
 //  /**
@@ -186,4 +194,39 @@ object AI {
 //    })
 //    (PAP, coverage._2)
 //  }
+
+
+
+
+  def getTrainingDatasetEncoding(datasetName: String): String = {
+    val minioClient = MinIOUtil.getMinioClient
+
+    try {
+      // 使用 builder 方法构建 GetPresignedObjectUrlArgs 实例
+      val args = GetPresignedObjectUrlArgs.builder()
+        .method(Method.GET)
+        .bucket("pytdml")
+        .`object`("datasetTDEncodes/" + datasetName + ".json")
+        .expiry(1, TimeUnit.HOURS) // 设置有效期为1小时
+        .build()
+
+      // 使用 GetPresignedObjectUrlArgs 实例调用 getPresignedObjectUrl 方法
+      val url = minioClient.getPresignedObjectUrl(args)
+      url
+    } catch {
+      case e: Exception =>
+        e.toString
+    }
+  }
+
+//  // 使用方法
+//  getData("yourName") match {
+//    case Success(result) => println(result)
+//    case Failure(_) => println("获取数据失败")
+//  }
+//def main(args: Array[String]): Unit = {
+//  print(getTrainingDatasetEncoding("MBD"))
+//}
 }
+
+
