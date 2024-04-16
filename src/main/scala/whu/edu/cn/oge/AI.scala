@@ -211,7 +211,7 @@ def getTrainingDatasetEncoding(datasetName: String): String = {
 }
 
 
-  def main(args: Array[String]): Unit = {
-    print(getTrainingDatasetEncoding("MBD"))
-  }
+//  def main(args: Array[String]): Unit = {
+//    print(getTrainingDatasetEncoding("MBD"))
+//  }
 }
