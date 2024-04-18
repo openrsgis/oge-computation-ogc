@@ -399,21 +399,35 @@
         "description": "The base url of service."
       },
       {
-        "name": "CubeName",
+        "name": "cubeId",
         "type": "String",
-        "description": "The Name of target collection."
+        "description": "The id of target cube."
+      },
+      {
+        "name": "products",
+        "type": "String",
+        "description": "The name of target collection.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bands",
+        "type": "String",
+        "description": "The bands used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "time",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
       },
       {
         "name": "extent",
         "type": "String",
         "description": "The extent used for deleting.",
-        "default": "null",
-        "optional": "True"
-      },
-      {
-        "name": "dateTime",
-        "type": "String",
-        "description": "The range of time used for deleting.",
         "default": "null",
         "optional": "True"
       }
@@ -8646,7 +8660,14 @@
         "description": "The cube to compute NDVI."
       },
       {
-        "name": "bandNames",
+        "name": "band1",
+        "type": "List<String>",
+        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
+        "optional": "True",
+        "default": "None"
+      },
+      {
+        "name": "band2",
         "type": "List<String>",
         "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
         "optional": "True",
