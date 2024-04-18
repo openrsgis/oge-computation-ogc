@@ -1,6 +1,6 @@
 package whu.edu.cn.entity.cube
 
-class CubeCOGMetadata {
+class CubeCOGMetadata extends Serializable {
   var imageWidth: Int = _
   var imageHeight: Int = _
   var bitPerSample: Int = _

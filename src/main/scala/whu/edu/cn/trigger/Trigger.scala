@@ -9,7 +9,7 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, S
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
-import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
@@ -37,6 +37,7 @@ import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 import whu.edu.cn.oge.Sheet.CsvData
 import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
+import whu.edu.cn.entity.cube.CubeTileKey
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -58,7 +59,7 @@ object Trigger {
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
   var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any] //GRASS部分返回String类的算子
   //  var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
-  var cubeRDDList: mutable.Map[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])]
+  var cubeRDDList: mutable.Map[String, Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]] = mutable.Map.empty[String, Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]]
 
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
   var outputInformationList:mutable.ListBuffer[JSONObject] = mutable.ListBuffer.empty[JSONObject]
@@ -164,7 +165,7 @@ object Trigger {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getCube" =>
-          cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
+          cubeRDDList += (UUID -> Service.getCube(sc, args("cubeId"), args("products"), args("bands"), args("time"), args("extent"), args("tms"), args("resolution")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -1144,39 +1145,41 @@ object Trigger {
         //          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
         //        case "Cube.addStyles" =>
         //          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
-        case "Cube.load" => {
-          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
-            dateTime = isOptionalArg(args, "dateTime")))
-        }
-        case "Cube.normalize" => {
-          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
-        }
-        case "Cube.aggregate" => {
-          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-            method = isOptionalArg(args, "method")))
-        }
+//        case "Cube.load" => {
+//          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
+//            dateTime = isOptionalArg(args, "dateTime")))
+//        }
+//        case "Cube.normalize" => {
+//          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+//            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
+//        }
+//        case "Cube.aggregate" => {
+//          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+//            method = isOptionalArg(args, "method")))
+//        }
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
+          CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
-
-        case "Cube.build" => {
-          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
-            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
-            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
-        }
-        case "Cube.export" =>
-          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
-        case "Cube.floodFillAnalysis" =>
-          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-            args("extent"), args("startTime"), args("endTime"))
+          cubeRDDList += (UUID -> CubeNew.normalizedDifference(cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
+
+//        case "Cube.build" => {
+//          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+//          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
+//            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
+//            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
+//        }
+//        case "Cube.export" =>
+//          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
+//        case "Cube.NDVI" =>
+//          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
+//        case "Cube.floodFillAnalysis" =>
+//          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
+//            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
+//            args("extent"), args("startTime"), args("endTime"))
         // TrainingDML-AI 新增算子
         case "Dataset.encoding" =>
           stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))

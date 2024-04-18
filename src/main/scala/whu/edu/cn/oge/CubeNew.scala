@@ -1,20 +1,36 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONObject}
-import geotrellis.layer.SpatialKey
+import geotrellis.layer
+import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.{DoubleConstantNoDataCellType, Raster, Tile}
-import geotrellis.vector.Extent
+import geotrellis.raster.mapalgebra.local.{Add, Multiply}
+import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.{CellType, DoubleConstantNoDataCellType, MultibandTile, Raster, Tile, TileLayout}
+import geotrellis.spark.{ContextRDD, MultibandTileLayerRDD}
+import geotrellis.vector.{Extent, ProjectedExtent}
 import io.minio.messages.Item
 import io.minio.{ListObjectsArgs, MinioClient, Result}
+import geotrellis.raster.{reproject => _, _}
+import geotrellis.spark._
+import geotrellis.spark.pyramid.Pyramid
+import geotrellis.spark.store.file.FileLayerWriter
+import geotrellis.store.LayerId
+import geotrellis.store.file.FileAttributeStore
+import geotrellis.store.index.ZCurveKeyIndexMethod
+import javafx.scene.paint.Color
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
-import whu.edu.cn.entity.CoverageMetadata
+import whu.edu.cn.entity.{CoverageMetadata, VisualizationParam}
 import whu.edu.cn.entity.cube._
-import whu.edu.cn.util.MinIOUtil
+import whu.edu.cn.oge.CubeNew.{bandRadiometricCalibration, loadCubeByImage, normalizedDifference, visualization}
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.COGUtil.tileDifference
+import whu.edu.cn.util.{COGUtil, MinIOUtil, PostSender}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 import whu.edu.cn.util.cube.CubePostgresqlUtil._
 import whu.edu.cn.util.cube.CubeUtil.{cogHeaderBytesParse, getCubeDataType}
@@ -22,13 +38,16 @@ import whu.edu.cn.util.cube.CubeUtil.{cogHeaderBytesParse, getCubeDataType}
 import java.lang
 import java.sql.ResultSet
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
+import scala.Console.println
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.math.{max, min}
 import scala.util.matching.Regex
 
 object CubeNew {
 
-  def loadCubeByTile(implicit sc: SparkContext, cubeId: String, productString: String, bandString: String, timeString: String, extentString: String, tms: String, resolution: Double): RDD[(CubeTileKey, Tile)] = {
+  def loadCubeByTile(implicit sc: SparkContext, cubeId: String, productString: String, bandString: String, timeString: String, extentString: String, tms: String, resolution: Double): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     val product: Array[String] = productString.substring(1, productString.length - 1).split(",")
     val band: Array[String] = bandString.substring(1, bandString.length - 1).split(",")
     val time: Array[String] = timeString.substring(1, timeString.length - 1).split(",")
@@ -36,7 +55,7 @@ object CubeNew {
     loadCubeSubsetJointByTile(sc, cubeId, product, band, time, extent(0), extent(1), extent(2), extent(3), tms, resolution)
   }
 
-  def loadCubeByImage(implicit sc: SparkContext, cubeId: String, productString: String, bandString: String, timeString: String, extentString: String, tms: String, resolution: Double): RDD[(CubeTileKey, Tile)] = {
+  def loadCubeByImage(implicit sc: SparkContext, cubeId: String, productString: String, bandString: String, timeString: String, extentString: String, tms: String, resolution: Double): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     val product: Array[String] = productString.substring(1, productString.length - 1).split(",")
     val band: Array[String] = bandString.substring(1, bandString.length - 1).split(",")
     val time: Array[String] = timeString.substring(1, timeString.length - 1).split(",")
@@ -44,15 +63,15 @@ object CubeNew {
     loadCubeSubsetJointByImage(sc, cubeId, product, band, time, extent(0), extent(1), extent(2), extent(3), tms, resolution)
   }
 
-  def bandRadiometricCalibration(cubeRDD: RDD[(CubeTileKey, Tile)], gain: Double, offset: Double): RDD[(CubeTileKey, Tile)] = {
-    cubeRDD.map(t => {
+  def bandRadiometricCalibration(cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])], gain: Double, offset: Double): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    cubeRDD.map(rdd => (rdd._1.map(t => {
       val tile: Tile = t._2.convert(DoubleConstantNoDataCellType)
       val newTile: Tile = tile.mapDouble(x => x * gain + offset)
       (t._1, newTile)
-    })
+    }), rdd._2))
   }
 
-  def normalizedDifference(cubeRDD: RDD[(CubeTileKey, Tile)], bandName1: String, platform1: String, bandName2: String, platform2: String): RDD[(CubeTileKey, Tile)] = {
+  def normalizedDifference(cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])], bandName1: String, platform1: String, bandName2: String, platform2: String): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     val bandKey1: BandKey = new BandKey(bandName1, platform1)
     val bandKey2: BandKey = new BandKey(bandName2, platform2)
     var platformNew: String = ""
@@ -61,47 +80,230 @@ object CubeNew {
     } else {
       platformNew = platform1 + "_" + platform2
     }
-    val cubeProcess1: RDD[(CubeTileKey, Tile)] = cubeRDD.filter((cubeTile: (CubeTileKey, Tile)) => cubeTile._1.bandKey.equals(bandKey1) || cubeTile._1.bandKey.equals(bandKey2))
-    val cubeProcess2: RDD[((String, Int, Int, Long, String, String), Iterable[(CubeTileKey, Tile)])] = cubeProcess1.groupBy(t => (t._1.spaceKey.tms, t._1.spaceKey.col, t._1.spaceKey.row, t._1.timeKey.time, t._1.productKey.productName, t._1.productKey.productType))
-    val cubeProcess3: RDD[(CubeTileKey, Tile)] = cubeProcess2.map((cubeTile: ((String, Int, Int, Long, String, String), Iterable[(CubeTileKey, Tile)])) => {
+    val cubeProcess1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = cubeRDD.map(rdd => (rdd._1.filter((cubeTile: (CubeTileKey, Tile)) => cubeTile._1.bandKey.equals(bandKey1) || cubeTile._1.bandKey.equals(bandKey2)), rdd._2))
+    val cubeProcess2: Array[(RDD[((String, Int, Int), Iterable[(CubeTileKey, Tile)])], TileLayerMetadata[SpatialKey])] = cubeProcess1.map(rdd => (rdd._1.groupBy(t => (t._1.spaceKey.tms, t._1.spaceKey.col, t._1.spaceKey.row)), rdd._2))
+    val cubeProcess3: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = cubeProcess2.map(rdd => (rdd._1.map((cubeTile: ((String, Int, Int), Iterable[(CubeTileKey, Tile)])) => {
       // TODO 同一个Space, time, band, product可能涉及多个瓦片！！！！因为卫星轨道有旁向和航向重叠！！！！
       val band1: Tile = cubeTile._2.filter(_._1.bandKey.equals(bandKey1)).map(_._2).localMean().convert(DoubleConstantNoDataCellType)
       val band2: Tile = cubeTile._2.filter(_._1.bandKey.equals(bandKey2)).map(_._2).localMean().convert(DoubleConstantNoDataCellType)
       val normalizedDifferenceTile: Tile = band1.localSubtract(band2).localDivide(band1.localAdd(band2))
       (new CubeTileKey(cubeTile._2.head._1.spaceKey, cubeTile._2.head._1.timeKey, cubeTile._2.head._1.productKey, new BandKey("NDVI", platformNew)), normalizedDifferenceTile)
-    })
+    }), rdd._2))
     cubeProcess3
   }
 
   //挑选产品和波段来进行可视化
-  def visualization(cubeRDD: RDD[(CubeTileKey, Tile)]): Unit = {
-    cubeRDD.map(t => ((t._1.productKey.productName, t._1.productKey.productType, t._1.bandKey.bandName, t._1.bandKey.bandPlatform, t._1.timeKey.time), (t._1.spaceKey, t._2))).groupByKey(16).foreach(t => {
-      val productName: String = t._1._1
-      val productType: String = t._1._2
-      val bandName: String = t._1._3
-      val bandPlatform: String = t._1._4
-      val timestampSeconds: Long = t._1._5
+  def visualization(cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]): Unit = {
+    cubeRDD.foreach(t => {
+      val productName: String = t._1.collect().head._1.productKey.productName
+      val productType: String = t._1.collect().head._1.productKey.productType
+      val bandName: String = t._1.collect().head._1.bandKey.bandName
+      val bandPlatform: String = t._1.collect().head._1.bandKey.bandPlatform
+      val timestampSeconds: Long = t._1.collect().head._1.timeKey.time
       val time: String = LocalDateTime.ofEpochSecond(timestampSeconds, 0, ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-
-      val tms: String = t._2.head._1.tms
-      val coverageArray: Array[(SpatialKey, Tile)] = t._2.toArray.map(x => (new SpatialKey(x._1.col, x._1.row), x._2))
-      val extentTuple4: (Double, Double, Double, Double) = t._2.map(x => (x._1.minX, x._1.minY, x._1.maxX, x._1.maxY)).reduce((x, y) => (math.min(x._1, y._1), math.min(x._2, y._2), math.max(x._3, y._3), math.max(x._4, y._4)))
+      val coverageArray: Array[(SpatialKey, Tile)] = t._1.collect().map(rdd => (new SpatialKey(rdd._1.spaceKey.col, rdd._1.spaceKey.row), rdd._2))
+      val extentTuple4: (Double, Double, Double, Double) = t._1.map(x => (x._1.spaceKey.minX, x._1.spaceKey.minY, x._1.spaceKey.maxX, x._1.spaceKey.maxY)).reduce((x, y) => (math.min(x._1, y._1), math.min(x._2, y._2), math.max(x._3, y._3), math.max(x._4, y._4)))
+      println("extentTuple4/2:" + extentTuple4)
       val extent: Extent = new Extent(extentTuple4._1, extentTuple4._2, extentTuple4._3, extentTuple4._4)
-      val crs: CRS = tms match {
-        case "WGS1984Quad" => CRS.fromName("EPSG:4326")
-        case "WebMercatorQuad" => CRS.fromName("EPSG:3857")
-        // TODO rHEALPixCustom的CRS如何解决？？？
-        case "rHEALPixCustom" => CRS.fromName("EPSG:3785")
-        case _ => CRS.fromName("EPSG:4326")
-      }
+      val crs: CRS = t._2.crs
 
 
       val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
       val stitchedTile: Raster[Tile] = Raster(tile, extent)
 
-      val saveFilePath: String = "D:\\组内项目\\DGGS-Cube计算优化\\DGGS\\data\\test\\" + productName + "_" + productType + "_" + bandName + "_" + bandPlatform + "_" + timestampSeconds.toString + ".tif"
+      val saveFilePath: String = "D:\\研究生材料\\Cube\\results\\" + productName + "_" + productType + "_" + bandName + "_" + bandPlatform + "_" + timestampSeconds.toString + ".tif"
       GeoTiff(stitchedTile, crs).write(saveFilePath)
     })
+  }
+
+  def addStyles(cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])], visualizationParam: VisualizationParam): Array[(RDD[(CubeTileKey, MultibandTile)], TileLayerMetadata[SpatialKey])] = {
+    var multibandTileRdd: Array[(RDD[(CubeTileKey, MultibandTile)], TileLayerMetadata[SpatialKey])] = cubeRDD.map(rdd => (rdd._1.map(t => {
+      val multiBandTiles: ArrayBuffer[Tile] = new ArrayBuffer[Tile]()
+      multiBandTiles.append(t._2)
+      (t._1, MultibandTile(multiBandTiles))
+    }), rdd._2))
+
+
+    multibandTileRdd.map(rdd => {
+      var stylingRDD: RDD[(CubeTileKey, MultibandTile)] = rdd._1
+      // min的数量
+      val minNum: Int = visualizationParam.getMin.length
+      // max的数量
+      val maxNum: Int = visualizationParam.getMax.length
+
+      if (minNum * maxNum != 0) {
+        // 首先找到现有的最小最大值
+        val minMaxBand: (Double, Double) = stylingRDD.map(t => {
+          val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN).filter(x => x != Int.MinValue)
+          if (noNaNArray.nonEmpty) {
+            (noNaNArray.min, noNaNArray.max)
+          }
+          else {
+            (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+          }
+        }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+        val minVis: Double = visualizationParam.getMin.headOption.getOrElse(0.0)
+        val maxVis: Double = visualizationParam.getMax.headOption.getOrElse(1.0)
+        val gainBand: Double = (maxVis - minVis) / (minMaxBand._2 - minMaxBand._1)
+        val biasBand: Double = (minMaxBand._2 * minVis - minMaxBand._1 * maxVis) / (minMaxBand._2 - minMaxBand._1)
+        stylingRDD = stylingRDD.map(t => (t._1, t._2.mapBands((_, tile) => {
+          Add(Multiply(tile, gainBand), biasBand)
+        })))
+      }
+
+      if (visualizationParam.getPalette.nonEmpty) {
+        val paletteVis: List[String] = visualizationParam.getPalette
+        val colorVis: List[Color] = paletteVis.map(t => {
+          try {
+            val color: Color = Color.valueOf(t)
+            color
+          } catch {
+            case e: Exception =>
+              throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+          }
+        })
+        val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+        val minMaxBand: (Double, Double) = stylingRDD.map(t => {
+          val noNaNArray: Array[Double] = t._2.band(0).toArrayDouble().filter(!_.isNaN).filter(x => x != Int.MinValue)
+          if (noNaNArray.nonEmpty) {
+            (noNaNArray.min, noNaNArray.max)
+          }
+          else {
+            (Int.MaxValue.toDouble, Int.MinValue.toDouble)
+          }
+        }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+
+        val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+        stylingRDD = stylingRDD.map(t => {
+          val len: Int = colorRGB.length - 1
+          val bandR: Tile = t._2.band(0).mapDouble(d => {
+            var R: Double = 0.0
+            for (i <- 0 to len) {
+              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                R = colorRGB(i)._1 * 255.0
+              }
+            }
+            R
+          })
+          val bandG: Tile = t._2.band(0).mapDouble(d => {
+            var G: Double = 0.0
+            for (i <- 0 to len) {
+              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                G = colorRGB(i)._2 * 255.0
+              }
+            }
+            G
+          })
+          val bandB: Tile = t._2.band(0).mapDouble(d => {
+            var B: Double = 0.0
+            for (i <- 0 to len) {
+              if (d >= minMaxBand._1 + i * interval && d < minMaxBand._1 + (i + 1) * interval) {
+                B = colorRGB(i)._3 * 255.0
+              }
+            }
+            B
+          })
+          (t._1, MultibandTile(bandR, bandG, bandB))
+        })
+      }
+      (stylingRDD, rdd._2)
+    })
+  }
+
+
+  def visualizeOnTheFly(implicit sc: SparkContext, cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])], visualizationParam: VisualizationParam): Unit = {
+    val bands: Array[String] = visualizationParam.getBands.toArray
+    val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
+
+    for (i <- bands.indices) {
+      cubeRDD.foreach(rdd => {
+        val selected = rdd._1.filter(t => t._1.bandKey.bandName.equals(bands(i)))
+        (selected, rdd._2)
+      })
+      val styledRDD: Array[(RDD[(CubeTileKey, MultibandTile)], TileLayerMetadata[SpatialKey])] = addStyles(cubeRDD, visualizationParam)
+      styledRDD.foreach(rdd => {
+        val cubeRDDwithMutiBand: RDD[(SpatialKey, MultibandTile)] = rdd._1.map(t => {
+          (new SpatialKey(t._1.spaceKey.col, t._1.spaceKey.row), t._2)
+        })
+
+        var cubeTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(cubeRDDwithMutiBand, rdd._2)
+
+        if (COGUtil.tileDifference > 0) {
+          // 首先对其进行上采样
+          // 上采样必须考虑范围缩小，不然非常占用内存
+          val levelUp: Int = COGUtil.tileDifference
+          val layoutOrigin: LayoutDefinition = cubeTMS.metadata.layout
+          val extentOrigin: Extent = cubeTMS.metadata.layout.extent
+          val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
+          val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
+          val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
+          val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
+
+          val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
+          val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
+          cubeTMS = cubeTMS.reproject(cubeTMS.metadata.crs, layoutNew)._2
+        }
+
+        val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+        val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+        val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) = {
+          cubeTMS.reproject(tmsCrs, layoutScheme)
+        }
+        println("zoom:" + zoom)
+
+        val outputPath: String = GlobalConfig.Others.ontheFlyStorage
+        // Create the attributes store that will tell us information about our catalog.
+        val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+        // Create the writer that we will use to store the tiles in the local catalog.
+        val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+
+        if (zoom < Trigger.level) {
+          throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+        }
+
+        Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+          if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
+            val layerId: LayerId = LayerId(Trigger.dagId, z)
+            println(layerId)
+            // If the layer exists already, delete it out before writing
+            if (attributeStore.layerExists(layerId)) {
+              //        new FileLayerManager(attributeStore).delete(layerId)
+              try {
+                writer.overwrite(layerId, rdd)
+              } catch {
+                case e: Exception =>
+                  e.printStackTrace()
+              }
+            }
+            else {
+              writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+            }
+          }
+        }
+
+        if (sc.master.contains("local")) {
+          whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube" + rdd._1.collect().head._1.bandKey.bandName)
+        }
+      })
+
+      val rasterJsonObject: JSONObject = new JSONObject
+      if (visualizationParam.getFormat == "png") {
+        rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.png")
+      }
+      else {
+        rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
+      }
+      tol_urljson.append(rasterJsonObject)
+    }
+
+    // 回调服务
+    val jsonObject: JSONObject = new JSONObject
+    jsonObject.put("raster", tol_urljson.toArray)
+    jsonObject.put("bands", bands)
+    println(jsonObject.toJSONString)
+
+    PostSender.shelvePost("cube", jsonObject)
+
   }
 
   def createCubeFromCollectionByTile(cubeName: String, tms: String, cubeDescription: String, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null): Int = {
@@ -320,7 +522,7 @@ object CubeNew {
       // 2.4.4 准备oc_extent, oc_time和oc_image_fact的数据
       // 2.4.4.1 先知道有哪些Cube-COG
       val imagePath: String = metadata.getPath
-      val cubeImagePathPrefix: String = imagePath.replace(".tif", "") + "/" + tms
+      val cubeImagePathPrefix: String = imagePath.replace(".tif", "") + "/" + tms //GLASS/GPP/MODIS/500m/2002/081 + coverageMetadata.getCoverageID + "_" + coverageMetadata.getMeasurement + ‘/’ + tms
       val client: MinioClient = MinIOUtil.getMinioClient
       val iterable: lang.Iterable[Result[Item]] = client.listObjects(ListObjectsArgs.builder().bucket("oge-cube").recursive(true).prefix(cubeImagePathPrefix).build())
       val iterator: java.util.Iterator[Result[Item]] = iterable.iterator()
@@ -446,15 +648,18 @@ object CubeNew {
     // 通过Tile加载Cube
     // loadCubeByTile(sc, "1", "[LC08_L2SP_C02_T1]", "[SR_B1]", "[2023-01-10 00:00:00, 2023-01-20 00:00:00]", "[113, 29, 120, 34]", "WebMercatorQuad", 30)
     // 通过Image加载Cube
-    val cubeRDD1: RDD[(CubeTileKey, Tile)] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-01-01 00:00:00,2023-12-31 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
-    val cubeRDD2: RDD[(CubeTileKey, Tile)] = bandRadiometricCalibration(cubeRDD1, 2.8e-05, -0.2)
-    val cubeRDD3: RDD[(CubeTileKey, Tile)] = normalizedDifference(cubeRDD2, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
-    visualization(cubeRDD3)
+    val vis = new VisualizationParam
+    //    vis.setAllParam(bands = "[SR_B3]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
+    vis.setAllParam(bands = "[SR_B3,SR_B5]", min = "0", max = "500")
+    Trigger.level = -1
+    Trigger.dagId = "cube"
+    val cubeRDD1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-01-10 00:00:00,2023-01-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
+    visualizeOnTheFly(sc, cubeRDD1, vis)
+    //    visualization(cubeRDD1)
     sc.stop()
 
     val time2: Long = System.currentTimeMillis()
     println("总耗时：" + (time2 - time1) + "ms")
-    println("Hello, World!")
   }
-
 }
+
