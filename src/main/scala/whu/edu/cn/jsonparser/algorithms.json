@@ -8675,6 +8675,70 @@
       }
     ]
   },
+  "Cube.add": {
+    "description": "Adds the first value to the second for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.subtract": {
+    "description": "Subtracts the second value from the first for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.multiply": {
+    "description": "Multiplies the first value by the second.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.divide": {
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
   "Cube.band": {
     "description": "Select a new cube by band name",
     "returns": "Cube",
@@ -8897,32 +8961,6 @@
         "name": "threshold",
         "type": "Int",
         "description": "The threshold to binary"
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of binary"
-      }
-    ]
-  },
-  "Cube.subtract": {
-    "description": "Compute binarization of the Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to compute NDWI."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product to compute binarization."
-      },
-      {
-        "name": "timeList",
-        "type": "List<String>",
-        "description": "The list of time."
       },
       {
         "name": "name",
