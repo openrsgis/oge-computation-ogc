@@ -601,6 +601,16 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativeIntersection(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("overlay")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], inputFields = args("inputFields"),overlayFields = args("overlayFields"),overlayFieldsPrefix = args("overlayFieldsPrefix"),gridSize = args("gridSize").toDouble))
         case "Coverage.edgeExtractionByOTB" =>
           coverageRddList += (UUID -> OTB.otbEdgeExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, filter = args("filter")))
+        case "Coverage.dimensionalityReductionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbDimensionalityReduction(sc, coverageRddList(args("input")), method = args("method"), rescale = args("rescale")))
+        case "Coverage.SFSTextureExtractionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSFSTextureExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, spectralThreshold = args("spectralThreshold").toDouble, spatialThreshold = args("spatialThreshold").toInt, numberOfDirection = args("numberOfDirection").toInt, alpha = args("alpha").toDouble, ratioMaximumConsiderationNumber = args("ratioMaximumConsiderationNumber").toInt))
+        case "Coverage.multivariateAlterationDetectorByOTB" =>
+          coverageRddList += (UUID -> OTB.otbMultivariateAlterationDetector(sc, coverageRddList(args("inputBefore")), coverageRddList(args("inputAfter"))))
+        case "Coverage.radiometricIndicesByOTB" =>
+          coverageRddList += (UUID -> OTB.otbRadiometricIndices(sc, coverageRddList(args("input")), channelsBlue = args("channelsBlue").toInt, channelsGreen = args("channelsGreen").toInt, channelsRed = args("channelsRed").toInt, channelsNir = args("channelsNir").toInt, channelsMir = args("channelsMir").toInt))
+        case "Coverage.obtainUTMZoneFromGeoPointByOTB" =>
+          OTB.otbObtainUTMZoneFromGeoPoint(sc, lat = args("lat").toDouble, lon = args("lon").toDouble)
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
