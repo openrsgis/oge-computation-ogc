@@ -612,6 +612,37 @@ object Trigger {
           coverageRddList += (UUID -> OTB.otbRadiometricIndices(sc, coverageRddList(args("input")), channelsBlue = args("channelsBlue").toInt, channelsGreen = args("channelsGreen").toInt, channelsRed = args("channelsRed").toInt, channelsNir = args("channelsNir").toInt, channelsMir = args("channelsMir").toInt))
         case "Coverage.obtainUTMZoneFromGeoPointByOTB" =>
           OTB.otbObtainUTMZoneFromGeoPoint(sc, lat = args("lat").toDouble, lon = args("lon").toDouble)
+        case "Coverage.largeScaleMeanShiftVectorByOTB" =>   //输入为栅格输出为矢量算哪一类？？
+          featureRddList += (UUID -> OTB.otbLargeScaleMeanShiftVector(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, minsize = args("minsize").toInt,tilesizex = args("tilesizex").toInt,tilesizey=args("tilesizey").toInt))
+        case "Coverage.largeScaleMeanShiftRasterByOTB" =>
+          coverageRddList += (UUID -> OTB.otbLargeScaleMeanShiftRaster(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, minsize = args("minsize").toInt,tilesizex = args("tilesizex").toInt,tilesizey=args("tilesizey").toInt))
+        case "Coverage.meanShiftSmoothingByOTB" =>
+          coverageCollectionRddList += (UUID -> OTB.otbMeanShiftSmoothing(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, thres = args("thres").toFloat,maxiter = args("maxiter").toInt,rangeramp=args("rangeramp").toFloat))
+        case "Coverage.localStatisticExtractionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbLocalStatisticExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, radius = args("radius").toInt))
+        case "Coverage.segmentationMeanshiftRasterByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSegmentationMeanshiftRaster(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, thres = args("thres").toFloat, maxiter = args("maxiter").toInt, minsize = args("minsize").toInt))
+        case "Coverage.segmentationMeanshiftVectorByOTB" =>
+          featureRddList += (UUID -> OTB.otbSegmentationMeanshiftVector(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, thres = args("thres").toFloat, maxiter = args("maxiter").toInt, minsize = args("minsize").toInt,neighbor = args("neighbor").toBoolean, stitch = args("stitch").toBoolean, v_minsize=args("v_minsize").toInt, simplify=args("simplify").toFloat, tilesize=args("tilesize").toInt, startlabel=args("startlabel").toInt))
+        case "Coverage.segmentationWatershedRasterByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSegmentationWatershedRaster(sc, coverageRddList(args("input")), threshold = args("threshold").toFloat, level = args("level").toFloat))
+        case "Coverage.segmentationWatershedVectorByOTB" =>
+          featureRddList += (UUID -> OTB.otbSegmentationWatershedVector(sc, coverageRddList(args("input")), threshold = args("threshold").toFloat, level = args("level").toFloat, neighbor = args("neighbor").toBoolean, stitch = args("stitch").toBoolean, v_minsize=args("v_minsize").toInt, simplify=args("simplify").toFloat, tilesize=args("tilesize").toInt, startlabel=args("startlabel").toInt))
+        case "Coverage.segmentationMprofilesdRasterByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSegmentationMprofilesdRaster(sc, coverageRddList(args("input")), size = args("size").toInt, start = args("start").toInt, step = args("step").toInt, sigma = args("sigma").toFloat))
+        case "Coverage.segmentationMprofilesdVectorByOTB" =>
+          featureRddList += (UUID -> OTB.otbSegmentationMprofilesVector(sc, coverageRddList(args("input")), size = args("size").toInt, start = args("start").toInt, step = args("step").toInt, sigma = args("sigma").toFloat, neighbor = args("neighbor").toBoolean, stitch = args("stitch").toBoolean, v_minsize=args("v_minsize").toInt, simplify=args("simplify").toFloat, tilesize=args("tilesize").toInt, startlabel=args("startlabel").toInt))
+        case "Coverage.trainImagesRegressionLibSvmByOTB" =>
+          stringList += (UUID -> OTB.otbTrainImagesRegressionLibSvm(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, kernel = args("kernel"), model = args("model"), costc = args("costc").toFloat, gamma = args("gamma").toFloat, coefficient = args("coefficient").toFloat, degree = args("degree").toInt, costnu = args("costnu").toFloat, opt = args("opt").toBoolean, prob = args("prob").toBoolean, epsilon = args("epsilon").toFloat))
+        case "Coverage.trainImagesRegressionDtByOTB" =>
+          stringList += (UUID -> OTB.otbTrainImagesRegressionDt(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, max = args("max").toInt, min = args("min").toInt, ra = args("ra").toFloat, cat = args("cat").toInt, r = args("r").toBoolean, t = args("t").toBoolean))
+        case "Coverage.trainImagesRegressionRfByOTB" =>
+          stringList += (UUID -> OTB.otbTrainImagesRegressionRf(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, max = args("max").toInt, min = args("min").toInt, ra = args("ra").toFloat, cat = args("cat").toInt, var_ = args("var_").toInt, nbtrees = args("nbtrees").toInt, acc = args("acc").toFloat))
+        case "Coverage.trainImagesRegressionKnnbyOTB" =>
+          stringList += (UUID -> OTB.otbTrainImagesRegressionKnn(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, number = args("max").toInt, rule = args("min")))
+        case "Coverage.trainImagesRegressionSharkRfByOTB" =>
+          stringList += (UUID -> OTB.otbTrainImagesRegressionSharkrf(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, nbtrees = args("nbtrees").toInt, nodesize = args("nodesize").toInt, mtry = args("mtry").toInt, oobr = args("oobr").toFloat))
+
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
