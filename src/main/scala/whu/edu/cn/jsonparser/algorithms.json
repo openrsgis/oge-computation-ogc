@@ -430,6 +430,20 @@
         "description": "The extent used for deleting.",
         "default": "null",
         "optional": "True"
+      },
+      {
+        "name": "tms",
+        "type": "String",
+        "description": "The tms used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "resolution",
+        "type": "String",
+        "description": "The resolution used for deleting.",
+        "default": "null",
+        "optional": "True"
       }
     ]
   },

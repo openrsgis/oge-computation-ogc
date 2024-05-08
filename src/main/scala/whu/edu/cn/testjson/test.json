@@ -1,82 +1,66 @@
 {
   "0": {
     "functionInvocationValue": {
-      "functionName": "Coverage.addStyles",
+      "functionName": "Cube.addStyles",
       "arguments": {
-        "coverage": {
+        "bands": {
+          "constantValue": "[ndvi]"
+        },
+        "cube": {
           "functionInvocationValue": {
-            "functionName": "Coverage.terrHillshade",
+            "functionName": "Cube.NDVI",
             "arguments": {
-              "coverage": {
+              "band1": {
+                "valueReference": "1"
+              },
+              "band2": {
+                "valueReference": "1"
+              },
+              "input": {
                 "functionInvocationValue": {
-                  "functionName": "CoverageCollection.mosaic",
+                  "functionName": "Service.getCube",
                   "arguments": {
-                    "coverageCollection": {
-                      "functionInvocationValue": {
-                        "functionName": "Service.getCoverageCollection",
-                        "arguments": {
-                          "baseUrl": {
-                            "constantValue": "http://localhost"
-                          },
-                          "datetime": {
-                            "constantValue": [
-                              "2000-01-01 00:00:00,2000-01-01 00:00:00"
-                            ]
-                          },
-                          "productID": {
-                            "constantValue": "ASTER_GDEM_DEM30"
-                          },
-                          "bbox": {
-                            "constantValue": [
-                              108.5,
-                              18.1,
-                              111,
-                              20.1
-                            ]
-                          }
-                        }
-                      }
+                    "bands": {
+                      "constantValue": "[SR_B3,SR_B5]"
+                    },
+                    "cubeId": {
+                      "constantValue": "3"
+                    },
+                    "extent": {
+                      "constantValue": "[114.16,30.47,114.47,30.69]"
+                    },
+                    "products": {
+                      "constantValue": "[LC08_L2SP_C02_T1]"
+                    },
+                    "resolution": {
+                      "constantValue": "30"
+                    },
+                    "time": {
+                      "constantValue": "[2023-01-10 00:00:00,2023-01-17 00:00:00]"
+                    },
+                    "tms": {
+                      "constantValue": "WebMercatorQuad"
                     }
                   }
                 }
-              },
-              "z-Factor": {
-                "constantValue": 1
-              },
-              "radius": {
-                "constantValue": 1
               }
             }
           }
         },
-        "min": {
-          "constantValue": -1
-        },
         "max": {
-          "constantValue": 1
+          "constantValue": "500"
         },
-        "palette": {
-          "constantValue": [
-            "#808080",
-            "#949494",
-            "#a9a9a9",
-            "#bdbebd",
-            "#d3d3d3",
-            "#e9e9e9"
-          ]
+        "min": {
+          "constantValue": "0"
         }
       }
     }
   },
-  "layerName": "lc08",
-  "isBatch": "0",
-  "map": {
-    "level": 9,
-    "spatialRange": [
-      107.478424,
-      18.439892,
-      111.92157,
-      19.749302
+  "1": {
+    "constantValue": [
+      "SR_B3", "Landsat 8"
     ]
-  }
+  },
+  "layerName": "cube",
+  "isBatch": "0"
 }

@@ -1,6 +1,8 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONObject}
+import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.{BosObjectSummary, ListObjectsResponse}
 import geotrellis.layer.{LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -27,7 +29,8 @@ import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 import whu.edu.cn.entity.{CoverageMetadata, VisualizationParam}
 import whu.edu.cn.entity.cube._
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.{COGUtil, MinIOUtil, PostSender}
+import whu.edu.cn.util.BosClientUtil_scala.getBosObject
+import whu.edu.cn.util.{BosClientUtil_scala, COGUtil, PostSender}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 import whu.edu.cn.util.cube.CubePostgresqlUtil._
 import whu.edu.cn.util.cube.CubeUtil.{cogHeaderBytesParse, cubeTemplate, getCubeDataType}
@@ -428,14 +431,11 @@ object CubeNew {
       // 2.4.4.1 先知道有哪些Cube-COG
       val imagePath: String = metadata.getPath
       val cubeImagePathPrefix: String = imagePath.replace(".tif", "") + "/" + tms
-      val client: MinioClient = MinIOUtil.getMinioClient
-      val iterable: lang.Iterable[Result[Item]] = client.listObjects(ListObjectsArgs.builder().bucket("oge-cube").recursive(true).prefix(cubeImagePathPrefix).build())
-      val iterator: java.util.Iterator[Result[Item]] = iterable.iterator()
+      val client: BosClient = BosClientUtil_scala.getClient3
+      val cubeImagePath = client.listObjects("oge-cube", cubeImagePathPrefix).getContents
       val cubeImagePathList: ListBuffer[String] = ListBuffer.empty[String]
-      while (iterator.hasNext) {
-        val item: Item = iterator.next().get()
-        val objectName: String = item.objectName()
-        cubeImagePathList.append(objectName)
+      while (cubeImagePath.iterator.hasNext) {
+        cubeImagePathList.append(cubeImagePath.iterator.next().getKey)
       }
       // 得到productKey
       val productKeyResultSet: ResultSet = selectDataFromTable("oc_product_" + cubeId, Array("product_name"), Array(productName))
@@ -458,7 +458,7 @@ object CubeNew {
 
       // 2.4.4.2 循环Cube-COG，并开始准备瓦片元数据
       for (cubeImagePath <- cubeImagePathList) {
-        val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
+        val headerBytes: Array[Byte] = getBosObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
         val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
         val compression: Int = cubeCOGMetadata.getCompression
         val dataType: OGECubeDataType.OGECubeDataType = getCubeDataType(cubeCOGMetadata.getSampleFormat, cubeCOGMetadata.getBitPerSample)
@@ -583,14 +583,11 @@ object CubeNew {
       // 2.4.4.1 先知道有哪些Cube-COG
       val imagePath: String = metadata.getPath
       val cubeImagePathPrefix: String = imagePath.replace(".tif", "") + "/" + tms //GLASS/GPP/MODIS/500m/2002/081 + coverageMetadata.getCoverageID + "_" + coverageMetadata.getMeasurement + ‘/’ + tms
-      val client: MinioClient = MinIOUtil.getMinioClient
-      val iterable: lang.Iterable[Result[Item]] = client.listObjects(ListObjectsArgs.builder().bucket("oge-cube").recursive(true).prefix(cubeImagePathPrefix).build())
-      val iterator: java.util.Iterator[Result[Item]] = iterable.iterator()
+      val client: BosClient = BosClientUtil_scala.getClient3
+      val cubeImagePath = client.listObjects("oge-cube", cubeImagePathPrefix).getContents
       val cubeImagePathList: ListBuffer[String] = ListBuffer.empty[String]
-      while (iterator.hasNext) {
-        val item: Item = iterator.next().get()
-        val objectName: String = item.objectName()
-        cubeImagePathList.append(objectName)
+      while (cubeImagePath.iterator.hasNext) {
+        cubeImagePathList.append(cubeImagePath.iterator.next().getKey)
       }
       // 得到productKey
       val productKeyResultSet: ResultSet = selectDataFromTable("oc_product_" + cubeId, Array("product_name"), Array(productName))
@@ -613,7 +610,7 @@ object CubeNew {
 
       // 2.4.4.2 循环Cube-COG，并开始准备瓦片元数据
       for (cubeImagePath <- cubeImagePathList) {
-        val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
+        val headerBytes: Array[Byte] = getBosObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
         val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
         val compression: Int = cubeCOGMetadata.getCompression
         val dataType: OGECubeDataType.OGECubeDataType = getCubeDataType(cubeCOGMetadata.getSampleFormat, cubeCOGMetadata.getBitPerSample)
@@ -718,7 +715,7 @@ object CubeNew {
     val ndviRDD1 = normalizedDifference(sc, cubeRDD1, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
     val ndviRDD2 = normalizedDifference(sc, cubeRDD2, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
     val cubeRDD3 = subtract(ndviRDD1, ndviRDD2)
-    visualizeOnTheFly(sc, cubeRDD1, vis)
+    visualizeOnTheFly(sc, cubeRDD3, vis)
     //    visualization(cubeRDD1)
     sc.stop()
 
