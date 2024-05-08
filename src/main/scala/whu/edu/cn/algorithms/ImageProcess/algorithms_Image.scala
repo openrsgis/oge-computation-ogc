@@ -262,7 +262,7 @@ object algorithms_Image {
     (normalizedCoverageRdd, newmultispectral._2)
   }
 
-
+//只为了截图
   //直方图均衡化
   def histogramEqualization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
