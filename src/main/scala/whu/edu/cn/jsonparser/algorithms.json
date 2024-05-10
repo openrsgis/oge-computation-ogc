@@ -8688,18 +8688,24 @@
         "description": "The cube to compute NDVI."
       },
       {
-        "name": "band1",
-        "type": "List<String>",
-        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
-        "optional": "True",
-        "default": "None"
+        "name": "bandName1",
+        "type": "String",
+        "description": "The band you pick to compute."
       },
       {
-        "name": "band2",
-        "type": "List<String>",
-        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
-        "optional": "True",
-        "default": "None"
+        "name": "platform1",
+        "type": "String",
+        "description": "The platform of the band you pick to compute."
+      },
+      {
+        "name": "bandName2",
+        "type": "String",
+        "description": "The band you pick to compute."
+      },
+      {
+        "name": "platform2",
+        "type": "String",
+        "description": "The platform of the band you pick to compute."
       }
     ]
   },

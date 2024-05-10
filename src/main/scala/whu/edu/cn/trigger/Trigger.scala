@@ -1197,7 +1197,7 @@ object Trigger {
           CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
+          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("bandName1"), platform1 = args("platform1"), bandName2 = args("bandName2"), platform2 = args("platform2")))
         case "Cube.add" =>
           cubeRDDList += (UUID -> CubeNew.add(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
         case "Cube.subtract" =>
@@ -1542,7 +1542,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/cube_test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

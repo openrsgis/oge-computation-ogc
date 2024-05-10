@@ -307,7 +307,7 @@ object CubeNew {
     jsonObject.put("raster", tol_urljson.toArray)
     jsonObject.put("bands", bands)
     jsonObject.put("dimension", dimension.toArray)
-    println(jsonObject.toJSONString)
+//    println(jsonObject.toJSONString)
 
     PostSender.shelvePost("cube", jsonObject)
 
@@ -707,15 +707,15 @@ object CubeNew {
     // 通过Image加载Cube
     val vis = new VisualizationParam
     //    vis.setAllParam(bands = "[SR_B3]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
-    vis.setAllParam(bands = "[SR_B3,SR_B5]")
-    Trigger.level = -1
+    vis.setAllParam(bands = "[NDVI]")
+    Trigger.level = 12
     Trigger.dagId = "cube"
     val cubeRDD1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-01-10 00:00:00,2023-01-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
     val cubeRDD2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-03-10 00:00:00,2023-03-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
     val ndviRDD1 = normalizedDifference(sc, cubeRDD1, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
     val ndviRDD2 = normalizedDifference(sc, cubeRDD2, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
     val cubeRDD3 = subtract(ndviRDD1, ndviRDD2)
-    visualizeOnTheFly(sc, cubeRDD3, vis)
+    visualizeOnTheFly(sc, ndviRDD1, vis)
     //    visualization(cubeRDD1)
     sc.stop()
 
