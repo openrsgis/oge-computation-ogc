@@ -9,7 +9,7 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, S
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
-import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
@@ -37,6 +37,7 @@ import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 import whu.edu.cn.oge.Sheet.CsvData
 import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
+import whu.edu.cn.entity.cube.CubeTileKey
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -58,7 +59,7 @@ object Trigger {
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
   var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any] //GRASS部分返回String类的算子
   //  var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
-  var cubeRDDList: mutable.Map[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])]
+  var cubeRDDList: mutable.Map[String, Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]] = mutable.Map.empty[String, Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]]
 
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
   var outputInformationList:mutable.ListBuffer[JSONObject] = mutable.ListBuffer.empty[JSONObject]
@@ -164,7 +165,7 @@ object Trigger {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getCube" =>
-          cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
+          cubeRDDList += (UUID -> Service.getCube(sc, args("cubeId"), args("products"), args("bands"), args("time"), args("extent"), args("tms"), args("resolution")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -599,6 +600,18 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativeExtractFromLocation(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("intersect")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predicate = args("predicate")))
         case "Feature.intersectionByQGIS" =>
           featureRddList += (UUID -> QGIS.nativeIntersection(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("overlay")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], inputFields = args("inputFields"),overlayFields = args("overlayFields"),overlayFieldsPrefix = args("overlayFieldsPrefix"),gridSize = args("gridSize").toDouble))
+        case "Coverage.edgeExtractionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbEdgeExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, filter = args("filter")))
+        case "Coverage.dimensionalityReductionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbDimensionalityReduction(sc, coverageRddList(args("input")), method = args("method"), rescale = args("rescale")))
+        case "Coverage.SFSTextureExtractionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSFSTextureExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, spectralThreshold = args("spectralThreshold").toDouble, spatialThreshold = args("spatialThreshold").toInt, numberOfDirection = args("numberOfDirection").toInt, alpha = args("alpha").toDouble, ratioMaximumConsiderationNumber = args("ratioMaximumConsiderationNumber").toInt))
+        case "Coverage.multivariateAlterationDetectorByOTB" =>
+          coverageRddList += (UUID -> OTB.otbMultivariateAlterationDetector(sc, coverageRddList(args("inputBefore")), coverageRddList(args("inputAfter"))))
+        case "Coverage.radiometricIndicesByOTB" =>
+          coverageRddList += (UUID -> OTB.otbRadiometricIndices(sc, coverageRddList(args("input")), channelsBlue = args("channelsBlue").toInt, channelsGreen = args("channelsGreen").toInt, channelsRed = args("channelsRed").toInt, channelsNir = args("channelsNir").toInt, channelsMir = args("channelsMir").toInt))
+        case "Coverage.obtainUTMZoneFromGeoPointByOTB" =>
+          OTB.otbObtainUTMZoneFromGeoPoint(sc, lat = args("lat").toDouble, lon = args("lon").toDouble)
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
@@ -838,6 +851,20 @@ object Trigger {
           featureRddList += (UUID -> calculator.ChannelNetwork(rddImage = coverageRddList(args("DEM")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), dirImage = coverageRddList(args("FlowDirection")), zFactor = args("z-Factor").toDouble, threshold = args("threshold").toDouble))
         case "Coverage.terrFilter" =>
           coverageRddList += (UUID -> calculator.Filter(rddImage = coverageRddList(args("coverage")), min = args("min").slice(1, args("min").length - 1).split(',').toList.map(_.toDouble), max = args("max").slice(1, args("max").length - 1).split(',').toList.map(_.toDouble), zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrStrahlerOrder" =>
+          coverageRddList += (UUID -> calculator.StrahlerOrder(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFlowConnectivity" =>
+          coverageRddList += (UUID -> calculator.FlowConnectivity(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFlowLength" =>
+          coverageRddList += (UUID -> calculator.FlowLength(rddImage = coverageRddList(args("coverage")), radius = if (args("radius").toInt < 16) 16 else args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFlowWidth" =>
+          coverageRddList += (UUID -> calculator.FlowWidth(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrWatershedBasins" =>
+          coverageRddList += (UUID -> calculator.WatershedBasins(rddImage = coverageRddList(args("coverage")), flowAccumulationImage = coverageRddList(args("FlowAccumulation")), zFactor = args("z-Factor").toDouble))
+        case "Coverage.terrFeatureSelect" =>
+          featureRddList += (UUID -> calculator.FeatureSelect(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble, vipValue = args("vipValue").toDouble))
+        case "Coverage.terrTIN" =>
+          featureRddList += (UUID -> calculator.TIN(rddImage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("z-Factor").toDouble, vipValue = args("vipValue").toDouble, geometryType = args("geometryType").toInt))
 
 
         case "Coverage.addStyles" =>
@@ -1052,7 +1079,7 @@ object Trigger {
         case "Feature.featureCollection" =>
           featureRddList += (UUID -> Feature.featureCollection(sc,args("featureList").stripPrefix("[").stripSuffix("]").split(",").toList.map(t =>{featureRddList(t).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]})))
         case "Feature.addStyles" =>
-          Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]])
+          Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],color = args("color").replace("[", "").replace("]", "").split(',').toList,attribute = args("attribute"))
         //      case "Feature.inverseDistanceWeighted" =>
         //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
         //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
@@ -1128,39 +1155,53 @@ object Trigger {
         //          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
         //        case "Cube.addStyles" =>
         //          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
-        case "Cube.load" => {
-          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
-            dateTime = isOptionalArg(args, "dateTime")))
-        }
-        case "Cube.normalize" => {
-          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
-        }
-        case "Cube.aggregate" => {
-          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-            method = isOptionalArg(args, "method")))
-        }
+//        case "Cube.load" => {
+//          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
+//            dateTime = isOptionalArg(args, "dateTime")))
+//        }
+//        case "Cube.normalize" => {
+//          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+//            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
+//        }
+//        case "Cube.aggregate" => {
+//          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+//            method = isOptionalArg(args, "method")))
+//        }
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
+          CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
-
-        case "Cube.build" => {
-          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
-            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
-            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
-        }
-        case "Cube.export" =>
-          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
-        case "Cube.floodFillAnalysis" =>
-          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-            args("extent"), args("startTime"), args("endTime"))
+          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
+        case "Cube.add" =>
+          cubeRDDList += (UUID -> CubeNew.add(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
+        case "Cube.subtract" =>
+          cubeRDDList += (UUID -> CubeNew.subtract(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
+        case "Cube.multiply" =>
+          cubeRDDList += (UUID -> CubeNew.multiply(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
+        case "Cube.divide" =>
+          cubeRDDList += (UUID -> CubeNew.divide(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
+
+
+//        case "Cube.build" => {
+//          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+//          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
+//            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
+//            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
+//        }
+//        case "Cube.export" =>
+//          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
+//        case "Cube.NDVI" =>
+//          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
+//        case "Cube.floodFillAnalysis" =>
+//          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
+//            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
+//            args("extent"), args("startTime"), args("endTime"))
+        // TrainingDML-AI 新增算子
+        case "Dataset.encoding" =>
+          stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
       }
 
 

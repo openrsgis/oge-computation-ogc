@@ -1,12 +1,13 @@
 package whu.edu.cn.oge
 
-import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
+import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{MultibandTile, Tile}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import com.alibaba.fastjson.JSONObject
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
+import whu.edu.cn.entity.cube.CubeTileKey
 import whu.edu.cn.entity.{CoverageCollectionMetadata, SpaceTimeBandKey}
 import whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata
 import whu.edu.cn.trigger.Trigger
@@ -43,8 +44,8 @@ object Service {
   }
 
 
-  def getCube(implicit sc: SparkContext, CubeName: String, extent: String = null, dateTime: String = null): (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]) = {
-    Cube.load(sc, cubeName = CubeName, extent = extent, dateTime = dateTime)
+  def getCube(implicit sc: SparkContext, CubeId: String, ProductString: String, BandString: String, TimeString: String, ExtentString: String, Tms: String, Resolution: String = "100"): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    CubeNew.loadCubeByImage(sc, cubeId = CubeId, productString = ProductString, bandString = BandString, timeString = TimeString, extentString = ExtentString, tms = Tms, resolution = Resolution.toDouble)
   }
 
   def print(res:String,name:String,valueType:String):Unit={

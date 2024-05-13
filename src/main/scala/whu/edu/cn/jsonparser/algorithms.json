@@ -399,21 +399,35 @@
         "description": "The base url of service."
       },
       {
-        "name": "CubeName",
+        "name": "cubeId",
         "type": "String",
-        "description": "The Name of target collection."
+        "description": "The id of target cube."
+      },
+      {
+        "name": "products",
+        "type": "String",
+        "description": "The name of target collection.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bands",
+        "type": "String",
+        "description": "The bands used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "time",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
       },
       {
         "name": "extent",
         "type": "String",
         "description": "The extent used for deleting.",
-        "default": "null",
-        "optional": "True"
-      },
-      {
-        "name": "dateTime",
-        "type": "String",
-        "description": "The range of time used for deleting.",
         "default": "null",
         "optional": "True"
       }
@@ -2905,7 +2919,6 @@
         "optional": "True",
         "default": ""
       }
-
     ]
   },
   "Coverage.contourByGDAL": {
@@ -4025,7 +4038,6 @@
         "description": "Set the coordinate reference to use for the mask layer.",
         "optional": "True",
         "default": ""
-
       },
       {
         "name": "keepResolution",
@@ -4061,7 +4073,6 @@
         "description": "Defines the format of the output raster file.",
         "optional": "True",
         "default": "0"
-
       },
       {
         "name": "sourceCrs",
@@ -4663,6 +4674,202 @@
       }
     ]
   },
+  "Coverage.edgeExtractionByOTB": {
+    "description": "This application computes edge features on a selected channel of the input.It uses different filters such as gradient, Sobel and Touzi.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "filter",
+        "type": "String",
+        "description": "Choice of edge feature, which contains gradient, sobel, touzi.",
+        "optional": "True",
+        "default": "gradient"
+      }
+    ]
+  },
+  "Coverage.dimensionalityReductionByOTB": {
+    "description": "Performs dimensionality reduction on input image. PCA,NA-PCA,MAF,ICA methods are available. It is also possible to compute the inverse transform to reconstruct the image and to optionally export the transformation matrix to a text file.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The input image to apply dimensionality reduction."
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Selection of the reduction dimension method.",
+        "optional": "True",
+        "default": "pca"
+      },
+      {
+        "name": "rescale",
+        "type": "String",
+        "description": "Enable rescaling of the reduced output image.",
+        "optional": "True",
+        "default": "no"
+      }
+    ]
+  },
+  "Coverage.SFSTextureExtractionByOTB": {
+    "description": "Computes Structural Feature Set textures on every pixel of the input image selected channel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The input image to compute the features on."
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index.",
+        "default": 1
+      },
+      {
+        "name": "spectralThreshold",
+        "type": "Double",
+        "description": "Spectral Threshold.",
+        "optional": "True",
+        "default": 50
+      },
+      {
+        "name": "spatialThreshold",
+        "type": "Int",
+        "description": "Spatial Threshold.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "numberOfDirection",
+        "type": "Int",
+        "description": "Number of Direction.",
+        "optional": "True",
+        "default": 20
+      },
+      {
+        "name": "alpha",
+        "type": "Double",
+        "description": "Alpha.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "ratioMaximumConsiderationNumber",
+        "type": "Int",
+        "description": "Ratio Maximum Consideration Number.",
+        "optional": "True",
+        "default": 5
+      }
+    ]
+  },
+  "Coverage.multivariateAlterationDetectorByOTB": {
+    "description": "Change detection by Multivariate Alteration Detector (MAD) algorithm.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "inputBefore",
+        "type": "Coverage",
+        "description": "Multiband image of the scene before perturbations."
+      },
+      {
+        "name": "inputAfter",
+        "type": "Coverage",
+        "description": "Mutliband image of the scene after perturbations."
+      }
+    ]
+  },
+  "Coverage.radiometricIndicesByOTB": {
+    "description": "This application computes radiometric indices using the relevant channels of the input image. The output is a multi band image into which each channel is one of the selected indices.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Input image."
+      },
+      {
+        "name": "channelsBlue",
+        "type": "Int",
+        "description": "Blue channel index",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsGreen",
+        "type": "Int",
+        "description": "Green channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsRed",
+        "type": "Int",
+        "description": "Red channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsNir",
+        "type": "Int",
+        "description": "NIR channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsMir",
+        "type": "Int",
+        "description": "MIR channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "ram",
+        "type": "Int",
+        "description": "Available memory for processing (in MB).",
+        "optional": "True",
+        "default": 256
+      },
+      {
+        "name": "indicesList",
+        "type": "List[String]",
+        "description": "List of available radiometric indices with their relevant channels in brackets.",
+        "optional": "True",
+        "default": ["Vegetation:NDVI"]
+      }
+    ]
+  },
+  "Coverage.obtainUTMZoneFromGeoPointByOTB": {
+    "description": "UTM zone determination from a geographic point.",
+    "args": [
+      {
+        "name": "lat",
+        "type": "Double",
+        "description": "Latitude value of desired point."
+      },
+      {
+        "name": "lon",
+        "type": "Double",
+        "description": "Longitude value of desired point."
+      }
+    ]
+  },
+
+
+
   "Coverage.neighborsByGrass": {
     "description": "Makes each cell category value a function of the category values assigned to the cells around it,and stores new cell values in an output raster map layers.",
     "returns": "Coverage",
@@ -4688,7 +4895,6 @@
       }
     ]
   },
-
   "Coverage.bufferByGrass": {
     "description": "Creates a raster map showing buffer zones surrounding cells that contain non-NULL category values.",
     "returns": "Coverage",
@@ -4741,7 +4947,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       }
     ]
   },
@@ -4752,12 +4958,12 @@
       {
         "name": "first",
         "type": "Coverage",
-        "description":"Name of first raster map for blending"
+        "description": "Name of first raster map for blending"
       },
       {
         "name": "second",
         "type": "Coverage",
-        "description":"Name of second raster map for blending"
+        "description": "Name of second raster map for blending"
       },
       {
         "name": "percent",
@@ -4775,17 +4981,17 @@
       {
         "name": "red",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <red>"
+        "description": "Name of raster map to be used for <red>"
       },
       {
         "name": "green",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <green>"
+        "description": "Name of raster map to be used for <green>"
       },
       {
         "name": "blue",
         "type": "Coverage",
-        "description":"Name of raster map to be used for <blue>"
+        "description": "Name of raster map to be used for <blue>"
       },
       {
         "name": "levels",
@@ -5059,7 +5265,6 @@
       }
     ]
   },
-
   "Coverage.surfIdwByGrass": {
     "description": "Provides surface interpolation from raster point data by Inverse Distance Squared Weighting.",
     "returns": "Coverage",
@@ -5067,7 +5272,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "npoints",
@@ -5085,7 +5290,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"The name of the raster map to be rescaled"
+        "description": "The name of the raster map to be rescaled"
       },
       {
         "name": "to",
@@ -5101,7 +5306,7 @@
       {
         "name": "map",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "vscale",
@@ -5119,7 +5324,7 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of raster map to report on"
+        "description": "Name of raster map to report on"
       },
       {
         "name": "flags",
@@ -5156,12 +5361,12 @@
       {
         "name": "first",
         "type": "Coverage",
-        "description":"Name of first raster map"
+        "description": "Name of first raster map"
       },
       {
         "name": "second",
         "type": "Coverage",
-        "description":"Name of second raster map"
+        "description": "Name of second raster map"
       },
       {
         "name": "units",
@@ -5177,12 +5382,12 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map representing data that will be summed within clumps"
+        "description": "Name of input raster map representing data that will be summed within clumps"
       },
       {
         "name": "clump",
         "type": "Coverage",
-        "description":"Name of input clump raster map"
+        "description": "Name of input clump raster map"
       }
     ]
   },
@@ -5193,12 +5398,12 @@
       {
         "name": "input",
         "type": "Coverage",
-        "description":"Name of input raster map"
+        "description": "Name of input raster map"
       },
       {
         "name": "compression",
         "type": "String",
-        "description":"Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
+        "description": "Compression level of PNG file(0= none,1 = fastest, 9 = best)Options: O-9",
         "optional": "True",
         "default": "6"
       }
@@ -5417,7 +5622,6 @@
         "description": "Rotations to make (negative numbers rotate counterclockwise)."
       }
     ]
-
   },
   "Kernel.chebyshev": {
     "description": "Generates a distance kernel based on Chebyshev distance (greatest distance along any dimension).",
@@ -7743,9 +7947,16 @@
       },
       {
         "name": "color",
-        "type": "String",
+        "type": "List<String>",
         "description": "",
         "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "attribute",
+        "type": "String",
+        "description": "",
+        "default": "",
         "optional": "True"
       }
     ]
@@ -8617,11 +8828,82 @@
         "description": "The cube to compute NDVI."
       },
       {
-        "name": "bandNames",
+        "name": "band1",
         "type": "List<String>",
         "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
         "optional": "True",
         "default": "None"
+      },
+      {
+        "name": "band2",
+        "type": "List<String>",
+        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Cube.add": {
+    "description": "Adds the first value to the second for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.subtract": {
+    "description": "Subtracts the second value from the first for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.multiply": {
+    "description": "Multiplies the first value by the second.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.divide": {
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
       }
     ]
   },
@@ -8855,32 +9137,6 @@
       }
     ]
   },
-  "Cube.subtract": {
-    "description": "Compute binarization of the Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to compute NDWI."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product to compute binarization."
-      },
-      {
-        "name": "timeList",
-        "type": "List<String>",
-        "description": "The list of time."
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of binary"
-      }
-    ]
-  },
   "Cube.ChangeDetection": {
     "description": "Get the change area of the target Cube.",
     "returns": "Cube",
@@ -9086,26 +9342,26 @@
     ]
   },
   "Coverage.terrPitrouter": {
-  "description": "DEM洼地探测.",
-  "returns": "Coverage",
-  "args": [
-    {
-      "name": "coverage",
-      "type": "Coverage",
-      "description": "The coverage to compute the pitrouter."
-    },
-    {
-      "name": "radius",
-      "type": "Int",
-      "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
-    },
-    {
-      "name": "z-Factor",
-      "type": "Double",
-      "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
-    }
-  ]
-},
+    "description": "DEM洼地探测.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the pitrouter."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the pitrouter, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct pitrouter calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
   "Coverage.terrPiteliminator": {
     "description": "DEM洼地填充.",
     "returns": "Coverage",
@@ -9221,6 +9477,168 @@
       }
     ]
   },
+  "Coverage.terrStrahlerOrder": {
+    "description": "河网分级.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the strahlerorder."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the strahlerorder, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct strahlerorder calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowConnectivity": {
+    "description": "河流连接.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowconnectivity."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowconnectivity, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowconnectivity calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowLength": {
+    "description": "水流长度.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowlength."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowlength, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowlength calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFlowWidth": {
+    "description": "水流宽度.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the flowwidth."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the flowwidth, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct flowwidth calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrWatershedBasins": {
+    "description": "流域分析.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The dem coverage to compute the WatershedBasins."
+      },
+      {
+        "name": "FlowAccumulation",
+        "type": "Coverage",
+        "description": "The flowaccumulation coverage to compute the WatershedBasins."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct WatershedBasins calculations when the surface z units are expressed in units different from the ground x,y units."
+      }
+    ]
+  },
+  "Coverage.terrFeatureSelect": {
+    "description": "特征点提取.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the FeatureSelect."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the FeatureSelect, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct FeatureSelect calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "vipValue",
+        "type": "Double",
+        "description": "Extract feature points whose importance is greater than value."
+      }
+    ]
+  },
+  "Coverage.terrTIN": {
+    "description": "TIN.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to compute the TIN."
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The radius of the square neighborhood to compute the TIN, 1 for a 3×3 square."
+      },
+      {
+        "name": "z-Factor",
+        "type": "Double",
+        "description": "a z-factor for correct TIN calculations when the surface z units are expressed in units different from the ground x,y units."
+      },
+      {
+        "name": "vipValue",
+        "type": "Double",
+        "description": "Extract feature points whose importance is greater than value."
+      },
+      {
+        "name": "geometryType",
+        "type": "Int",
+        "description": "type of result (1: points, 2: lines, 3: polygons)."
+      }
+    ]
+  },
   "Coverage.linearTransformation": {
     "description": "Gray-level linear transformations",
     "returns": "Coverage",
@@ -9309,9 +9727,10 @@
     "returns": "Coverage",
     "args": [
       {
-        "name":"coverage",
-        "type":"Coverage",
-        "description":"The coverage to be stretched based on standard deviation."}
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be stretched based on standard deviation."
+      }
     ]
   },
   "Coverage.histogramEqualization": {
@@ -9802,7 +10221,7 @@
         "name": "weightstyle",
         "type": "String",
         "description": "neighbor weight type, including: W, B, C, U, default: W",
-          "default": "\"W\"",
+        "default": "\"W\"",
         "optional": "True"
       }
     ]
@@ -10284,6 +10703,17 @@
         "name": "coverageCollection",
         "type": "Collections",
         "description": "image to be color balance and reference"
+      }
+    ]
+  },
+  "Dataset.encoding": {
+    "description": "TrainingDML-AI encoding of dataset in oge",
+    "returns": "String",
+    "args": [
+      {
+        "name": "datasetName",
+        "type": "String",
+        "description": "name of dataset for the encoding"
       }
     ]
   }

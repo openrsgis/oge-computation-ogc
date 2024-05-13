@@ -12,6 +12,9 @@ import scala.util.control.Breaks
 class CoverageMetadata extends Serializable {
   var coverageId: String = _
   var product: String = _
+  var productType: String = _
+  var productDescription: String = _
+  var platformName: String = _
   var path: String = _
   var geom: Geometry = _
   var measurement: String = _
@@ -35,6 +38,30 @@ class CoverageMetadata extends Serializable {
 
   def setProduct(product: String): Unit = {
     this.product = product
+  }
+
+  def getProductType: String = {
+    this.productType
+  }
+
+  def setProductType(productType: String): Unit = {
+    this.productType = productType
+  }
+
+  def getProductDescription: String = {
+    this.productDescription
+  }
+
+  def setProductDescription(productDescription: String): Unit = {
+    this.productDescription = productDescription
+  }
+
+  def getPlatformName: String = {
+    this.platformName
+  }
+
+  def setPlatformName(platformName: String): Unit = {
+    this.platformName = platformName
   }
 
   def getPath: String = {
