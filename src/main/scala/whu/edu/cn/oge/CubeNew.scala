@@ -1,16 +1,17 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONObject}
-import geotrellis.layer
-import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
+import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.{BosObjectSummary, ListObjectsResponse}
+import geotrellis.layer.{LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local.{Add, Divide, Multiply, Subtract}
 import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{CellType, DoubleConstantNoDataCellType, MultibandTile, Raster, Tile, TileLayout}
-import geotrellis.spark.{ContextRDD, MultibandTileLayerRDD}
-import geotrellis.vector.{Extent, ProjectedExtent}
+import geotrellis.raster.{DoubleConstantNoDataCellType, MultibandTile, Raster, Tile, TileLayout}
+import geotrellis.spark.MultibandTileLayerRDD
+import geotrellis.vector.Extent
 import io.minio.messages.Item
 import io.minio.{ListObjectsArgs, MinioClient, Result}
 import geotrellis.raster.{reproject => _, _}
@@ -27,10 +28,9 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 import whu.edu.cn.entity.{CoverageMetadata, VisualizationParam}
 import whu.edu.cn.entity.cube._
-import whu.edu.cn.oge.CubeNew.{bandRadiometricCalibration, loadCubeByImage, normalizedDifference, visualization}
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.COGUtil.tileDifference
-import whu.edu.cn.util.{COGUtil, MinIOUtil, PostSender}
+import whu.edu.cn.util.BosClientUtil_scala.getBosObject
+import whu.edu.cn.util.{BosClientUtil_scala, COGUtil, PostSender}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 import whu.edu.cn.util.cube.CubePostgresqlUtil._
 import whu.edu.cn.util.cube.CubeUtil.{cogHeaderBytesParse, cubeTemplate, getCubeDataType}
@@ -299,9 +299,15 @@ object CubeNew {
 
     // 回调服务
     val jsonObject: JSONObject = new JSONObject
+    val dimObject: JSONObject = new JSONObject
+    val dimension: ArrayBuffer[JSONObject] = ArrayBuffer()
+    dimObject.put("name", "bands")
+    dimObject.put("values", bands)
+    dimension.append(dimObject)
     jsonObject.put("raster", tol_urljson.toArray)
     jsonObject.put("bands", bands)
-    println(jsonObject.toJSONString)
+    jsonObject.put("dimension", dimension.toArray)
+//    println(jsonObject.toJSONString)
 
     PostSender.shelvePost("cube", jsonObject)
 
@@ -337,7 +343,7 @@ object CubeNew {
   }
 
   def subtractNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
-             i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+                  i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     i match {
       case (x: Int) => cubeTemplate(cube, tile => Subtract(tile, x))
       case (x: Double) => cubeTemplate(cube, tile => Subtract(tile, x))
@@ -346,7 +352,7 @@ object CubeNew {
   }
 
   def divideNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
-                  i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+                i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     i match {
       case (x: Int) => cubeTemplate(cube, tile => Divide(tile, x))
       case (x: Double) => cubeTemplate(cube, tile => Divide(tile, x))
@@ -355,7 +361,7 @@ object CubeNew {
   }
 
   def multiplyNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
-                i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+                  i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     i match {
       case (x: Int) => cubeTemplate(cube, tile => Multiply(tile, x))
       case (x: Double) => cubeTemplate(cube, tile => Multiply(tile, x))
@@ -425,14 +431,11 @@ object CubeNew {
       // 2.4.4.1 先知道有哪些Cube-COG
       val imagePath: String = metadata.getPath
       val cubeImagePathPrefix: String = imagePath.replace(".tif", "") + "/" + tms
-      val client: MinioClient = MinIOUtil.getMinioClient
-      val iterable: lang.Iterable[Result[Item]] = client.listObjects(ListObjectsArgs.builder().bucket("oge-cube").recursive(true).prefix(cubeImagePathPrefix).build())
-      val iterator: java.util.Iterator[Result[Item]] = iterable.iterator()
+      val client: BosClient = BosClientUtil_scala.getClient3
+      val cubeImagePath = client.listObjects("oge-cube", cubeImagePathPrefix).getContents
       val cubeImagePathList: ListBuffer[String] = ListBuffer.empty[String]
-      while (iterator.hasNext) {
-        val item: Item = iterator.next().get()
-        val objectName: String = item.objectName()
-        cubeImagePathList.append(objectName)
+      while (cubeImagePath.iterator.hasNext) {
+        cubeImagePathList.append(cubeImagePath.iterator.next().getKey)
       }
       // 得到productKey
       val productKeyResultSet: ResultSet = selectDataFromTable("oc_product_" + cubeId, Array("product_name"), Array(productName))
@@ -455,7 +458,7 @@ object CubeNew {
 
       // 2.4.4.2 循环Cube-COG，并开始准备瓦片元数据
       for (cubeImagePath <- cubeImagePathList) {
-        val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
+        val headerBytes: Array[Byte] = getBosObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
         val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
         val compression: Int = cubeCOGMetadata.getCompression
         val dataType: OGECubeDataType.OGECubeDataType = getCubeDataType(cubeCOGMetadata.getSampleFormat, cubeCOGMetadata.getBitPerSample)
@@ -580,14 +583,11 @@ object CubeNew {
       // 2.4.4.1 先知道有哪些Cube-COG
       val imagePath: String = metadata.getPath
       val cubeImagePathPrefix: String = imagePath.replace(".tif", "") + "/" + tms //GLASS/GPP/MODIS/500m/2002/081 + coverageMetadata.getCoverageID + "_" + coverageMetadata.getMeasurement + ‘/’ + tms
-      val client: MinioClient = MinIOUtil.getMinioClient
-      val iterable: lang.Iterable[Result[Item]] = client.listObjects(ListObjectsArgs.builder().bucket("oge-cube").recursive(true).prefix(cubeImagePathPrefix).build())
-      val iterator: java.util.Iterator[Result[Item]] = iterable.iterator()
+      val client: BosClient = BosClientUtil_scala.getClient3
+      val cubeImagePath = client.listObjects("oge-cube", cubeImagePathPrefix).getContents
       val cubeImagePathList: ListBuffer[String] = ListBuffer.empty[String]
-      while (iterator.hasNext) {
-        val item: Item = iterator.next().get()
-        val objectName: String = item.objectName()
-        cubeImagePathList.append(objectName)
+      while (cubeImagePath.iterator.hasNext) {
+        cubeImagePathList.append(cubeImagePath.iterator.next().getKey)
       }
       // 得到productKey
       val productKeyResultSet: ResultSet = selectDataFromTable("oc_product_" + cubeId, Array("product_name"), Array(productName))
@@ -610,7 +610,7 @@ object CubeNew {
 
       // 2.4.4.2 循环Cube-COG，并开始准备瓦片元数据
       for (cubeImagePath <- cubeImagePathList) {
-        val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
+        val headerBytes: Array[Byte] = getBosObject("oge-cube", cubeImagePath, 0, MINIO_HEAD_SIZE)
         val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
         val compression: Int = cubeCOGMetadata.getCompression
         val dataType: OGECubeDataType.OGECubeDataType = getCubeDataType(cubeCOGMetadata.getSampleFormat, cubeCOGMetadata.getBitPerSample)
@@ -707,15 +707,15 @@ object CubeNew {
     // 通过Image加载Cube
     val vis = new VisualizationParam
     //    vis.setAllParam(bands = "[SR_B3]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
-    vis.setAllParam(bands = "[SR_B3,SR_B5]")
-    Trigger.level = -1
+    vis.setAllParam(bands = "[NDVI]")
+    Trigger.level = 12
     Trigger.dagId = "cube"
     val cubeRDD1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-01-10 00:00:00,2023-01-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
     val cubeRDD2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-03-10 00:00:00,2023-03-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
     val ndviRDD1 = normalizedDifference(sc, cubeRDD1, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
     val ndviRDD2 = normalizedDifference(sc, cubeRDD2, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
     val cubeRDD3 = subtract(ndviRDD1, ndviRDD2)
-    visualizeOnTheFly(sc, ndviRDD2, vis)
+    visualizeOnTheFly(sc, ndviRDD1, vis)
     //    visualization(cubeRDD1)
     sc.stop()
 
@@ -723,4 +723,3 @@ object CubeNew {
     println("总耗时：" + (time2 - time1) + "ms")
   }
 }
-

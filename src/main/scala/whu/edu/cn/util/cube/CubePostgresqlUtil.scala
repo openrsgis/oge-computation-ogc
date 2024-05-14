@@ -1,23 +1,24 @@
 package whu.edu.cn.util.cube
 
 import com.alibaba.fastjson.{JSON, JSONObject}
+import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.{BosObject, GetObjectRequest}
 import geotrellis.layer.{Bounds, LayoutDefinition, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, Tile, TileLayout}
 import geotrellis.vector.Extent
-import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.SparkContext
 import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
 import whu.edu.cn.entity.cube._
 import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.BosClientUtil_scala.getBosObject
 import whu.edu.cn.util.COGUtil.tileDifference
 import whu.edu.cn.util.cube.CubeUtil.cogHeaderBytesParse
-import whu.edu.cn.util.{MinIOUtil, PostgresqlUtilDev}
+import whu.edu.cn.util.{BosClientUtil_scala, MinIOUtil, PostgresqlUtilDev}
 
+import java.io.{ByteArrayOutputStream, InputStream}
 import java.sql.{Connection, ResultSet, Statement}
-import java.time.{LocalDateTime, ZoneOffset}
-import java.time.format.DateTimeFormatter
 import scala.Console.println
 import scala.collection.mutable.ArrayBuffer
 import scala.math.{max, min}
@@ -600,21 +601,23 @@ object CubePostgresqlUtil {
       val compression: Int = tileAll.getInt("compression")
       val dataType: String = tileAll.getString("data_type")
       val path: String = tileAll.getString("path")
-      val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", path, 0, MINIO_HEAD_SIZE)
+      val headerBytes: Array[Byte] = getBosObject("oge-cube", path, 0, MINIO_HEAD_SIZE)
       val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
       cubeCOGTileMetaList.append((new CubeTileMeta(cubeTileKey, path, tileOffset, tileByteCount, dataType, compression), cubeCOGMetadata))
     }
-    val cubeTileMetaRDD: RDD[(CubeTileMeta, CubeCOGMetadata)] = sc.parallelize(cubeCOGTileMetaList)
-    val cubeCOGRDD: RDD[(CubeTileKey, Tile, CubeCOGMetadata)] = cubeTileMetaRDD.map(t => {
-      val cubeTileKey: CubeTileKey = t._1.cubeTileKey
-      // path相同但是tileOffset不同是不是就是cog切割的结果，tileOffset是不是cog瓦片切割过后的标识。
-      val tileCompressed: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", t._1.tilePath, t._1.tileOffset, t._1.tileByteCount)
-      val tileDecompressed: Array[Byte] = CubeUtil.decompress(tileCompressed)
-      val dataType: String = t._1.dataType
-      val cubeTile: Tile = CubeTileSerializerUtil.deserializeTileData(tileDecompressed, 256, dataType)
-      (cubeTileKey, cubeTile, t._2)
-    })
 
+    var cubeCOGList: ArrayBuffer[(CubeTileKey, Tile, CubeCOGMetadata)] = ArrayBuffer()
+    for (cubeCOG <- cubeCOGTileMetaList) {
+      val cubeTileKey: CubeTileKey = cubeCOG._1.cubeTileKey
+      // path相同但是tileOffset不同是不是就是cog切割的结果，tileOffset是不是cog瓦片切割过后的标识。
+      val tileCompressed: Array[Byte] = getBosObject("oge-cube", cubeCOG._1.tilePath, cubeCOG._1.tileOffset, cubeCOG._1.tileByteCount)
+      val tileDecompressed: Array[Byte] = CubeUtil.decompress(tileCompressed)
+      val dataType: String = cubeCOG._1.dataType
+      val cubeTile: Tile = CubeTileSerializerUtil.deserializeTileData(tileDecompressed, 256, dataType)
+      cubeCOGList.append((cubeTileKey, cubeTile, cubeCOG._2))
+    }
+
+    val cubeCOGRDD: RDD[(CubeTileKey, Tile, CubeCOGMetadata)] = sc.parallelize(cubeCOGList)
     val tileLayerRDD: Array[Iterable[(CubeTileKey, Tile, CubeCOGMetadata)]] = cubeCOGRDD.map(t => ((t._1.productKey.productName, t._1.productKey.productType, t._1.bandKey.bandName, t._1.bandKey.bandPlatform, t._1.timeKey.time), t)).groupByKey(16).map(_._2).collect()
     val cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = tileLayerRDD.map(t => sc.parallelize(t.toSeq)).map(t => {
       val tms: String = t.map(_._1.spaceKey.tms).collect().head
@@ -741,7 +744,7 @@ object CubePostgresqlUtil {
       val compression: Int = imageAll.getInt("compression")
       val dataType: String = imageAll.getString("data_type")
       val path: String = imageAll.getString("path")
-      val headerBytes: Array[Byte] = MinIOUtil.getMinioObject("oge-cube", path, 0, MINIO_HEAD_SIZE)
+      val headerBytes: Array[Byte] = getBosObject("oge-cube", path, 0, MINIO_HEAD_SIZE)
       val cubeCOGMetadata: CubeCOGMetadata = cogHeaderBytesParse(headerBytes)
       // 这里通过之前找到的extent_key的列表，对应到tms的row和col，再去COG里面换算成他自己的row和col
       // 先通过cubeImagePath得到extent_level
@@ -813,21 +816,25 @@ object CubePostgresqlUtil {
         }
       }
     }
-    val cubeCOGTileMetaRDD: RDD[(CubeTileStripeMeta, CubeCOGMetadata)] = sc.parallelize(cubeCOGTileMetaList)
-    val cubeCOGRDD: RDD[(CubeTileKey, Tile, CubeCOGMetadata)] = cubeCOGTileMetaRDD.groupBy((cubeTileMeta: (CubeTileStripeMeta, CubeCOGMetadata)) => {
+
+    val cubeCOGMap: Map[(String, Int), Iterable[(CubeTileStripeMeta, CubeCOGMetadata)]] = cubeCOGTileMetaList.toList.groupBy((cubeTileMeta: (CubeTileStripeMeta, CubeCOGMetadata)) => {
       (cubeTileMeta._1.tilePath, cubeTileMeta._1.stripe)
-    }).map(t => {
-      (MinIOUtil.getMinioObject("oge-cube", t._1._1, tileStripeOffsets(t._1._2), tileStripeByteCounts(t._1._2)), t._2)
-    }).map(t => {
-      t._2.map(x => {
-        val cubeTileKey: CubeTileKey = x._1.cubeTileKey
-        val tileCompressed: Array[Byte] = t._1.slice(x._1.tileStripeOffset.toInt, (x._1.tileStripeOffset + x._1.tileByteCount).toInt)
-        var tileDecompressed: Array[Byte] = CubeUtil.decompress(tileCompressed)
-        val dataType: String = x._1.dataType
-        val cubeTile: Tile = CubeTileSerializerUtil.deserializeTileData(tileDecompressed, 256, dataType)
-        (cubeTileKey, cubeTile, x._2)
-      })
-    }).flatMap((x: Iterable[(CubeTileKey, Tile, CubeCOGMetadata)]) => x)
+    })
+    var cubeCOGList: ArrayBuffer[Iterable[(CubeTileKey, Tile, CubeCOGMetadata)]] = ArrayBuffer()
+    for (cubeCOG <- cubeCOGMap) {
+      val headerBytes: Array[Byte] = getBosObject("oge-cube", cubeCOG._1._1, tileStripeOffsets(cubeCOG._1._2), tileStripeByteCounts(cubeCOG._1._2))
+      val cubeCOGMeta: (Array[Byte], Iterable[(CubeTileStripeMeta, CubeCOGMetadata)]) = (headerBytes, cubeCOG._2)
+      val cubeTile: Iterable[(CubeTileKey, Tile, CubeCOGMetadata)] = cubeCOGMeta._2.map(x => {
+          val cubeTileKey: CubeTileKey = x._1.cubeTileKey
+          val tileCompressed: Array[Byte] = cubeCOGMeta._1.slice(x._1.tileStripeOffset.toInt, (x._1.tileStripeOffset + x._1.tileByteCount).toInt)
+          var tileDecompressed: Array[Byte] = CubeUtil.decompress(tileCompressed)
+          val dataType: String = x._1.dataType
+          val cubeTile: Tile = CubeTileSerializerUtil.deserializeTileData(tileDecompressed, 256, dataType)
+          (cubeTileKey, cubeTile, x._2)
+        })
+      cubeCOGList.append(cubeTile)
+    }
+    val cubeCOGRDD: RDD[(CubeTileKey, Tile, CubeCOGMetadata)] = sc.parallelize(cubeCOGList.flatten)
 
     val tileLayerRDD: Array[RDD[(CubeTileKey, Tile, CubeCOGMetadata)]] = cubeCOGRDD.map(t => ((t._1.productKey.productName, t._1.productKey.productType, t._1.bandKey.bandName, t._1.bandKey.bandPlatform, t._1.timeKey.time), t)).groupByKey(16).map(_._2).collect().map(t => sc.parallelize(t.toSeq))
     val cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = tileLayerRDD.map(t => {
@@ -941,7 +948,6 @@ object CubePostgresqlUtil {
   def main(args: Array[String]): Unit = {
     // val interpreter = new PythonInterpreter
     // interpreter.exec("import pyproj")
-    MinIOUtil.getMinioObject("oge-cube", "Landsat/raw_scene/Landsat8/124/039/LC08_L2SP_124039_20230107_20230110_02_T1/LC08_L2SP_124039_20230107_20230110_02_T1_SR_B5/WebMercatorQuad/LC08_L2SP_124039_20230107_20230110_02_T1_SR_B5_WebMercatorQuad_z12.tif", 62540462, 193119)
   }
 
 }

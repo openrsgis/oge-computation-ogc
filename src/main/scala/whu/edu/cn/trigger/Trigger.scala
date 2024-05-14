@@ -1167,37 +1167,13 @@ object Trigger {
         //          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
         //        case "Collections.toCube" =>
         //          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
-        //        case "Cube.NDWI" =>
-        //          cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
-        //        case "Cube.binarization" =>
-        //          cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
-        //            threshold = isOptionalArg(args, "threshold").toDouble))
-        //        case "Cube.subtract" =>
-        //          cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
-        //            certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
-        //        case "Cube.overlayAnalysis" =>
-        //          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
-        //        case "Cube.addStyles" =>
-        //          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
-//        case "Cube.load" => {
-//          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
-//            dateTime = isOptionalArg(args, "dateTime")))
-//        }
-//        case "Cube.normalize" => {
-//          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-//            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
-//        }
-//        case "Cube.aggregate" => {
-//          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-//            method = isOptionalArg(args, "method")))
-//        }
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
+          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("bandName1"), platform1 = args("platform1"), bandName2 = args("bandName2"), platform2 = args("platform2")))
         case "Cube.add" =>
           cubeRDDList += (UUID -> CubeNew.add(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
         case "Cube.subtract" =>
@@ -1206,23 +1182,6 @@ object Trigger {
           cubeRDDList += (UUID -> CubeNew.multiply(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
         case "Cube.divide" =>
           cubeRDDList += (UUID -> CubeNew.divide(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
-
-
-//        case "Cube.build" => {
-//          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-//          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
-//            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
-//            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
-//        }
-//        case "Cube.export" =>
-//          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
-//        case "Cube.NDVI" =>
-//          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
-//        case "Cube.floodFillAnalysis" =>
-//          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-//            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-//            args("extent"), args("startTime"), args("endTime"))
         // TrainingDML-AI 新增算子
         case "Dataset.encoding" =>
           stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
