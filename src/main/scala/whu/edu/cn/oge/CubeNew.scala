@@ -6,7 +6,7 @@ import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, Spati
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
 import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.mapalgebra.local.{Add, Multiply}
+import geotrellis.raster.mapalgebra.local.{Add, Divide, Multiply, Subtract}
 import geotrellis.raster.resample.Bilinear
 import geotrellis.raster.{CellType, DoubleConstantNoDataCellType, MultibandTile, Raster, Tile, TileLayout}
 import geotrellis.spark.{ContextRDD, MultibandTileLayerRDD}
@@ -33,7 +33,7 @@ import whu.edu.cn.util.COGUtil.tileDifference
 import whu.edu.cn.util.{COGUtil, MinIOUtil, PostSender}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 import whu.edu.cn.util.cube.CubePostgresqlUtil._
-import whu.edu.cn.util.cube.CubeUtil.{cogHeaderBytesParse, getCubeDataType}
+import whu.edu.cn.util.cube.CubeUtil.{cogHeaderBytesParse, cubeTemplate, getCubeDataType}
 
 import java.lang
 import java.sql.ResultSet
@@ -71,25 +71,27 @@ object CubeNew {
     }), rdd._2))
   }
 
-  def normalizedDifference(cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])], bandName1: String, platform1: String, bandName2: String, platform2: String): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+  def normalizedDifference(implicit sc: SparkContext, cubeRDD: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])], bandName1: String, platform1: String, bandName2: String, platform2: String): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
     val bandKey1: BandKey = new BandKey(bandName1, platform1)
     val bandKey2: BandKey = new BandKey(bandName2, platform2)
+    var ndvicube: ArrayBuffer[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = ArrayBuffer()
     var platformNew: String = ""
     if (platform1.equals(platform2)) {
       platformNew = platform1
     } else {
       platformNew = platform1 + "_" + platform2
     }
-    val cubeProcess1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = cubeRDD.map(rdd => (rdd._1.filter((cubeTile: (CubeTileKey, Tile)) => cubeTile._1.bandKey.equals(bandKey1) || cubeTile._1.bandKey.equals(bandKey2)), rdd._2))
-    val cubeProcess2: Array[(RDD[((String, Int, Int), Iterable[(CubeTileKey, Tile)])], TileLayerMetadata[SpatialKey])] = cubeProcess1.map(rdd => (rdd._1.groupBy(t => (t._1.spaceKey.tms, t._1.spaceKey.col, t._1.spaceKey.row)), rdd._2))
-    val cubeProcess3: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = cubeProcess2.map(rdd => (rdd._1.map((cubeTile: ((String, Int, Int), Iterable[(CubeTileKey, Tile)])) => {
+    val cubeProcess1: Iterable[(CubeTileKey, Tile)] = cubeRDD.filter(t => t._1.first()._1.bandKey.equals(bandKey1) || t._1.first()._1.bandKey.equals(bandKey2)).flatMap(_._1.collect()).toIterable
+    val cubeProcess2: RDD[((String, Int, Int), Iterable[(CubeTileKey, Tile)])] = sc.parallelize(cubeProcess1.groupBy(t => (t._1.spaceKey.tms, t._1.spaceKey.col, t._1.spaceKey.row)).toSeq)
+    val cubeProcess3: (RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey]) = (cubeProcess2.map(rdd => {
       // TODO 同一个Space, time, band, product可能涉及多个瓦片！！！！因为卫星轨道有旁向和航向重叠！！！！
-      val band1: Tile = cubeTile._2.filter(_._1.bandKey.equals(bandKey1)).map(_._2).localMean().convert(DoubleConstantNoDataCellType)
-      val band2: Tile = cubeTile._2.filter(_._1.bandKey.equals(bandKey2)).map(_._2).localMean().convert(DoubleConstantNoDataCellType)
+      val band1: Tile = rdd._2.filter(_._1.bandKey.equals(bandKey1)).map(_._2).localMean().convert(DoubleConstantNoDataCellType)
+      val band2: Tile = rdd._2.filter(_._1.bandKey.equals(bandKey2)).map(_._2).localMean().convert(DoubleConstantNoDataCellType)
       val normalizedDifferenceTile: Tile = band1.localSubtract(band2).localDivide(band1.localAdd(band2))
-      (new CubeTileKey(cubeTile._2.head._1.spaceKey, cubeTile._2.head._1.timeKey, cubeTile._2.head._1.productKey, new BandKey("NDVI", platformNew)), normalizedDifferenceTile)
-    }), rdd._2))
-    cubeProcess3
+      (new CubeTileKey(rdd._2.head._1.spaceKey, rdd._2.head._1.timeKey, rdd._2.head._1.productKey, new BandKey("NDVI", platformNew)), normalizedDifferenceTile)
+    }), cubeRDD.head._2)
+    ndvicube.append(cubeProcess3)
+    ndvicube.toArray
   }
 
   //挑选产品和波段来进行可视化
@@ -249,7 +251,6 @@ object CubeNew {
         val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) = {
           cubeTMS.reproject(tmsCrs, layoutScheme)
         }
-        println("zoom:" + zoom)
 
         val outputPath: String = GlobalConfig.Others.ontheFlyStorage
         // Create the attributes store that will tell us information about our catalog.
@@ -304,6 +305,62 @@ object CubeNew {
 
     PostSender.shelvePost("cube", jsonObject)
 
+  }
+
+  def add(cube1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+          cube2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    cubeTemplate(cube1, cube2, (tile1, tile2) => Add(tile1, tile2))
+  }
+
+  def subtract(cube1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+               cube2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    cubeTemplate(cube1, cube2, (tile1, tile2) => Subtract(tile1, tile2))
+  }
+
+  def divide(cube1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+             cube2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    cubeTemplate(cube1, cube2, (tile1, tile2) => Divide(tile1, tile2))
+  }
+
+  def multiply(cube1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+               cube2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    cubeTemplate(cube1, cube2, (tile1, tile2) => Multiply(tile1, tile2))
+  }
+
+  def addNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+             i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    i match {
+      case (x: Int) => cubeTemplate(cube, tile => Add(tile, x))
+      case (x: Double) => cubeTemplate(cube, tile => Add(tile, x))
+      case _ => throw new IllegalArgumentException("Invalid arguments")
+    }
+  }
+
+  def subtractNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+             i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    i match {
+      case (x: Int) => cubeTemplate(cube, tile => Subtract(tile, x))
+      case (x: Double) => cubeTemplate(cube, tile => Subtract(tile, x))
+      case _ => throw new IllegalArgumentException("Invalid arguments")
+    }
+  }
+
+  def divideNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+                  i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    i match {
+      case (x: Int) => cubeTemplate(cube, tile => Divide(tile, x))
+      case (x: Double) => cubeTemplate(cube, tile => Divide(tile, x))
+      case _ => throw new IllegalArgumentException("Invalid arguments")
+    }
+  }
+
+  def multiplyNum(cube: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])],
+                i: AnyVal): Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = {
+    i match {
+      case (x: Int) => cubeTemplate(cube, tile => Multiply(tile, x))
+      case (x: Double) => cubeTemplate(cube, tile => Multiply(tile, x))
+      case _ => throw new IllegalArgumentException("Invalid arguments")
+    }
   }
 
   def createCubeFromCollectionByTile(cubeName: String, tms: String, cubeDescription: String, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null): Int = {
@@ -650,11 +707,15 @@ object CubeNew {
     // 通过Image加载Cube
     val vis = new VisualizationParam
     //    vis.setAllParam(bands = "[SR_B3]", min = "0", max = "500", palette = "[oldlace,peachpuff,gold,olive,lightyellow,yellow,lightgreen,limegreen,brown,lightblue,blue]")
-    vis.setAllParam(bands = "[SR_B3,SR_B5]", min = "0", max = "500")
+    vis.setAllParam(bands = "[SR_B3,SR_B5]")
     Trigger.level = -1
     Trigger.dagId = "cube"
     val cubeRDD1: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-01-10 00:00:00,2023-01-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
-    visualizeOnTheFly(sc, cubeRDD1, vis)
+    val cubeRDD2: Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])] = loadCubeByImage(sc, "3", "[LC08_L2SP_C02_T1]", "[SR_B3,SR_B5]", "[2023-03-10 00:00:00,2023-03-17 00:00:00]", "[114.16,30.47,114.47,30.69]", "WebMercatorQuad", 30)
+    val ndviRDD1 = normalizedDifference(sc, cubeRDD1, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
+    val ndviRDD2 = normalizedDifference(sc, cubeRDD2, "SR_B3", "Landsat 8", "SR_B5", "Landsat 8")
+    val cubeRDD3 = subtract(ndviRDD1, ndviRDD2)
+    visualizeOnTheFly(sc, ndviRDD2, vis)
     //    visualization(cubeRDD1)
     sc.stop()
 
