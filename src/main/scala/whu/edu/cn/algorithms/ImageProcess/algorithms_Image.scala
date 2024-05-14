@@ -1483,6 +1483,8 @@ object algorithms_Image {
     }
     val schema = StructType(fields)
     val df = spark.createDataFrame(rowRdd, schema).toDF(labelColNames: _*)
+
+
     val assembler = new VectorAssembler()
       .setInputCols(colNames.toArray)
       .setOutputCol("features")
