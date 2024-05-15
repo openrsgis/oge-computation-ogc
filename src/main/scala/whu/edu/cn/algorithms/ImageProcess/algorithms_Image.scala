@@ -1729,38 +1729,40 @@ def panSharp(coverage1: RDDImage, coverage2: RDDImage, method: String = "IHS", b
 }
 
 def catTwoCoverage(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
-    //对齐像素、分辨率等等
-    val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
-    //    val (newCoverage1, newCoverage2) = (coverage1, coverage2)
-    val cellType1: CellType = newCoverage1._1.first()._2.cellType
-    val cellType2: CellType = newCoverage2._1.first()._2.cellType
-    val cellType = cellType1.union(cellType2) //获得更通用的那种类型
-    //时间戳、波段列表暂时以coverage1为准
-    val time: Long = newCoverage1._1.first()._1.spaceTimeKey.instant
-    val band: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //先创建一个空波段列表，后面再填充
-    //计算新影像波段数，便于后面新建一个空的类型为Tile的Array
-    val bandCount1: Int = newCoverage1._1.first()._2.bandCount
-    val bandCount2: Int = newCoverage2._1.first()._2.bandCount
-    val bandCount: Int = bandCount1 + bandCount2
-    val coverage1tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage1._1.map(t => {
-      (t._1.spaceTimeKey.spatialKey, t._2)
-    })
-    val coverage2tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage2._1.map(t => {
-      (t._1.spaceTimeKey.spatialKey, t._2)
-    })
-    val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1tileRDD.join(coverage2tileRDD)
-    val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = rdd.map { case (spatialKey, (multibandTile1, multibandTile2)) =>
-      val bandArray = Array.ofDim[Tile](bandCount)
-      for (index1 <- 0 until bandCount1) {
-        bandArray(index1) = multibandTile1.band(index1).convert(cellType)
-        band.append(index1.toString())
-      }
-      for (index2 <- 0 until bandCount2) {
-        bandArray(bandCount1 + index2) = multibandTile2.band(index2).convert(cellType)
-        band.append((bandCount1 + index2).toString())
-      }
-      (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time), band), MultibandTile(bandArray))
+  //对齐像素、分辨率等等
+  //对齐像素、分辨率等等
+  val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
+  //    val (newCoverage1, newCoverage2) = (coverage1, coverage2)
+  val cellType1: CellType = newCoverage1._1.first()._2.cellType
+  val cellType2: CellType = newCoverage2._1.first()._2.cellType
+  val cellType = cellType1.union(cellType2) //获得更通用的那种类型
+  //时间戳、波段列表暂时以coverage1为准
+  val time: Long = newCoverage1._1.first()._1.spaceTimeKey.instant
+  val band: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //先创建一个空波段列表，后面再填充
+  //计算新影像波段数，便于后面新建一个空的类型为Tile的Array
+  val bandCount1: Int = newCoverage1._1.first()._2.bandCount
+  val bandCount2: Int = newCoverage2._1.first()._2.bandCount
+  val bandCount: Int = bandCount1 + bandCount2
+  val coverage1tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage1._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val coverage2tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage2._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1tileRDD.join(coverage2tileRDD)
+  val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = rdd.map { case (spatialKey, (multibandTile1, multibandTile2)) =>
+    val bandArray = Array.ofDim[Tile](bandCount)
+    for (index1 <- 0 until bandCount1) {
+      bandArray(index1) = multibandTile1.band(index1).convert(cellType)
+      band.append("B" + index1.toString())
     }
-    (newCoverageRdd, newCoverage1._2) //TODO 暂时先这么返回
+    for (index2 <- 0 until bandCount2) {
+      bandArray(bandCount1 + index2) = multibandTile2.band(index2).convert(cellType)
+      band.append("B" + (bandCount1 + index2).toString())
+    }
+    (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time), band), MultibandTile(bandArray))
   }
+  val metaData = TileLayerMetadata(cellType, newCoverage1._2.layout, newCoverage1._2.extent, newCoverage1._2.crs, newCoverage1._2.bounds)
+  (newCoverageRdd, metaData)
+}
 }
