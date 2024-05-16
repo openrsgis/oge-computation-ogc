@@ -399,7 +399,7 @@ object Trigger {
         case "Coverage.panSharp" =>
           val bandListString :List[String] =args("bands").substring(1,args("bands").length - 1).split(",").toList
           val bandList=bandListString.map(s=>scala.util.Try(s.toShort)).filter(_.isSuccess).map(_.get)
-          val weightListString:List[String]=args("weightList").split(",").toList
+          val weightListString:List[String]=args("weightList").substring(1,args("weightList").length - 1).split(",").toList
           val weightList=weightListString.map(s=>scala.util.Try(s.toDouble)).filter(_.isSuccess).map(_.get)
 
           coverageRddList += (UUID -> panSharp(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), method = args("method").toString, bandList = bandList, weightList = weightList))

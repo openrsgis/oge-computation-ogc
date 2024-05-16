@@ -10109,7 +10109,7 @@
       },
       {
         "name": "weightList",
-        "type": "List",
+        "type": "List<Double>",
         "description": "111",
         "default": "None",
         "optional": "False"
