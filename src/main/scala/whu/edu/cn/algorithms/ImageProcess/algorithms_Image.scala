@@ -1195,7 +1195,7 @@ object algorithms_Image {
       case 135 => (-dist, -dist)
       case _ => throw new IllegalArgumentException("Error: orient输入不符合要求")
     }
-    // TODO Correlation和Dissimilarity根据结果图像来看有点问题，还差Homogeneity同质性
+    // TODO Correlation和Dissimilarity根据结果图像来看有点问题
     val featureFunc: (Array[Array[Double]] => Double) = feature match {
       case "Mean" => (GLCM: Array[Array[Double]]) => { //均值
         var sum: Double = 0
@@ -1238,6 +1238,9 @@ object algorithms_Image {
         var sum: Double = 0
         GLCM.flatten.foreach(t => sum += t * t)
         math.pow(sum, 0.5)
+        //        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        //        for (i <- 0 until numRows; j <- 0 until numCols) {sum += GLCM(i)(j) * GLCM(i)(j)}
+        //        math.pow(sum, 0.5)
       }
       case "Contrast" => (GLCM: Array[Array[Double]]) => { //对比度 反映了图像中灰度级对比程度的强度
         var sum: Double = 0
@@ -1267,7 +1270,7 @@ object algorithms_Image {
         var sum: Double = 0
         val (numRows, numCols) = (GLCM.length, GLCM(0).length)
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          sum += GLCM(i)(j) * math.log(GLCM(i)(j)) / math.log(2)
+          if (GLCM(i)(j) > 0) sum += GLCM(i)(j) * math.log(GLCM(i)(j)) / math.log(2)
         }
         sum
       }
@@ -1284,15 +1287,19 @@ object algorithms_Image {
         for (i <- 0 until numRows; j <- 0 until numCols) {
           mean_j += GLCM(i)(j) * j
         }
+        //        for (i <- 0 until numRows; j <- 0 until numCols) {variance_i += GLCM(i)(j) * (i-mean_i)*(i-mean_i)}
+        //        for (i <- 0 until numRows; j <- 0 until numCols) {variance_j += GLCM(i)(j) * (j-mean_j)*(j-mean_j)}
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          variance_i += GLCM(i)(j) * (i - mean_i) * (i - mean_i)
+          variance_i += (i - mean_i) * (i - mean_i)
         }
+        variance_i = variance_i / (numRows * numCols)
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          variance_j += GLCM(i)(j) * (j - mean_j) * (j - mean_j)
+          variance_j += (j - mean_j) * (j - mean_j)
         }
+        variance_j = variance_j / (numRows * numCols)
         //        if(variance_i==0||variance_j==0) sum会得到NaN的值
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          sum += GLCM(i)(j) * (i - mean_i) * (j - mean_j) / (math.pow(variance_i * variance_j, 0.5))
+          if (variance_i * variance_j > 0) sum += GLCM(i)(j) * (i - mean_i) * (j - mean_j) / (math.pow(variance_i * variance_j, 0.5))
         }
         //        println(mean_i, mean_j, variance_i, variance_j, sum)
         sum
@@ -1345,14 +1352,14 @@ object algorithms_Image {
               val value1: Int = bandTile.get(j - radius + n, i - radius + m)
               val value2: Int = bandTile.get(j - radius + n + dj, i - radius + m + di)
               if ((!isNoData(value1)) && (!isNoData(value2))) GLCM(value1)(value2) += 1 //当前是进去NoData，出来也是NoData的策略
-//              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
-//              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
-//              else GLCM(value1)(0) += 1
+              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
+              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
+              else GLCM(value1)(0) += 1
             }
           }
           //灰度共生矩阵归一化
           val sum = GLCM.flatten.sum.toDouble
-          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, Double.NaN) //当前是进去NoData，出来也是NoData的策略  Double.NaN-》0，就是opencv的处理策略
+          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, 0) //当前是进去NoData，出来也是NoData的策略；  Double.NaN-》0，就是opencv的处理策略
           else {
             val GLCM_1: Array[Array[Double]] = GLCM.map(_.map(_ / sum))
             //计算特征量
