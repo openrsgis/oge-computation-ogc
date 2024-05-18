@@ -10085,14 +10085,14 @@
       },
       {
         "name": "bandList",
-        "type": "List",
+        "type": "List<Short>",
         "description": "111",
         "default": "None",
         "optional": "False"
       },
       {
         "name": "weightList",
-        "type": "List",
+        "type": "List<Double>",
         "description": "111",
         "default": "None",
         "optional": "False"
