@@ -1,5 +1,7 @@
 package whu.edu.cn.algorithms.ImageProcess
-
+import breeze.linalg.{DenseMatrix=>BreezeDenseMatrix, DenseVector=>BreezeDenseVector}
+import breeze.linalg.Tensor.transposeTensor
+import breeze.linalg.{DenseMatrix, InjectNumericOps}
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, UShortConstantNoDataCellType, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
@@ -260,7 +262,7 @@ object algorithms_Image {
     (normalizedCoverageRdd, newmultispectral._2)
   }
 
-
+//只为了截图
   //直方图均衡化
   def histogramEqualization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -1193,7 +1195,7 @@ object algorithms_Image {
       case 135 => (-dist, -dist)
       case _ => throw new IllegalArgumentException("Error: orient输入不符合要求")
     }
-    // TODO Correlation和Dissimilarity根据结果图像来看有点问题，还差Homogeneity同质性
+    // TODO Correlation和Dissimilarity根据结果图像来看有点问题
     val featureFunc: (Array[Array[Double]] => Double) = feature match {
       case "Mean" => (GLCM: Array[Array[Double]]) => { //均值
         var sum: Double = 0
@@ -1236,6 +1238,9 @@ object algorithms_Image {
         var sum: Double = 0
         GLCM.flatten.foreach(t => sum += t * t)
         math.pow(sum, 0.5)
+        //        val (numRows, numCols) = (GLCM.length, GLCM(0).length)
+        //        for (i <- 0 until numRows; j <- 0 until numCols) {sum += GLCM(i)(j) * GLCM(i)(j)}
+        //        math.pow(sum, 0.5)
       }
       case "Contrast" => (GLCM: Array[Array[Double]]) => { //对比度 反映了图像中灰度级对比程度的强度
         var sum: Double = 0
@@ -1265,7 +1270,7 @@ object algorithms_Image {
         var sum: Double = 0
         val (numRows, numCols) = (GLCM.length, GLCM(0).length)
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          sum += GLCM(i)(j) * math.log(GLCM(i)(j)) / math.log(2)
+          if (GLCM(i)(j) > 0) sum += GLCM(i)(j) * math.log(GLCM(i)(j)) / math.log(2)
         }
         sum
       }
@@ -1282,15 +1287,19 @@ object algorithms_Image {
         for (i <- 0 until numRows; j <- 0 until numCols) {
           mean_j += GLCM(i)(j) * j
         }
+        //        for (i <- 0 until numRows; j <- 0 until numCols) {variance_i += GLCM(i)(j) * (i-mean_i)*(i-mean_i)}
+        //        for (i <- 0 until numRows; j <- 0 until numCols) {variance_j += GLCM(i)(j) * (j-mean_j)*(j-mean_j)}
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          variance_i += GLCM(i)(j) * (i - mean_i) * (i - mean_i)
+          variance_i += (i - mean_i) * (i - mean_i)
         }
+        variance_i = variance_i / (numRows * numCols)
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          variance_j += GLCM(i)(j) * (j - mean_j) * (j - mean_j)
+          variance_j += (j - mean_j) * (j - mean_j)
         }
+        variance_j = variance_j / (numRows * numCols)
         //        if(variance_i==0||variance_j==0) sum会得到NaN的值
         for (i <- 0 until numRows; j <- 0 until numCols) {
-          sum += GLCM(i)(j) * (i - mean_i) * (j - mean_j) / (math.pow(variance_i * variance_j, 0.5))
+          if (variance_i * variance_j > 0) sum += GLCM(i)(j) * (i - mean_i) * (j - mean_j) / (math.pow(variance_i * variance_j, 0.5))
         }
         //        println(mean_i, mean_j, variance_i, variance_j, sum)
         sum
@@ -1343,14 +1352,14 @@ object algorithms_Image {
               val value1: Int = bandTile.get(j - radius + n, i - radius + m)
               val value2: Int = bandTile.get(j - radius + n + dj, i - radius + m + di)
               if ((!isNoData(value1)) && (!isNoData(value2))) GLCM(value1)(value2) += 1 //当前是进去NoData，出来也是NoData的策略
-//              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
-//              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
-//              else GLCM(value1)(0) += 1
+              else if (isNoData(value1) && isNoData(value2)) GLCM(0)(0) += 1 //取消以下3行注释，就是opencv的处理策略
+              else if (isNoData(value1) && !isNoData(value2)) GLCM(0)(value2) += 1
+              else GLCM(value1)(0) += 1
             }
           }
           //灰度共生矩阵归一化
           val sum = GLCM.flatten.sum.toDouble
-          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, Double.NaN) //当前是进去NoData，出来也是NoData的策略  Double.NaN-》0，就是opencv的处理策略
+          if (isNoData(bandTile.get(j, i)) || sum == 0) doubleArrayTile.setDouble(j, i, 0) //当前是进去NoData，出来也是NoData的策略；  Double.NaN-》0，就是opencv的处理策略
           else {
             val GLCM_1: Array[Array[Double]] = GLCM.map(_.map(_ / sum))
             //计算特征量
@@ -1446,7 +1455,7 @@ object algorithms_Image {
     (newCoverageRdd, coverage._2)
   }
 
-
+//Kmeans聚类
   def kMeans(coverage: RDDImage, k: Int, seed: Long, maxIter: Int, distanceMeasure: String): RDDImage = {
     val spark = SparkSession.builder().appName("SparkKMeansJob").getOrCreate()
     val bandCount: Int = coverage._1.first()._2.bandCount
@@ -1521,6 +1530,246 @@ object algorithms_Image {
     })
     (newCoverageRdd, coverage._2)
   }
+//  IHSFusion
+def IHSFusion(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
+  //coverage1为低分彩色图像（RGB），coverage2为高分全色图像，允许传入多波段，但分别只取用前三波段和前一波段
+  //注意，整数除法默认会返回整数结果
+  if (coverage1._1.first()._2.bandCount < 3 || coverage2._1.first()._2.bandCount < 1) {
+    throw new IllegalArgumentException("Error: 波段数量不足")
+  }
+  val cellType: CellType = coverage1._1.first()._2.cellType
+  val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
+  val time1: Long = newCoverage1._1.first()._1.spaceTimeKey.instant //以这个时间为准
+  val time2: Long = newCoverage2._1.first()._1.spaceTimeKey.instant
+  val band1: mutable.ListBuffer[String] = newCoverage1._1.first()._1.measurementName //以这个波段列表为准
+  val band2: mutable.ListBuffer[String] = newCoverage2._1.first()._1.measurementName
+  val coverage1tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage1._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val coverage2tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage2._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val RGB_IHS: BreezeDenseMatrix[Double] = BreezeDenseMatrix((1.0 / 3, 1.0 / 3, 1.0 / 3), (-Math.pow(2, 0.5) / 6, -Math.pow(2, 0.5) / 6, Math.pow(2, 1.5) / 6), (1 / Math.pow(2, 0.5), -1 / Math.pow(2, 0.5), 0.0))
+  val IHS_RGB: BreezeDenseMatrix[Double] = BreezeDenseMatrix((1.0, -1 / Math.pow(2, 0.5), 1 / Math.pow(2, 0.5)), (1.0, -1 / Math.pow(2, 0.5), -1 / Math.pow(2, 0.5)), (1.0, Math.pow(2, 0.5), 0.0))
+  val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1tileRDD.join(coverage2tileRDD)
+  val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = rdd.map { case (spatialKey, (multibandTile1, multibandTile2)) =>
+    //将coverage1的MultibandTile（取前3波段）转化为二维矩阵（波段数×pixels）
+    val pixels = multibandTile1.rows * multibandTile1.cols
+    val RGB_matrix = BreezeDenseMatrix.zeros[Double](3, pixels) //先创建一个空的二维矩阵
+    for (i <- 0 until 3) {
+      val pixelArray: Array[Double] = multibandTile1.band(i).toArrayDouble()
+      val pixelVector: BreezeDenseVector[Double] = BreezeDenseVector(pixelArray)
+      RGB_matrix(i, ::) := pixelVector.t //DenseVector 默认是列向量，所以要转成行向量
+    }
+    //RGB->IHS
+    val IHS_matrix: BreezeDenseMatrix[Double] = RGB_IHS * RGB_matrix
+    //将coverage2的MultibandTile（取前1波段）转化为一维向量（pixels）
+    val pixelArray: Array[Double] = multibandTile2.band(0).toArrayDouble()
+    val pixelVector: BreezeDenseVector[Double] = BreezeDenseVector(pixelArray)
+    //IHS的I分量替换
+    IHS_matrix(0, ::) := pixelVector.t
+    //IHS->RGB
+    val RGB_matrix_new = IHS_RGB * IHS_matrix
+    //将二维矩阵（波段数×pixels）转化为MultibandTile，合成新coverage输出
+    val band_ArrayTile = Array.ofDim[Tile](3)
+    for (i <- 0 until 3) {
+      band_ArrayTile(i) = DoubleArrayTile(RGB_matrix_new(i, ::).t.toArray, multibandTile1.cols, multibandTile1.rows)
+    }
+    (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time1), band1), MultibandTile(band_ArrayTile))
+  }
+  //将影像每个波段的值都重新映射到0-255
+  val minAndMax = findMinMaxValueDouble((newCoverageRdd, coverage1._2)) //findminmaxValue这个函数不会使用到coverage1._2数据
+  val normalizedCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = newCoverageRdd.map(
+    image => {
+      val rows = image._2.rows
+      val cols = image._2.cols
+      val bandCount = image._2.bandCount
+      val band_Array = Array.ofDim[Tile](bandCount)
+      for (bandIndex <- 0 until bandCount) {
+        val tile = image._2.band(bandIndex)
+        val min = minAndMax(bandIndex)._1
+        val max = minAndMax(bandIndex)._2
+        val result = Array.ofDim[Double](rows, cols)
+        for (i <- 0 until rows; j <- 0 until cols) {
+          result(i)(j) = (tile.get(j, i).toDouble - min) / (max - min) * 255
+        }
+        band_Array(bandIndex) = DoubleArrayTile(result.flatten, cols, rows)
+      }
+      (image._1, MultibandTile(band_Array).convert(cellType)) //TODO 11.21增加.convert
+    })
+  //TODO TileLayerMetadata部分，暂时先这么返回,
+  (normalizedCoverageRdd, newCoverage1._2)
+}
+def panSharp(coverage1: RDDImage, coverage2: RDDImage, method: String = "IHS", bandList: List[Short] = List(1,2,3), weightList: List[Double] = List(1,1,1)): RDDImage = {
+  //coverage1为低分彩色图像（RGB），coverage2为高分全色图像，允许传入多波段，但分别只取用前三波段和前一波段
+  //注意，整数除法默认会返回整数结果
+  //此算子暂时只考虑RGB三通道的实现，不考虑近红外或更多波段
+  println("cellType",coverage1._1.first()._2.cellType)
+  if(coverage1._1.first()._2.bandCount<3 || coverage2._1.first()._2.bandCount<1){
+    throw new IllegalArgumentException("Error: 影像波段数量不足")
+  }
+  //TODO bandList必须是从1开始，规定必须是三波段RGB
+  if(bandList.length!=3 || weightList.length>3){
+    throw new IllegalArgumentException("Error: 波段列表应包含三个元素，权重列表不超过三个元素")
+  }
+  var weight: ListBuffer[Double] = ListBuffer.empty
+  for(i<-0 until 3){
+    if(i<weightList.length) weight.append(weightList(i))
+    else weight.append(0)
+  }
+  weight = weight.map(_/weight.sum)
+  val cellType: CellType = coverage1._1.first()._2.cellType
+  val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
+  val time1: Long = newCoverage1._1.first()._1.spaceTimeKey.instant  //以这个时间为准
+  val time2: Long = newCoverage2._1.first()._1.spaceTimeKey.instant
+  val band1: mutable.ListBuffer[String] = newCoverage1._1.first()._1.measurementName  //以这个波段列表为准
+  val band2: mutable.ListBuffer[String] = newCoverage2._1.first()._1.measurementName
+  val coverage1tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage1._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val coverage2tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage2._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1tileRDD.join(coverage2tileRDD)
+  var newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = null
 
+  if (method == "IHS"){
+    val RGB_IHS: BreezeDenseMatrix[Double] = BreezeDenseMatrix((1.0/3,1.0/3,1.0/3),(-Math.pow(2,0.5)/6,-Math.pow(2,0.5)/6,Math.pow(2,1.5)/6),(1/Math.pow(2,0.5),-1/Math.pow(2,0.5),0.0))
+    val IHS_RGB: BreezeDenseMatrix[Double] = BreezeDenseMatrix((1.0,-1/Math.pow(2,0.5),1/Math.pow(2,0.5)),(1.0,-1/Math.pow(2,0.5),-1/Math.pow(2,0.5)),(1.0,Math.pow(2,0.5),0.0))
+    newCoverageRdd  = rdd.map{ case(spatialKey, (multibandTile1, multibandTile2)) =>
+      //将coverage1的MultibandTile（取前3波段）转化为二维矩阵（波段数×pixels）
+      val pixels = multibandTile1.rows * multibandTile1.cols
+      val RGB_matrix = BreezeDenseMatrix.zeros[Double](3, pixels) //先创建一个空的二维矩阵
+      for (i <- 0 until 3){
+        val pixelArray: Array[Double] = multibandTile1.band(bandList(i)-1).toArrayDouble()
+        val pixelVector: BreezeDenseVector[Double] = BreezeDenseVector(pixelArray)
+        RGB_matrix(i, ::) := pixelVector.t //DenseVector 默认是列向量，所以要转成行向量
+      }
+      //RGB->IHS
+      val IHS_matrix: BreezeDenseMatrix[Double] = RGB_IHS * RGB_matrix
+      //将coverage2的MultibandTile（取前1波段）转化为一维向量（pixels）
+      val pixelArray: Array[Double] = multibandTile2.band(0).toArrayDouble()
+      val pixelVector: BreezeDenseVector[Double] = BreezeDenseVector(pixelArray)
+      //IHS的I分量替换
+      IHS_matrix(0, ::) := pixelVector.t
+      //IHS->RGB
+      val RGB_matrix_new = IHS_RGB * IHS_matrix
+      //将二维矩阵（波段数×pixels）转化为MultibandTile，合成新coverage输出
+      val band_ArrayTile = Array.ofDim[Tile](3)
+      for (i <- 0 until 3){
+        band_ArrayTile(i) = DoubleArrayTile(RGB_matrix_new(i, ::).t.toArray, multibandTile1.cols, multibandTile1.rows)
+      }
+      (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time1), band1), MultibandTile(band_ArrayTile).convert(cellType))
+    }
+  }
+  else if(method == "Brovey"){
+    newCoverageRdd = rdd.map{ case(spatialKey, (multibandTile1, multibandTile2))=>
+      val sumRGB: Tile = multibandTile1.band(bandList(0)-1).convert(DoubleConstantNoDataCellType).localMultiply(weight(0)) //11.21增加括号
+        .localAdd((multibandTile1.band(bandList(1)-1).convert(DoubleConstantNoDataCellType)).localMultiply(weight(1)))
+        .localAdd((multibandTile1.band(bandList(2)-1).convert(DoubleConstantNoDataCellType)).localMultiply(weight(2)))
+      var fusedBands: Seq[Tile] = Seq.empty[Tile]
+      for(i<- 0 until 3){
+        val fusedBand = multibandTile1.band(bandList(i)-1).convert(DoubleConstantNoDataCellType)
+          .localMultiply(multibandTile2.band(0).convert(DoubleConstantNoDataCellType))
+          .localDivide(sumRGB).localDivide(3)
+        fusedBands = fusedBands :+ (fusedBand)
+      }
+      (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time1), band1), MultibandTile(fusedBands).convert(cellType))
+    }
+  }
+  else if(method == "Esri"){
+    newCoverageRdd = rdd.map{ case(spatialKey, (multibandTile1, multibandTile2))=>
+      val mean: Tile = multibandTile1.band(bandList(0)-1).convert(DoubleConstantNoDataCellType).localMultiply(weight(0))
+        .localAdd((multibandTile1.band(bandList(1)-1).convert(DoubleConstantNoDataCellType)).localMultiply(weight(1)))
+        .localAdd((multibandTile1.band(bandList(2)-1).convert(DoubleConstantNoDataCellType)).localMultiply(weight(2)))
+      //.localDivide(3)
+      val ADJ: Tile = multibandTile2.band(0).convert(DoubleConstantNoDataCellType).localSubtract(mean)
+      var fusedBands: Seq[Tile] = Seq.empty[Tile]
+      for(i<- 0 until 3){
+        val fusedBand = multibandTile1.band(bandList(i)-1).convert(DoubleConstantNoDataCellType)
+          .localAdd(ADJ)
+        fusedBands = fusedBands :+ (fusedBand)
+      }
+      (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time1), band1), MultibandTile(fusedBands).convert(cellType))
+    }
+  }
+  else if(method == "Simple mean"){
+    //不存在权重选择 R G B
+    newCoverageRdd = rdd.map{ case(spatialKey, (multibandTile1, multibandTile2))=>
+      var fusedBands: Seq[Tile] = Seq.empty[Tile]
+      for(i<- 0 until 3){
+        val fusedBand = multibandTile1.band(bandList(i)-1).convert(DoubleConstantNoDataCellType)
+          .localAdd(multibandTile2.band(0).convert(DoubleConstantNoDataCellType))
+          .localMultiply(0.5)  //注意localAdd和localMultiply的运算顺序问题
+        fusedBands = fusedBands :+ (fusedBand.convert(multibandTile1.cellType))
+      }
+      (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time1), band1), MultibandTile(fusedBands))
+    }
+  }
+  else if(method == "Gram-Schmidt"){
+    throw new IllegalArgumentException("Error: 该方法暂未实现")
+  }
+  else{
+    throw new IllegalArgumentException("Error: 不存在当前method")
+  }
+  //将影像每个波段的值都重新映射到0-255
+  val minAndMax = findMinMaxValueDouble((newCoverageRdd, coverage1._2)) //findminmaxValue这个函数不会使用到coverage1._2数据
+  val normalizedCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = newCoverageRdd.map(
+    image => {
+      val rows = image._2.rows
+      val cols = image._2.cols
+      val bandCount = image._2.bandCount
+      val band_Array = Array.ofDim[Tile](bandCount)
+      for (bandIndex <- 0 until bandCount) {
+        val tile = image._2.band(bandIndex)
+        val min = minAndMax(bandIndex)._1
+        val max = minAndMax(bandIndex)._2
+        val result = Array.ofDim[Double](rows, cols)
+        for (i <- 0 until rows; j <- 0 until cols) {
+          result(i)(j) = (tile.get(j, i).toDouble - min) / (max - min) * 255
+        }
+        band_Array(bandIndex) = DoubleArrayTile(result.flatten, cols, rows)
+      }
+      (image._1, MultibandTile(band_Array).convert(cellType))
+    })
+  (newCoverageRdd, newCoverage1._2) // TODO 暂时不进行映射
+}
 
+def catTwoCoverage(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
+  //对齐像素、分辨率等等
+  //对齐像素、分辨率等等
+  val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
+  //    val (newCoverage1, newCoverage2) = (coverage1, coverage2)
+  val cellType1: CellType = newCoverage1._1.first()._2.cellType
+  val cellType2: CellType = newCoverage2._1.first()._2.cellType
+  val cellType = cellType1.union(cellType2) //获得更通用的那种类型
+  //时间戳、波段列表暂时以coverage1为准
+  val time: Long = newCoverage1._1.first()._1.spaceTimeKey.instant
+  val band: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //先创建一个空波段列表，后面再填充
+  //计算新影像波段数，便于后面新建一个空的类型为Tile的Array
+  val bandCount1: Int = newCoverage1._1.first()._2.bandCount
+  val bandCount2: Int = newCoverage2._1.first()._2.bandCount
+  val bandCount: Int = bandCount1 + bandCount2
+  val coverage1tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage1._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val coverage2tileRDD: RDD[(SpatialKey, MultibandTile)] = newCoverage2._1.map(t => {
+    (t._1.spaceTimeKey.spatialKey, t._2)
+  })
+  val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1tileRDD.join(coverage2tileRDD)
+  val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = rdd.map { case (spatialKey, (multibandTile1, multibandTile2)) =>
+    val bandArray = Array.ofDim[Tile](bandCount)
+    for (index1 <- 0 until bandCount1) {
+      bandArray(index1) = multibandTile1.band(index1).convert(cellType)
+      band.append("B" + index1.toString())
+    }
+    for (index2 <- 0 until bandCount2) {
+      bandArray(bandCount1 + index2) = multibandTile2.band(index2).convert(cellType)
+      band.append("B" + (bandCount1 + index2).toString())
+    }
+    (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time), band), MultibandTile(bandArray))
+  }
+  val metaData = TileLayerMetadata(cellType, newCoverage1._2.layout, newCoverage1._2.extent, newCoverage1._2.crs, newCoverage1._2.bounds)
+  (newCoverageRdd, metaData)
+}
 }

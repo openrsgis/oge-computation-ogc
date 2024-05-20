@@ -25,7 +25,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,IHSFusion,panSharp,catTwoCoverage}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -396,6 +396,17 @@ object Trigger {
           coverageRddList += (UUID -> PCA(coverage = coverageRddList(args("coverage")), num = args("num").toInt))
         case "Coverage.kMeans" =>
           coverageRddList += (UUID -> kMeans(coverage = coverageRddList(args("coverage")), k = args("k").toInt, seed =args("seed").toLong , maxIter =args("maxIter").toInt,distanceMeasure =args("distanceMeasure").toString))
+        case "Coverage.panSharp" =>
+          val bandListString :List[String] =args("bands").substring(1,args("bands").length - 1).split(",").toList
+          val bandList=bandListString.map(s=>scala.util.Try(s.toShort)).filter(_.isSuccess).map(_.get)
+          val weightListString:List[String]=args("weightList").substring(1,args("weightList").length - 1).split(",").toList
+          val weightList=weightListString.map(s=>scala.util.Try(s.toDouble)).filter(_.isSuccess).map(_.get)
+
+          coverageRddList += (UUID -> panSharp(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), method = args("method").toString, bandList = bandList, weightList = weightList))
+        case "Coverage.catTwoCoverage" =>
+          coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.IHSFusion" =>
+          coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.atan" =>
           coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
         case "Coverage.atan2" =>

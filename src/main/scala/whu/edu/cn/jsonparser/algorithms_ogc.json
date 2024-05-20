@@ -10882,6 +10882,87 @@
       }
     ]
   },
+  "Coverage.IHSFusion": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.panSharp": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "bandList",
+        "type": "List<Short>",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "weightList",
+        "type": "List<Double>",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.catTwoCoverage": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
   "SpatialStats.GWModels.GWRbasic.autoFit": {
     "description": "Basic GWR calculation with bandwidth auto selection",
     "returns": "Feature",
