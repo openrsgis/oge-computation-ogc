@@ -100,7 +100,7 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate otb;${algorithmCode}python otb_edgeextraction.py --input "$outputTiffPath" --method $method --rescale "$rescale" --output "$writePath"""".stripMargin
+        raw"""conda activate otb;${algorithmCode}python otb_dimensionalityreduction.py --input "$outputTiffPath" --method $method --rescale "$rescale" --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -146,7 +146,7 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate otb;${algorithmCode}python otb_edgeextraction.py --input "$outputTiffPath" --channel $channel --spectral-threshold $spectralThreshold --spatial-threshold $spatialThreshold --number-of-direction $numberOfDirection --alpha $alpha --ratio-maximum-consideration-number $ratioMaximumConsiderationNumber --output "$writePath"""".stripMargin
+        raw"""conda activate otb;${algorithmCode}python otb_SFStextureextraction.py --input "$outputTiffPath" --channel $channel --spectral-threshold $spectralThreshold --spatial-threshold $spatialThreshold --number-of-direction $numberOfDirection --alpha $alpha --ratio-maximum-consideration-number $ratioMaximumConsiderationNumber --output "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")

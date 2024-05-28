@@ -803,6 +803,9 @@ object Trigger {
         case "Coverage.univarByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_univar(sc,coverageRddList(args("input"))))
 
+        // SAGA
+        case "Coverage.histogramMatchingBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGird")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
 
         // Kernel
         case "Kernel.chebyshev" =>

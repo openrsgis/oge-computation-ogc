@@ -5295,6 +5295,46 @@
       }
     ]
   },
+  "Coverage.histogramMatchingBySAGA": {
+    "description": "This tool alters the values of a grid so that its value distribution (its histogram), matches that of a reference grid. The first method simply uses arithmetic mean and standard deviation for adjustment, which usually is sufficient for normal distributed values. The second method performs a more precise adjustment based on the grids' histograms.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "grid",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "referenceGird",
+        "type": "Coverage",
+        "description": "Reference Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "Available Choices: [0] standard deviation [1] histogram Default: 1",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "nclasses",
+        "type": "Int",
+        "description": "Number of histogram classes for internal use.",
+        "optional": "True",
+        "default": "100"
+      },
+      {
+        "name": "maxSamples",
+        "type": "Int",
+        "description": "If set to zero all data will be used to build the histograms.",
+        "optional": "True",
+        "default": "1000000"
+      }
+    ]
+  },
+
+
+
 
   "Coverage.segmentationMprofilesdVectorByOTB": {
     "description": "Performs segmentation of an image, and output a vector file.Segmentation based on morphological profiles.",
