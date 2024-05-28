@@ -48,7 +48,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RemapWithDefaultValue, RemapWithoutDefaultValue}
+import whu.edu.cn.util.{COGUtil, Cbrt, CoverageOverloadUtil, Entropy, MinIOUtil, Mod, PostSender, RDDTransformerUtil, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
@@ -84,11 +84,11 @@ object Coverage {
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val client: BosClient = BosClientUtil_scala.getClient
+        val client: MinioClient = MinIOUtil.getMinioClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
+            val tiles: mutable.ArrayBuffer[RawTile] = COGUtil.tileQuery(client, level, t, union,queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -109,9 +109,9 @@ object Coverage {
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
 
-      val client: BosClient = BosClientUtil_scala.getClient
+      val client: MinioClient = MinIOUtil.getMinioClient
       par.map(t => {
-        BosCOGUtil.getTileBuf(client, t)
+        COGUtil.getTileBuf(client, t)
       })
     })
     println("Loading data Time: " + (System.currentTimeMillis() - time1))
@@ -2209,7 +2209,7 @@ object Coverage {
 
 
     //val level: Int = COGUtil.tileDifference
-    val level: Int = targetZoom - BosCOGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
+    val level: Int = targetZoom - COGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
 
     if (level > 0) {
       val time1 = System.currentTimeMillis()
@@ -3424,13 +3424,13 @@ object Coverage {
 
     //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
     //     大于0是上采样
-    if (BosCOGUtil.tileDifference > 0) {
+    if (COGUtil.tileDifference > 0) {
       // 首先对其进行上采样
       // 上采样必须考虑范围缩小，不然非常占用内存
-      val levelUp: Int = BosCOGUtil.tileDifference
+      val levelUp: Int = COGUtil.tileDifference
       val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
       val extentOrigin: Extent = coverageTMS.metadata.layout.extent
-      val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
+      val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
       val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
       val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
       val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
@@ -3533,10 +3533,10 @@ object Coverage {
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
     val file :File = new File(saveFilePath)
 
-    val client: BosClient = BosClientUtil_scala.getClient2
+    val client: MinioClient = MinIOUtil.getMinioClient
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.putObject("oge-user",path,file)
-//    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+//    client.putObject("oge-user",path,file)
+    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
 
     //    minIOUtil.releaseMinioClient(client)
 
@@ -3551,28 +3551,28 @@ object Coverage {
       path = s"$userID/$coverageId.tiff"
     }
 
-    val client = BosClientUtil_scala.getClient2
+    val client = MinIOUtil.getMinioClient
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-    val tempfile = new File(filePath)
-    val getObjectRequest = new GetObjectRequest("oge-user",path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
-    println(filePath)
-    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+
+    val outputPath = Paths.get(filePath)
+
+
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    inputStream.close()
+    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
+
   }
 
   def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val path = "/" + coverageId
-    val client = BosClientUtil_scala.getClient
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-    val getObjectRequest = new GetObjectRequest("ogebos",path)
     val tempfile = new File(filePath)
     tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
     val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage

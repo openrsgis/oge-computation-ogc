@@ -28,7 +28,7 @@ import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, makeCoverageRDD}
-import whu.edu.cn.util.{BosClientUtil_scala, CoverageCollectionUtil, MinIOUtil, RDDTransformerUtil}
+import whu.edu.cn.util.{ CoverageCollectionUtil, MinIOUtil, RDDTransformerUtil}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 
 import java.io.File
@@ -92,19 +92,7 @@ object CoverageDubug {
     "hostname".run
   }
   def test1(implicit sc: SparkContext):Unit={
-    val c0 = CoverageCollection.load(sc,"LC08_L1TP_C02_T1",null, startTime = "2016-02-01 00:00:00",endTime = "2016-03-01 00:00:00",extent = Extent(112.47632030703949, 28.970962363234158, 117.00549536957259, 31.413560053039767),cloudCoverMin = 0,cloudCoverMax = 15)
-
-//    val c1 = CoverageCollection.map(sc,c,"addNum",100)
-    val c01 = CoverageCollection.mosaic(c0)
-    makeTIFF(c01,"LC08")
-    c0.foreach(c =>{
-      makeTIFF(c._2,c._1)
-    })
-
-//    val c = Coverage.load(sc, "LC08_L1GT_123038_20190105_20200830_02_T2","LC08_L1GT_C02_T2",10)
-//    makeTIFF(c,"LC08_1")
-//    val c2 = Coverage.load(sc, "LC08_L1GT_123039_20190105_20200830_02_T2","LC08_L1GT_C02_T2",10)
-//    makeTIFF(c2,"LC08_2")
+    val c0 = Coverage.load(sc,"ASTGTM_N28E056","ASTER_GDEM_DEM30",10)
     println("Finish")
   }
 

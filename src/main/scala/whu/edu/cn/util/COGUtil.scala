@@ -70,29 +70,28 @@ object COGUtil {
     val cell: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]] = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]]
     try{
-      val inputStream_test: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(1).build)
+      val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
+      // Read data from stream
+      val outStream = new ByteArrayOutputStream
+      val buffer = new Array[Byte](MINIO_HEAD_SIZE)
+      var len: Int = 0
+      while ( {
+        len = inputStream.read(buffer)
+        len != -1
+      }) {
+        outStream.write(buffer, 0, len)
+      }
+      val headerByte: Array[Byte] = outStream.toByteArray
+      outStream.close()
+      inputStream.close()
+
+      parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
+
+      getTiles(level, coverageMetadata, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, windowsExtent, queryGeometry)
     }catch {
       case e:Exception =>
         throw new Exception("Minio中不存在相应数据，请联系管理员检查数据完整性。")
     }
-    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
-    // Read data from stream
-    val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](MINIO_HEAD_SIZE)
-    var len: Int = 0
-    while ( {
-      len = inputStream.read(buffer)
-      len != -1
-    }) {
-      outStream.write(buffer, 0, len)
-    }
-    val headerByte: Array[Byte] = outStream.toByteArray
-    outStream.close()
-    inputStream.close()
-
-    parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
-
-    getTiles(level, coverageMetadata,  tileOffsets, cell, geoTrans, tileByteCounts, bandCount,windowsExtent,queryGeometry)
 
   }
 
@@ -403,7 +402,7 @@ object COGUtil {
 }
 
 import whu.edu.cn.util.BosClientUtil
-object BosCOGUtil{
+object BosCOGUtil1{
   var tileDifference = 0
   var tmsLevel = 0 // Scaling levels of the front-end TMS
   var extent: Extent = _

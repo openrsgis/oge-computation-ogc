@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
-
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
@@ -40,11 +39,12 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{BosClientUtil_scala, MinIOUtil, PostSender, PostgresqlUtil}
-import java.nio.file.Paths
+import whu.edu.cn.util.{MinIOUtil, PostSender, PostgresqlUtil}
 
+import java.nio.file.Paths
 import com.baidubce.services.bos.model.GetObjectRequest
 
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
@@ -1136,16 +1136,17 @@ object Feature {
       path = s"$userID/$featureId.geojson"
     }
 
-    val client = BosClientUtil_scala.getClient2
+    val client = MinIOUtil.getMinioClient
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.geojson"
-    val tempfile = new File(filePath)
-    val getObjectRequest = new GetObjectRequest("oge-user",path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
-    println(filePath)
-    val temp = Source.fromFile(filePath).mkString
-    val feature = geometry(sc, temp,crs)
+    val filePath = s"$tempPath${dagId}.tiff"
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+
+    val outputPath = Paths.get(filePath)
+
+
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    inputStream.close()
+    val feature = geometry(sc, filePath,crs)
     feature
   }
 

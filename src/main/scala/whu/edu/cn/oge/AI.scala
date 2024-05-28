@@ -7,7 +7,6 @@ import geotrellis.raster.{ByteArrayTile, ByteConstantNoDataCellType, FloatArrayT
 import geotrellis.raster.mapalgebra.local.{Add, Divide}
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.BosClientUtil_scala
 
 import java.text.SimpleDateFormat
 
@@ -190,24 +189,24 @@ object AI {
 //    (PAP, coverage._2)
 //  }
 def getTrainingDatasetEncoding(datasetName: String): String = {
-
-  val bosClient = BosClientUtil_scala.getClient2 // 假设这个方法返回一个有效的BosClient对象
-
-  try {
-    val bucketName = "pytdml"
-    val key = s"datasetTDEncodes/$datasetName.json"
-    // 生成预签名URL请求
-    val request = new GeneratePresignedUrlRequest(bucketName, key, HttpMethodName.GET)
-    request.setExpiration(3600) // 设置URL的有效时间为3600秒
-
-    // 生成预签名URL
-    val url = bosClient.generatePresignedUrl(request)
-    url.toString // 将返回的URL转换为字符串
-  } catch {
-    case e: Exception =>
-      e.printStackTrace()
-      "" // 在异常情况下返回空字符串
-  }
+  throw new Exception("所请求的数据在Bos中不存在！")
+//  val bosClient = BosClientUtil_scala.getClient2 // 假设这个方法返回一个有效的BosClient对象
+//
+//  try {
+//    val bucketName = "pytdml"
+//    val key = s"datasetTDEncodes/$datasetName.json"
+//    // 生成预签名URL请求
+//    val request = new GeneratePresignedUrlRequest(bucketName, key, HttpMethodName.GET)
+//    request.setExpiration(3600) // 设置URL的有效时间为3600秒
+//
+//    // 生成预签名URL
+//    val url = bosClient.generatePresignedUrl(request)
+//    url.toString // 将返回的URL转换为字符串
+//  } catch {
+//    case e: Exception =>
+//      e.printStackTrace()
+//      "" // 在异常情况下返回空字符串
+//  }
 }
 
 
