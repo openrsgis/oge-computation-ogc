@@ -9,7 +9,7 @@ import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, S
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
-import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
+import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
@@ -25,7 +25,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,IHSFusion,panSharp,catTwoCoverage}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -37,7 +37,6 @@ import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
 import whu.edu.cn.oge.Sheet.CsvData
 import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
-import whu.edu.cn.entity.cube.CubeTileKey
 
 import scala.collection.mutable.ArrayBuffer
 object Trigger {
@@ -59,7 +58,7 @@ object Trigger {
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
   var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any] //GRASS部分返回String类的算子
   //  var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
-  var cubeRDDList: mutable.Map[String, Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]] = mutable.Map.empty[String, Array[(RDD[(CubeTileKey, Tile)], TileLayerMetadata[SpatialKey])]]
+  var cubeRDDList: mutable.Map[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(whu.edu.cn.geocube.core.entity.SpaceTimeBandKey, Tile)], whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata[SpaceTimeKey])]
 
   var cubeLoad: mutable.Map[String, (String, String, String)] = mutable.Map.empty[String, (String, String, String)]
   var outputInformationList:mutable.ListBuffer[JSONObject] = mutable.ListBuffer.empty[JSONObject]
@@ -165,7 +164,7 @@ object Trigger {
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
         case "Service.getCube" =>
-          cubeRDDList += (UUID -> Service.getCube(sc, args("cubeId"), args("products"), args("bands"), args("time"), args("extent"), args("tms"), args("resolution")))
+//          cubeRDDList += (UUID -> Service.getCube(sc, args("CubeName"), args("extent"), args("dateTime")))
         case "Service.getTable" =>
           tableRddList += (UUID -> isOptionalArg(args, "productID"))
         case "Service.getFeatureCollection" =>
@@ -396,17 +395,6 @@ object Trigger {
           coverageRddList += (UUID -> PCA(coverage = coverageRddList(args("coverage")), num = args("num").toInt))
         case "Coverage.kMeans" =>
           coverageRddList += (UUID -> kMeans(coverage = coverageRddList(args("coverage")), k = args("k").toInt, seed =args("seed").toLong , maxIter =args("maxIter").toInt,distanceMeasure =args("distanceMeasure").toString))
-        case "Coverage.panSharp" =>
-          val bandListString :List[String] =args("bands").substring(1,args("bands").length - 1).split(",").toList
-          val bandList=bandListString.map(s=>scala.util.Try(s.toShort)).filter(_.isSuccess).map(_.get)
-          val weightListString:List[String]=args("weightList").substring(1,args("weightList").length - 1).split(",").toList
-          val weightList=weightListString.map(s=>scala.util.Try(s.toDouble)).filter(_.isSuccess).map(_.get)
-
-          coverageRddList += (UUID -> panSharp(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), method = args("method").toString, bandList = bandList, weightList = weightList))
-        case "Coverage.catTwoCoverage" =>
-          coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
-        case "Coverage.IHSFusion" =>
-          coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.atan" =>
           coverageRddList += (UUID -> Coverage.atan(coverage = coverageRddList(args("coverage"))))
         case "Coverage.atan2" =>
@@ -613,47 +601,6 @@ object Trigger {
           featureRddList += (UUID -> QGIS.nativeIntersection(sc, featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],featureRddList(args("overlay")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], inputFields = args("inputFields"),overlayFields = args("overlayFields"),overlayFieldsPrefix = args("overlayFieldsPrefix"),gridSize = args("gridSize").toDouble))
         case "Coverage.edgeExtractionByOTB" =>
           coverageRddList += (UUID -> OTB.otbEdgeExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, filter = args("filter")))
-        case "Coverage.dimensionalityReductionByOTB" =>
-          coverageRddList += (UUID -> OTB.otbDimensionalityReduction(sc, coverageRddList(args("input")), method = args("method"), rescale = args("rescale")))
-        case "Coverage.SFSTextureExtractionByOTB" =>
-          coverageRddList += (UUID -> OTB.otbSFSTextureExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, spectralThreshold = args("spectralThreshold").toDouble, spatialThreshold = args("spatialThreshold").toInt, numberOfDirection = args("numberOfDirection").toInt, alpha = args("alpha").toDouble, ratioMaximumConsiderationNumber = args("ratioMaximumConsiderationNumber").toInt))
-        case "Coverage.multivariateAlterationDetectorByOTB" =>
-          coverageRddList += (UUID -> OTB.otbMultivariateAlterationDetector(sc, coverageRddList(args("inputBefore")), coverageRddList(args("inputAfter"))))
-        case "Coverage.radiometricIndicesByOTB" =>
-          coverageRddList += (UUID -> OTB.otbRadiometricIndices(sc, coverageRddList(args("input")), channelsBlue = args("channelsBlue").toInt, channelsGreen = args("channelsGreen").toInt, channelsRed = args("channelsRed").toInt, channelsNir = args("channelsNir").toInt, channelsMir = args("channelsMir").toInt))
-        case "Coverage.obtainUTMZoneFromGeoPointByOTB" =>
-          OTB.otbObtainUTMZoneFromGeoPoint(sc, lat = args("lat").toDouble, lon = args("lon").toDouble)
-        case "Coverage.largeScaleMeanShiftVectorByOTB" =>   //输入为栅格输出为矢量算哪一类？？
-          featureRddList += (UUID -> OTB.otbLargeScaleMeanShiftVector(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, minsize = args("minsize").toInt,tilesizex = args("tilesizex").toInt,tilesizey=args("tilesizey").toInt))
-        case "Coverage.largeScaleMeanShiftRasterByOTB" =>
-          coverageRddList += (UUID -> OTB.otbLargeScaleMeanShiftRaster(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, minsize = args("minsize").toInt,tilesizex = args("tilesizex").toInt,tilesizey=args("tilesizey").toInt))
-        case "Coverage.meanShiftSmoothingByOTB" =>
-          coverageCollectionRddList += (UUID -> OTB.otbMeanShiftSmoothing(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, thres = args("thres").toFloat,maxiter = args("maxiter").toInt,rangeramp=args("rangeramp").toFloat))
-        case "Coverage.localStatisticExtractionByOTB" =>
-          coverageRddList += (UUID -> OTB.otbLocalStatisticExtraction(sc, coverageRddList(args("input")), channel = args("channel").toInt, radius = args("radius").toInt))
-        case "Coverage.segmentationMeanshiftRasterByOTB" =>
-          coverageRddList += (UUID -> OTB.otbSegmentationMeanshiftRaster(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, thres = args("thres").toFloat, maxiter = args("maxiter").toInt, minsize = args("minsize").toInt))
-        case "Coverage.segmentationMeanshiftVectorByOTB" =>
-          featureRddList += (UUID -> OTB.otbSegmentationMeanshiftVector(sc, coverageRddList(args("input")), spatialr = args("spatialr").toInt, ranger = args("ranger").toFloat, thres = args("thres").toFloat, maxiter = args("maxiter").toInt, minsize = args("minsize").toInt,neighbor = args("neighbor").toBoolean, stitch = args("stitch").toBoolean, v_minsize=args("v_minsize").toInt, simplify=args("simplify").toFloat, tilesize=args("tilesize").toInt, startlabel=args("startlabel").toInt))
-        case "Coverage.segmentationWatershedRasterByOTB" =>
-          coverageRddList += (UUID -> OTB.otbSegmentationWatershedRaster(sc, coverageRddList(args("input")), threshold = args("threshold").toFloat, level = args("level").toFloat))
-        case "Coverage.segmentationWatershedVectorByOTB" =>
-          featureRddList += (UUID -> OTB.otbSegmentationWatershedVector(sc, coverageRddList(args("input")), threshold = args("threshold").toFloat, level = args("level").toFloat, neighbor = args("neighbor").toBoolean, stitch = args("stitch").toBoolean, v_minsize=args("v_minsize").toInt, simplify=args("simplify").toFloat, tilesize=args("tilesize").toInt, startlabel=args("startlabel").toInt))
-        case "Coverage.segmentationMprofilesdRasterByOTB" =>
-          coverageRddList += (UUID -> OTB.otbSegmentationMprofilesdRaster(sc, coverageRddList(args("input")), size = args("size").toInt, start = args("start").toInt, step = args("step").toInt, sigma = args("sigma").toFloat))
-        case "Coverage.segmentationMprofilesdVectorByOTB" =>
-          featureRddList += (UUID -> OTB.otbSegmentationMprofilesVector(sc, coverageRddList(args("input")), size = args("size").toInt, start = args("start").toInt, step = args("step").toInt, sigma = args("sigma").toFloat, neighbor = args("neighbor").toBoolean, stitch = args("stitch").toBoolean, v_minsize=args("v_minsize").toInt, simplify=args("simplify").toFloat, tilesize=args("tilesize").toInt, startlabel=args("startlabel").toInt))
-        case "Coverage.trainImagesRegressionLibSvmByOTB" =>
-          stringList += (UUID -> OTB.otbTrainImagesRegressionLibSvm(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, kernel = args("kernel"), model = args("model"), costc = args("costc").toFloat, gamma = args("gamma").toFloat, coefficient = args("coefficient").toFloat, degree = args("degree").toInt, costnu = args("costnu").toFloat, opt = args("opt").toBoolean, prob = args("prob").toBoolean, epsilon = args("epsilon").toFloat))
-        case "Coverage.trainImagesRegressionDtByOTB" =>
-          stringList += (UUID -> OTB.otbTrainImagesRegressionDt(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, max = args("max").toInt, min = args("min").toInt, ra = args("ra").toFloat, cat = args("cat").toInt, r = args("r").toBoolean, t = args("t").toBoolean))
-        case "Coverage.trainImagesRegressionRfByOTB" =>
-          stringList += (UUID -> OTB.otbTrainImagesRegressionRf(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, max = args("max").toInt, min = args("min").toInt, ra = args("ra").toFloat, cat = args("cat").toInt, var_ = args("var_").toInt, nbtrees = args("nbtrees").toInt, acc = args("acc").toFloat))
-        case "Coverage.trainImagesRegressionKnnbyOTB" =>
-          stringList += (UUID -> OTB.otbTrainImagesRegressionKnn(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, number = args("max").toInt, rule = args("min")))
-        case "Coverage.trainImagesRegressionSharkRfByOTB" =>
-          stringList += (UUID -> OTB.otbTrainImagesRegressionSharkrf(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, nbtrees = args("nbtrees").toInt, nodesize = args("nodesize").toInt, mtry = args("mtry").toInt, oobr = args("oobr").toFloat))
-
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
@@ -803,9 +750,6 @@ object Trigger {
         case "Coverage.univarByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_univar(sc,coverageRddList(args("input"))))
 
-        // SAGA
-        case "Coverage.histogramMatchingBySAGA" =>
-          coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGird")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
 
         // Kernel
         case "Kernel.chebyshev" =>
@@ -1200,53 +1144,39 @@ object Trigger {
         //          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
         //        case "Cube.addStyles" =>
         //          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
-//        case "Cube.load" => {
-//          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
-//            dateTime = isOptionalArg(args, "dateTime")))
-//        }
-//        case "Cube.normalize" => {
-//          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-//            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
-//        }
-//        case "Cube.aggregate" => {
-//          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-//            method = isOptionalArg(args, "method")))
-//        }
+        case "Cube.load" => {
+          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
+            dateTime = isOptionalArg(args, "dateTime")))
+        }
+        case "Cube.normalize" => {
+          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
+        }
+        case "Cube.aggregate" => {
+          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
+            method = isOptionalArg(args, "method")))
+        }
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
-          CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
+          Cube.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
+
+        case "Cube.build" => {
+          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
+          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
+            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
+            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
+        }
+        case "Cube.export" =>
+          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
-        case "Cube.add" =>
-          cubeRDDList += (UUID -> CubeNew.add(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
-        case "Cube.subtract" =>
-          cubeRDDList += (UUID -> CubeNew.subtract(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
-        case "Cube.multiply" =>
-          cubeRDDList += (UUID -> CubeNew.multiply(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
-        case "Cube.divide" =>
-          cubeRDDList += (UUID -> CubeNew.divide(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
-
-
-//        case "Cube.build" => {
-//          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-//          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
-//            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
-//            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
-//        }
-//        case "Cube.export" =>
-//          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
-//        case "Cube.NDVI" =>
-//          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
-//        case "Cube.floodFillAnalysis" =>
-//          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-//            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-//            args("extent"), args("startTime"), args("endTime"))
-        // TrainingDML-AI 新增算子
-        case "Dataset.encoding" =>
-          stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
+          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
+        case "Cube.floodFillAnalysis" =>
+          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
+            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
+            args("extent"), args("startTime"), args("endTime"))
       }
 
 
