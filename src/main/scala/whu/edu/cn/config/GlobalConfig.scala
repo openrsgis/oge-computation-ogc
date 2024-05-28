@@ -126,11 +126,22 @@ object GlobalConfig {
   }
   object OTBConf{
     var OTB_DATA: String = "/mnt/storage/algorithmData/"
-    var OTB_ALGORITHMCODE: String = "cd /root/otb/algorithmCodeByOTB;"
+    var OTB_ALGORITHMCODE: String = "cd /root/otbData/algorithmCodeByOTB;"
     var OTB_HOST: String = "120.48.116.93"
     var OTB_USERNAME: String = "root"
     var OTB_PASSWORD: String = "Ypfamily608!"
     var OTB_PORT: Int = 22
+  }
+
+  //TODO：改为私有云
+  object SAGAConf {
+    var SAGA_DATA: String = "/mnt/SAGA/sagaData/"  // docker挂载目录
+    var SAGA_ALGORITHMCODE: String = "cd /root/sagaData/algorithmBySAGA;"
+    var SAGA_DOCKERDATA: String = "/tmp/saga"   // docker的临时目录
+    var SAGA_HOST: String = "120.48.116.93"
+    var SAGA_USERNAME: String = "root"
+    var SAGA_PASSWORD: String = "Ypfamily608!"
+    var SAGA_PORT: Int = 22
   }
   object Others {
     final var jsonAlgorithms = "/home/ogeStorage/algorithms_ogc.json" //存储json解析文件地址
