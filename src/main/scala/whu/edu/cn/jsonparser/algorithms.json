@@ -4868,6 +4868,434 @@
       }
     ]
   },
+  "Coverage.largeScaleMeanShiftVectorByOTB": {
+    "description": "This application chains together the 4 steps of the MeanShift framework, that is the MeanShiftSmoothing, the LSMSSegmentation, the LSMSSmallRegionsMerging and the LSMSVectorization.In this mode, the application will produce a vector file or database and compute field values for each region",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Radius of the spatial neighborhood for averaging. Higher values will result in more smoothing and higher processing time.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Threshold on spectral signature euclidean distance (expressed in radiometry unit) to consider neighborhood pixel for averaging. Higher values will be less edge-preserving (more similar to simple average in neighborhood), whereas lower values will result in less noise smoothing. Note that this parameter has no effect on processing time.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum Segment Size. If, after the segmentation, a segment is of size strictly lower than this criterion, the segment is merged with the segment that has the closest sepctral signature.",
+        "optional": "True",
+        "default": 50
+      },
+      {
+        "name": "tilesizex",
+        "type": "Int",
+        "description": "Size of tiles along the X-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      },
+      {
+        "name": "tilesizey",
+        "type": "Int",
+        "description": "Size of tiles along the Y-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      }
+    ]
+  },
+  "Coverage.largeScaleMeanShiftRasterByOTB": {
+    "description": "This application chains together the 4 steps of the MeanShift framework, that is the MeanShiftSmoothing, the LSMSSegmentation, the LSMSSmallRegionsMerging and the LSMSVectorization.In this mode, the application will produce a standard labeled raster.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Radius of the spatial neighborhood for averaging. Higher values will result in more smoothing and higher processing time.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Threshold on spectral signature euclidean distance (expressed in radiometry unit) to consider neighborhood pixel for averaging. Higher values will be less edge-preserving (more similar to simple average in neighborhood), whereas lower values will result in less noise smoothing. Note that this parameter has no effect on processing time.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum Segment Size. If, after the segmentation, a segment is of size strictly lower than this criterion, the segment is merged with the segment that has the closest sepctral signature.",
+        "optional": "True",
+        "default": 50
+      },
+      {
+        "name": "tilesizex",
+        "type": "Int",
+        "description": "Size of tiles along the X-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      },
+      {
+        "name": "tilesizey",
+        "type": "Int",
+        "description": "Size of tiles along the Y-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      }
+    ]
+  },
+  "Coverage.meanShiftSmoothingByOTB": {
+    "description": "This application smooths an image using the MeanShift algorithm.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Radius of the spatial neighborhood for averaging. Higher values will result in more smoothing and higher processing time.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Threshold on spectral signature euclidean distance (expressed in radiometry unit) to consider neighborhood pixel for averaging. Higher values will be less edge-preserving (more similar to simple average in neighborhood), whereas lower values will result in less noise smoothing. Note that this parameter has no effect on processing time.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "thres",
+        "type": "Float",
+        "description": "Algorithm will stop if update of average spectral signature and spatial position is below this threshold.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "maxiter",
+        "type": "Int",
+        "description": "Algorithm will stop if convergence threshold is not met after the maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "rangeramp",
+        "type": "Float",
+        "description": "Vary the range radius linearly with the central pixel intensity (experimental).",
+        "optional": "True",
+        "default": 0
+      }
+    ]
+  },
+  "Coverage.localStatisticExtractionByOTB": {
+    "description": "Computes local statistical moments on every pixel in the selected channel of the input image",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index (1 based)",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The computational window radius.",
+        "optional": "True",
+        "default": 3
+      }
+    ]
+  },
+  "Coverage.segmentationMeanshiftRasterByOTB": {
+    "description": "Performs segmentation of an image, and output a raster file.OTB implementation of the Mean-Shift algorithm (multi-threaded).",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Spatial radius of the neighborhood.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Range radius defining the radius (expressed in radiometry unit) in the multispectral space.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "thres",
+        "type": "Float",
+        "description": "Algorithm iterative scheme will stop if mean-shift vector is below this threshold or if iteration number reached maximum number of iterations.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "maxiter",
+        "type": "Int",
+        "description": "Algorithm iterative scheme will stop if convergence hasn’t been reached after the maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum size of a region (in pixel unit) in segmentation. Smaller clusters will be merged to the neighboring cluster with the closest radiometry. If set to 0 no pruning is done.",
+        "optional": "True",
+        "default": 100
+      }
+    ]
+  },
+  "Coverage.segmentationMeanshiftVectorByOTB": {
+    "description": "Performs segmentation of an image, and output a vector file.OTB implementation of the Mean-Shift algorithm (multi-threaded)",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Spatial radius of the neighborhood.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Range radius defining the radius (expressed in radiometry unit) in the multispectral space.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "thres",
+        "type": "Float",
+        "description": "Algorithm iterative scheme will stop if mean-shift vector is below this threshold or if iteration number reached maximum number of iterations.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "maxiter",
+        "type": "Int",
+        "description": "Algorithm iterative scheme will stop if convergence hasn’t been reached after the maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum size of a region (in pixel unit) in segmentation. Smaller clusters will be merged to the neighboring cluster with the closest radiometry. If set to 0 no pruning is done.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "neighbor",
+        "type": "Boolean",
+        "description": "Activate 8-Neighborhood connectivity (default is 4).",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "stitch",
+        "type": "Boolean",
+        "description": "Scan polygons on each side of tiles and stitch polygons which connect by more than one pixel",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Objects whose size is below the minimum object size (area in pixels) will be ignored during vectorization.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "simplify",
+        "type": "Float",
+        "description": "Simplify polygons according to a given tolerance (in pixel). This option allows reducing the size of the output file or database.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "tilesize",
+        "type": "Int",
+        "description": "User defined tiles size for tile-based segmentation. Optimal tile size is selected according to available RAM if null.",
+        "optional": "True",
+        "default": 1024
+      },
+      {
+        "name": "startlabel",
+        "type": "Int",
+        "description": "Starting value of the geometry index field",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.segmentationWatershedRasterByOTB": {
+    "description": "Performs segmentation of an image, and output a raster file.The traditional watershed algorithm. The height function is the gradient magnitude of the amplitude (square root of the sum of squared bands).",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "threshold",
+        "type": "Float",
+        "description": "Depth threshold Units in percentage of the maximum depth in the image.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "level",
+        "type": "Float",
+        "description": "flood level for generating the merge tree from the initial segmentation (between 0 and 1).",
+        "optional": "True",
+        "default": 0.1
+      }
+    ]
+  },
+  "Coverage.segmentationWatershedVectorByOTB": {
+    "description": "Performs segmentation of an image, and output a vector file.The traditional watershed algorithm. The height function is the gradient magnitude of the amplitude (square root of the sum of squared bands).",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "threshold",
+        "type": "Float",
+        "description": "Depth threshold Units in percentage of the maximum depth in the image.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "level",
+        "type": "Float",
+        "description": "flood level for generating the merge tree from the initial segmentation (between 0 and 1).",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "neighbor",
+        "type": "Boolean",
+        "description": "Activate 8-Neighborhood connectivity (default is 4).",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "stitch",
+        "type": "Boolean",
+        "description": "Scan polygons on each side of tiles and stitch polygons which connect by more than one pixel",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Objects whose size is below the minimum object size (area in pixels) will be ignored during vectorization.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "simplify",
+        "type": "Float",
+        "description": "Simplify polygons according to a given tolerance (in pixel). This option allows reducing the size of the output file or database.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "tilesize",
+        "type": "Int",
+        "description": "User defined tiles size for tile-based segmentation. Optimal tile size is selected according to available RAM if null.",
+        "optional": "True",
+        "default": 1024
+      },
+      {
+        "name": "startlabel",
+        "type": "Int",
+        "description": "Starting value of the geometry index field",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.segmentationMprofilesdRasterByOTB": {
+    "description": "Performs segmentation of an image, and output a raster file.Segmentation based on morphological profiles.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "Int",
+        "description": "Size of the profiles.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "Initial radius of the structuring element (in pixels).",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "step",
+        "type": "Int",
+        "description": "Radius step along the profile (in pixels)",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "float",
+        "type": "Float",
+        "description": "Profiles values under the threshold will be ignored.",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
   "Coverage.histogramMatchingBySAGA": {
     "description": "This tool alters the values of a grid so that its value distribution (its histogram), matches that of a reference grid. The first method simply uses arithmetic mean and standard deviation for adjustment, which usually is sufficient for normal distributed values. The second method performs a more precise adjustment based on the grids' histograms.",
     "returns": "Coverage",
@@ -4909,6 +5337,405 @@
 
 
 
+  "Coverage.segmentationMprofilesdVectorByOTB": {
+    "description": "Performs segmentation of an image, and output a vector file.Segmentation based on morphological profiles.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "Int",
+        "description": "Size of the profiles.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "Initial radius of the structuring element (in pixels).",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "step",
+        "type": "Int",
+        "description": "Radius step along the profile (in pixels)",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "float",
+        "type": "Float",
+        "description": "Profiles values under the threshold will be ignored.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "neighbor",
+        "type": "Boolean",
+        "description": "Activate 8-Neighborhood connectivity (default is 4).",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "stitch",
+        "type": "Boolean",
+        "description": "Scan polygons on each side of tiles and stitch polygons which connect by more than one pixel",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Objects whose size is below the minimum object size (area in pixels) will be ignored during vectorization.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "simplify",
+        "type": "Float",
+        "description": "Simplify polygons according to a given tolerance (in pixel). This option allows reducing the size of the output file or database.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "tilesize",
+        "type": "Int",
+        "description": "User defined tiles size for tile-based segmentation. Optimal tile size is selected according to available RAM if null.",
+        "optional": "True",
+        "default": 1024
+      },
+      {
+        "name": "startlabel",
+        "type": "Int",
+        "description": "Starting value of the geometry index field",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionLibSvmByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting SVM classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "SVM Kernel Type.",
+        "optional": "True",
+        "default": "linear"
+      },
+      {
+        "name": "model",
+        "type": "String",
+        "description": "Type of SVM formulation.",
+        "optional": "True",
+        "default": "epssvr"
+      },
+      {
+        "name": "costc",
+        "type": "Float",
+        "description": "SVM models have a cost parameter C (1 by default) to control the trade-off between training errors and forcing rigid margins.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "gamma",
+        "type": "Float",
+        "description": "Set gamma parameter in poly/rbf/sigmoid kernel function",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "coefficient",
+        "type": "Float",
+        "description": "Set coef0 parameter in poly/sigmoid kernel function",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "degree",
+        "type": "Int",
+        "description": "Set polynomial degree in poly kernel function",
+        "optional": "True",
+        "default": 3
+      },
+      {
+        "name": "costnu",
+        "type": "Float",
+        "description": "Cost parameter Nu, in the range 0..1, the larger the value, the smoother the decision.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "opt",
+        "type": "Boolean",
+        "description": "SVM parameters optimization flag.",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "prob",
+        "type": "Boolean",
+        "description": "Probability estimation flag.",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "epsilon",
+        "type": "Int",
+        "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
+        "optional": "True",
+        "default": 10
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionDtByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting Decision tree classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "max",
+        "type": "Int",
+        "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "min",
+        "type": "Int",
+        "description": "If the number of samples in a node is smaller than this parameter, then this node will not be split.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "ra",
+        "type": "Float",
+        "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split further.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "cat",
+        "type": "Int",
+        "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "r",
+        "type": "Boolean",
+        "description": "If true, then a pruning will be harsher. This will make a tree more compact and more resistant to the training data noise but a bit less accurate.",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "t",
+        "type": "Boolean",
+        "description": "If true, then pruned branches are physically removed from the tree.",
+        "optional": "True",
+        "default": false
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionRfByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting Random forests classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "max",
+        "type": "Int",
+        "description": "The depth of the tree. A low value will likely underfit and conversely a high value will likely overfit. The optimal value can be obtained using cross validation or other suitable methods.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "min",
+        "type": "Int",
+        "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "ra",
+        "type": "Float",
+        "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "cat",
+        "type": "Int",
+        "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "var_",
+        "type": "Int",
+        "description": "The size of the subset of features, randomly selected at each tree node, that are used to find the best split(s). If you set it to 0, then the size will be set to the square root of the total number of features.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "nbtrees",
+        "type":  "Int",
+        "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "acc",
+        "type":  "Float",
+        "description": "Sufficient accuracy (OOB error).",
+        "optional": "True",
+        "default": 0.01
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionKnnByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting KNN classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "number",
+        "type": "Int",
+        "description": "The number of neighbors to use.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "rule",
+        "type": "String",
+        "description": "Decision rule for regression output",
+        "optional": "True",
+        "default": "mean"
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionSharkrfByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting Shark Random forests classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "nbtrees",
+        "type": "Int",
+        "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "nodesize",
+        "type": "Int",
+        "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+        "optional": "True",
+        "default": 25
+      },
+      {
+        "name": "mtry",
+        "type": "Int",
+        "description": "The number of features (variables) which will be tested at each node in order to compute the split. If set to zero, the square root of the number of features is used.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "oobr",
+        "type": "Float",
+        "description": "Set the fraction of the original training dataset to use as the out of bag sample.A good default value is 0.66.",
+        "optional": "True",
+        "default": 0.66
+      }
+    ]
+  },
 
 
   "Coverage.neighborsByGrass": {
