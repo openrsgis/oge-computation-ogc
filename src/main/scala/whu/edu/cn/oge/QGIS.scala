@@ -1916,7 +1916,6 @@ object QGIS {
 
     makeRasterRDDFromTif(sc, input, writePath)
   }
---input
   /**
    * Extracts contour lines from any GDAL-supported elevation raster.
    *
