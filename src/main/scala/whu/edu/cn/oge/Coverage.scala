@@ -11,7 +11,7 @@ import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import io.minio.{GetObjectArgs, MinioClient, UploadObjectArgs}
+import io.minio.{GetObjectArgs, MinioClient, PutObjectArgs, UploadObjectArgs}
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -39,9 +39,8 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
-import java.io.File
-import scala.sys.process._
-import java.nio.file.Paths
+import java.io.{File, FileInputStream}
+import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.mutable
@@ -3532,12 +3531,18 @@ object Coverage {
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
     val file :File = new File(saveFilePath)
+    val inputStream = new FileInputStream(file)
 
     val client: MinioClient = MinIOUtil.getMinioClient
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-//    client.putObject("oge-user",path,file)
+    val obj: JSONObject = new JSONObject
+    obj.put("path",path.toString)
+    PostSender.shelvePost("info",obj)
+//    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
+    inputStream.close()
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
 
+//    client.putObject(PutObjectArgs)
     //    minIOUtil.releaseMinioClient(client)
 
   }

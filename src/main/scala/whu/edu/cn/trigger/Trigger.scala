@@ -1486,6 +1486,8 @@ object Trigger {
 
     try {
       lambda(sc, optimizedDagMap("0"))
+      //返回正常信息
+      PostSender.sendShelvedPost()
     } catch {
       case e: Throwable =>
         val errorJson = new JSONObject
