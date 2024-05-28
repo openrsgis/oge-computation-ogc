@@ -4854,6 +4854,7 @@
   },
   "Coverage.obtainUTMZoneFromGeoPointByOTB": {
     "description": "UTM zone determination from a geographic point.",
+    "returns": "void",
     "args": [
       {
         "name": "lat",
