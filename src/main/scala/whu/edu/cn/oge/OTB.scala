@@ -28,7 +28,7 @@ object OTB {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    print("ok")
+    print("ok!")
 
   }
 
