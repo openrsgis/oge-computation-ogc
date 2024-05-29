@@ -92,12 +92,13 @@ object Trigger {
     }
   }
 
+  // 实际的CoverageCollection的加载函数
   def isActioned(implicit sc: SparkContext, UUID: String, typeEnum: OGEClassType): Unit = {
     typeEnum match {
       case OGEClassType.CoverageCollection =>
         if (!coverageCollectionRddList.contains(UUID)) {
           val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
-          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level))
+          coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax()))
         }
     }
   }
@@ -155,12 +156,16 @@ object Trigger {
         // Service
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
-          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox")))
+          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverage" =>
           if(args("coverageID").startsWith("myData/")){
             coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
-          } else {
+          } else if(args("coverageID").startsWith("OGE_Case_Data/")){
+            coverageReadFromUploadFile = true
+            coverageRddList += (UUID -> Coverage.loadCoverageFromCaseData(sc, args("coverageID"),  dagId))
+          }
+          else {
             coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
@@ -192,6 +197,14 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
         case "Filter.bounds" =>
           lazyFunc += (UUID -> (funcName, args))
+
+        // Sheet
+        case "Sheet.getcellValue" =>
+          stringList += (UUID -> Sheet.getcellValue(SheetList(args("sheet")), args("row").toInt, args("col").toInt))
+        case "Sheet.slice" =>
+          SheetList += (UUID -> Sheet.slice(SheetList(args("sheet")), args("sliceRows").toBoolean, args("start").toInt, args("end").toInt))
+        case "Sheet.filterByHeader" =>
+          SheetList += (UUID -> Sheet.filterByHeader(SheetList(args("sheet")), args("condition"), args("value")))
 
         // CoverageCollection
         case "CoverageCollection.filter" =>
@@ -229,10 +242,10 @@ object Trigger {
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> CoverageCollection.cat(coverageCollectionRddList(args("coverageCollection"))))
         case "CoverageCollection.map" =>
-          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
-            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
-            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
-          }
+//          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
+//            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
+//            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
+//          }
         case "CoverageCollection.addStyles" =>
           if (isBatch == 0) {
             isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
@@ -479,7 +492,7 @@ object Trigger {
         case "Coverage.reproject" =>
           coverageRddList += (UUID -> Coverage.reproject(coverage = coverageRddList(args("coverage")), crs = CRS.fromEpsgCode(args("crsCode").toInt), scale = args("resolution").toDouble))
         case "Coverage.resample" =>
-          coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toInt, mode = args("mode")))
+          coverageRddList += (UUID -> Coverage.resample(coverage = coverageRddList(args("coverage")), level = args("level").toDouble, mode = args("mode")))
         case "Coverage.gradient" =>
           coverageRddList += (UUID -> Coverage.gradient(coverage = coverageRddList(args("coverage"))))
         case "Coverage.clip" =>
@@ -653,6 +666,25 @@ object Trigger {
           stringList += (UUID -> OTB.otbTrainImagesRegressionKnn(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, number = args("max").toInt, rule = args("min")))
         case "Coverage.trainImagesRegressionSharkRfByOTB" =>
           stringList += (UUID -> OTB.otbTrainImagesRegressionSharkrf(sc, input_predict = coverageCollectionRddList(args("input_predict")),input_label = coverageCollectionRddList(args("input_predict")), ratio = args("ratio").toFloat, nbtrees = args("nbtrees").toInt, nodesize = args("nodesize").toInt, mtry = args("mtry").toInt, oobr = args("oobr").toFloat))
+        case "Feature.ComputeOGRLayersFeaturesStatisticsByOTB" =>
+          featureRddList += (UUID -> OTB.otbComputeOGRLayersFeaturesStatistics(sc, featureRddList(args("inshp")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], feat = args("feat").split(",").toList))
+        case "Coverage.KMeansClassificationByOTB" =>
+          coverageRddList += (UUID -> OTB.otbKMeansClassification(sc, coverageRddList(args("in")), nc = args("nc").toInt, ts = args("ts").toInt, maxit = args("maxit").toInt, centroidsIn = args("centroids.in"), centroidsOut = args("centroids.out"), ram = args("ram").toInt, sampler = args("sampler").split(",").toList, samplerPeriodicJitter = args("samplerPeriodicJitter").toInt, vm = args("vm"), nodatalabel = args("nodatalabel").toInt, cleanup = args("cleanup").toBoolean, rand = args("rand").toInt))
+        case "Coverage.SOMClassificationByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSOMClassification(sc, coverageRddList(args("in")), vm = args("vm"), tp = args("tp").toFloat, ts = args("ts").toInt, som = args("som"), sx = args("sx").toInt, sy = args("sy").toInt, nx = args("nx").toInt, ny = args("ny").toInt, ni = args("ni").toInt, bi = args("bi").toFloat, bf = args("bf").toFloat, iv = args("iv").toFloat, rand = args("rand").toInt, ram = args("ram").toInt))
+        case "Coverage.SampleExtractionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSampleExtraction(sc, in = coverageRddList(args("in")), vec = featureRddList(args("vec")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], outfield = args("outfield").split(",").toList, outfieldPrefixName = args("outfield.prefix.name"), outfieldListNames = args("outfield.list.names").split(",").toList, field = args("field"), layer = args("layer").toInt, ram = args("ram").toInt))
+        case "Coverage.SampleSelectionByOTB" =>
+          coverageRddList += (UUID -> OTB.otbSampleSelection(sc, in = coverageRddList(args("in")), mask = coverageRddList(args("mask")), vec = featureRddList(args("vec")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], instats = args("instats"), outrates = args("outrates"), sampler = args("sampler").split(",").toList, samplerPeriodicJitter = args("sampler.periodic.jitter").toInt, strategy = args("strategy"), strategyByclassIn = args("strategy.byclass.in"), strategyConstantNb = args("strategy.constant.nb").toInt, strategyPercentP = args("strategy.percent.p").toFloat, strategyTotalV = args("strategy.total.v").toInt, field = args("field"), layer = args("layer").toInt, elevDem = args("elev.dem"), elevGeoid = args("elev.geoid"), elevDefault = args("elev.default").toFloat, rand = args("rand").toInt, ram = args("ram").toInt))
+        case "Coverage.OpticalCalibrationByOTB" =>
+          coverageRddList += (UUID -> OTB.otbOpticalCalibration(sc, in = coverageRddList(args("in")), level = args("level"), milli = args("milli").toBoolean, clamp = args("clamp").toBoolean, acquiMinute = args("acqui.minute").toInt, acquiHour = args("acqui.hour").toInt, acquiDay = args("acqui.day").toInt, acquiMonth = args("acqui.month").toInt, acquiYear = args("acqui.year").toInt, acquiFluxnormcoeff = args("acqui.fluxnormcoeff").toFloat, acquiSolardistance = args("acqui.solardistance").toFloat, acquiSunElev = args("acqui.sun.elev").toFloat, acquiSunAzim = args("acqui.sun.azim").toFloat, acquiViewElev = args("acqui.view.elev").toFloat, acquiViewAzim = args("acqui.view.azim").toFloat, acquiGainbias = args("acqui.gainbias"), acquiSolarilluminations = args("acqui.solarilluminations"), atmoAerosol = args("atmo.aerosol"), atmoOz = args("atmo.oz").toFloat, atmoWa = args("atmo.wa").toFloat, atmoPressure = args("atmo.pressure").toFloat, atmoOpt = args("atmo.opt").toFloat, atmoAeronet = args("atmo.aeronet"), atmoRsr = args("atmo.rsr"), atmoRadius = args("atmo.radius").toInt, atmoPixsize = args("atmo.pixsize").toFloat, ram = args("ram").toInt))
+        case "Coverage.OrthoRectificationByOTB" =>
+          coverageRddList += (UUID -> OTB.otbOrthoRectification(sc, in = coverageRddList(args("in")), map = args("map"), mapUtmZone = args("map.utm.zone").toInt, mapUtmNorthhem = args("map.utm.northhem").toBoolean, mapEpsgCode = args("map.epsg.code").toInt, outputsMode = args("outputs.mode"), outputsUlx = args("outputs.ulx").toDouble, outputsUly = args("outputs.uly").toDouble, outputsSizex = args("outputs.sizex").toInt, outputsSizey = args("outputs.sizey").toInt, outputsSpacingx = args("outputs.spacingx").toDouble, outputsSpacingy = args("outputs.spacingy").toDouble, outputsLrx = args("outputs.lrx").toDouble, outputsLry = args("outputs.lry").toDouble, outputsOrtho = args("outputs.ortho"), outputsIsotropic = args("outputs.isotropic").toBoolean, outputsDefault = args("outputs.default").toDouble, elevDem = args("elev.dem"), elevGeoid = args("elev.geoid"), elevDefault = args("elev.default").toFloat, interpolator = args("interpolator"), interpolatorBcoRadius = args("interpolator.bco.radius").toInt, optRpc = args("opt.rpc").toInt, optRam = args("opt.ram").toInt, optGridspacing = args("opt.gridspacing").toDouble))
+        case "Coverage.PansharpeningByOTB" =>
+          coverageRddList += (UUID -> OTB.otbPansharpening(sc, inp = coverageRddList(args("inp")), inxs = coverageRddList(args("inxs")), method = args("method"), methodRcsRadiusx = args("method.rcs.radiusx").toInt, methodRcsRadiusy = args("method.rcs.radiusy").toInt, methodLmvmRadiusx = args("method.lmvm.radiusx").toInt, methodLmvmRadiusy = args("method.lmvm.radiusy").toInt, methodBayesLambda = args("method.bayes.lambda").toFloat, methodBayesS = args("method.bayes.s").toFloat, ram = args("ram").toInt))
+        case "Coverage.BundleToPerfectSensorByOTB" =>
+          coverageRddList += (UUID -> OTB.otbBundleToPerfectSensor(sc, inp = coverageRddList(args("inp")), inxs = coverageRddList(args("inxs")), elevDem = args("elev.dem"), elevGeoid = args("elev.geoid"), elevDefault = args("elev.default").toFloat, mode = args("mode"), method = args("method"), methodRcsRadiusx = args("method.rcs.radiusx").toInt, methodRcsRadiusy = args("method.rcs.radiusy").toInt, methodLmvmRadiusx = args("method.lmvm.radiusx").toInt, methodLmvmRadiusy = args("method.lmvm.radiusy").toInt, methodBayesLambda = args("method.bayes.lambda").toFloat, methodBayesS = args("method.bayes.s").toFloat, lms = args("lms").toFloat, interpolator = args("interpolator"), interpolatorBcoRadius = args("interpolator.bco.radius").toInt, fv = args("fv").toFloat, ram = args("ram").toInt))
+
 
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
@@ -867,7 +899,7 @@ object Trigger {
 
         // Terrain
         case "Coverage.slope" =>
-          coverageRddList += (UUID -> Coverage.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt, zFactor = args("Z_factor").toDouble))
+          coverageRddList += (UUID -> Coverage.slope(coverage = coverageRddList(args("coverage")), radius = args("radius").toDouble.toInt, zFactor = args("Z_factor").toDouble))
         case "Coverage.aspect" =>
           coverageRddList += (UUID -> Coverage.aspect(coverage = coverageRddList(args("coverage")), radius = args("radius").toInt))
 
@@ -1350,6 +1382,13 @@ object Trigger {
               curWorkTaskJson: String,
               curDagID: String, userID: String): Unit = {
 
+    // Check if the SparkContext is active
+    if(sc.isStopped){
+      sendPost(DAG_ROOT_URL + "/deliverUrl","ERROR")
+      println("Send to boot!")
+      return
+    }
+
     /* sc,workTaskJson,workID,originTaskID */
     workTaskJson = curWorkTaskJson
     dagId = curDagID
@@ -1573,7 +1612,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragecollection.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line

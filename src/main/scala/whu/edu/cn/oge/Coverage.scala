@@ -1,6 +1,8 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
+import com.baidubce.services.bos.BosClient
+import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -30,13 +32,15 @@ import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.windowExtent
+import whu.edu.cn.trigger.Trigger.{dagId, layerName, windowExtent}
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
-import whu.edu.cn.util._
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
+import java.io.File
+import scala.sys.process._
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
@@ -44,6 +48,12 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
+import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RemapWithDefaultValue, RemapWithoutDefaultValue}
+
+import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe._
+import java.io.File
+import sys.process._
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -74,12 +84,11 @@ object Coverage {
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val minIOUtil = MinIOUtil
-        val client: MinioClient = minIOUtil.getMinioClient
+        val client: BosClient = BosClientUtil_scala.getClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union,queryGeometry)
+            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -99,9 +108,10 @@ object Coverage {
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
-      val client: MinioClient = MinIOUtil.getMinioClient
+
+      val client: BosClient = BosClientUtil_scala.getClient
       par.map(t => {
-        getTileBuf(client, t)
+        BosCOGUtil.getTileBuf(client, t)
       })
     })
     println("Loading data Time: " + (System.currentTimeMillis() - time1))
@@ -594,11 +604,11 @@ object Coverage {
    * @return Coverage
    */
   def addNum(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-             i: AnyVal): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    i match {
+             i: Any*): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    i.head match {
       case (x: Int) => coverageTemplate(coverage, (tile) => Add(tile, x))
       case (x: Double) => coverageTemplate(coverage, (tile) => Add(tile, x))
-      case _ => throw new IllegalArgumentException("Invalid arguments")
+      case _ => coverageTemplate(coverage, (tile) => Add(tile, i.head.asInstanceOf[Double]))
     }
   }
 
@@ -1429,9 +1439,9 @@ object Coverage {
    */
   def slice(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), start: Int, end: Int):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    if (start < 0 || start > coverage._1.count())
+    if (start < 0 || start > coverage._1.first()._1.measurementName.length)
       throw new IllegalArgumentException("Start index out of range!")
-    if (end < 0 || end > coverage._1.count())
+    if (end < 0 || end > coverage._1.first()._1.measurementName.length)
       throw new IllegalArgumentException("End index out of range!")
     if (end <= start)
       throw new IllegalArgumentException("End index should be greater than the start index!")
@@ -1861,6 +1871,20 @@ object Coverage {
     (convolvedRDD, coverage._2)
   }
 
+  def filter(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), min: Double,max: Double):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    (coverage._1.map(t =>{
+      (t._1,t._2.mapBands((_,tile) =>{
+        tile.mapDouble(p =>{
+          if(p>max || p<min){
+            doubleNODATA
+          }else{
+            p
+          }
+        })
+      }))
+    }),coverage._2)
+  }
+
   /**
    * Calculates the aspect of the coverage.
    *
@@ -2112,7 +2136,7 @@ object Coverage {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
     val extent = coverage._2.extent.reproject(coverage._2.crs, crs)
-    val tl = TileLayout(((extent.xmax - extent.xmin) / (scale * 256)).toInt, ((extent.ymax - extent.ymin) / (scale * 256)).toInt, 256, 256)
+    val tl = TileLayout(math.max(1,((extent.xmax - extent.xmin) / (scale * 256)).toInt), math.max(1,((extent.ymax - extent.ymin) / (scale * 256)).toInt), 256, 256)
     val ld = LayoutDefinition(extent, tl)
     val cellType = coverage._2.cellType
     val srcLayout = coverage._2.layout
@@ -2185,7 +2209,7 @@ object Coverage {
 
 
     //val level: Int = COGUtil.tileDifference
-    val level: Int = targetZoom - COGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
+    val level: Int = targetZoom - BosCOGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
 
     if (level > 0) {
       val time1 = System.currentTimeMillis()
@@ -2239,32 +2263,43 @@ object Coverage {
    * @return
    */
 
-  def resample(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), level: Int, mode: String
-              ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO 重采样
+  def resample(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), level: Double, mode: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = { // TODO 重采样
     val resampleMethod = mode match {
       case "Bilinear" => geotrellis.raster.resample.Bilinear
       case "CubicConvolution" => geotrellis.raster.resample.CubicConvolution
       case _ => geotrellis.raster.resample.NearestNeighbor
     }
-    if (level > 0) {
-      val coverageResampled = coverage._1.map(t => {
-        (t._1, t._2.resample(t._2.cols * (1 << level), t._2.rows * (1 << level), resampleMethod))
-      })
-      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, coverage._2.tileCols * (1 << level),
-        coverage._2.tileRows * (1 << level))), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    }
-    else if (level < 0) {
-      val coverageResampled = coverage._1.map(t => {
-        val cols = if ((t._2.cols / (1 << -level)) > 1) Math.ceil(t._2.cols.toDouble / (1 << -level)).toInt else 1
-        val rows = if ((t._2.rows / (1 << -level)) > 1) Math.ceil(t._2.rows.toDouble / (1 << -level)).toInt else 1
-        (t._1, t._2.resample(cols, rows, resampleMethod))
-      })
-      var tileCols = if ((coverage._2.tileCols / (1 << -level)) > 1) Math.ceil(coverage._2.tileCols.toDouble / (1 << -level)).toInt else 1
-      var tileRows = if ((coverage._2.tileRows / (1 << -level)) > 1) Math.ceil(coverage._2.tileRows.toDouble / (1 << -level)).toInt else 1
-      (coverageResampled, TileLayerMetadata(coverage._2.cellType, LayoutDefinition(coverage._2.extent, TileLayout(coverage._2.layoutCols, coverage._2.layoutRows, tileCols,
-        tileRows)), coverage._2.extent, coverage._2.crs, coverage._2.bounds))
-    }
-    else coverage
+    val crs = coverage._2.crs
+    val band = coverage._1.first()._1.measurementName
+    val resampleTime = Instant.now.getEpochSecond
+    val coverageTileRDD = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val extent = coverage._2.extent.reproject(coverage._2.crs, crs)
+    val tl = TileLayout(math.max(1, (coverage._2.layout.layoutCols*level).toInt), math.max(1, (coverage._2.layout.layoutCols*level).toInt), 256, 256)
+    val ld = LayoutDefinition(extent, tl)
+    val cellType = coverage._2.cellType
+    val srcLayout = coverage._2.layout
+    val srcExtent = coverage._2.extent
+    val srcCrs = coverage._2.crs
+    val srcBounds = coverage._2.bounds
+    val newBounds = Bounds(SpatialKey(0, 0), SpatialKey(srcBounds.get.maxKey.spatialKey._1, srcBounds.get.maxKey.spatialKey._2))
+    val rasterMetaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
+      (t._1.spaceTimeKey.spatialKey, t._2)
+    })
+    val coverageTileLayerRDD = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData);
+
+
+
+    val (_, coverageTileRDDWithMetadata) = coverageTileLayerRDD.reproject(crs, ld, resampleMethod)
+    val coverageNoband = (coverageTileRDDWithMetadata.mapValues(tile => tile: MultibandTile), coverageTileRDDWithMetadata.metadata)
+    val newBound = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(coverageNoband._2.tileLayout.layoutCols - 1, coverageNoband._2.tileLayout.layoutRows - 1, resampleTime))
+    val newMetadata = TileLayerMetadata(coverageNoband._2.cellType, coverageNoband._2.layout, coverageNoband._2.extent, coverageNoband._2.crs, newBound)
+    val coverageRDD = coverageNoband.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, resampleTime), band), t._2)
+    })
+    (coverageRDD, newMetadata)
   }
 
   /**
@@ -2832,15 +2867,12 @@ object Coverage {
     if (bandNumber <= 3) {
       if (bandNumber == 1) {
         resultCoverage = addStyles1Band(coverageVis2, visParam)
-        resultCoverage
       }
       else if (bandNumber == 2) {
         resultCoverage = addStyles2Band(coverageVis2, visParam)
-        resultCoverage
       }
       else {
         resultCoverage = addStyles3Band(coverageVis2, visParam)
-        resultCoverage
       }
     }
     else {
@@ -2856,8 +2888,8 @@ object Coverage {
         val coverageVis3: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = selectBands(coverageVis1, bandsDefault)
         resultCoverage = addStyles3Band(coverageVis3, visParam)
       }
-      resultCoverage
     }
+    Coverage.toUint8(resultCoverage)
   }
 
   def addStyles1Band(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -2912,20 +2944,8 @@ object Coverage {
           }))), coverageOneBand._2)
         }
         // 设置默认的调色盘
-        var paletteVis: List[String] = List[String]("#808080", "#949494", "#a9a9a9", "#bdbebd", "#d3d3d3", "#e9e9e9")
-        if (visParam.getPalette.nonEmpty) {
-          paletteVis = visParam.getPalette
-        }
-        val colorVis: List[Color] = paletteVis.map(t => {
-          try {
-            val color: Color = Color.valueOf(t)
-            color
-          } catch {
-            case e: Exception =>
-              throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
-          }
-        })
-        val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
+//        var paletteVis: List[String] = List[String]("#808080", "#949494", "#a9a9a9", "#bdbebd", "#d3d3d3", "#e9e9e9")
+        // 计算最大最小值
         val minMaxBand: (Double, Double) = coverageOneBand._1.map(t => {
           val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
           if (noNaNArray.nonEmpty) {
@@ -2935,32 +2955,71 @@ object Coverage {
             (Int.MaxValue.toDouble, Int.MinValue.toDouble)
           }
         }).reduce((a, b) => (math.min(a._1, b._1), math.max(a._2, b._2)))
+        if (visParam.getPalette.nonEmpty) {
+          val paletteVis = visParam.getPalette
+          val colorVis: List[Color] = paletteVis.map(t => {
+            try {
+              val color: Color = Color.valueOf(t)
+              color
+            } catch {
+              case e: Exception =>
+                throw new IllegalArgumentException(s"输入颜色有误，无法识别$t")
+            }
+          })
+          val colorRGB: List[(Double, Double, Double)] = colorVis.map(t => (t.getRed, t.getGreen, t.getBlue))
 
-        val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
-        coverageOneBand = (coverageOneBand._1.map(t => {
-          val bandR: Tile = t._2.bands(0).mapDouble(d => {
-            if (d.isNaN)
-              d
-            else
-              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._1
-          })
-          val bandG: Tile = t._2.bands(0).mapDouble(d => {
-            if (d.isNaN)
-              d
-            else
-              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._2
-          })
-          val bandB: Tile = t._2.bands(0).mapDouble(d => {
-            if (d.isNaN)
-              d
-            else
-              255.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._3
-          })
-          (t._1, MultibandTile(bandR, bandG, bandB))
-        }), coverageOneBand._2)
+
+          val interval: Double = (minMaxBand._2 - minMaxBand._1) / colorRGB.length
+          coverageOneBand = (coverageOneBand._1.map(t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._1
+            })
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._2
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * colorRGB(math.min(((d - minMaxBand._1) / interval).toInt, colorRGB.length - 1))._3
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }), coverageOneBand._2)
+        }
+        else {
+          //没有调色盘的情况,保证值不为0
+          val interval: Double = (minMaxBand._2 - minMaxBand._1)
+          coverageOneBand = (coverageOneBand._1.map(t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval
+            })
+            val bandG: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }), coverageOneBand._2)
+        }
       }
     }
-    makeTIFF(coverageOneBand,"coverage")
+//    makeTIFF(coverageOneBand,"coverage")
     coverageOneBand
 
   }
@@ -2986,6 +3045,47 @@ object Coverage {
       // 判断数量是否对应
       if (minNum > 2 || maxNum > 2 || gainNum > 2 || biasNum > 2 || gammaNum > 2) {
         throw new IllegalArgumentException("波段数量与参数数量不相符")
+      }
+      else if(minNum == 0 && maxNum == 0 && gainNum == 0 && biasNum == 0){
+        //默认渲染模式
+        // 计算最大最小值，分别为波段1、2的最小值和波段1、2的最大值
+        val minMaxBand: (Double, Double, Double, Double) = coverageTwoBand._1.map(t => {
+          val noNaNArray1: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+          val noNaNArray2: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+          if (noNaNArray1.nonEmpty && noNaNArray1.nonEmpty) {
+            (noNaNArray1.min, noNaNArray2.min, noNaNArray1.max,noNaNArray2.max)
+          }
+          else {
+            (Int.MaxValue.toDouble, Int.MaxValue.toDouble, Int.MinValue.toDouble, Int.MinValue.toDouble)
+          }
+        }).reduce((a, b) => (math.min(a._1, b._1), math.min(a._2, b._2), math.max(a._3,b._3), math.max(a._4,b._4)))
+
+        // 拉伸图像
+        val interval1: Double = (minMaxBand._3 - minMaxBand._1)
+        val interval2: Double = (minMaxBand._4 - minMaxBand._2)
+
+        coverageTwoBand = (coverageTwoBand._1.map(
+          t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval1
+            })
+            val bandG: Tile = t._2.bands(1).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._2) / interval2
+            })
+            val bandB: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                63
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }),coverageTwoBand._2)
       }
       else {
         // 判断是否同时存在最小最大值拉伸和线性拉伸
@@ -3110,8 +3210,50 @@ object Coverage {
       if (minNum * maxNum != 0 && gainNum * biasNum != 0) {
         throw new IllegalArgumentException("不能同时设置min/max和gain/bias")
       }
+      else if (minNum == 0 && maxNum == 0 && gainNum == 0 && biasNum == 0) {
+        //默认渲染模式
+        // 计算最大最小值，分别为波段1、2、3的最小值和波段1、2、3的最大值
+        val minMaxBand: (Double, Double, Double, Double, Double, Double) = coverageThreeBand._1.map(t => {
+          val noNaNArray1: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
+          val noNaNArray2: Array[Double] = t._2.bands(1).toArrayDouble().filter(!_.isNaN)
+          val noNaNArray3: Array[Double] = t._2.bands(2).toArrayDouble().filter(!_.isNaN)
+          if (noNaNArray1.nonEmpty && noNaNArray1.nonEmpty) {
+            (noNaNArray1.min, noNaNArray2.min, noNaNArray3.min,noNaNArray1.max, noNaNArray2.max, noNaNArray3.max)
+          }
+          else {
+            (Int.MaxValue.toDouble, Int.MaxValue.toDouble,Int.MaxValue.toDouble, Int.MinValue.toDouble, Int.MinValue.toDouble,Int.MinValue.toDouble)
+          }
+        }).reduce((a, b) => (math.min(a._1, b._1), math.min(a._2, b._2), math.min(a._3, b._3), math.max(a._4, b._4), math.max(a._5, b._5), math.max(a._6, b._6)))
+
+        // 拉伸图像
+        val interval1: Double = (minMaxBand._4 - minMaxBand._1)
+        val interval2: Double = (minMaxBand._5 - minMaxBand._2)
+        val interval3: Double = (minMaxBand._6 - minMaxBand._3)
+        coverageThreeBand = (coverageThreeBand._1.map(
+          t => {
+            val bandR: Tile = t._2.bands(0).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._1) / interval1
+            })
+            val bandG: Tile = t._2.bands(1).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._2) / interval2
+            })
+            val bandB: Tile = t._2.bands(2).mapDouble(d => {
+              if (d.isNaN)
+                d
+              else
+                1 + 254.0 * (d - minMaxBand._3) / interval3
+            })
+            (t._1, MultibandTile(bandR, bandG, bandB))
+          }), coverageThreeBand._2)
+      }
       else {
-        // 如果存在线性拉伸
+        // 如果存在线性拉伸,默认为线性拉伸
         if (gainNum * biasNum != 0) {
           var gainVis0: Double = 1.0
           var gainVis1: Double = 1.0
@@ -3282,13 +3424,13 @@ object Coverage {
 
     //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
     //     大于0是上采样
-    if (COGUtil.tileDifference > 0) {
+    if (BosCOGUtil.tileDifference > 0) {
       // 首先对其进行上采样
       // 上采样必须考虑范围缩小，不然非常占用内存
-      val levelUp: Int = COGUtil.tileDifference
+      val levelUp: Int = BosCOGUtil.tileDifference
       val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
       val extentOrigin: Extent = coverageTMS.metadata.layout.extent
-      val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
+      val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
       val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
       val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
       val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
@@ -3300,6 +3442,16 @@ object Coverage {
 
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
+    val on_the_fly_path = GlobalConfig.Others.ontheFlyStorage + Trigger.dagId
+    val file = new File(on_the_fly_path)
+    if (file.exists() && file.isDirectory) {
+      println("Delete existed on_the_fly_path")
+      val command = s"rm -rf $on_the_fly_path"
+      println(command)
+      //调用系统命令
+      command.!!
+    }
+
 
     val outputPath: String = GlobalConfig.Others.ontheFlyStorage
     // Create the attributes store that will tell us information about our catalog.
@@ -3307,9 +3459,9 @@ object Coverage {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
-    if (zoom < Trigger.level) {
-      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-    }
+//    if (zoom < Trigger.level) {
+//      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+//    }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
       if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
@@ -3326,7 +3478,14 @@ object Coverage {
           }
         }
         else {
-          writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+          try{
+            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+          } catch {
+            case e:Exception =>
+              println(e)
+              println("Continue writing Layers!")
+          }
+
         }
       }
     }
@@ -3369,19 +3528,16 @@ object Coverage {
     reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
 
 
-    // 绝对路径需要加oge-user-test/{userId}/result/folder/fileName.tiff
+    // 上传文件
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-    val minIOUtil = MinIOUtil
-    val client: MinioClient = minIOUtil.getMinioClient
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+    val file :File = new File(saveFilePath)
 
+    val client: BosClient = BosClientUtil_scala.getClient2
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
-    //通知前端
-    val outJsonObject: JSONObject = new JSONObject
-    outJsonObject.put("dagId", Trigger.dagId)
-    outJsonObject.put("state", "success")
-    sendPost(DAG_ROOT_URL + "/updateStatus", outJsonObject.toJSONString)
+    client.putObject("oge-user",path,file)
+//    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+
     //    minIOUtil.releaseMinioClient(client)
 
   }
@@ -3395,19 +3551,49 @@ object Coverage {
       path = s"$userID/$coverageId.tiff"
     }
 
-    val client = MinIOUtil.getMinioClient
+    val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.tiff"
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
-
-    val outputPath = Paths.get(filePath)
-
-
-    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
-    inputStream.close()
-    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    val tempfile = new File(filePath)
+    val getObjectRequest = new GetObjectRequest("oge-user",path)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest,tempfile)
+    println(filePath)
+    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
   }
 
+  def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val path = "/" + coverageId
+    val client = BosClientUtil_scala.getClient
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}.tiff"
+    val getObjectRequest = new GetObjectRequest("ogebos",path)
+    val tempfile = new File(filePath)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest,tempfile)
+    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+
+    coverage
+  }
+
+}
+
+object Relection extends App {
+
+
+  def reflectCall(functionName: String, params: Any*): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val mirror = ru.runtimeMirror(getClass.getClassLoader)
+
+    // 获取并调用方法
+    val moduleSymbol = ru.typeOf[Coverage.type].termSymbol.asModule
+    val moduleMirror = mirror.reflectModule(moduleSymbol)
+
+    val methodSymbol = ru.typeOf[Coverage.type].decl(ru.TermName(functionName)).asMethod
+    val instanceMirror = mirror.reflect(moduleMirror.instance)
+    val methodMirror = instanceMirror.reflectMethod(methodSymbol)
+    methodMirror(params: _*).asInstanceOf[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
+  }
 }
