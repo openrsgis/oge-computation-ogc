@@ -805,7 +805,7 @@ object Trigger {
 
         // SAGA
         case "Coverage.histogramMatchingBySAGA" =>
-          coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGird")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
+          coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
 
         // Kernel
         case "Kernel.chebyshev" =>
