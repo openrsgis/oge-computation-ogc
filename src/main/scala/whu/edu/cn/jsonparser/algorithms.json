@@ -5315,21 +5315,21 @@
         "type": "Int",
         "description": "Available Choices: [0] standard deviation [1] histogram Default: 1",
         "optional": "True",
-        "default": "1"
+        "default": 1
       },
       {
         "name": "nclasses",
         "type": "Int",
         "description": "Number of histogram classes for internal use.",
         "optional": "True",
-        "default": "100"
+        "default": 100
       },
       {
         "name": "maxSamples",
         "type": "Int",
         "description": "If set to zero all data will be used to build the histograms.",
         "optional": "True",
-        "default": "1000000"
+        "default": 1000000
       }
     ]
   },
