@@ -10,7 +10,7 @@ import io.minio.{GetObjectArgs, MinioClient}
 import org.locationtech.jts.geom.{Envelope, Geometry}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.{CoverageMetadata, RawTile}
-import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
+import whu.edu.cn.config.GlobalConfig.MinioConf.{MINIO_BUCKET_NAME, MINIO_HEAD_SIZE}
 
 import java.io.{ByteArrayOutputStream, InputStream}
 import scala.collection.mutable
@@ -69,8 +69,8 @@ object COGUtil {
     val geoTrans: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val cell: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]] = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]]
-    try{
-      val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
+//    try{
+      val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket(MINIO_BUCKET_NAME).`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
       // Read data from stream
       val outStream = new ByteArrayOutputStream
       val buffer = new Array[Byte](MINIO_HEAD_SIZE)
@@ -88,10 +88,10 @@ object COGUtil {
       parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
 
       getTiles(level, coverageMetadata, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, windowsExtent, queryGeometry)
-    }catch {
-      case e:Exception =>
-        throw new Exception("Minio中不存在相应数据，请联系管理员检查数据完整性。")
-    }
+//    }catch {
+//      case e:Exception =>
+//        throw new Exception("Minio中不存在相应数据，请联系管理员检查数据完整性。")
+//    }
 
   }
 
@@ -102,7 +102,7 @@ object COGUtil {
    * @return
    */
   def getTileBuf(minioClient: MinioClient, tile: RawTile): RawTile = {
-    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
+    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket(MINIO_BUCKET_NAME).`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
     val outStream = new ByteArrayOutputStream
     val buffer = new Array[Byte](tile.getOffset.toInt)
     var len = 0

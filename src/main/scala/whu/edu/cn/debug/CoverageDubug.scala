@@ -92,7 +92,7 @@ object CoverageDubug {
     "hostname".run
   }
   def test1(implicit sc: SparkContext):Unit={
-    val c0 = Coverage.load(sc,"ASTGTM_N28E056","ASTER_GDEM_DEM30",10)
+    val c0 = Coverage.load(sc,"ASTGTM_N00E011","ASTER_GDEM_DEM30",10)
     println("Finish")
   }
 
