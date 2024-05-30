@@ -17,11 +17,15 @@ object SAGA {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
+    val grid = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
+    val reference = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
+    val matchedRDD  = sagaHistogramMatching(sc, grid, reference)
+    saveRasterRDDToTif(matchedRDD, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
   val algorithmData = GlobalConfig.SAGAConf.SAGA_DATA
   val algorithmDockerData = GlobalConfig.SAGAConf.SAGA_DOCKERDATA
-  val algorithmCode = GlobalConfig.SAGAConf.SAGA_ALGORITHMCODE
+//  val algorithmCode = GlobalConfig.SAGAConf.SAGA_ALGORITHMCODE
   val host = GlobalConfig.SAGAConf.SAGA_HOST
   val userName = GlobalConfig.SAGAConf.SAGA_USERNAME
   val password = GlobalConfig.SAGAConf.SAGA_PASSWORD
@@ -29,7 +33,7 @@ object SAGA {
 
   def sagaHistogramMatching(implicit sc: SparkContext,
                             grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                            referenceGird: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                            referenceGrid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                             method: Int = 1,
                             nclasses: Int = 100,
                             maxSamples: Int = 1000000):
@@ -46,7 +50,7 @@ object SAGA {
     val outputTiffPath2 = algorithmData + "sagaHistogramMatchingReference_" + time + ".tif"
     val writePath = algorithmData + "sagaHistogramMatching_" + time + "_out.tif"
     saveRasterRDDToTif(grid, outputTiffPath1)
-    saveRasterRDDToTif(referenceGird, outputTiffPath2)
+    saveRasterRDDToTif(referenceGrid, outputTiffPath2)
     // docker路径
     val dockerTiffPath1 = algorithmDockerData + "sagaHistogramMatchingGrid_" + time + ".tif"
     val dockerTiffPath2 = algorithmDockerData + "sagaHistogramMatchingReference_" + time + ".tif"
@@ -55,7 +59,8 @@ object SAGA {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""docker run -v /mnt/SAGA/sagaData/:/tmp/saga -it saga-gis /bin/bash;${algorithmCode}python otb_edgeextraction.py -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
+//        raw"""docker run -v /mnt/SAGA/sagaData/:/tmp/saga -it saga-gis /bin/bash;saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin val st =
+        raw"""docker start 567ea3ad13c2;docker exec upbeat_bartik saga_cmd   -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
