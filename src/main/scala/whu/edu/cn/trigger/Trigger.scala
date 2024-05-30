@@ -672,10 +672,7 @@ object Trigger {
           coverageRddList += (UUID -> OTB.otbKMeansClassification(sc, coverageRddList(args("in")), nc = args("nc").toInt, ts = args("ts").toInt, maxit = args("maxit").toInt, centroidsIn = args("centroids.in"), centroidsOut = args("centroids.out"), ram = args("ram").toInt, sampler = args("sampler").split(",").toList, samplerPeriodicJitter = args("samplerPeriodicJitter").toInt, vm = args("vm"), nodatalabel = args("nodatalabel").toInt, cleanup = args("cleanup").toBoolean, rand = args("rand").toInt))
         case "Coverage.SOMClassificationByOTB" =>
           coverageRddList += (UUID -> OTB.otbSOMClassification(sc, coverageRddList(args("in")), vm = args("vm"), tp = args("tp").toFloat, ts = args("ts").toInt, som = args("som"), sx = args("sx").toInt, sy = args("sy").toInt, nx = args("nx").toInt, ny = args("ny").toInt, ni = args("ni").toInt, bi = args("bi").toFloat, bf = args("bf").toFloat, iv = args("iv").toFloat, rand = args("rand").toInt, ram = args("ram").toInt))
-        case "Coverage.SampleExtractionByOTB" =>
-          coverageRddList += (UUID -> OTB.otbSampleExtraction(sc, in = coverageRddList(args("in")), vec = featureRddList(args("vec")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], outfield = args("outfield").split(",").toList, outfieldPrefixName = args("outfield.prefix.name"), outfieldListNames = args("outfield.list.names").split(",").toList, field = args("field"), layer = args("layer").toInt, ram = args("ram").toInt))
-        case "Coverage.SampleSelectionByOTB" =>
-          coverageRddList += (UUID -> OTB.otbSampleSelection(sc, in = coverageRddList(args("in")), mask = coverageRddList(args("mask")), vec = featureRddList(args("vec")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], instats = args("instats"), outrates = args("outrates"), sampler = args("sampler").split(",").toList, samplerPeriodicJitter = args("sampler.periodic.jitter").toInt, strategy = args("strategy"), strategyByclassIn = args("strategy.byclass.in"), strategyConstantNb = args("strategy.constant.nb").toInt, strategyPercentP = args("strategy.percent.p").toFloat, strategyTotalV = args("strategy.total.v").toInt, field = args("field"), layer = args("layer").toInt, elevDem = args("elev.dem"), elevGeoid = args("elev.geoid"), elevDefault = args("elev.default").toFloat, rand = args("rand").toInt, ram = args("ram").toInt))
+
         case "Coverage.OpticalCalibrationByOTB" =>
           coverageRddList += (UUID -> OTB.otbOpticalCalibration(sc, in = coverageRddList(args("in")), level = args("level"), milli = args("milli").toBoolean, clamp = args("clamp").toBoolean, acquiMinute = args("acqui.minute").toInt, acquiHour = args("acqui.hour").toInt, acquiDay = args("acqui.day").toInt, acquiMonth = args("acqui.month").toInt, acquiYear = args("acqui.year").toInt, acquiFluxnormcoeff = args("acqui.fluxnormcoeff").toFloat, acquiSolardistance = args("acqui.solardistance").toFloat, acquiSunElev = args("acqui.sun.elev").toFloat, acquiSunAzim = args("acqui.sun.azim").toFloat, acquiViewElev = args("acqui.view.elev").toFloat, acquiViewAzim = args("acqui.view.azim").toFloat, acquiGainbias = args("acqui.gainbias"), acquiSolarilluminations = args("acqui.solarilluminations"), atmoAerosol = args("atmo.aerosol"), atmoOz = args("atmo.oz").toFloat, atmoWa = args("atmo.wa").toFloat, atmoPressure = args("atmo.pressure").toFloat, atmoOpt = args("atmo.opt").toFloat, atmoAeronet = args("atmo.aeronet"), atmoRsr = args("atmo.rsr"), atmoRadius = args("atmo.radius").toInt, atmoPixsize = args("atmo.pixsize").toFloat, ram = args("ram").toInt))
         case "Coverage.OrthoRectificationByOTB" =>
@@ -686,6 +683,10 @@ object Trigger {
           coverageRddList += (UUID -> OTB.otbBundleToPerfectSensor(sc, inp = coverageRddList(args("inp")), inxs = coverageRddList(args("inxs")), elevDem = args("elev.dem"), elevGeoid = args("elev.geoid"), elevDefault = args("elev.default").toFloat, mode = args("mode"), method = args("method"), methodRcsRadiusx = args("method.rcs.radiusx").toInt, methodRcsRadiusy = args("method.rcs.radiusy").toInt, methodLmvmRadiusx = args("method.lmvm.radiusx").toInt, methodLmvmRadiusy = args("method.lmvm.radiusy").toInt, methodBayesLambda = args("method.bayes.lambda").toFloat, methodBayesS = args("method.bayes.s").toFloat, lms = args("lms").toFloat, interpolator = args("interpolator"), interpolatorBcoRadius = args("interpolator.bco.radius").toInt, fv = args("fv").toFloat, ram = args("ram").toInt))
 
 
+        case "Coverage.SampleExtractionByOTB" =>
+          featureRddList += (UUID -> OTB.otbSampleExtraction(sc, in = coverageRddList(args("in")), vec = featureRddList(args("vec")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], outfield = args("outfield").split(",").toList, outfieldPrefixName = args("outfield.prefix.name"), outfieldListNames = args("outfield.list.names").split(",").toList, field = args("field"), layer = args("layer").toInt, ram = args("ram").toInt))
+        case "Coverage.SampleSelectionByOTB" =>
+          featureRddList += (UUID -> OTB.otbSampleSelection(sc, in = coverageRddList(args("in")), mask = coverageRddList(args("mask")), vec = featureRddList(args("vec")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], instats = args("instats"), outrates = args("outrates"), sampler = args("sampler").split(",").toList, samplerPeriodicJitter = args("sampler.periodic.jitter").toInt, strategy = args("strategy"), strategyByclassIn = args("strategy.byclass.in"), strategyConstantNb = args("strategy.constant.nb").toInt, strategyPercentP = args("strategy.percent.p").toFloat, strategyTotalV = args("strategy.total.v").toInt, field = args("field"), layer = args("layer").toInt, elevDem = args("elev.dem"), elevGeoid = args("elev.geoid"), elevDefault = args("elev.default").toFloat, rand = args("rand").toInt, ram = args("ram").toInt))
         case "Coverage.aspectByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalAspect(sc, coverageRddList(args("input")), band = args("band").toInt, trigAngle = args("trigAngle"), zeroFlat = args("zeroFlat"), computeEdges = args("computeEdges"), zevenbergen = args("zevenbergen"), options = args("options")))
         case "Coverage.contourByGDAL" =>
@@ -765,6 +766,10 @@ object Trigger {
         case "Coverage.calNPP" =>
           coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),coverageRddList(args("paraData"))))
 
+        // SAGA
+        case "Coverage.histogramMatchingBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
+
         //    GRASS
         case "Coverage.neighborsByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_neighbors(sc, input = coverageRddList(args("input")), size = args("size"), method = args("method")))
@@ -834,10 +839,6 @@ object Trigger {
           coverageRddList += (UUID -> GrassUtil.r_random(sc,coverageRddList(args("input")),args("npoints")))
         case "Coverage.univarByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_univar(sc,coverageRddList(args("input"))))
-
-        // SAGA
-        case "Coverage.histogramMatchingBySAGA" =>
-          coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
 
         // Kernel
         case "Kernel.chebyshev" =>

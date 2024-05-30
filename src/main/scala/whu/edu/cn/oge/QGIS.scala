@@ -707,6 +707,7 @@ object QGIS {
       "1" -> "1"
     ).getOrElse(strategy, "0")
 
+
     val defaultDirectionInput: String = Map(
       "0" -> "0",
       "1" -> "1",

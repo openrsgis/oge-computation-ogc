@@ -17,6 +17,10 @@ object SAGA {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
+    val grid = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
+    val reference = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
+    val matchedRDD  = sagaHistogramMatching(sc, grid, reference)
+    saveRasterRDDToTif(matchedRDD, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
   val algorithmData = GlobalConfig.SAGAConf.SAGA_DATA
@@ -56,7 +60,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
       val st =
 //        raw"""docker run -v /mnt/SAGA/sagaData/:/tmp/saga -it saga-gis /bin/bash;saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin val st =
-        raw"""start docker 567ea3ad13c2;docker exec -it saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
+        raw"""docker start 567ea3ad13c2;docker exec upbeat_bartik saga_cmd   -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
