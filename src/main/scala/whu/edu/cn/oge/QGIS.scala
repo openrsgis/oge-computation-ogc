@@ -108,10 +108,7 @@ object QGIS {
       case e: Exception =>
         e.printStackTrace()
     }
-
-
     makeRasterRDDFromTif(sc, input, writePath)
-
   }
 
   /**
