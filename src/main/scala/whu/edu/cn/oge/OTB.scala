@@ -1178,7 +1178,7 @@ object OTB {
   def otbSampleExtraction(implicit sc: SparkContext, in: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                           vec: RDD[(String, (Geometry, mutable.Map[String, Any]))], outfield: List[String] = List("prefix"), outfieldPrefixName: String = "value_",
                           outfieldListNames: List[String], field: String, layer: Int = 0, ram: Int = 256
-                         )
+                         ):(RDD[(String, (Geometry, mutable.Map[String, Any]))])
   = {
 
     val time = System.currentTimeMillis()
@@ -1236,7 +1236,7 @@ object OTB {
                          vec: RDD[(String, (Geometry, mutable.Map[String, Any]))], instats: String, outrates: String, sampler: List[String] = List("periodic"), samplerPeriodicJitter: Int = 0,
                          strategy: String = "smallest", strategyByclassIn: String, strategyConstantNb: Int, strategyPercentP: Float = 0.5f, strategyTotalV: Int = 1000, field: String, layer: Int = 0,
                          elevDem: String, elevGeoid: String, elevDefault: Float = 0, rand: Int, ram: Int = 256
-                        ) = {
+                        ):(RDD[(String, (Geometry, mutable.Map[String, Any]))]) = {
     val time = System.currentTimeMillis()
 
     val outputTiffPath = algorithmData + "otbSOMClassification_" + time + ".tif"
