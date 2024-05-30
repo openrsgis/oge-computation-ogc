@@ -133,8 +133,8 @@ object GlobalConfig {
   //TODO：改为私有云
   object SAGAConf {
     var SAGA_DATA: String = "/mnt/SAGA/sagaData/"  // docker挂载目录
-    var SAGA_ALGORITHMCODE: String = "cd /root/sagaData/algorithmBySAGA;"
-    var SAGA_DOCKERDATA: String = "/tmp/saga"   // docker的临时目录
+    var SAGA_ALGORITHMCODE: String = "cd /root/sagaData/algorithmBySAGA/;"
+    var SAGA_DOCKERDATA: String = "/tmp/saga/"   // docker的临时目录
     var SAGA_HOST: String = "120.48.116.93"
     var SAGA_USERNAME: String = "root"
     var SAGA_PASSWORD: String = "Ypfamily608!"
