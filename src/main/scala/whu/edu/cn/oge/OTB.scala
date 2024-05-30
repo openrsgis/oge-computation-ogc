@@ -28,7 +28,6 @@ object OTB {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    print("ok")
 
   }
 
@@ -1179,7 +1178,7 @@ object OTB {
   def otbSampleExtraction(implicit sc: SparkContext, in: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                           vec: RDD[(String, (Geometry, mutable.Map[String, Any]))], outfield: List[String] = List("prefix"), outfieldPrefixName: String = "value_",
                           outfieldListNames: List[String], field: String, layer: Int = 0, ram: Int = 256
-                         ): RDD[(String, (Geometry, mutable.Map[String, Any]))]
+                         )
   = {
 
     val time = System.currentTimeMillis()
@@ -1237,7 +1236,7 @@ object OTB {
                          vec: RDD[(String, (Geometry, mutable.Map[String, Any]))], instats: String, outrates: String, sampler: List[String] = List("periodic"), samplerPeriodicJitter: Int = 0,
                          strategy: String = "smallest", strategyByclassIn: String, strategyConstantNb: Int, strategyPercentP: Float = 0.5f, strategyTotalV: Int = 1000, field: String, layer: Int = 0,
                          elevDem: String, elevGeoid: String, elevDefault: Float = 0, rand: Int, ram: Int = 256
-                        ): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+                        ) = {
     val time = System.currentTimeMillis()
 
     val outputTiffPath = algorithmData + "otbSOMClassification_" + time + ".tif"
@@ -1298,10 +1297,14 @@ object OTB {
    * @return Output calibrated image filename
    */
   def otbOpticalCalibration(implicit sc: SparkContext, in: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                            level: String = "toa", milli: Boolean = false, clamp: Boolean = true, acquiMinute: Int = 0, acquiHour: Int = 12, acquiDay: Int = 1, acquiMonth: Int = 1,
-                            acquiYear: Int = 2000, acquiFluxnormcoeff: Float, acquiSolardistance: Float, acquiSunElev: Float = 90, acquiSunAzim: Float = 0, acquiViewElev: Float = 90,
-                            acquiViewAzim: Float = 0, acquiGainbias: String, acquiSolarilluminations: String, atmoAerosol: String = "noaersol", atmoOz: Float = 0, atmoWa: Float = 2.5f
-                            , atmoPressure: Float = 1030, atmoOpt: Float = 0.2f, atmoAeronet: String, atmoRsr: String, atmoRadius: Int = 2, atmoPixsize: Float = 1, ram: Int = 256
+                            level: String = "toa", milli: Boolean = false, clamp: Boolean = true, acquiMinute: Int = 0, acquiHour: Int = 12,
+                            acquiDay: Int = 1, acquiMonth: Int = 1,
+                            acquiYear: Int = 2000, acquiFluxnormcoeff: Float, acquiSolardistance: Float,
+                            acquiSunElev: Float = 90, acquiSunAzim: Float = 0, acquiViewElev: Float = 90,
+                            acquiViewAzim: Float = 0, acquiGainbias: String, acquiSolarilluminations: String,
+                            atmoAerosol: String = "noaersol", atmoOz: Float = 0, atmoWa: Float = 2.5f
+                            , atmoPressure: Float = 1030, atmoOpt: Float = 0.2f, atmoAeronet: String,
+                            atmoRsr: String, atmoRadius: Int = 2, atmoPixsize: Float = 1, ram: Int = 256
                            ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
@@ -1378,7 +1381,7 @@ object OTB {
       versouSshUtil(host, userName, password, port)
       val st =
         raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --io.in $outputTiffPath --map $map --map.utm.zone $mapUtmZone --map.utm.northhem $mapUtmNorthhem
-             --map.epsg.code $mapEpsgCode --outputs.mode $outputsMode --outputs.ulx $outputsUlx --outputs.uly $outputsUly --outputs.sizex $outputsSizex --outputs.sizey $outputsSizey
+           --map.epsg.code $mapEpsgCode --outputs.mode $outputsMode --outputs.ulx $outputsUlx --outputs.uly $outputsUly --outputs.sizex $outputsSizex --outputs.sizey $outputsSizey
              --outputs.spacingx $outputsSpacingx --outputs.spacingy $outputsSpacingy --outputs.lrx $outputsLrx --outputs.lry $outputsLry --outputs.ortho $outputsOrtho
              --outputs.isotropic $outputsIsotropic --outputs.default $outputsDefault --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --interpolator $interpolator
              --interpolator.bco.radius $interpolatorBcoRadius --opt.rpc $optRpc --opt.ram $optRam --opt.gridspacing $optGridspacing --out "$writePath"""".stripMargin
@@ -1423,11 +1426,7 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate otb;${algorithmCode}python otb_pansharpening.py --inp $outputTiffPath_p --inxs $outputTiffPath_in    --method $method --method.rcs.radiusx $methodRcsRadiusx --method.rcs.radiusy
-             $methodRcsRadiusy --method.lmvm.radiusx $methodLmvmRadiusx --method.lmvm.radiusy $methodLmvmRadiusy --method.bayes.lambda
-             $methodBayesLambda --method.bayes.s $methodBayesS --ram $ram --out "$writePath"""".stripMargin
-
-
+        raw"""conda activate otb;${algorithmCode}python otb_pansharpening.py --inp $outputTiffPath_p --inxs $outputTiffPath_in    --method $method --method.rcs.radiusx $methodRcsRadiusx --method.rcs.radiusy $methodRcsRadiusy --method.lmvm.radiusx $methodLmvmRadiusx --method.lmvm.radiusy $methodLmvmRadiusy --method.bayes.lambda $methodBayesLambda --method.bayes.s $methodBayesS --ram $ram --out "$writePath"""".stripMargin
       println(s"st = $st")
       runCmd(st, "UTF-8")
 
@@ -1476,15 +1475,13 @@ object OTB {
     saveRasterRDDToTif(inxs, outputTiffPath_in)
     try {
       versouSshUtil(host, userName, password, port)
-      val st =
-        raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid
-         --elev.default $elevDefault --mode $mode --method $method --method.rcs.radiusx $methodRcsRadiusx --method.rcs.radiusy $methodRcsRadiusy --method.lmvm.radiusx $methodLmvmRadiusx
-         --method.lmvm.radiusy $methodLmvmRadiusy --method.bayes.lambda $methodBayesLambda --method.bayes.s $methodBayesS --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
-
-
+     val st = method match{
+       case "rcs" =>  raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method --method.rcs.radiusx $methodRcsRadiusx --method.rcs.radiusy $methodRcsRadiusy --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "lmvm" =>  raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --method.lmvm.radiusx $methodLmvmRadiusx --method.lmvm.radiusy $methodLmvmRadiusy  --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "bayes" =>  raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --method.bayes.lambda $methodBayesLambda --method.bayes.s $methodBayesS --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+     }
       println(s"st = $st")
       runCmd(st, "UTF-8")
-
     } catch {
       case e: Exception =>
         e.printStackTrace()
