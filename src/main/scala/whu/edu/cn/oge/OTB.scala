@@ -1380,7 +1380,7 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --io.in $outputTiffPath --map $map --map.utm.zone $mapUtmZone --map.utm.northhem $mapUtmNorthhem --map.epsg.code $mapEpsgCode --outputs.mode $outputsMode --outputs.ulx $outputsUlx --outputs.uly $outputsUly --outputs.sizex $outputsSizex --outputs.sizey $outputsSizey --outputs.spacingx $outputsSpacingx --outputs.spacingy $outputsSpacingy --outputs.lrx $outputsLrx --outputs.lry $outputsLry --outputs.ortho $outputsOrtho   --outputs.isotropic $outputsIsotropic --outputs.default $outputsDefault --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --interpolator $interpolator    --interpolator.bco.radius $interpolatorBcoRadius --opt.rpc $optRpc --opt.ram $optRam --opt.gridspacing $optGridspacing --out "$writePath"""".stripMargin
+        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --io.in $outputTiffPath --map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode --outputs.mode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy --outputsLrx $outputsLrx --outputsLry $outputsLry --outputsOrtho $outputsOrtho   --outputsIsotropic $outputsIsotropic --outputsDefault $outputsDefault --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --interpolator $interpolator    --interpolatorBcoRadius $interpolatorBcoRadius --optRpc $optRpc --optRam $optRam --optGridspacing $optGridspacing --out "$writePath"""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1471,13 +1471,13 @@ object OTB {
     saveRasterRDDToTif(inxs, outputTiffPath_in)
     try {
       versouSshUtil(host, userName, password, port)
-//     val st = method match{
-//       case "rcs" =>  raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method --method.rcs.radiusx $methodRcsRadiusx --method.rcs.radiusy $methodRcsRadiusy --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
-//       case "lmvm" =>  raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --method.lmvm.radiusx $methodLmvmRadiusx --method.lmvm.radiusy $methodLmvmRadiusy  --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
-//       case "bayes" =>  raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --method.bayes.lambda $methodBayesLambda --method.bayes.s $methodBayesS --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
-//     }
-      val st=
-     raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+     val st = interpolator match{
+       case "bco" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator --interpolatorBcoRadius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "nn" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator  --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "linear" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator  --fv $fv --ram $ram --out "$writePath"""".stripMargin
+     }
+//      val st=
+//     raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
 
 println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1487,7 +1487,6 @@ println(s"st = $st")
     }
     makeChangedRasterRDDFromTif(sc, writePath)
   }
-
 }
 
 
