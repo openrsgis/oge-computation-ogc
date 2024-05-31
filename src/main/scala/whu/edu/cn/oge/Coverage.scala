@@ -3405,114 +3405,195 @@ object Coverage {
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
+//  def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+//    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
+//      reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(Trigger.level))
+//    } else {
+//      coverage
+//    }, visParam)
+//
+//    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+//    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+//    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
+//    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
+//    val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverageVis._1.map(t => {
+//      (t._1.spaceTimeKey.spatialKey, t._2)
+//    })
+//
+//    var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
+//
+//    //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
+//    //     大于0是上采样
+//    if (BosCOGUtil.tileDifference > 0) {
+//      // 首先对其进行上采样
+//      // 上采样必须考虑范围缩小，不然非常占用内存
+//      val levelUp: Int = BosCOGUtil.tileDifference
+//      val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
+//      val extentOrigin: Extent = coverageTMS.metadata.layout.extent
+//      val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
+//      val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
+//      val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
+//      val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
+//
+//      val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
+//      val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
+//      coverageTMS = coverageTMS.reproject(coverageTMS.metadata.crs, layoutNew)._2
+//    }
+//
+//    val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+//      coverageTMS.reproject(tmsCrs, layoutScheme)
+//    val on_the_fly_path = GlobalConfig.Others.ontheFlyStorage + Trigger.dagId
+//    val file = new File(on_the_fly_path)
+//    if (file.exists() && file.isDirectory) {
+//      println("Delete existed on_the_fly_path")
+//      val command = s"rm -rf $on_the_fly_path"
+//      println(command)
+//      //调用系统命令
+//      command.!!
+//    }
+//
+//
+//    val outputPath: String = GlobalConfig.Others.ontheFlyStorage
+//    // Create the attributes store that will tell us information about our catalog.
+//    val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+//    // Create the writer that we will use to store the tiles in the local catalog.
+//    val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+//
+////    if (zoom < Trigger.level) {
+////      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+////    }
+//
+//    Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+//      if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
+//        val layerId: LayerId = LayerId(Trigger.dagId, z)
+//        println(layerId)
+//        // If the layer exists already, delete it out before writing
+//        if (attributeStore.layerExists(layerId)) {
+//          //        new FileLayerManager(attributeStore).delete(layerId)
+//          try {
+//            writer.overwrite(layerId, rdd)
+//          } catch {
+//            case e: Exception =>
+//              e.printStackTrace()
+//          }
+//        }
+//        else {
+//          try{
+//            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+//          } catch {
+//            case e:Exception =>
+//              println(e)
+//              println("Continue writing Layers!")
+//          }
+//
+//        }
+//      }
+//    }
+//
+//    // 回调服务
+//    val jsonObject: JSONObject = new JSONObject
+//    val rasterJsonObject: JSONObject = new JSONObject
+//    if (visParam.getFormat == "png") {
+//      rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.png")
+//    }
+//    else {
+//      rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
+//    }
+////    jsonObject.put("raster", rasterJsonObject)
+////
+////    val outJsonObject: JSONObject = new JSONObject
+////    outJsonObject.put("workID", Trigger.dagId)
+////    outJsonObject.put("json", jsonObject)
+//
+//    PostSender.shelvePost("raster",rasterJsonObject)
+//
+////    println("outputJSON: ", outJsonObject.toJSONString)
+//
+////    if (sc.master.contains("local")) {
+////      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
+////    }
+//
+//  }
+
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
       reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(Trigger.level))
     } else {
       coverage
     }, visParam)
 
-    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
-    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
-    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
-    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
+
     val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverageVis._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     })
 
+
+    val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
+    val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(
+      coverageVis._2.cellType,
+      coverageVis._2.layout,
+      coverageVis._2.extent,
+      coverageVis._2.crs,
+      newBounds
+    )
+
+
     var coverageTMS: MultibandTileLayerRDD[SpatialKey] = MultibandTileLayerRDD(coverageNoTimeBand, rasterMetaData)
 
-    //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
-    //     大于0是上采样
-    if (BosCOGUtil.tileDifference > 0) {
-      // 首先对其进行上采样
-      // 上采样必须考虑范围缩小，不然非常占用内存
-      val levelUp: Int = BosCOGUtil.tileDifference
-      val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
-      val extentOrigin: Extent = coverageTMS.metadata.layout.extent
-      val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
-      val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
-      val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
-      val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
-
-      val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
-      val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
-      coverageTMS = coverageTMS.reproject(coverageTMS.metadata.crs, layoutNew)._2
-    }
-
+    // 重新投影到EPSG:3857
+    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
+
+    // 准备存储路径
     val on_the_fly_path = GlobalConfig.Others.ontheFlyStorage + Trigger.dagId
     val file = new File(on_the_fly_path)
     if (file.exists() && file.isDirectory) {
       println("Delete existed on_the_fly_path")
       val command = s"rm -rf $on_the_fly_path"
       println(command)
-      //调用系统命令
       command.!!
     }
 
-
+    // 创建文件属性存储和文件图层写入器
     val outputPath: String = GlobalConfig.Others.ontheFlyStorage
-    // Create the attributes store that will tell us information about our catalog.
     val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
-    // Create the writer that we will use to store the tiles in the local catalog.
     val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
-//    if (zoom < Trigger.level) {
-//      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-//    }
-
+    // 写入金字塔层级数据
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
       if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
         val layerId: LayerId = LayerId(Trigger.dagId, z)
         println(layerId)
-        // If the layer exists already, delete it out before writing
         if (attributeStore.layerExists(layerId)) {
-          //        new FileLayerManager(attributeStore).delete(layerId)
           try {
             writer.overwrite(layerId, rdd)
           } catch {
-            case e: Exception =>
-              e.printStackTrace()
+            case e: Exception => e.printStackTrace()
           }
-        }
-        else {
-          try{
+        } else {
+          try {
             writer.write(layerId, rdd, ZCurveKeyIndexMethod)
           } catch {
-            case e:Exception =>
+            case e: Exception =>
               println(e)
               println("Continue writing Layers!")
           }
-
         }
       }
     }
 
-    // 回调服务
-    val jsonObject: JSONObject = new JSONObject
+    // 发送回调服务
     val rasterJsonObject: JSONObject = new JSONObject
     if (visParam.getFormat == "png") {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.png")
-    }
-    else {
+    } else {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
-//    jsonObject.put("raster", rasterJsonObject)
-//
-//    val outJsonObject: JSONObject = new JSONObject
-//    outJsonObject.put("workID", Trigger.dagId)
-//    outJsonObject.put("json", jsonObject)
 
-    PostSender.shelvePost("raster",rasterJsonObject)
-
-//    println("outputJSON: ", outJsonObject.toJSONString)
-
-//    if (sc.master.contains("local")) {
-//      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
-//    }
-
+    PostSender.shelvePost("raster", rasterJsonObject)
   }
 
   def visualizeBatch(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String): Unit = {
