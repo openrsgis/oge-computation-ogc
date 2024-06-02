@@ -7609,61 +7609,6 @@
       "default": 4
     }]
   },
-  "Coverage.PansharpeningByOTB": {
-    "description": "This application performs P+XS pansharpening. Pansharpening is a process of merging high-resolution panchromatic and lower resolution multispectral imagery to create a single high-resolution color image. Algorithms available in the applications are: RCS, bayesian fusion and Local Mean and Variance Matching(LMVM).",
-    "returns": "Coverage",
-    "args": [{
-      "name": "inp",
-      "type": "Coverage",
-      "description": "Input panchromatic image.",
-      "optional": "True"
-    },{
-      "name": "ins",
-      "type": "Coverage",
-      "description": "Input XS image.",
-      "optional": "True"
-    },{
-      "name": "method",
-      "type": "String",
-      "description": "Selection of the pan-sharpening method.",
-      "default": "rcs"
-    }, {
-      "name": "method.rcs.radiusx",
-      "type": "Int",
-      "description": "Set the x radius of the sliding window.",
-      "default": 9
-    }, {
-      "name": "method.rcs.radiusy",
-      "type": "Int",
-      "description": "Set the y radius of the sliding window.",
-      "default": 9
-    }, {
-      "name": "method.lmvm.radiusx",
-      "type": "Int",
-      "description": "Set the x radius of the sliding window.",
-      "default": 3
-    }, {
-      "name": "methodLmvmRadiusy",
-      "type": "Int",
-      "description": "Set the y radius of the sliding window.",
-      "default": 3
-    }, {
-      "name": "methodBayesLambda",
-      "type": "Float",
-      "description": "Set the weighting value.",
-      "default": "0.9999"
-    }, {
-      "name": "methodBayesS",
-      "type": "Float",
-      "description": "Set the S coefficient.",
-      "default": 1
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }]
-  },
   "Coverage.BundleToPerfectSensorByOTB": {
     "description": "This application performs P+XS pansharpening. The default mode use Pan and XS sensor models to estimate the transformation to superimpose XS over Pan before the fusion (\u201cdefault mode\u201d). The application provides also a PHR mode for Pleiades images which does not use sensor models as Pan and XS products are already coregistered but only estimate an affine transformation to superimpose XS over the Pan.Note that this option is automatically activated in case Pleiades images are detected as input.",
     "returns": "Coverage",
