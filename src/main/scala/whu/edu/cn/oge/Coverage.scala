@@ -3585,7 +3585,6 @@ object Coverage {
       }
     }
 
-    // 发送回调服务
     val rasterJsonObject: JSONObject = new JSONObject
     if (visParam.getFormat == "png") {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.png")

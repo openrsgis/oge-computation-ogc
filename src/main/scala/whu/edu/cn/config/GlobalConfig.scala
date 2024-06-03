@@ -140,5 +140,6 @@ object GlobalConfig {
     final var bucketName = "ogebos"
     var platform = "bmr"
     final var hbaseHost = "192.168.80.10:2181"
+    final var educationDataRoot = "http://10.101.240.20/api/oge-server-edu-course/personal/achievement/save/"
   }
 }

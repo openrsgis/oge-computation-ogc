@@ -1421,8 +1421,8 @@ object Trigger {
       case e: Throwable =>
         e.printStackTrace()
         val errorJson = new JSONObject
+        PostSender.print()
         errorJson.put("error", e.getCause.getMessage)
-
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
         outJsonObject.put("workID", Trigger.dagId)
