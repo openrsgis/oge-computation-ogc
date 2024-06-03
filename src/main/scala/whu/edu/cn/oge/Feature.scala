@@ -571,7 +571,7 @@ object Feature {
 
     versouSshUtil(host, userName, password, port)
 
-    val st = s"scp -P 608 $outputVectorPath root@${GlobalConfig.Others.tmsHost}:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
+    val st = s"scp  $outputVectorPath root@${GlobalConfig.Others.tomcatHost}:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
     //本地测试使用代码
 //      val exitCode: Int = st.!
@@ -584,7 +584,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = s"http://${GlobalConfig.Others.tomcatHost}:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = s"http://${GlobalConfig.Others.tomcatHost_public}:8888/tomcat-vector/vector_" + time + ".json"
 
     storageURL
   }

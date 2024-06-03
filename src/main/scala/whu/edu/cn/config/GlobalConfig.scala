@@ -135,6 +135,7 @@ object GlobalConfig {
     final var tmsPath = "http://111.37.195.68:8888/api/oge-tms-png/" //tms服务url
     final var tmsHost = "172.22.1.19" //tms服务ip
     final var tomcatHost = "172.22.1.12"
+    final var tomcatHost_public = "111.37.195.68"
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
