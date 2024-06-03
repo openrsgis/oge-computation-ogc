@@ -7374,106 +7374,106 @@
       "description": "Clamping in the range [0, 1]. It can be useful to preserve area with specular reflectance.",
       "default": "true"
     }, {
-      "name": "acqui.minute",
+      "name": "acquiMinute",
       "type": "Int",
       "description": "Minute (0-59)",
       "default": 0
     }, {
-      "name": "acqui.hour",
+      "name": "acquiHour",
       "type": "Int",
       "description": "Hour (0-23)",
       "default": 12
     }, {
-      "name": "acqui.day",
+      "name": "acquiDay",
       "type": "Int",
       "description": "Day (1-31)",
       "default": 1
     }, {
-      "name": "acqui.month",
+      "name": "acquiMonth",
       "type": "Int",
       "description": "Month (1-12)",
       "default": 1
     }, {
-      "name": "acqui.year",
+      "name": "acquiYear",
       "type": "Int",
       "description": "Year",
       "default": 2000
     }, {
-      "name": "acqui.fluxnormcoeff",
+      "name": "acquiFluxnormcoeff",
       "type": "Float",
       "description": "Flux Normalization Coefficient"
     }, {
-      "name": "acqui.solardistance",
+      "name": "acquiSolardistance",
       "type": "Float",
       "description": "Solar distance (in AU)"
     }, {
-      "name": "acqui.sun.elev",
+      "name": "acquiSunElev",
       "type": "Float",
       "description": "Sun elevation angle (in degrees)",
       "default": 90
     }, {
-      "name": "acqui.sun.azim",
+      "name": "acquiSunAzim",
       "type": "Float",
       "description": "Sun azimuth angle (in degrees)",
       "default": 0
     }, {
-      "name": "acqui.view.elev",
+      "name": "acquiViewElev",
       "type": "Float",
       "description": "Viewing elevation angle (in degrees)",
       "default": 90
     }, {
-      "name": "acqui.view.azim",
+      "name": "acquiViewAzim",
       "type": "Float",
       "description": "Viewing azimuth angle (in degrees)",
       "default": 0
     }, {
-      "name": "acqui.gainbias",
+      "name": "acquiQainbias",
       "type": "String",
       "description": "A text file containing user defined gains and biases"
     }, {
-      "name": "acqui.solarilluminations",
+      "name": "acquiSolarilluminations",
       "type": "String",
       "description": "Solar illuminations (one value per band, in W/m^2/micron)"
     }, {
-      "name": "atmo.aerosol",
+      "name": "atmoAerosol",
       "type": "String",
       "description": "",
       "default": "noaersol"
     }, {
-      "name": "atmo.oz",
+      "name": "atmoOz",
       "type": "Float",
       "description": "Stratospheric ozone layer content (in cm-atm)",
       "default": 0
     }, {
-      "name": "atmo.wa",
+      "name": "atmoWa",
       "type": "Float",
       "description": "Total water vapor content over vertical atmospheric column (in g/cm2)",
       "default": 2.5
     }, {
-      "name": "atmo.pressure",
+      "name": "atmoPressure",
       "type": "Float",
       "description": "Atmospheric Pressure (in hPa)",
       "default": 1030
     }, {
-      "name": "atmo.opt",
+      "name": "atmoOpt",
       "type": "Float",
       "description": "Aerosol Optical Thickness (unitless)",
       "default": 0.2
     }, {
-      "name": "atmo.aeronet",
+      "name": "atmoAeronet",
       "type": "String",
       "description": "Aeronet file containing atmospheric parameters"
     }, {
-      "name": "atmo.rsr",
+      "name": "atmoRsr",
       "type": "String",
       "description": "Sensor relative spectral response file By default the application gets this information in the metadata"
     }, {
-      "name": "atmo.radius",
+      "name": "atmoRadius",
       "type": "Int",
       "description": "Window radius for adjacency effects correctionsSetting this parameters will enable the correction ofadjacency effects",
       "default": 2
     }, {
-      "name": "atmo.pixsize",
+      "name": "atmoPixsize",
       "type": "Float",
       "description": "Pixel size (in km) used tocompute adjacency effects, it does not have tomatch the image spacing",
       "default": 1
@@ -7488,7 +7488,7 @@
     "description": "This application uses inverse sensor modelling combined with a choice of interpolation functions to resample a sensor geometry image into a ground geometry regular grid. The ground geometry regular grid is defined with respect to a map projection (see map parameter). The application offers several modes to estimate the output grid parameters (origin and ground sampling distance), including automatic estimation of image size, ground sampling distance, or both, from image metadata, user-defined ROI corners, or another ortho-image.A digital Elevation Model along with a geoid file can be specified to account for terrain deformations.In case of SPOT5 images, the sensor model can be approximated by an RPC model in order to speed-up computation.",
     "returns": "Coverage",
     "args": [{
-      "name": "io.in",
+      "name": "ioIn",
       "type": "Coverage",
       "description": "The input image to ortho-rectify",
       "optional": "True"
@@ -7498,87 +7498,87 @@
       "description": "Defines the map projection to be used.",
       "default": "utm"
     }, {
-      "name": "map.utm.zone",
+      "name": "mapUtmZone",
       "type": "Int",
       "description": "The zone number ranges from 1 to 60 and allows defining the transverse mercator projection (along with the hemisphere)",
       "default": 31
     }, {
-      "name": "map.utm.northhem",
+      "name": "mapUtmNorthhem",
       "type": "Boolean",
       "description": "The transverse mercator projections are defined by their zone number as well as the hemisphere. Activate this parameter if your image is in the northern hemisphere.",
       "default": "false"
     }, {
-      "name": "map.epsg.code",
+      "name": "mapEpsgCode",
       "type": "Int",
       "description": "See www.spatialreference.org to find which EPSG code is associated to your projection",
       "default": 4326
     }, {
-      "name": "outputs.mode",
+      "name": "outputsMode",
       "type": "String",
       "description": "User Defined|Automatic Size from Spacing|Automatic Spacing from Size|Automatic Size from Spacing and output corners|Fit to ortho",
       "default": "auto"
     }, {
-      "name": "outputs.ulx",
+      "name": "outputsUlx",
       "type": "Double",
       "description": "Cartographic X coordinate of upper-left corner (meters for cartographic projections, degrees for geographic ones)",
       "optional": "True"
     }, {
-      "name": "outputs.uly",
+      "name": "outputsUly",
       "type": "Double",
       "description": "Cartographic Y coordinate of the upper-left corner (meters for cartographic projections, degrees for geographic ones)",
       "optional": "True"
     }, {
-      "name": "outputs.sizex",
+      "name": "outputsSizex",
       "type": "Int",
       "description": "Size of projected image along X (in pixels)",
       "optional": "True"
     }, {
-      "name": "outputs.sizey",
+      "name": "outputsSizey",
       "type": "Int",
       "description": "Size of projected image along Y (in pixels)",
       "optional": "True"
     }, {
-      "name": "outputs.spacingx",
+      "name": "outputsSpacingx",
       "type": "Double",
       "description": "Size of each pixel along X axis (meters for cartographic projections, degrees for geographic ones)",
       "optional": "True"
     }, {
-      "name": "outputs.spacingy",
+      "name": "outputsSpacingy",
       "type": "Double",
       "description": "Size of each pixel along Y axis (meters for cartographic projections, degrees for geographic ones)",
       "optional": "True"
     }, {
-      "name": "outputs.lrx",
+      "name": "outputsLrx",
       "type": "Double",
       "description": "Cartographic X coordinate of the lower-right corner (meters for cartographic projections, degrees for geographic ones)"
     }, {
-      "name": "outputs.lry",
+      "name": "outputsLry",
       "type": "Double",
       "description": "Cartographic Y coordinate of the lower-right corner (meters for cartographic projections, degrees for geographic ones)"
     }, {
-      "name": "outputs.ortho",
+      "name": "outputsOrtho",
       "type": "String",
       "description": "A model ortho-image that can be used to compute size, origin and spacing of the output"
     }, {
-      "name": "outputs.isotropic",
+      "name": "outputsIsotropic",
       "type": "Boolean",
       "description": "Default spacing (pixel size) values are estimated from the sensor modeling of the image. It can therefore result in a non-isotropic spacing. This option allows you to force default values to be isotropic (in this case, the minimum of spacing in both direction is applied. Values overridden by user are not affected by this option.",
       "default": "true"
     }, {
-      "name": "outputs.default",
+      "name": "outputsDefault",
       "type": "Double",
       "description": "Default value to write when outside of input image.",
       "default": 0
     }, {
-      "name": "elev.dem",
+      "name": "elevDem",
       "type": "String",
       "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
     }, {
-      "name": "elev.geoid",
+      "name": "elevGeoid",
       "type": "String",
       "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
     }, {
-      "name": "elev.default",
+      "name": "elevDefault",
       "type": "Float",
       "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
       "default": 0
@@ -7588,80 +7588,25 @@
       "description": "This group of parameters allows one to define how the input image will be interpolated during resampling.",
       "default": "bco"
     }, {
-      "name": "interpolator.bco.radius",
+      "name": "interpolatorBcoRadius",
       "type": "Int",
       "description": "This parameter allows one to control the size of the bicubic interpolation filter. If the target pixel size is higher than the input pixel size, increasing this parameter will reduce aliasing artifacts.",
       "default": 2
     }, {
-      "name": "opt.rpc",
+      "name": "optRpc",
       "type": "Int",
       "description": "Enabling RPC modeling allows one to speed-up SPOT5 ortho-rectification. Value is the number of control points per axis for RPC estimation",
       "default": 10
     }, {
-      "name": "opt.ram",
+      "name": "optRam",
       "type": "Int",
       "description": "This allows setting the maximum amount of RAM available for processing. As the writing task is time consuming, it is better to write large pieces of data, which can be achieved by increasing this parameter (pay attention to your system capabilities)",
       "default": 256
     }, {
-      "name": "opt.gridspacing",
+      "name": "optGridspacing",
       "type": "Double",
       "description": "Resampling is done according to a coordinate mapping deformation grid, whose pixel size is set by this parameter, and expressed in the coordinate system of the output image The closer to the output spacing this parameter is, the more precise will be the ortho-rectified image,but increasing this parameter will reduce processing time.",
       "default": 4
-    }]
-  },
-  "Coverage.PansharpeningByOTB": {
-    "description": "This application performs P+XS pansharpening. Pansharpening is a process of merging high-resolution panchromatic and lower resolution multispectral imagery to create a single high-resolution color image. Algorithms available in the applications are: RCS, bayesian fusion and Local Mean and Variance Matching(LMVM).",
-    "returns": "Coverage",
-    "args": [{
-      "name": "inp",
-      "type": "Coverage",
-      "description": "Input panchromatic image.",
-      "optional": "True"
-    },{
-      "name": "ins",
-      "type": "Coverage",
-      "description": "Input XS image.",
-      "optional": "True"
-    },{
-      "name": "method",
-      "type": "String",
-      "description": "Selection of the pan-sharpening method.",
-      "default": "rcs"
-    }, {
-      "name": "method.rcs.radiusx",
-      "type": "Int",
-      "description": "Set the x radius of the sliding window.",
-      "default": 9
-    }, {
-      "name": "method.rcs.radiusy",
-      "type": "Int",
-      "description": "Set the y radius of the sliding window.",
-      "default": 9
-    }, {
-      "name": "method.lmvm.radiusx",
-      "type": "Int",
-      "description": "Set the x radius of the sliding window.",
-      "default": 3
-    }, {
-      "name": "method.lmvm.radiusy",
-      "type": "Int",
-      "description": "Set the y radius of the sliding window.",
-      "default": 3
-    }, {
-      "name": "method.bayes.lambda",
-      "type": "Float",
-      "description": "Set the weighting value.",
-      "default": "0.9999"
-    }, {
-      "name": "method.bayes.s",
-      "type": "Float",
-      "description": "Set the S coefficient.",
-      "default": 1
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
     }]
   },
   "Coverage.BundleToPerfectSensorByOTB": {
@@ -7678,15 +7623,15 @@
       "description": "Input XS image.",
       "optional": "True"
     }, {
-      "name": "elev.dem",
+      "name": "elevDem",
       "type": "String",
       "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
     }, {
-      "name": "elev.geoid",
+      "name": "elevGeoid",
       "type": "String",
       "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
     }, {
-      "name": "elev.default",
+      "name": "elevDefault",
       "type": "Float",
       "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
       "default": 0
@@ -7701,32 +7646,32 @@
       "description": "Selection of the pan-sharpening method.",
       "default": "rcs"
     }, {
-      "name": "method.rcs.radiusx",
+      "name": "methodRcsRadiusx",
       "type": "Int",
       "description": "Set the x radius of the sliding window.",
       "default": 9
     }, {
-      "name": "method.rcs.radiusy",
+      "name": "methodRcsRadiusy",
       "type": "Int",
       "description": "Set the y radius of the sliding window.",
       "default": 9
     }, {
-      "name": "method.lmvm.radiusx",
+      "name": "methodLmvmRadiusx",
       "type": "Int",
       "description": "Set the x radius of the sliding window.",
       "default": 3
     }, {
-      "name": "method.lmvm.radiusy",
+      "name": "methodLmvmRadiusy",
       "type": "Int",
       "description": "Set the y radius of the sliding window.",
       "default": 3
     }, {
-      "name": "method.bayes.lambda",
+      "name": "methodBayesLambda",
       "type": "Float",
       "description": "Set the weighting value.",
       "default": 0.9999
     }, {
-      "name": "method.bayes.s",
+      "name": "methodBayesS",
       "type": "Float",
       "description": "Set the S coefficient.",
       "default": 1
@@ -7741,7 +7686,7 @@
       "description": "This group of parameters allows defining how the input image will be interpolated during resampling.",
       "default": "bco"
     }, {
-      "name": "interpolator.bco.radius",
+      "name": "interpolatorBcoRadius",
       "type": "Int",
       "description": "This parameter allows controlling the size of the bicubic interpolation filter. If the target pixel size is higher than the input pixel size, increasing this parameter will reduce aliasing artifacts.",
       "default": 2

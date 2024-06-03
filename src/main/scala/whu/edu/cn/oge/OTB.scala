@@ -1316,11 +1316,11 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --in $outputTiffPath --level $level --milli $milli --clamp $clamp
-          --acqui.minute $acquiMinute --acqui.hour $acquiHour --acqui.day $acquiDay --acqui.month $acquiMonth --acqui.year $acquiYear
-          --acqui.fluxnormcoeff $acquiFluxnormcoeff --acqui.solardistance $acquiSolardistance --acqui.sun.elev $acquiSunElev
-          --acqui.sun.azim $acquiSunAzim --acqui.view.elev $acquiViewElev --acqui.view.azim $acquiViewAzim --acqui.gainbias $acquiGainbias --acqui.solarilluminations $acquiSolarilluminations
-           --atmo.aerosol $atmoAerosol --atmo.oz $atmoOz --atmo.wa $atmoWa --atmo.pressure $atmoPressure --atmo.opt $atmoOpt --atmo.aeronet $atmoAeronet
+        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $outputTiffPath --level $level --milli $milli --clamp $clamp
+          --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
+          --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
+          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $acquiGainbias --acquiSolarilluminations $acquiSolarilluminations
+           --atmoAerosol $atmoAerosol --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmo.aeronet $atmoAeronet
            --atmo.rsr $atmoRsr --atmo.radius $atmoRadius --atmo.pixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
 
 
@@ -1364,65 +1364,45 @@ object OTB {
    * @param optGridspacing        Resampling is done according to a coordinate mapping deformation grid, whose pixel size is set by this parameter, and expressed in the coordinate system of the output image The closer to the output spacing this parameter is, the more precise will be the ortho-rectified image,but increasing this parameter will reduce processing time.
    * @return The ortho-rectified output image
    */
-  def otbOrthoRectification(implicit sc: SparkContext, in: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                            map: String = "utm", mapUtmZone: Int = 31, mapUtmNorthhem: Boolean = false, mapEpsgCode: Int = 4326, outputsMode: String = "auto",
-                            outputsUlx: Double, outputsUly: Double, outputsSizex: Int, outputsSizey: Int, outputsSpacingx: Double, outputsSpacingy: Double,
-                            outputsLrx: Double, outputsLry: Double, outputsOrtho: String, outputsIsotropic: Boolean = true, outputsDefault: Double = 0,
-                            elevDem: String, elevGeoid: String, elevDefault: Float = 0, interpolator: String = "bco", interpolatorBcoRadius: Int = 2, optRpc: Int = 10, optRam: Int = 256,
+  def otbOrthoRectification(implicit sc: SparkContext,
+                            ioIn: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                            map: String = "utm", mapUtmZone: Int = 31, mapUtmNorthhem: Boolean = false,
+                            mapEpsgCode: Int = 4326, outputsMode: String = "auto",
+                            outputsUlx: Double, outputsUly: Double, outputsSizex: Int,
+                            outputsSizey: Int, outputsSpacingx: Double, outputsSpacingy: Double,
+                            outputsLrx: Double, outputsLry: Double, outputsOrtho: String,
+                            outputsIsotropic: Boolean = true, outputsDefault: Double = 0,
+                            elevDem: String, elevGeoid: String, elevDefault: Float = 0,
+                            interpolator: String = "bco", interpolatorBcoRadius: Int = 2,
+                            optRpc: Int = 10, optRam: Int = 256,
                             optGridspacing: Double = 4): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
 
     val outputTiffPath = algorithmData + "otbOrthoRectification_" + time + ".tif"
     val writePath = algorithmData + "otbOrthoRectification_" + time + "_out.tif"
-    saveRasterRDDToTif(in, outputTiffPath)
+    saveRasterRDDToTif(ioIn, outputTiffPath)
 
     try {
       versouSshUtil(host, userName, password, port)
-      val st =
-        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --io.in $outputTiffPath --map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode --outputs.mode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy --outputsLrx $outputsLrx --outputsLry $outputsLry --outputsOrtho $outputsOrtho   --outputsIsotropic $outputsIsotropic --outputsDefault $outputsDefault --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --interpolator $interpolator    --interpolatorBcoRadius $interpolatorBcoRadius --optRpc $optRpc --optRam $optRam --optGridspacing $optGridspacing --out "$writePath"""".stripMargin
+      val interpolatorParams = if (interpolator == "bco") {
+        s"--interpolator $interpolator --interpolatorBcoRadius $interpolatorBcoRadius"
+      } else {
+        s"--interpolator $interpolator"
+      }
 
-      println(s"st = $st")
-      runCmd(st, "UTF-8")
+      val mapParams = if (map == "epsg") {
+        s"--map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode"
+      } else {
+        s"--map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem"
+      }
+      val st = raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath $mapParams --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy
+  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho $outputsOrtho  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem $elevDem  --elevGeoid $elevGeoid  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc
+  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
 
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    }
-    makeChangedRasterRDDFromTif(sc, writePath)
-  }
+      //      val st =
+//        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy --outputsLrx $outputsLrx --outputsLry $outputsLry --outputsOrtho $outputsOrtho   --outputsIsotropic $outputsIsotropic --outputsDefault $outputsDefault --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --interpolator $interpolator    --interpolatorBcoRadius $interpolatorBcoRadius --optRpc $optRpc --optRam $optRam --optGridspacing $optGridspacing --ioOut "$writePath"""".stripMargin
 
-  /**
-   * This application performs P+XS pansharpening. Pansharpening is a process of merging high-resolution panchromatic and lower resolution multispectral imagery to create a single high-resolution color image. Algorithms available in the applications are: RCS, bayesian fusion and Local Mean and Variance Matching(LMVM).
-   *
-   * @param inp               Input panchromatic image.
-   * @param inxs              Input XS image.
-   * @param method            Selection of the pan-sharpening method.
-   * @param methodRcsRadiusx  Set the x radius of the sliding window.
-   * @param methodRcsRadiusy  Set the y radius of the sliding window.
-   * @param methodLmvmRadiusx Set the x radius of the sliding window.
-   * @param methodLmvmRadiusy Set the y radius of the sliding window.
-   * @param methodBayesLambda Set the weighting value.
-   * @param methodBayesS      Set the S coefficient.
-   * @param ram               Available memory for processing (in MB).
-   * @return Output image.
-   */
-  def otbPansharpening(implicit sc: SparkContext, inp: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                       inxs: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), method: String = "rcs",
-                       methodRcsRadiusx: Int = 9, methodRcsRadiusy: Int = 9, methodLmvmRadiusx: Int = 3, methodLmvmRadiusy: Int = 3, methodBayesLambda: Float = 0.9999f, methodBayesS: Float = 1f, ram: Int = 256)
-  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-
-    val time = System.currentTimeMillis()
-
-    val outputTiffPath_p = algorithmData + "otbPansharpeningP_" + time + ".tif"
-    val outputTiffPath_in = algorithmData + "otbPansharpeningIN_" + time + ".tif"
-    val writePath = algorithmData + "otbPansharpening_" + time + "_out.tif"
-    saveRasterRDDToTif(inp, outputTiffPath_p)
-    saveRasterRDDToTif(inxs, outputTiffPath_in)
-    try {
-      versouSshUtil(host, userName, password, port)
-      val st =
-        raw"""conda activate otb;${algorithmCode}python otb_pansharpening.py --inp $outputTiffPath_p --inxs $outputTiffPath_in    --method $method --method.rcs.radiusx $methodRcsRadiusx --method.rcs.radiusy $methodRcsRadiusy --method.lmvm.radiusx $methodLmvmRadiusx --method.lmvm.radiusy $methodLmvmRadiusy --method.bayes.lambda $methodBayesLambda --method.bayes.s $methodBayesS --ram $ram --out "$writePath"""".stripMargin
       println(s"st = $st")
       runCmd(st, "UTF-8")
 
@@ -1486,9 +1466,9 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
      val st = interpolator match{
-       case "bco" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator --interpolatorBcoRadius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
-       case "nn" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator  --fv $fv --ram $ram --out "$writePath"""".stripMargin
-       case "linear" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator  --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "bco" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp "$outputTiffPath_p" --inxs "$outputTiffPath_in" --elevDem "$elevDem" --elevGeoid "$elevGeoid" --elevDefault $elevDefault --mode "$mode" --method "$method"  --lms $lms --interpolator "$interpolator" --interpolatorBcoRadius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "nn" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp "$outputTiffPath_p" --inxs "$outputTiffPath_in" --elevDem "$elevDem" --elevGeoid "$elevGeoid" --elevDefault $elevDefault --mode "$mode" --method "$method"  --lms $lms --interpolator "$interpolator"  --fv $fv --ram $ram --out "$writePath"""".stripMargin
+       case "linear" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp "$outputTiffPath_p" --inxs "$outputTiffPath_in" --elevDem "$elevDem" --elevGeoid "$elevGeoid" --elevDefault $elevDefault --mode "$mode" --method "$method"  --lms $lms --interpolator "$interpolator"  --fv $fv --ram $ram --out "$writePath"""".stripMargin
      }
 //      val st=
 //     raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
