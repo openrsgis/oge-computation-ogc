@@ -1316,12 +1316,12 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $outputTiffPath --level $level --milli $milli --clamp $clamp
+        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $outputTiffPath --level "$level" --milli $milli --clamp $clamp
           --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
           --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
-          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $acquiGainbias --acquiSolarilluminations $acquiSolarilluminations
-           --atmoAerosol $atmoAerosol --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet $atmoAeronet
-           --atmoRsr $atmoRsr --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
+          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias "$acquiGainbias" --acquiSolarilluminations "$acquiSolarilluminations"
+           --atmoAerosol "$atmoAerosol" --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet "$atmoAeronet"
+           --atmoRsr "$atmoRsr" --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
 
 
       println(s"st = $st")
@@ -1386,17 +1386,17 @@ object OTB {
     try {
       versouSshUtil(host, userName, password, port)
       val interpolatorParams = if (interpolator == "bco") {
-        s"--interpolator $interpolator --interpolatorBcoRadius $interpolatorBcoRadius"
+        s"--interpolator '$interpolator' --interpolatorBcoRadius $interpolatorBcoRadius"
       } else {
-        s"--interpolator $interpolator"
+        s"--interpolator '$interpolator'"
       }
 
       val mapParams = if (map == "epsg") {
-        s"--map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode"
+        s" --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode"
       } else {
-        s"--map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem"
+        s" --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem"
       }
-      val st = raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath $mapParams --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho $outputsOrtho  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem $elevDem  --elevGeoid $elevGeoid  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
+      val st = raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map "$map" $mapParams --outputsMode "$outputsMode" --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho "$outputsOrtho"  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem "$elevDem"  --elevGeoid "$elevGeoid"  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
 
       //      val st =
 //        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy --outputsLrx $outputsLrx --outputsLry $outputsLry --outputsOrtho $outputsOrtho   --outputsIsotropic $outputsIsotropic --outputsDefault $outputsDefault --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --interpolator $interpolator    --interpolatorBcoRadius $interpolatorBcoRadius --optRpc $optRpc --optRam $optRam --optGridspacing $optGridspacing --ioOut "$writePath"""".stripMargin
