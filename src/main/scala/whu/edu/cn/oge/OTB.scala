@@ -1296,7 +1296,7 @@ object OTB {
    * @param ram                     Available memory for processing (in MB).
    * @return Output calibrated image filename
    */
-  def otbOpticalCalibration(implicit sc: SparkContext, in: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+  def otbOpticalCalibration(implicit sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                             level: String = "toa", milli: Boolean = false, clamp: Boolean = true, acquiMinute: Int = 0, acquiHour: Int = 12,
                             acquiDay: Int = 1, acquiMonth: Int = 1,
                             acquiYear: Int = 2000, acquiFluxnormcoeff: Float, acquiSolardistance: Float,
@@ -1311,7 +1311,7 @@ object OTB {
 
     val outputTiffPath = algorithmData + "otbOpticalCalibration_" + time + ".tif"
     val writePath = algorithmData + "otbOpticalCalibration_" + time + "_out.tif"
-    saveRasterRDDToTif(in, outputTiffPath)
+    saveRasterRDDToTif(input, outputTiffPath)
 
     try {
       versouSshUtil(host, userName, password, port)
@@ -1320,8 +1320,8 @@ object OTB {
           --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
           --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
           --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $acquiGainbias --acquiSolarilluminations $acquiSolarilluminations
-           --atmoAerosol $atmoAerosol --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmo.aeronet $atmoAeronet
-           --atmo.rsr $atmoRsr --atmo.radius $atmoRadius --atmo.pixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
+           --atmoAerosol $atmoAerosol --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet $atmoAeronet
+           --atmoRsr $atmoRsr --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
 
 
       println(s"st = $st")
@@ -1396,9 +1396,7 @@ object OTB {
       } else {
         s"--map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem"
       }
-      val st = raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath $mapParams --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy
-  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho $outputsOrtho  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem $elevDem  --elevGeoid $elevGeoid  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc
-  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
+      val st = raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath $mapParams --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho $outputsOrtho  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem $elevDem  --elevGeoid $elevGeoid  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
 
       //      val st =
 //        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy --outputsLrx $outputsLrx --outputsLry $outputsLry --outputsOrtho $outputsOrtho   --outputsIsotropic $outputsIsotropic --outputsDefault $outputsDefault --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --interpolator $interpolator    --interpolatorBcoRadius $interpolatorBcoRadius --optRpc $optRpc --optRam $optRam --optGridspacing $optGridspacing --ioOut "$writePath"""".stripMargin
