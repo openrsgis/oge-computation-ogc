@@ -17,10 +17,16 @@ object SAGA {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    val grid = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
-    val reference = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
-    val matchedRDD  = sagaHistogramMatching(sc, grid, reference)
-    saveRasterRDDToTif(matchedRDD, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
+    versouSshUtil(host, userName, password, port)
+    val st =
+      raw"""docker start 8bb3a634bcd6;""".stripMargin
+    println(s"st = $st")
+    runCmd(st, "UTF-8")
+    print("ok")
+//    val grid = makeChangedRasterRDDFromTif(sc, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
+//    val reference = makeChangedRasterRDDFromTif(sc, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
+//    val matchedRDD  = sagaHistogramMatching(sc, grid, reference)
+//    saveRasterRDDToTif(matchedRDD, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
   val algorithmData = GlobalConfig.SAGAConf.SAGA_DATA
@@ -55,12 +61,11 @@ object SAGA {
     val dockerTiffPath1 = algorithmDockerData + "sagaHistogramMatchingGrid_" + time + ".tif"
     val dockerTiffPath2 = algorithmDockerData + "sagaHistogramMatchingReference_" + time + ".tif"
     val writeDockerPath = algorithmDockerData + "sagaHistogramMatching_" + time + "_out.tif"
-
     try {
       versouSshUtil(host, userName, password, port)
+
       val st =
-//        raw"""docker run -v /mnt/SAGA/sagaData/:/tmp/saga -it saga-gis /bin/bash;saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin val st =
-        raw"""docker start 567ea3ad13c2;docker exec upbeat_bartik saga_cmd   -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -73,6 +78,7 @@ object SAGA {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
+
 
 
 }
