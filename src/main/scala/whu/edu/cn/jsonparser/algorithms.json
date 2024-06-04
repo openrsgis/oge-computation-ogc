@@ -7427,7 +7427,7 @@
       "description": "Viewing azimuth angle (in degrees)",
       "default": 0
     }, {
-      "name": "acquiQainbias",
+      "name": "acquiGainbias",
       "type": "String",
       "description": "A text file containing user defined gains and biases"
     }, {
