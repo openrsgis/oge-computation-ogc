@@ -1396,11 +1396,11 @@ object OTB {
       } else {
         s" --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem"
       }
-      val st = raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map "$map" $mapParams --outputsMode "$outputsMode" --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho "$outputsOrtho"  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem "$elevDem"  --elevGeoid "$elevGeoid"  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
-
-      //      val st =
-//        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map $map --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode --outputsMode $outputsMode --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy --outputsLrx $outputsLrx --outputsLry $outputsLry --outputsOrtho $outputsOrtho   --outputsIsotropic $outputsIsotropic --outputsDefault $outputsDefault --elevDem $elevDem --elevGeoid $elevGeoid --elevDefault $elevDefault --interpolator $interpolator    --interpolatorBcoRadius $interpolatorBcoRadius --optRpc $optRpc --optRam $optRam --optGridspacing $optGridspacing --ioOut "$writePath"""".stripMargin
-
+      val st=if (outputsUlx == 0 && outputsUly == 0 && outputsSizex == 0 && outputsSizey == 0 && outputsSpacingx == 0 && outputsSpacingy == 0 && outputsLrx == 0 && outputsLry == 0) {
+        raw"""conda activate otb;${algorithmCode}python otb_orthorectification1.py --ioIn $outputTiffPath  --ioOut "$writePath"""".stripMargin
+      } else {
+        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map "$map" $mapParams --outputsMode "$outputsMode" --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho "$outputsOrtho"  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem "$elevDem"  --elevGeoid "$elevGeoid"  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
+      }
       println(s"st = $st")
       runCmd(st, "UTF-8")
 
