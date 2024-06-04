@@ -9,6 +9,8 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
+import scala.collection.immutable.Map
+import scala.collection.mutable
 import scala.collection.mutable.Map
 
 object SAGA {
@@ -17,16 +19,18 @@ object SAGA {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    versouSshUtil(host, userName, password, port)
-    val st =
-      raw"""docker start 8bb3a634bcd6;""".stripMargin
-    println(s"st = $st")
-    runCmd(st, "UTF-8")
-    print("ok")
+
+//    // test
 //    val grid = makeChangedRasterRDDFromTif(sc, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
 //    val reference = makeChangedRasterRDDFromTif(sc, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
-//    val matchedRDD  = sagaHistogramMatching(sc, grid, reference)
-//    saveRasterRDDToTif(matchedRDD, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
+//
+//
+//    val inputMap: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map()
+//    inputMap.put("1", grid)
+//    inputMap.put("2", reference)
+//
+//    val resultRDD =  sagaISODATAClusteringForGrids(sc, inputMap)
+//    saveRasterRDDToTif(resultRDD, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
   val algorithmData = GlobalConfig.SAGAConf.SAGA_DATA
@@ -45,7 +49,7 @@ object SAGA {
                             maxSamples: Int = 1000000):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val methodInput: Int = Map(
+    val methodInput: Int = mutable.Map(
       0 -> 0,
       1 -> 1,
     ).getOrElse(method, 1)
@@ -78,6 +82,60 @@ object SAGA {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
+  def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
+                                features: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                                normalize: Int = 0,
+                                iterations: Int = 20,
+                                clusterINI: Int = 5,
+                                clusterMAX: Int = 16,
+                                samplesMIN: Int = 5,
+                                initialize: String = "0"
+  ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val initializeInput: String = mutable.Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2"
+    ).getOrElse(initialize, "0")
+    val time = System.currentTimeMillis()
+
+    // 输入的影像集合
+    var tiffDockerPathList: List[String] = List()
+    for (feature <- features) {
+      // 影像落地为tif
+      val tiffPath = algorithmData + "sagaISODATAClusteringForGrids" + feature._1 + "_" + time + ".tif"
+      val tiffDockerPath = algorithmDockerData + "sagaISODATAClusteringForGrids" + feature._1 + "_" + time + ".tif"
+      saveRasterRDDToTif(feature._2, tiffPath)
+      tiffDockerPathList = tiffDockerPathList :+ tiffDockerPath
+    }
+
+    val tiffDockerPathCollection = tiffDockerPathList.mkString(";")
+    val writePath = algorithmData + "sagaISODATAClusteringForGrids_" + time + "_out.tif"
+
+    // docker路径
+    val dockerDbfPath = algorithmDockerData + "sagaISODATAClusteringForGrids_" + time + ".dbf"
+    val writeDockerPath = algorithmDockerData + "sagaISODATAClusteringForGrids_" + time + "_out.tif"
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st2 =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE "$normalize" -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
+
+      println(s"st = $st2")
+      runCmd(st2, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
+
+
+
 
 
 
