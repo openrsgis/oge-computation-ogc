@@ -5564,7 +5564,7 @@
         "description": "Grid"
       },
       {
-        "name": "referenceGird",
+        "name": "referenceGrid",
         "type": "Coverage",
         "description": "Reference Grid"
       },
