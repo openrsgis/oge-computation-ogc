@@ -83,7 +83,7 @@ object SAGA {
 
   }
   def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
-                                features: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                                features: Predef.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                                 normalize: Int = 0,
                                 iterations: Int = 20,
                                 clusterINI: Int = 5,
