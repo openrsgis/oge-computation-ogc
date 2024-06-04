@@ -121,10 +121,11 @@ object GlobalConfig {
     var QGIS_PASSWORD: String = "Ypfamily608!"
     var QGIS_PORT: Int = 22
   }
+
   object OTBConf{
-    var OTB_DATA: String = "/mnt/storage/algorithmData/"
-    var OTB_ALGORITHMCODE: String = "cd /root/otbData/algorithmCodeByOTB;"
-    var OTB_HOST: String = "120.48.116.93"
+    var OTB_DATA: String = "/mnt/storage/otbData/algorithmData/"
+    var OTB_ALGORITHMCODE: String = "cd /mnt/storage/otbData/algorithmCodeByOTB/;"
+    var OTB_HOST: String = "192.168.80.3"
     var OTB_USERNAME: String = "root"
     var OTB_PASSWORD: String = "Ypfamily608!"
     var OTB_PORT: Int = 22
@@ -132,10 +133,9 @@ object GlobalConfig {
 
   //TODO：改为私有云
   object SAGAConf {
-    var SAGA_DATA: String = "/mnt/SAGA/sagaData/"  // docker挂载目录
-    var SAGA_ALGORITHMCODE: String = "cd /root/sagaData/algorithmBySAGA/;"
+    var SAGA_DATA: String = "/mnt/storage/SAGA/sagaData/"  // docker挂载目录
     var SAGA_DOCKERDATA: String = "/tmp/saga/"   // docker的临时目录
-    var SAGA_HOST: String = "120.48.116.93"
+    var SAGA_HOST: String = "192.168.80.3"
     var SAGA_USERNAME: String = "root"
     var SAGA_PASSWORD: String = "Ypfamily608!"
     var SAGA_PORT: Int = 22
