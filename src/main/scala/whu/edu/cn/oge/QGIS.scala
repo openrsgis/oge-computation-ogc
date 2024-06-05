@@ -108,10 +108,7 @@ object QGIS {
       case e: Exception =>
         e.printStackTrace()
     }
-
-
     makeRasterRDDFromTif(sc, input, writePath)
-
   }
 
   /**
@@ -706,6 +703,7 @@ object QGIS {
       "0" -> "0",
       "1" -> "1"
     ).getOrElse(strategy, "0")
+
 
     val defaultDirectionInput: String = Map(
       "0" -> "0",
@@ -1916,7 +1914,6 @@ object QGIS {
 
     makeRasterRDDFromTif(sc, input, writePath)
   }
-
   /**
    * Extracts contour lines from any GDAL-supported elevation raster.
    *
