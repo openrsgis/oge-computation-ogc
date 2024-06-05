@@ -3541,8 +3541,8 @@ object Coverage {
     //    minIOUtil.releaseMinioClient(client)
 
   }
-
-
+  //用来标识读取上传文件的编号的自增标识符
+  var file_id:Long = 0
   def loadCoverageFromUpload(implicit sc: SparkContext, coverageId: String, userID: String, dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     var path: String = new String()
     if (coverageId.endsWith(".tiff") || coverageId.endsWith(".tif")) {
@@ -3553,13 +3553,16 @@ object Coverage {
 
     val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.tiff"
+    val filePath = s"$tempPath${dagId}_$file_id.tiff"
+
     val tempfile = new File(filePath)
     val getObjectRequest = new GetObjectRequest("oge-user",path)
     tempfile.createNewFile()
     val bosObject = client.getObject(getObjectRequest,tempfile)
+    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
     println(filePath)
     val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    file_id = file_id + 1
 
     coverage
   }

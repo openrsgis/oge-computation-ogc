@@ -83,6 +83,8 @@ object Trigger {
   var ontheFlyLevel: Int = _
 
   var coverageReadFromUploadFile : Boolean = false
+
+  val tempFileList = mutable.ListBuffer.empty[String]
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -1465,13 +1467,11 @@ object Trigger {
       Trigger.doubleList.clear()
       Trigger.stringList.clear()
       PostSender.clearShelvedMessages()
-      val tempFilePath = GlobalConfig.Others.tempFilePath
-      val filePath = s"${tempFilePath}${dagId}.tiff"
-      if (scala.reflect.io.File(filePath).exists)
-        scala.reflect.io.File(filePath).delete()
-      val featurePath = s"${tempFilePath}${dagId}.geojson"
-      if (scala.reflect.io.File(featurePath).exists)
-        scala.reflect.io.File(featurePath).delete()
+      tempFileList.foreach(tempFile =>{
+        if (scala.reflect.io.File(tempFile).exists)
+          scala.reflect.io.File(tempFile).delete()
+      })
+
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
