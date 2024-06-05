@@ -10,8 +10,7 @@ import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRast
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import scala.collection.immutable.Map
-import scala.collection.mutable
-import scala.collection.mutable.Map
+import scala.collection.immutable
 
 object SAGA {
   def main(args: Array[String]): Unit = {
@@ -49,7 +48,7 @@ object SAGA {
                             maxSamples: Int = 1000000):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val methodInput: Int = mutable.Map(
+    val methodInput: Int = Map(
       0 -> 0,
       1 -> 1,
     ).getOrElse(method, 1)
@@ -83,7 +82,7 @@ object SAGA {
 
   }
   def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
-                                features: Predef.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                                features: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                                 normalize: Int = 0,
                                 iterations: Int = 20,
                                 clusterINI: Int = 5,
@@ -92,7 +91,7 @@ object SAGA {
                                 initialize: String = "0"
   ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val initializeInput: String = mutable.Map(
+    val initializeInput: String = Map(
       "0" -> "0",
       "1" -> "1",
       "2" -> "2"
@@ -140,12 +139,12 @@ object SAGA {
                        kernelRadius: Int = 2):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val methodInput: Int = mutable.Map(
+    val methodInput: Int = Map(
       0 -> 0,
       1 -> 1,
       2 -> 2
     ).getOrElse(method, 0)
-    val kernelTypeInput: Int = mutable.Map(
+    val kernelTypeInput: Int = Map(
       0 -> 0,
       1 -> 1
     ).getOrElse(kernelType, 1)
