@@ -5400,6 +5400,38 @@
       }
     ]
   },
+  "Coverage.simpleFilterBySAGA": {
+    "description": "Simple standard filters for grids.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "optional": "True",
+        "description": "choice Available Choices: [0] Smooth [1] Sharpen [2] Edge Default: 0",
+        "default": 0
+      },
+      {
+        "name": "kernelType",
+        "type": "Int",
+        "description": "choice Available Choices: [0] Square [1] Circle Default: 1",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "kernelRadius",
+        "type": "Int",
+        "description": "integer number Minimum: 0 Default: 2",
+        "optional": "True",
+        "default": 100
+      }
+    ]
+  },
 
 
   "Feature.ComputeOGRLayersFeaturesStatisticsByOTB": {

@@ -133,6 +133,49 @@ object SAGA {
 
   }
 
+  def sagaSimpleFilter(implicit sc: SparkContext,
+                       input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                       method: Int = 0,
+                       kernelType: Int = 1,
+                       kernelRadius: Int = 2):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val methodInput: Int = mutable.Map(
+      0 -> 0,
+      1 -> 1,
+      2 -> 2
+    ).getOrElse(method, 0)
+    val kernelTypeInput: Int = mutable.Map(
+      0 -> 0,
+      1 -> 1
+    ).getOrElse(kernelType, 1)
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    val outputTiffPath = algorithmData + "sagaSimpleFilter_" + time + ".tif"
+    val writePath = algorithmData + "sagaSimpleFilter_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "sagaSimpleFilter_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "sagaSimpleFilter_" + time + "_out.tif"
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -INPUT "$dockerTiffPath" -RESULT "$writeDockerPath" -METHOD $methodInput -KERNEL_TYPE $kernelTypeInput -KERNEL_RADIUS $kernelRadius""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
 
 
 
