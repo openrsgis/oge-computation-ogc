@@ -5347,6 +5347,93 @@
       }
     ]
   },
+  "Coverage.ISODATAClusteringForGridsBySAGA": {
+    "description": "This tool executes the Isodata unsupervised classification - clustering algorithm. Isodata stands for Iterative Self-Organizing Data Analysis Techniques. This is a more sophisticated algorithm which allows the number of clusters to be automatically adjusted during the iteration by merging similar clusters and splitting clusters with large standard deviations. The tool is based on Christos Iosifidis' Isodata implementation.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "features",
+        "type": "CoverageCollection",
+        "description": "grid list"
+      },
+      {
+        "name": "normalize",
+        "type": "Int",
+        "description": "Normalize",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "iterations",
+        "type": "Int",
+        "description": "Maximum Number of Iterations",
+        "optional": "True",
+        "default": 20
+      },
+      {
+        "name": "clusterINI",
+        "type": "Int",
+        "description": "Initial Number of Clusters.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "clusterMAX",
+        "type": "Int",
+        "description": "Maximum Number of Clusters.",
+        "optional": "True",
+        "default": 16
+      },
+      {
+        "name": "samplesMIN",
+        "type": "Int",
+        "description": "Minimum Number of Samples in a Cluster.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "initialize",
+        "type": "String",
+        "description": "Start Partition.choice tAvailable Choices: [0] random [1] periodical [2] keep values",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+  "Coverage.simpleFilterBySAGA": {
+    "description": "Simple standard filters for grids.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "optional": "True",
+        "description": "choice Available Choices: [0] Smooth [1] Sharpen [2] Edge Default: 0",
+        "default": 0
+      },
+      {
+        "name": "kernelType",
+        "type": "Int",
+        "description": "choice Available Choices: [0] Square [1] Circle Default: 1",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "kernelRadius",
+        "type": "Int",
+        "description": "integer number Minimum: 0 Default: 2",
+        "optional": "True",
+        "default": 100
+      }
+    ]
+  },
+
+
   "Feature.ComputeOGRLayersFeaturesStatisticsByOTB": {
     "description": "Compute statistics (mean and standard deviation) of the features in a set of OGR Layers, and write them in an XML file. The resulting XML file can then be used by the training application.",
     "returns": "string",

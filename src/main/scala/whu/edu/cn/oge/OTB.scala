@@ -1440,10 +1440,11 @@ object OTB {
    * @return Output image.
    */
   def otbBundleToPerfectSensor(implicit sc: SparkContext, inp: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+
                                inxs: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), elevDem: String, elevGeoid: String, elevDefault: Float = 0, mode: String = "default", method: String = "rcs", methodRcsRadiusx: Int = 9,
                                methodRcsRadiusy: Int = 9, methodLmvmRadiusx: Int = 3,
                                methodLmvmRadiusy: Int = 3, methodBayesLambda: Float = 0.9999f, methodBayesS: Float = 1, lms: Float = 4, interpolator: String = "bco", interpolatorBcoRadius: Int = 2, fv: Float = 0, ram: Int = 256)
-  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                               : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
 
     val time = System.currentTimeMillis()
@@ -1472,5 +1473,4 @@ println(s"st = $st")
     makeChangedRasterRDDFromTif(sc, writePath)
   }
 }
-
 

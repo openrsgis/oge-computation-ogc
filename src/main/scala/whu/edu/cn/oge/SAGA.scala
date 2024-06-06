@@ -9,7 +9,8 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
-import scala.collection.mutable.Map
+import scala.collection.immutable.Map
+import scala.collection.{immutable, mutable}
 
 object SAGA {
   def main(args: Array[String]): Unit = {
@@ -17,10 +18,18 @@ object SAGA {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-    val grid = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
-    val reference = makeChangedRasterRDDFromTif(sc, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
-    val matchedRDD  = sagaHistogramMatching(sc, grid, reference)
-    saveRasterRDDToTif(matchedRDD, "C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
+
+//    // test
+//    val grid = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata2_1717593290374.tif")
+//    val reference = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata1_1717593290374.tif")
+//
+//
+//    val inputMap: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map()
+//    val updatedMap1 = inputMap + ("data1" -> grid)
+//    val updatedMap2 = updatedMap1 + ("data2" -> reference)
+//
+//    val resultRDD =  sagaISODATAClusteringForGrids(sc, updatedMap2)
+//    saveRasterRDDToTif(resultRDD, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
   val algorithmData = GlobalConfig.SAGAConf.SAGA_DATA
@@ -39,7 +48,7 @@ object SAGA {
                             maxSamples: Int = 1000000):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val methodInput: Int = Map(
+    val methodInput: Int = mutable.Map(
       0 -> 0,
       1 -> 1,
     ).getOrElse(method, 1)
@@ -55,12 +64,11 @@ object SAGA {
     val dockerTiffPath1 = algorithmDockerData + "sagaHistogramMatchingGrid_" + time + ".tif"
     val dockerTiffPath2 = algorithmDockerData + "sagaHistogramMatchingReference_" + time + ".tif"
     val writeDockerPath = algorithmDockerData + "sagaHistogramMatching_" + time + "_out.tif"
-
     try {
       versouSshUtil(host, userName, password, port)
+
       val st =
-//        raw"""docker run -v /mnt/SAGA/sagaData/:/tmp/saga -it saga-gis /bin/bash;saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin val st =
-        raw"""docker start 567ea3ad13c2;docker exec upbeat_bartik saga_cmd   -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -73,6 +81,108 @@ object SAGA {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
+  def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
+                                    features: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                                    normalize: Int = 0,
+                                    iterations: Int = 20,
+                                    clusterINI: Int = 5,
+                                    clusterMAX: Int = 16,
+                                    samplesMIN: Int = 5,
+                                    initialize: String = "0"
+  ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val initializeInput: String = mutable.Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2"
+    ).getOrElse(initialize, "0")
+    val time = System.currentTimeMillis()
+
+    // 输入的影像集合
+    var tiffDockerPathList: List[String] = List()
+    for (feature <- features) {
+      // 影像落地为tif
+      val tiffPath = algorithmData + "sagaISODATAClusteringForGrids" + feature._1 + "_" + time + ".tif"
+      val tiffDockerPath = algorithmDockerData + "sagaISODATAClusteringForGrids" + feature._1 + "_" + time + ".tif"
+      saveRasterRDDToTif(feature._2, tiffPath)
+      tiffDockerPathList = tiffDockerPathList :+ tiffDockerPath
+    }
+
+    val tiffDockerPathCollection = tiffDockerPathList.mkString(";")
+    val writePath = algorithmData + "sagaISODATAClusteringForGrids_" + time + "_out.tif"
+//    val tiffDockerPathCollection = "/tmp/saga/sagaISODATAClusteringForGridsdata1_1717593290374.tif;/tmp/saga/sagaISODATAClusteringForGridsdata2_1717593290374.tif"
+//    val writePath = "/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata1_1717593290374.tif"
+
+    // docker路径
+    val dockerDbfPath = algorithmDockerData + "sagaISODATAClusteringForGrids_" + time + ".dbf"
+    val writeDockerPath = algorithmDockerData + "sagaISODATAClusteringForGrids_" + time + "_out.tif"
+//    val dockerDbfPath = "/tmp/saga/output.dbf"
+//    val writeDockerPath = "/tmp/saga/sagaISODATAClusteringForGridsdata1_1717593290374.tif"
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st2 =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE "$normalize" -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
+
+      println(s"st = $st2")
+      runCmd(st2, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
+  def sagaSimpleFilter(implicit sc: SparkContext,
+                       input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                       method: Int = 0,
+                       kernelType: Int = 1,
+                       kernelRadius: Int = 2):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val methodInput: Int = mutable.Map(
+      0 -> 0,
+      1 -> 1,
+      2 -> 2
+    ).getOrElse(method, 0)
+    val kernelTypeInput: Int = mutable.Map(
+      0 -> 0,
+      1 -> 1
+    ).getOrElse(kernelType, 1)
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    val outputTiffPath = algorithmData + "sagaSimpleFilter_" + time + ".tif"
+    val writePath = algorithmData + "sagaSimpleFilter_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "sagaSimpleFilter_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "sagaSimpleFilter_" + time + "_out.tif"
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -INPUT "$dockerTiffPath" -RESULT "$writeDockerPath" -METHOD $methodInput -KERNEL_TYPE $kernelTypeInput -KERNEL_RADIUS $kernelRadius""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
+
+
+
+
 
 
 }

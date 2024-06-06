@@ -1125,8 +1125,8 @@ object Feature {
     geoJson.put("render", render)
     PostSender.shelvePost("vector",geoJson)
   }
-
-
+  //feature用户上传文件自增id
+  var feature_id:Long = 0
   // 下载用户上传的geojson文件
   def loadFeatureFromUpload(implicit sc: SparkContext, featureId: String, userID: String, dagId: String, crs: String = "EPSG:4326"): (RDD[(String, (Geometry, Map[String, Any]))]) = {
     var path: String = new String()
@@ -1138,7 +1138,9 @@ object Feature {
 
     val client = BosClientUtil_scala.getClient2
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.geojson"
+    val filePath = s"$tempPath${dagId}_$feature_id.geojson"
+    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
+    feature_id += 1
     val tempfile = new File(filePath)
     val getObjectRequest = new GetObjectRequest("oge-user",path)
     tempfile.createNewFile()

@@ -83,6 +83,8 @@ object Trigger {
   var ontheFlyLevel: Int = _
 
   var coverageReadFromUploadFile : Boolean = false
+
+  val tempFileList = mutable.ListBuffer.empty[String]
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -769,6 +771,11 @@ object Trigger {
         // SAGA
         case "Coverage.histogramMatchingBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
+        case "Coverage.histogramMatchingBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaISODATAClusteringForGrids(sc, coverageCollectionRddList(args("features")), args("normalize").toInt, args("iterations").toInt, args("clusterINI").toInt, args("clusterMAX").toInt, args("samplesMIN").toInt, args("initialize")))
+        case "Coverage.simpleFilterBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaSimpleFilter(sc, coverageRddList(args("input")), args("method").toInt, args("kernelType").toInt, args("kernelRadius").toInt))
+
 
         //    GRASS
         case "Coverage.neighborsByGrass" =>
@@ -1519,13 +1526,11 @@ object Trigger {
       Trigger.doubleList.clear()
       Trigger.stringList.clear()
       PostSender.clearShelvedMessages()
-      val tempFilePath = GlobalConfig.Others.tempFilePath
-      val filePath = s"${tempFilePath}${dagId}.tiff"
-      if (scala.reflect.io.File(filePath).exists)
-        scala.reflect.io.File(filePath).delete()
-      val featurePath = s"${tempFilePath}${dagId}.geojson"
-      if (scala.reflect.io.File(featurePath).exists)
-        scala.reflect.io.File(featurePath).delete()
+      tempFileList.foreach(tempFile =>{
+        if (scala.reflect.io.File(tempFile).exists)
+          scala.reflect.io.File(tempFile).delete()
+      })
+
       val time2: Long = System.currentTimeMillis()
       println(time2 - time1)
 
