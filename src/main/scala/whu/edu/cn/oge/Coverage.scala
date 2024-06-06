@@ -3564,6 +3564,22 @@ object Coverage {
     coverage
   }
 
+  def loadTxtFromUpload(userID: String, dagId: String,name:String) = {
+    var path: String = new String()
+    path = s"$userID/$name.txt"
+
+
+    val client = BosClientUtil_scala.getClient2
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}.txt"
+    val tempfile = new File(filePath)
+    val getObjectRequest = new GetObjectRequest("oge-user", path)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest, tempfile)
+    println(filePath)
+    filePath
+  }
+
   def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val path = "/" + coverageId
     val client = BosClientUtil_scala.getClient
