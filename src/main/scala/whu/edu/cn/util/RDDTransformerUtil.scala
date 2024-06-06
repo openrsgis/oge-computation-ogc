@@ -32,6 +32,7 @@ object RDDTransformerUtil {
   var output:String = _
 
   def saveRasterRDDToTif(input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), outputTiffPath: String): Unit = {
+    val time1 = System.currentTimeMillis()
     val tileLayerArray = input._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()
@@ -39,7 +40,9 @@ object RDDTransformerUtil {
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileLayerArray)
     val stitchedTile = Raster(tile, layout.extent)
     GeoTiff(stitchedTile, input._2.crs).write(outputTiffPath)
-    println("成功落地tif")
+    val time2 = System.currentTimeMillis()
+    val timeCost = time2 - time1
+    println("成功落地tif, 耗时："+s"$timeCost")
   }
 
   def demo(data: Array[String]):Unit={
