@@ -10,7 +10,7 @@ import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRast
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import scala.collection.immutable.Map
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 
 object SAGA {
   def main(args: Array[String]): Unit = {
@@ -20,15 +20,15 @@ object SAGA {
     val sc = new SparkContext(conf)
 
 //    // test
-//    val grid = makeChangedRasterRDDFromTif(sc, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/grid.tif")
-//    val reference = makeChangedRasterRDDFromTif(sc, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/reference.tif")
+//    val grid = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata2_1717593290374.tif")
+//    val reference = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata1_1717593290374.tif")
 //
 //
-//    val inputMap: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map()
-//    inputMap.put("1", grid)
-//    inputMap.put("2", reference)
+//    val inputMap: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map()
+//    val updatedMap1 = inputMap + ("data1" -> grid)
+//    val updatedMap2 = updatedMap1 + ("data2" -> reference)
 //
-//    val resultRDD =  sagaISODATAClusteringForGrids(sc, inputMap)
+//    val resultRDD =  sagaISODATAClusteringForGrids(sc, updatedMap2)
 //    saveRasterRDDToTif(resultRDD, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
@@ -48,7 +48,7 @@ object SAGA {
                             maxSamples: Int = 1000000):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val methodInput: Int = Map(
+    val methodInput: Int = mutable.Map(
       0 -> 0,
       1 -> 1,
     ).getOrElse(method, 1)
@@ -82,16 +82,16 @@ object SAGA {
 
   }
   def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
-                                features: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                                normalize: Int = 0,
-                                iterations: Int = 20,
-                                clusterINI: Int = 5,
-                                clusterMAX: Int = 16,
-                                samplesMIN: Int = 5,
-                                initialize: String = "0"
+                                    features: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                                    normalize: Int = 0,
+                                    iterations: Int = 20,
+                                    clusterINI: Int = 5,
+                                    clusterMAX: Int = 16,
+                                    samplesMIN: Int = 5,
+                                    initialize: String = "0"
   ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val initializeInput: String = Map(
+    val initializeInput: String = mutable.Map(
       "0" -> "0",
       "1" -> "1",
       "2" -> "2"
@@ -110,10 +110,14 @@ object SAGA {
 
     val tiffDockerPathCollection = tiffDockerPathList.mkString(";")
     val writePath = algorithmData + "sagaISODATAClusteringForGrids_" + time + "_out.tif"
+//    val tiffDockerPathCollection = "/tmp/saga/sagaISODATAClusteringForGridsdata1_1717593290374.tif;/tmp/saga/sagaISODATAClusteringForGridsdata2_1717593290374.tif"
+//    val writePath = "/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata1_1717593290374.tif"
 
     // docker路径
     val dockerDbfPath = algorithmDockerData + "sagaISODATAClusteringForGrids_" + time + ".dbf"
     val writeDockerPath = algorithmDockerData + "sagaISODATAClusteringForGrids_" + time + "_out.tif"
+//    val dockerDbfPath = "/tmp/saga/output.dbf"
+//    val writeDockerPath = "/tmp/saga/sagaISODATAClusteringForGridsdata1_1717593290374.tif"
     try {
       versouSshUtil(host, userName, password, port)
 
@@ -139,12 +143,12 @@ object SAGA {
                        kernelRadius: Int = 2):
   (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-    val methodInput: Int = Map(
+    val methodInput: Int = mutable.Map(
       0 -> 0,
       1 -> 1,
       2 -> 2
     ).getOrElse(method, 0)
-    val kernelTypeInput: Int = Map(
+    val kernelTypeInput: Int = mutable.Map(
       0 -> 0,
       1 -> 1
     ).getOrElse(kernelType, 1)
