@@ -25,7 +25,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,IHSFusion,panSharp,catTwoCoverage}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, panSharp, reduction, standardDeviationCalculation, standardDeviationStretching}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -39,7 +39,7 @@ import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
 import whu.edu.cn.entity.cube.CubeTileKey
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -81,6 +81,12 @@ object Trigger {
 
   // Onthefly输出计算层级
   var ontheFlyLevel: Int = _
+  //用来标识读取上传文件的编号的自增标识符
+  var file_id: Long = 0
+  val tempFileList = new ListBuffer[String]
+
+  //任务来源
+  var dagType = ""
 
   var coverageReadFromUploadFile : Boolean = false
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
@@ -1305,7 +1311,12 @@ object Trigger {
     println(jsonObject)
 
     isBatch = jsonObject.getString("isBatch").toInt
-
+    //教育版判断
+    if(jsonObject.getString("dagType").equals("edu")){
+      dagType = "edu"
+    }else{
+      dagType = ""
+    }
 
     layerName = jsonObject.getString("layerName")
     try{
@@ -1507,11 +1518,13 @@ object Trigger {
     } finally {
       val tempFilePath = GlobalConfig.Others.tempFilePath
       val filePath = s"${tempFilePath}${dagId}.tiff"
-      if (scala.reflect.io.File(filePath).exists)
-        scala.reflect.io.File(filePath).delete()
-      val featurePath = s"${tempFilePath}${dagId}.geojson"
-      if (scala.reflect.io.File(featurePath).exists)
-        scala.reflect.io.File(featurePath).delete()
+
+      tempFileList.foreach(file =>{
+        if(scala.reflect.io.File(file).exists)
+          scala.reflect.io.File(file).delete()
+      })
+
+      tempFileList.clear()
     }
   }
 

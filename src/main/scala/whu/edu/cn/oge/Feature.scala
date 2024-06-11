@@ -1138,11 +1138,11 @@ object Feature {
 
     val client = MinIOUtil.getMinioClient
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.tiff"
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
     val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
 
     val outputPath = Paths.get(filePath)
-
+    Trigger.file_id += 1
 
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     inputStream.close()

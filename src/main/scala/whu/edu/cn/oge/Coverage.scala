@@ -28,11 +28,12 @@ import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
+import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.{dagId, layerName, windowExtent}
+import whu.edu.cn.trigger.Trigger.{batchParam, dagId, layerName, tempFileList, userId, windowExtent}
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -3400,11 +3401,26 @@ object Coverage {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
+    val writePath: String = s"$tempFilePath$name.tif"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+    // 教育版额外的判断,保存结果,调用回调接口
+    if(Trigger.dagType.equals("edu")){
+      makeTIFF(coverage,dagId)
+      val client: MinioClient = MinIOUtil.getMinioClient
+
+      val saveFilePath = s"$tempFilePath$dagId.tif"
+      val file = new File(saveFilePath)
+      val inputStream = new FileInputStream(file)
+
+      val path = s"$userId/result/$dagId.tif"
+
+
+    }
+
+
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
       reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(Trigger.level))
     } else {
@@ -3547,7 +3563,6 @@ object Coverage {
 
   }
 
-
   def loadCoverageFromUpload(implicit sc: SparkContext, coverageId: String, userID: String, dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     var path: String = new String()
     if (coverageId.endsWith(".tiff") || coverageId.endsWith(".tif")) {
@@ -3558,12 +3573,13 @@ object Coverage {
 
     val client = MinIOUtil.getMinioClient
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.tiff"
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
     val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
 
     val outputPath = Paths.get(filePath)
 
-
+    tempFileList.append(filePath)
+    Trigger.file_id += 1
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     inputStream.close()
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
@@ -3575,9 +3591,15 @@ object Coverage {
   def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val path = "/" + coverageId
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.tiff"
-    val tempfile = new File(filePath)
-    tempfile.createNewFile()
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
+
+    val client = MinIOUtil.getMinioClient
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+    val outputPath = Paths.get(filePath)
+    tempFileList.append(filePath)
+    Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+
     val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
