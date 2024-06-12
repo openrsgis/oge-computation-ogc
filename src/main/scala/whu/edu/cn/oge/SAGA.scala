@@ -4,9 +4,10 @@ import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
+import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import scala.collection.immutable.Map
@@ -42,10 +43,10 @@ object SAGA {
 
   def sagaGridStatisticsForPolygons(implicit sc: SparkContext,
                                     grids: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                                    polygons: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                                    fieldNaming: Int = 1,
-                                    method: Int = 1,
-                                    useMultipleCores: Boolean,
+                                    polygons: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                    fieldNaming: String = "1",
+                                    method: String = "0",
+                                    useMultipleCores: String = "1",
                                     numberOfCells: Boolean,
                                     minimum: Boolean,
                                     maximum: Boolean,
@@ -56,13 +57,19 @@ object SAGA {
                                     standardDeviation: Boolean,
                                     gini: Boolean,
                                     percentiles: String
-                                   ):
-  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                                   ): Unit = {
+   // 枚举类型参数
+    val fieldNamingInput: String = mutable.Map(
+      "0" -> "0",
+      "1" -> "1",
+    ).getOrElse(fieldNaming, "1")
 
-    //    val methodInput: Int = mutable.Map(
-    //      0 -> 0,
-    //      1 -> 1,
-    //    ).getOrElse(method, 1)
+    val methodInput: String = mutable.Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2",
+      "3" -> "3"
+    ).getOrElse(fieldNaming, "0")
 
     val time = System.currentTimeMillis()
     // 服务器上挂载的路径
@@ -81,7 +88,7 @@ object SAGA {
     //输出结果文件路径
     val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.shp"
 
-    saveRasterRDDToTif(polygons, polygonsPath)
+    saveFeatureRDDToShp(polygons, polygonsPath)
     // docker路径
     // docker矢量文件路径
     val dockerPolygonsPath = algorithmDockerData + "sagaGridStatisticsPolygons_" + time + ".shp"
@@ -91,7 +98,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathList -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNaming -METHOD $method -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathList -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -101,7 +108,7 @@ object SAGA {
         e.printStackTrace()
     }
 
-    makeChangedRasterRDDFromTif(sc, writePath)
+//    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
