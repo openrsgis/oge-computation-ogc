@@ -87,6 +87,8 @@ object Trigger {
 
   //任务来源
   var dagType = ""
+  //任务结果文件名
+  var outputFile = ""
 
   var coverageReadFromUploadFile : Boolean = false
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
@@ -1312,11 +1314,22 @@ object Trigger {
 
     isBatch = jsonObject.getString("isBatch").toInt
     //教育版判断
-    if(jsonObject.getString("dagType").equals("edu")){
-      dagType = "edu"
-    }else{
-      dagType = ""
+    try{
+      if (jsonObject.getString("dagType").equals("edu")) {
+        dagType = "edu"
+        outputFile = jsonObject.getString("outputFile")
+      }}catch {
+      case e:Exception =>
+        dagType = ""
+        outputFile = ""
     }
+//    if(jsonObject.getString("dagType").equals("edu")){
+//      dagType = "edu"
+//      outputFile = jsonObject.getString("outputFile")
+//    }else{
+//      dagType = ""
+//      outputFile = ""
+//    }
 
     layerName = jsonObject.getString("layerName")
     try{

@@ -3412,12 +3412,10 @@ object Coverage {
       val client: MinioClient = MinIOUtil.getMinioClient
 
       val saveFilePath = s"$tempFilePath$dagId.tif"
-      val file = new File(saveFilePath)
-      val inputStream = new FileInputStream(file)
 
-      val path = s"$userId/result/$dagId.tif"
-
-
+      val path = s"$userId/result/${Trigger.outputFile}"
+      //上传
+      client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
     }
 
 
@@ -3546,8 +3544,7 @@ object Coverage {
     // 上传文件
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-    val file :File = new File(saveFilePath)
-    val inputStream = new FileInputStream(file)
+
 
     val client: MinioClient = MinIOUtil.getMinioClient
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
@@ -3555,7 +3552,7 @@ object Coverage {
     obj.put("path",path.toString)
     PostSender.shelvePost("info",obj)
 //    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
-    inputStream.close()
+
     client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
 
 //    client.putObject(PutObjectArgs)
