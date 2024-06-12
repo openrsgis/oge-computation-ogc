@@ -8,6 +8,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
@@ -22,21 +23,21 @@ object SAGA {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val feature  = makeFeatureRDDFromShp(sc,"/Users/churcy/Desktop/影像文件/temp/temp.shp")
+    val feature  = makeFeatureRDDFromShp(sc,"D:\\whu_master\\temp\\temp.shp")
     val list:mutable.ListBuffer[JSONObject] = new mutable.ListBuffer[JSONObject]
     feature.collect().foreach(f =>{
 //      result +=f._2
 //      println(f._2._2.get())
       val map = f._2._2
       val mapJson = new JSONObject();
-      val str = JSON.toJSONString(map)
       map.foreach(m =>{
         mapJson.put(m._1,m._2)
       })
       list.append(mapJson)
     })
-    println(list)
-
+    println(list.toArray)
+    shelvePost("info",list.toArray)
+    sendShelvedPost()
 
 //    // test
 //    val grid = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata2_1717593290374.tif")
@@ -75,7 +76,7 @@ object SAGA {
                                     standardDeviation: String = "True",
                                     gini: String = "False",
                                     percentiles: String
-                                   ): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+                                   ): Unit = {
     // 枚举类型参数
     val fieldNamingInput: String = mutable.Map(
       "0" -> "0",
@@ -104,7 +105,7 @@ object SAGA {
     //输入矢量文件路径
     val polygonsPath = algorithmData + "sagaGridStatisticsPolygons_" + time + ".shp"
     //输出结果文件路径
-    //    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.dbf"
+    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.shp"
 
     saveFeatureRDDToShp(polygons, polygonsPath)
     // docker路径
@@ -125,7 +126,19 @@ object SAGA {
       case e: Exception =>
         e.printStackTrace()
     }
-    makeFeatureRDDFromShp(sc, writeDockerPath)
+    val feature = makeFeatureRDDFromShp(sc, writePath)
+    val list: mutable.ListBuffer[JSONObject] = new mutable.ListBuffer[JSONObject]
+    feature.collect().foreach(f => {
+      val map = f._2._2
+      val mapJson = new JSONObject();
+      map.foreach(m => {
+        mapJson.put(m._1, m._2)
+      })
+      list.append(mapJson)
+    })
+    println(list.toArray)
+    shelvePost("info", list.toArray)
+//    sendShelvedPost()
   }
 
   def sagaHistogramMatching(implicit sc: SparkContext,
