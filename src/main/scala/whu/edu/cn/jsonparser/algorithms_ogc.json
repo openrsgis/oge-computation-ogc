@@ -5239,7 +5239,7 @@
 
   "Coverage.gridStatisticsForPolygonsBySAGA": {
     "description": "Zonal grid statistics. For each polygon statistics based on all covered grid cells will be calculated.",
-    "returns": "Feature",
+    "returns": "void",
     "args": [
       {
         "name": "grids",
