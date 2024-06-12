@@ -3810,10 +3810,11 @@ object QGIS {
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
+
     // tif落地
     val outputTiffPath = algorithmData + "gdalSieve_" + time + ".tif"
     val writePath = algorithmData + "gdalSieve_" + time + "_out.tif"
-
+    saveRasterRDDToTif(input, outputTiffPath)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
