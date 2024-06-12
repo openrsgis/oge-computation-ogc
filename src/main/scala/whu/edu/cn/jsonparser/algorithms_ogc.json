@@ -5237,6 +5237,110 @@
     }]
   },
 
+  "Coverage.gridStatisticsForPolygonsBySAGA": {
+    "description": "Zonal grid statistics. For each polygon statistics based on all covered grid cells will be calculated.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "grids",
+        "type": "CoverageCollection",
+        "description": "Grid"
+      },
+      {
+        "name": "polygons",
+        "type": "Feature",
+        "description": "Polygons"
+      },
+      {
+        "name": "fieldNaming",
+        "type": "Int",
+        "description": "Available Choices: [0] grid number [1] grid name Default: 1",
+        "default": 1
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "Available Choices: [0] simple and fast [1] polygon wise (cell centers) [2] polygon wise (cell area) [3] polygon wise (cell area weighted) Default: 0",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "useMultipleCores",
+        "type": "Boolean",
+        "description": "Default: 0",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "numberOfCells",
+        "type": "Boolean",
+        "description": "PARALLELIZED Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "minimum",
+        "type": "Boolean",
+        "description": "min Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "maximum",
+        "type": "Boolean",
+        "description": "max Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "range",
+        "type": "Boolean",
+        "description": "range Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "sum",
+        "type": "Boolean",
+        "description": "Sum Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "mean",
+        "type": "Boolean",
+        "description": "Mean Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "variance",
+        "type": "Boolean",
+        "description": "Variance Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "standardDeviation",
+        "type": "Boolean",
+        "description": "Standard Deviation Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "gini",
+        "type": "Boolean",
+        "description": "Gini Default: 0",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "percentiles",
+        "type": "String",
+        "description": "QUANTILES Separate the desired percentiles by semicolon, e.g. \"5; 25; 50; 75; 95\""
+      }
+    ]
+  },
 
   "Coverage.histogramMatchingBySAGA": {
     "description": "This tool alters the values of a grid so that its value distribution (its histogram), matches that of a reference grid. The first method simply uses arithmetic mean and standard deviation for adjustment, which usually is sufficient for normal distributed values. The second method performs a more precise adjustment based on the grids' histograms.",
