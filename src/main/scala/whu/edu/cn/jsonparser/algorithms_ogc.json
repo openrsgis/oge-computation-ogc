@@ -5356,7 +5356,7 @@
         "type": "Int",
         "description": "integer number Minimum: 0 Default: 2",
         "optional": "True",
-        "default": 100
+        "default": 2
       }
     ]
   },
@@ -5415,6 +5415,53 @@
       }
     ]
   },
+  "Coverage.sieveByGDAL": {
+    "description": "Removes raster polygons smaller than a provided threshold size (in pixels) and replaces them with the pixel value of the largest neighbour polygon. It is useful if you have a large amount of small areas on your raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Input elevation raster layer."
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "Only raster polygons smaller than this size will be removed.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "eightConnectedness",
+        "type": "String",
+        "description": "Use eight connectedness instead of four connectedness.",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "noMask",
+        "type": "String",
+        "description": "Do not use the default validity mask for the input band.",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "maskLayer",
+        "type": "String",
+        "description": "Validity mask to use instead of the default.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "extra",
+        "type": "String",
+        "description": "Add extra GDAL command line options.",
+        "optional": "True",
+        "default": ""
+      }
+    ]
+  },
+
   "Coverage.contourByGDAL": {
     "description": "Extracts contour lines from any GDAL-supported elevation raster.",
     "returns": "Feature",

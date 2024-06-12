@@ -135,7 +135,6 @@ object SAGA {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
-
   def sagaSimpleFilter(implicit sc: SparkContext,
                        input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                        method: Int = 0,
@@ -178,8 +177,6 @@ object SAGA {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
-
-
 
 
 
