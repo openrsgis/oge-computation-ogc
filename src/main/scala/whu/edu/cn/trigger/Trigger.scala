@@ -772,7 +772,7 @@ object Trigger {
 
         // SAGA
         case "Coverage.gridStatisticsForPolygonsBySAGA" =>
-          coverageRddList += (UUID -> SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")),
+          stringList += (UUID -> SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")),
             args("fieldNaming").toInt, args("method").toInt,
             args("useMultipleCores").toBoolean, args("numberOfCells").toBoolean, args("minimum").toBoolean,
             args("maximum").toBoolean,args("range").toBoolean,args("sum").toBoolean,args("mean").toBoolean,

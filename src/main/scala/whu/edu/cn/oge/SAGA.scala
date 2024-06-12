@@ -4,12 +4,14 @@ import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
+import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import scala.collection.immutable.Map
+import scala.collection.mutable.Map
 import scala.collection.{immutable, mutable}
 
 object SAGA {
@@ -42,7 +44,7 @@ object SAGA {
 
   def sagaGridStatisticsForPolygons(implicit sc: SparkContext,
                                     grids: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                                    polygons: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                    polygons: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                                     fieldNaming: Int = 1,
                                     method: Int = 1,
                                     useMultipleCores: Boolean,
@@ -56,13 +58,7 @@ object SAGA {
                                     standardDeviation: Boolean,
                                     gini: Boolean,
                                     percentiles: String
-                                   ):
-  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-
-    //    val methodInput: Int = mutable.Map(
-    //      0 -> 0,
-    //      1 -> 1,
-    //    ).getOrElse(method, 1)
+                                   ): String = {
 
     val time = System.currentTimeMillis()
     // 服务器上挂载的路径
@@ -79,14 +75,14 @@ object SAGA {
     //输入矢量文件路径
     val polygonsPath = algorithmData + "sagaGridStatisticsPolygons_" + time + ".shp"
     //输出结果文件路径
-    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.shp"
+//    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.dbf"
 
-    saveRasterRDDToTif(polygons, polygonsPath)
+    saveFeatureRDDToShp(polygons, polygonsPath)
     // docker路径
     // docker矢量文件路径
     val dockerPolygonsPath = algorithmDockerData + "sagaGridStatisticsPolygons_" + time + ".shp"
     // docker输出结果文件路径
-    val writeDockerPath = algorithmDockerData + "sagaGridStatistics_" + time + "_out.shp"
+    val writeDockerPath = algorithmDockerData + "sagaGridStatistics_" + time + "_out.dbf"
     try {
       versouSshUtil(host, userName, password, port)
 
@@ -100,9 +96,9 @@ object SAGA {
       case e: Exception =>
         e.printStackTrace()
     }
-
-    makeChangedRasterRDDFromTif(sc, writePath)
-
+//    makeChangedRasterRDDFromTif(sc, writePath)
+    //TODO 把dbf数据转成json 返回
+    return ""
   }
 
   def sagaHistogramMatching(implicit sc: SparkContext,
