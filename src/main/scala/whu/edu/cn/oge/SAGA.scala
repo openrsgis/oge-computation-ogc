@@ -11,6 +11,7 @@ import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveFeat
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import scala.collection.immutable.Map
+import scala.collection.mutable.Map
 import scala.collection.{immutable, mutable}
 
 object SAGA {
@@ -70,7 +71,7 @@ object SAGA {
       "2" -> "2",
       "3" -> "3"
     ).getOrElse(fieldNaming, "0")
-
+    
     val time = System.currentTimeMillis()
     // 服务器上挂载的路径
     // 输入的栅格影像集合
@@ -86,14 +87,14 @@ object SAGA {
     //输入矢量文件路径
     val polygonsPath = algorithmData + "sagaGridStatisticsPolygons_" + time + ".shp"
     //输出结果文件路径
-    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.shp"
+//    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.dbf"
 
     saveFeatureRDDToShp(polygons, polygonsPath)
     // docker路径
     // docker矢量文件路径
     val dockerPolygonsPath = algorithmDockerData + "sagaGridStatisticsPolygons_" + time + ".shp"
     // docker输出结果文件路径
-    val writeDockerPath = algorithmDockerData + "sagaGridStatistics_" + time + "_out.shp"
+    val writeDockerPath = algorithmDockerData + "sagaGridStatistics_" + time + "_out.dbf"
     try {
       versouSshUtil(host, userName, password, port)
 
