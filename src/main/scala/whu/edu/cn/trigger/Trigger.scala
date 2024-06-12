@@ -532,6 +532,8 @@ object Trigger {
         case "Coverage.toDouble" =>
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
         //   QGIS
+        case "Coverage.sieveByGDAL" =>
+          coverageRddList += (UUID -> QGIS.gdalSieve(sc, input = coverageRddList(args("input")), threshold = args("threshold").toInt, eightConnectedness = args("eightConnectedness"), noMask = args("noMask"), maskLayer = args("maskLayer"), extra = args("extra")))
         case "Coverage.aspectByQGIS" =>
           coverageRddList += (UUID -> QGIS.nativeAspect(sc, input = coverageRddList(args("input")), zFactor = args("zFactor").toDouble))
         case "Coverage.slopeByQGIS" =>
