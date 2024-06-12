@@ -40,6 +40,71 @@ object SAGA {
   val password = GlobalConfig.SAGAConf.SAGA_PASSWORD
   val port = GlobalConfig.SAGAConf.SAGA_PORT
 
+  def sagaGridStatisticsForPolygons(implicit sc: SparkContext,
+                                    grids: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                                    polygons: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                    fieldNaming: Int = 1,
+                                    method: Int = 1,
+                                    useMultipleCores: Boolean,
+                                    numberOfCells: Boolean,
+                                    minimum: Boolean,
+                                    maximum: Boolean,
+                                    range: Boolean,
+                                    sum: Boolean,
+                                    mean: Boolean,
+                                    variance: Boolean,
+                                    standardDeviation: Boolean,
+                                    gini: Boolean,
+                                    percentiles: String
+                                   ):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    //    val methodInput: Int = mutable.Map(
+    //      0 -> 0,
+    //      1 -> 1,
+    //    ).getOrElse(method, 1)
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    // 输入的栅格影像集合
+    var tiffDockerPathList: List[String] = List()
+    for (grid <- grids) {
+      // 影像落地为tif
+      val tiffPath = algorithmData + "sagaGridStatisticsGrids" + grid._1 + "_" + time + ".tif"
+      val tiffDockerPath = algorithmDockerData + "sagaGridStatisticsGrids" + grid._1 + "_" + time + ".tif"
+      saveRasterRDDToTif(grid._2, tiffPath)
+      tiffDockerPathList = tiffDockerPathList :+ tiffDockerPath
+    }
+    //    val tiffDockerPathCollection = tiffDockerPathList.mkString(";")
+    //输入矢量文件路径
+    val polygonsPath = algorithmData + "sagaGridStatisticsPolygons_" + time + ".shp"
+    //输出结果文件路径
+    val writePath = algorithmData + "sagaGridStatistics_" + time + "_out.shp"
+
+    saveRasterRDDToTif(polygons, polygonsPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockerPolygonsPath = algorithmDockerData + "sagaGridStatisticsPolygons_" + time + ".shp"
+    // docker输出结果文件路径
+    val writeDockerPath = algorithmDockerData + "sagaGridStatistics_" + time + "_out.shp"
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathList -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNaming -METHOD $method -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
   def sagaHistogramMatching(implicit sc: SparkContext,
                             grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                             referenceGrid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),

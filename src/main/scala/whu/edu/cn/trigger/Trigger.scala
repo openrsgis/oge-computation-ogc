@@ -771,6 +771,12 @@ object Trigger {
           coverageRddList += (UUID -> QGIS.calNPP(sc, coverageRddList(args("inputLSWI")),coverageRddList(args("inputNDVI")),coverageRddList(args("paraData"))))
 
         // SAGA
+        case "Coverage.gridStatisticsForPolygonsBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")),
+            args("fieldNaming").toInt, args("method").toInt,
+            args("useMultipleCores").toBoolean, args("numberOfCells").toBoolean, args("minimum").toBoolean,
+            args("maximum").toBoolean,args("range").toBoolean,args("sum").toBoolean,args("mean").toBoolean,
+            args("variance").toBoolean, args("standardDeviation").toBoolean, args("gini").toBoolean,args("percentiles")))
         case "Coverage.histogramMatchingBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
         case "Coverage.histogramMatchingBySAGA" =>
