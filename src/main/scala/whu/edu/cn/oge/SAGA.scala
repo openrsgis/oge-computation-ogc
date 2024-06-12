@@ -45,9 +45,9 @@ object SAGA {
   def sagaGridStatisticsForPolygons(implicit sc: SparkContext,
                                     grids: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                                     polygons: RDD[(String, (Geometry, mutable.Map[String, Any]))],
-                                    fieldNaming: Int = 1,
-                                    method: Int = 1,
-                                    useMultipleCores: Boolean,
+                                    fieldNaming: String = "1",
+                                    method: String = "0",
+                                    useMultipleCores: String = "1",
                                     numberOfCells: Boolean,
                                     minimum: Boolean,
                                     maximum: Boolean,
@@ -58,8 +58,20 @@ object SAGA {
                                     standardDeviation: Boolean,
                                     gini: Boolean,
                                     percentiles: String
-                                   ): String = {
+                                   ): Unit = {
+   // 枚举类型参数
+    val fieldNamingInput: String = mutable.Map(
+      "0" -> "0",
+      "1" -> "1",
+    ).getOrElse(fieldNaming, "1")
 
+    val methodInput: String = mutable.Map(
+      "0" -> "0",
+      "1" -> "1",
+      "2" -> "2",
+      "3" -> "3"
+    ).getOrElse(fieldNaming, "0")
+    
     val time = System.currentTimeMillis()
     // 服务器上挂载的路径
     // 输入的栅格影像集合
@@ -87,7 +99,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathList -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNaming -METHOD $method -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathList -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -96,9 +108,9 @@ object SAGA {
       case e: Exception =>
         e.printStackTrace()
     }
+
 //    makeChangedRasterRDDFromTif(sc, writePath)
-    //TODO 把dbf数据转成json 返回
-    return ""
+
   }
 
   def sagaHistogramMatching(implicit sc: SparkContext,
