@@ -5266,70 +5266,70 @@
       },
       {
         "name": "useMultipleCores",
-        "type": "Boolean",
+        "type": "String",
         "description": "Default: 0",
         "optional": "True",
         "default": "False"
       },
       {
         "name": "numberOfCells",
-        "type": "Boolean",
+        "type": "String",
         "description": "PARALLELIZED Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "minimum",
-        "type": "Boolean",
+        "type": "String",
         "description": "min Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "maximum",
-        "type": "Boolean",
+        "type": "String",
         "description": "max Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "range",
-        "type": "Boolean",
+        "type": "String",
         "description": "range Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "sum",
-        "type": "Boolean",
+        "type": "String",
         "description": "Sum Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "mean",
-        "type": "Boolean",
+        "type": "String",
         "description": "Mean Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "variance",
-        "type": "Boolean",
+        "type": "String",
         "description": "Variance Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "standardDeviation",
-        "type": "Boolean",
+        "type": "String",
         "description": "Standard Deviation Default: 1",
         "optional": "True",
         "default": "True"
       },
       {
         "name": "gini",
-        "type": "Boolean",
+        "type": "String",
         "description": "Gini Default: 0",
         "optional": "True",
         "default": "False"
