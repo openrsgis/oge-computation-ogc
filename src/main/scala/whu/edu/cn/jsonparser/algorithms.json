@@ -5358,7 +5358,7 @@
   },
   "Coverage.gridStatisticsForPolygonsBySAGA": {
     "description": "Zonal grid statistics. For each polygon statistics based on all covered grid cells will be calculated.",
-    "returns": "Feature",
+    "returns": "void",
     "args": [
       {
         "name": "grids",
@@ -5508,10 +5508,10 @@
       },
       {
         "name": "normalize",
-        "type": "Int",
+        "type": "String",
         "description": "Normalize",
         "optional": "True",
-        "default": 0
+        "default": "0"
       },
       {
         "name": "iterations",
