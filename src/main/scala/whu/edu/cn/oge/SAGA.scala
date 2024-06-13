@@ -190,7 +190,7 @@ object SAGA {
   }
   def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
                                     features: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                                    normalize: Int = 0,
+                                    normalize: String = "0",
                                     iterations: Int = 20,
                                     clusterINI: Int = 5,
                                     clusterMAX: Int = 16,
@@ -229,7 +229,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st2 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE "$normalize" -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE $normalize -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
 
       println(s"st = $st2")
       runCmd(st2, "UTF-8")

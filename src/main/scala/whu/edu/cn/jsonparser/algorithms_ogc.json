@@ -5390,10 +5390,10 @@
       },
       {
         "name": "normalize",
-        "type": "Int",
+        "type": "String",
         "description": "Normalize",
         "optional": "True",
-        "default": 0
+        "default": "0"
       },
       {
         "name": "iterations",
