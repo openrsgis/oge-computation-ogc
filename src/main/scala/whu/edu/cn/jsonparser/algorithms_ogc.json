@@ -5239,7 +5239,7 @@
 
   "Coverage.gridStatisticsForPolygonsBySAGA": {
     "description": "Zonal grid statistics. For each polygon statistics based on all covered grid cells will be calculated.",
-    "returns": "void",
+    "returns": "String",
     "args": [
       {
         "name": "grids",
@@ -13265,7 +13265,7 @@
   },
   "AI.ANNClassification": {
     "description": "Classify image using ANN.",
-    "returns": "String",
+    "returns": "Coverage",
     "args": [
       {
         "name": "coverage",

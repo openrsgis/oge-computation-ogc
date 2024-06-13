@@ -1157,12 +1157,6 @@ object Trigger {
             featureRddList(args("featureRDD2")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], propertyList))
         case "Feature.get" =>
           stringList += (UUID -> Feature.get(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")).toString())
-//        case "Feature.getNumber" =>
-//          stringList += (UUID -> Feature.getNumber(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-//        case "Feature.getString" =>
-//          stringList += (UUID -> Feature.getString(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
-//        case "Feature.getArray" =>
-//          featureRddList += (UUID -> Feature.getArray(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], args("property")))
         case "Feature.propertyNames" =>
           stringList += (UUID -> Feature.propertyNames(featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
         case "Feature.set" =>
@@ -1174,10 +1168,6 @@ object Trigger {
           featureRddList += (UUID -> Feature.featureCollection(sc,args("featureList").stripPrefix("[").stripSuffix("]").split(",").toList.map(t =>{featureRddList(t).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]})))
         case "Feature.addStyles" =>
           Feature.visualize(feature = featureRddList(args("input")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],color = args("color").replace("[", "").replace("]", "").split(',').toList,attribute = args("attribute"))
-        //      case "Feature.inverseDistanceWeighted" =>
-        //        coverageRddList += (UUID -> Feature.inverseDistanceWeighted(sc, featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
-        //          args("propertyName"), featureRddList(args("maskGeom")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]]))
-
         //algorithms.SpatialStats
         case "SpatialStats.GWModels.GWRbasic.autoFit" =>
           val re_gwr = GWModels.GWRbasic.autoFit(sc,featureRddList(args("featureRDD")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("propertyY"),args("propertiesX"),args("kernel"),args("approach"),args("adaptive").toBoolean)
@@ -1232,35 +1222,6 @@ object Trigger {
           coverageRddList += (UUID -> ColorBalance.colorBalance(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.colorbalanceRef.ColorBalanceWithRef.colorBalanceRef" =>
           coverageRddList += (UUID -> ColorBalanceWithRef.colorBalanceRef(sc, coverageCollectionRddList(args("coverageCollection"))))
-        //Cube
-        //        case "Service.getCollections" =>
-        //          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
-        //        case "Collections.toCube" =>
-        //          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
-        //        case "Cube.NDWI" =>
-        //          cubeRDDList += (UUID -> Cube.NDWI(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name")))
-        //        case "Cube.binarization" =>
-        //          cubeRDDList += (UUID -> Cube.binarization(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"), name = isOptionalArg(args, "name"),
-        //            threshold = isOptionalArg(args, "threshold").toDouble))
-        //        case "Cube.subtract" =>
-        //          cubeRDDList += (UUID -> Cube.WaterChangeDetection(input = cubeRDDList(args("input")), product = isOptionalArg(args, "product"),
-        //            certainTimes = isOptionalArg(args, "timeList"), name = isOptionalArg(args, "name")))
-        //        case "Cube.overlayAnalysis" =>
-        //          cubeRDDList += (UUID -> Cube.OverlayAnalysis(input = cubeRDDList(args("input")), rasterOrTabular = isOptionalArg(args, "raster"), vector = isOptionalArg(args, "vector"), name = isOptionalArg(args, "name")))
-        //        case "Cube.addStyles" =>
-        //          Cube.visualize(sc, cube = cubeRDDList(args("cube")), products = isOptionalArg(args, "products"))
-//        case "Cube.load" => {
-//          cubeRDDList += (UUID -> Cube.load(sc, cubeName = isOptionalArg(args, "cubeID"), extent = isOptionalArg(args, "bbox"),
-//            dateTime = isOptionalArg(args, "dateTime")))
-//        }
-//        case "Cube.normalize" => {
-//          cubeRDDList += (UUID -> Cube.calculateAlongDimensionWithString(input = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-//            dimensionMembersStr = isOptionalArg(args, "dimensionMembers"), method = "normalize"))
-//        }
-//        case "Cube.aggregate" => {
-//          cubeRDDList += (UUID -> Cube.aggregateAlongDimension(data = cubeRDDList(args("input")), dimensionName = isOptionalArg(args, "dimensionName"),
-//            method = isOptionalArg(args, "method")))
-//        }
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
@@ -1276,27 +1237,10 @@ object Trigger {
           cubeRDDList += (UUID -> CubeNew.multiply(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
         case "Cube.divide" =>
           cubeRDDList += (UUID -> CubeNew.divide(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
-
-
-//        case "Cube.build" => {
-//          val coverageList: ArrayBuffer[String] = args("coverageIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-//          val productList: ArrayBuffer[String] = args("productIDList").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]]
-//          cubeRDDList += (UUID -> Cube.cubeBuild(sc, coverageList, productList, level = level,
-//            gridDimX = args("gridDimX").toInt, gridDimY=args("gridDimY").toInt,
-//            startTime = args("startTime"), endTime = args("endTime"), extents = args("extent")))
-//        }
-//        case "Cube.export" =>
-//          Cube.visualizeBatch(sc, cubeRDDList(args("cube")), batchParam = batchParam, dagId = dagId)
-//        case "Cube.NDVI" =>
-//          cubeRDDList += (UUID -> Cube.NDVI(cubeRDDList(args("input")), bandNames = args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList))
-//        case "Cube.floodFillAnalysis" =>
-//          Cube.floodServices(sc, args("cubeId"), args("rasterProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-//            args("vectorProductNames").stripPrefix("[").stripSuffix("]").split(",").toBuffer.asInstanceOf[ArrayBuffer[String]],
-//            args("extent"), args("startTime"), args("endTime"))
         // TrainingDML-AI 新增算子
         case "Dataset.encoding" =>
           stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
-        case "AL.ANNClassification" =>
+        case "AI.ANNClassification" =>
           coverageRddList += (UUID -> ML.ANNClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
       }
 
@@ -1629,15 +1573,15 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragecollection.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
-    dagId = "12345678"
-    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
+    dagId = "45607c22-dbce-4674-9abf-c9f906668dfa_1718268689911_0"
+    userId = "45607c22-dbce-4674-9abf-c9f906668dfa"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()

@@ -53,9 +53,11 @@ object ML {
     val client = BosClientUtil_scala.getClient2
     //下载文件
     sampleFiles.foreach(f =>{
-      val filePath = s"$userFolder/f"
-      val path = s"${Trigger.userId}/f"
+      val fileName = f.split('/')(1)
+      val filePath = s"$userFolder/$fileName"
+      val path = s"${Trigger.userId}/$f"
       val tempfile = new File(filePath)
+      println(path)
       val getObjectRequest = new GetObjectRequest("oge-user",path)
       tempfile.createNewFile()
       val bosObject = client.getObject(getObjectRequest,tempfile)
@@ -63,7 +65,7 @@ object ML {
 
     // 给每个文件加路径前缀
     val sampleFiles1 = sampleFiles.map(f =>{
-      s"$userFolder/" + f
+      s"$userFolder/" + f.split('/')(1)
     })
     val samplePaths = sampleFiles1.mkString(" ")
 
@@ -71,8 +73,7 @@ object ML {
     // nodata的处理很麻烦的一点是如果匹配不到怎么办？
 //    val nodata = getnoDataAccordingtoCellType(coverage._2.cellType)
 
-    val st =
-      s"conda activate cv && python /root/ann/ann.py --imagePath $savePath --samplePath $samplePaths --savePath $resultPath "
+    val st = s"conda activate cv && python /root/ann/ann.py --imagePath $savePath --samplePath $samplePaths --savePath $resultPath "
 
     Trigger.tempFileList.append(savePath)
     Trigger.tempFileList.append(resultPath)
@@ -80,7 +81,7 @@ object ML {
     println(s"st = $st")
     runCmd(st, "UTF-8")
     println("Success")
-    Thread.sleep(200)
+//    Thread.sleep(200)
     val result = makeChangedRasterRDDFromTif(sc,resultPath)
 
 
