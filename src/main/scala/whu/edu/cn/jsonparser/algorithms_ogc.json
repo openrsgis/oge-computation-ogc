@@ -13278,5 +13278,21 @@
         "description": "Sample files to train the model."
       }
     ]
+  },
+  "AI.SVMClassification": {
+    "description": "Classify image using SVM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Coverage to be classified."
+      },
+      {
+        "name": "sampleFiles",
+        "type": "List[String]",
+        "description": "Sample files to train the model."
+      }
+    ]
   }
 }

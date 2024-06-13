@@ -1242,6 +1242,9 @@ object Trigger {
           stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
         case "AI.ANNClassification" =>
           coverageRddList += (UUID -> ML.ANNClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
+        case "AI.SVMClassification" =>
+          coverageRddList += (UUID -> ML.SVMClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
+
       }
 
 
