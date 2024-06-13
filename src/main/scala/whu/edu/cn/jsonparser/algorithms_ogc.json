@@ -13384,5 +13384,32 @@
         "description": "image to be color balance and reference"
       }
     ]
+  },
+  "Dataset.encoding": {
+    "description": "TrainingDML-AI encoding of dataset in oge",
+    "returns": "String",
+    "args": [
+      {
+        "name": "datasetName",
+        "type": "String",
+        "description": "name of dataset for the encoding"
+      }
+    ]
+  },
+  "AI.ANNClassification": {
+    "description": "Classify image using ANN.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Coverage to be classified."
+      },
+      {
+        "name": "sampleFiles",
+        "type": "List[String]",
+        "description": "Sample files to train the model."
+      }
+    ]
   }
 }

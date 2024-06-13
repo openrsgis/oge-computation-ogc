@@ -18,6 +18,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
+import whu.edu.cn.algorithms.AI.ML
 import whu.edu.cn.algorithms.terrain.calculator
 import whu.edu.cn.entity.OGEClassType.OGEClassType
 import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
@@ -25,7 +26,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,IHSFusion,panSharp,catTwoCoverage}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, panSharp, reduction, standardDeviationCalculation, standardDeviationStretching}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -1286,6 +1287,8 @@ object Trigger {
         // TrainingDML-AI 新增算子
         case "Dataset.encoding" =>
           stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
+        case "AL.ANNClassification" =>
+          coverageRddList += (UUID -> ML.ANNClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
       }
 
 
