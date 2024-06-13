@@ -23,7 +23,8 @@ object SAGA {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val feature  = makeFeatureRDDFromShp(sc,"D:\\whu_master\\temp\\temp.shp")
+//    val feature  = makeFeatureRDDFromShp(sc,"D:\\whu_master\\temp\\temp.shp")
+    val feature  = makeFeatureRDDFromShp(sc,"/Users/churcy/Desktop/影像文件/temp/temp.shp")
     val list:mutable.ListBuffer[JSONObject] = new mutable.ListBuffer[JSONObject]
     feature.collect().foreach(f =>{
 //      result +=f._2
@@ -37,7 +38,7 @@ object SAGA {
     })
     println(list.toArray)
     val resultJson = new JSONObject();
-    resultJson.put("info",JSON.toJSONString(list))
+    resultJson.put("info",list.toArray)
     //    shelvePost("info", list.toArray)
     //    sendShelvedPost()
     println(resultJson.toString)
@@ -140,7 +141,7 @@ object SAGA {
     })
     println(list.toArray)
     val resultJson = new JSONObject();
-    resultJson.put("info",JSON.toJSONString(list))
+    resultJson.put("info",list.toArray)
 //    shelvePost("info", list.toArray)
 //    sendShelvedPost()
     resultJson.toString
