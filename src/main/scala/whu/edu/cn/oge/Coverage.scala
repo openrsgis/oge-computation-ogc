@@ -3566,6 +3566,25 @@ object Coverage {
 
     coverage
   }
+  var file_idx:Long = 0
+  def loadTxtFromUpload(txt: String,userID: String, dagId: String) = {
+    var path: String = s"${userID}/$txt"
+
+
+    val client = BosClientUtil_scala.getClient2
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}_$file_idx.txt"
+
+    val tempfile = new File(filePath)
+    val getObjectRequest = new GetObjectRequest("oge-user", path)
+    tempfile.createNewFile()
+    val bosObject = client.getObject(getObjectRequest, tempfile)
+    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
+    println(filePath)
+    file_idx = file_idx + 1
+
+    filePath
+  }
 
   def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val path = "/" + coverageId

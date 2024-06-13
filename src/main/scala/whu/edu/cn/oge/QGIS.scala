@@ -3799,6 +3799,40 @@ object QGIS {
 
     makeChangedRasterRDDFromTif(sc, writePath)
   }
+
+  def gdalSieve(implicit sc: SparkContext,
+                input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                threshold: Int = 10,
+                eightConnectedness: String = "False",
+                noMask: String = "False",
+                maskLayer: String = "",
+                extra: String = "")
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // tif落地
+    val outputTiffPath = algorithmData + "gdalSieve_" + time + ".tif"
+    val writePath = algorithmData + "gdalSieve_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_sieve.py --input "$outputTiffPath" --threshold $threshold --eightConnectedness "$eightConnectedness" --noMask "$noMask" --maskLayer "$maskLayer" --output "$writePath" --extra "$extra"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+  }
+
+
+
 }
 
 

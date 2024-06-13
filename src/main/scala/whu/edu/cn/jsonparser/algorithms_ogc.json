@@ -3842,322 +3842,6 @@
       "default": 256
     }]
   },
-  "Coverage.OpticalCalibrationByOTB": {
-    "description": "The application allows converting pixel values from DN (for Digital Numbers) to reflectance. Calibrated values are called surface reflectivity and its values lie in the range [0, 1].\nThe first level is called Top Of Atmosphere (TOA) reflectivity. It takes into account the sensor gain, sensor spectral response and the solar illuminations.\nThe second level is called Top Of Canopy (TOC) reflectivity. In addition to sensor gain and solar illuminations, it takes into account the optical thickness of the atmosphere, the atmospheric pressure, the water vapor amount, the ozone amount, as well as the composition and amount of aerosol gasses.\nIt is also possible to indicate an AERONET file which contains atmospheric parameters (version 1 and version 2 of Aeronet file are supported. Note that computing TOC reflectivity will internally compute first TOA and then TOC reflectance.",
-    "returns": "Coverage",
-    "args": [{
-      "name": "in",
-      "type": "Coverage",
-      "description": "Input image filename",
-      "optional": "True"
-    }, {
-      "name": "level",
-      "type": "String",
-      "description": "",
-      "default": "toa"
-    }, {
-      "name": "milli",
-      "type": "Boolean",
-      "description": "Flag to use milli-reflectance instead of reflectance.\nThis allows saving the image with integer pixel type (in the range [0, 1000]  instead of floating point in the range [0, 1]. In order to do that, use this option and set the output pixel type (-out filename double for example)",
-      "default": "false"
-    }, {
-      "name": "clamp",
-      "type": "Boolean",
-      "description": "Clamping in the range [0, 1]. It can be useful to preserve area with specular reflectance.",
-      "default": "true"
-    }, {
-      "name": "acqui.minute",
-      "type": "Int",
-      "description": "Minute (0-59)",
-      "default": 0
-    }, {
-      "name": "acqui.hour",
-      "type": "Int",
-      "description": "Hour (0-23)",
-      "default": 12
-    }, {
-      "name": "acqui.day",
-      "type": "Int",
-      "description": "Day (1-31)",
-      "default": 1
-    }, {
-      "name": "acqui.month",
-      "type": "Int",
-      "description": "Month (1-12)",
-      "default": 1
-    }, {
-      "name": "acqui.year",
-      "type": "Int",
-      "description": "Year",
-      "default": 2000
-    }, {
-      "name": "acqui.fluxnormcoeff",
-      "type": "Float",
-      "description": "Flux Normalization Coefficient"
-    }, {
-      "name": "acqui.solardistance",
-      "type": "Float",
-      "description": "Solar distance (in AU)"
-    }, {
-      "name": "acqui.sun.elev",
-      "type": "Float",
-      "description": "Sun elevation angle (in degrees)",
-      "default": 90
-    }, {
-      "name": "acqui.sun.azim",
-      "type": "Float",
-      "description": "Sun azimuth angle (in degrees)",
-      "default": 0
-    }, {
-      "name": "acqui.view.elev",
-      "type": "Float",
-      "description": "Viewing elevation angle (in degrees)",
-      "default": 90
-    }, {
-      "name": "acqui.view.azim",
-      "type": "Float",
-      "description": "Viewing azimuth angle (in degrees)",
-      "default": 0
-    }, {
-      "name": "acqui.gainbias",
-      "type": "String",
-      "description": "A text file containing user defined gains and biases"
-    }, {
-      "name": "acqui.solarilluminations",
-      "type": "String",
-      "description": "Solar illuminations (one value per band, in W/m^2/micron)"
-    }, {
-      "name": "atmo.aerosol",
-      "type": "String",
-      "description": "",
-      "default": "noaersol"
-    }, {
-      "name": "atmo.oz",
-      "type": "Float",
-      "description": "Stratospheric ozone layer content (in cm-atm)",
-      "default": 0
-    }, {
-      "name": "atmo.wa",
-      "type": "Float",
-      "description": "Total water vapor content over vertical atmospheric column (in g/cm2)",
-      "default": 2.5
-    }, {
-      "name": "atmo.pressure",
-      "type": "Float",
-      "description": "Atmospheric Pressure (in hPa)",
-      "default": 1030
-    }, {
-      "name": "atmo.opt",
-      "type": "Float",
-      "description": "Aerosol Optical Thickness (unitless)",
-      "default": 0.2
-    }, {
-      "name": "atmo.aeronet",
-      "type": "String",
-      "description": "Aeronet file containing atmospheric parameters"
-    }, {
-      "name": "atmo.rsr",
-      "type": "String",
-      "description": "Sensor relative spectral response file By default the application gets this information in the metadata"
-    }, {
-      "name": "atmo.radius",
-      "type": "Int",
-      "description": "Window radius for adjacency effects correctionsSetting this parameters will enable the correction ofadjacency effects",
-      "default": 2
-    }, {
-      "name": "atmo.pixsize",
-      "type": "Float",
-      "description": "Pixel size (in km) used tocompute adjacency effects, it doesn\u2019t have tomatch the image spacing",
-      "default": 1
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }]
-  },
-  "Coverage.OrthoRectificationByOTB": {
-    "description": "This application uses inverse sensor modelling combined with a choice of interpolation functions to resample a sensor geometry image into a ground geometry regular grid. The ground geometry regular grid is defined with respect to a map projection (see map parameter). The application offers several modes to estimate the output grid parameters (origin and ground sampling distance), including automatic estimation of image size, ground sampling distance, or both, from image metadata, user-defined ROI corners, or another ortho-image.A digital Elevation Model along with a geoid file can be specified to account for terrain deformations.In case of SPOT5 images, the sensor model can be approximated by an RPC model in order to speed-up computation.",
-    "returns": "Coverage",
-    "args": [{
-      "name": "io.in",
-      "type": "Coverage",
-      "description": "The input image to ortho-rectify",
-      "optional": "True"
-    }, {
-      "name": "map",
-      "type": "String",
-      "description": "Defines the map projection to be used.",
-      "default": "utm"
-    }, {
-      "name": "map.utm.zone",
-      "type": "Int",
-      "description": "The zone number ranges from 1 to 60 and allows defining the transverse mercator projection (along with the hemisphere)",
-      "default": 31
-    }, {
-      "name": "map.utm.northhem",
-      "type": "Boolean",
-      "description": "The transverse mercator projections are defined by their zone number as well as the hemisphere. Activate this parameter if your image is in the northern hemisphere.",
-      "default": "false"
-    }, {
-      "name": "map.epsg.code",
-      "type": "Int",
-      "description": "See www.spatialreference.org to find which EPSG code is associated to your projection",
-      "default": 4326
-    }, {
-      "name": "outputs.mode",
-      "type": "String",
-      "description": "User Defined|Automatic Size from Spacing|Automatic Spacing from Size|Automatic Size from Spacing and output corners|Fit to ortho",
-      "default": "auto"
-    }, {
-      "name": "outputs.ulx",
-      "type": "Double",
-      "description": "Cartographic X coordinate of upper-left corner (meters for cartographic projections, degrees for geographic ones)",
-      "optional": "True"
-    }, {
-      "name": "outputs.uly",
-      "type": "Double",
-      "description": "Cartographic Y coordinate of the upper-left corner (meters for cartographic projections, degrees for geographic ones)",
-      "optional": "True"
-    }, {
-      "name": "outputs.sizex",
-      "type": "Int",
-      "description": "Size of projected image along X (in pixels)",
-      "optional": "True"
-    }, {
-      "name": "outputs.sizey",
-      "type": "Int",
-      "description": "Size of projected image along Y (in pixels)",
-      "optional": "True"
-    }, {
-      "name": "outputs.spacingx",
-      "type": "Double",
-      "description": "Size of each pixel along X axis (meters for cartographic projections, degrees for geographic ones)",
-      "optional": "True"
-    }, {
-      "name": "outputs.spacingy",
-      "type": "Double",
-      "description": "Size of each pixel along Y axis (meters for cartographic projections, degrees for geographic ones)",
-      "optional": "True"
-    }, {
-      "name": "outputs.lrx",
-      "type": "Double",
-      "description": "Cartographic X coordinate of the lower-right corner (meters for cartographic projections, degrees for geographic ones)"
-    }, {
-      "name": "outputs.lry",
-      "type": "Double",
-      "description": "Cartographic Y coordinate of the lower-right corner (meters for cartographic projections, degrees for geographic ones)"
-    }, {
-      "name": "outputs.ortho",
-      "type": "String",
-      "description": "A model ortho-image that can be used to compute size, origin and spacing of the output"
-    }, {
-      "name": "outputs.isotropic",
-      "type": "Boolean",
-      "description": "Default spacing (pixel size) values are estimated from the sensor modeling of the image. It can therefore result in a non-isotropic spacing. This option allows you to force default values to be isotropic (in this case, the minimum of spacing in both direction is applied. Values overridden by user are not affected by this option.",
-      "default": "true"
-    }, {
-      "name": "outputs.default",
-      "type": "Double",
-      "description": "Default value to write when outside of input image.",
-      "default": 0
-    }, {
-      "name": "elev.dem",
-      "type": "String",
-      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
-    }, {
-      "name": "elev.geoid",
-      "type": "String",
-      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
-    }, {
-      "name": "elev.default",
-      "type": "Float",
-      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
-      "default": 0
-    }, {
-      "name": "interpolator",
-      "type": "String",
-      "description": "This group of parameters allows one to define how the input image will be interpolated during resampling.",
-      "default": "bco"
-    }, {
-      "name": "interpolator.bco.radius",
-      "type": "Int",
-      "description": "This parameter allows one to control the size of the bicubic interpolation filter. If the target pixel size is higher than the input pixel size, increasing this parameter will reduce aliasing artifacts.",
-      "default": 2
-    }, {
-      "name": "opt.rpc",
-      "type": "Int",
-      "description": "Enabling RPC modeling allows one to speed-up SPOT5 ortho-rectification. Value is the number of control points per axis for RPC estimation",
-      "default": 10
-    }, {
-      "name": "opt.ram",
-      "type": "Int",
-      "description": "This allows setting the maximum amount of RAM available for processing. As the writing task is time consuming, it is better to write large pieces of data, which can be achieved by increasing this parameter (pay attention to your system capabilities)",
-      "default": 256
-    }, {
-      "name": "opt.gridspacing",
-      "type": "Double",
-      "description": "Resampling is done according to a coordinate mapping deformation grid, whose pixel size is set by this parameter, and expressed in the coordinate system of the output image The closer to the output spacing this parameter is, the more precise will be the ortho-rectified image,but increasing this parameter will reduce processing time.",
-      "default": 4
-    }]
-  },
-  "Coverage.PansharpeningByOTB": {
-    "description": "This application performs P+XS pansharpening. Pansharpening is a process of merging high-resolution panchromatic and lower resolution multispectral imagery to create a single high-resolution color image. Algorithms available in the applications are: RCS, bayesian fusion and Local Mean and Variance Matching(LMVM).",
-    "returns": "Coverage",
-    "args": [{
-      "name": "inp",
-      "type": "Coverage",
-      "description": "Input panchromatic image.",
-      "optional": "True"
-    },{
-      "name": "ins",
-      "type": "Coverage",
-      "description": "Input XS image.",
-      "optional": "True"
-    },{
-      "name": "method",
-      "type": "String",
-      "description": "Selection of the pan-sharpening method.",
-      "default": "rcs"
-    }, {
-      "name": "method.rcs.radiusx",
-      "type": "Int",
-      "description": "Set the x radius of the sliding window.",
-      "default": 9
-    }, {
-      "name": "method.rcs.radiusy",
-      "type": "Int",
-      "description": "Set the y radius of the sliding window.",
-      "default": 9
-    }, {
-      "name": "method.lmvm.radiusx",
-      "type": "Int",
-      "description": "Set the x radius of the sliding window.",
-      "default": 3
-    }, {
-      "name": "method.lmvm.radiusy",
-      "type": "Int",
-      "description": "Set the y radius of the sliding window.",
-      "default": 3
-    }, {
-      "name": "method.bayes.lambda",
-      "type": "Float",
-      "description": "Set the weighting value.",
-      "default": 0.9999
-    }, {
-      "name": "method.bayes.s",
-      "type": "Float",
-      "description": "Set the S coefficient.",
-      "default": 1
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }]
-  },
-
-
   "Coverage.segmentationMprofilesdVectorByOTB": {
     "description": "Performs segmentation of an image, and output a vector file.Segmentation based on morphological profiles.",
     "returns": "Feature",
@@ -5204,7 +4888,7 @@
     "description": "The application allows converting pixel values from DN (for Digital Numbers) to reflectance. Calibrated values are called surface reflectivity and its values lie in the range [0, 1].\nThe first level is called Top Of Atmosphere (TOA) reflectivity. It takes into account the sensor gain, sensor spectral response and the solar illuminations.\nThe second level is called Top Of Canopy (TOC) reflectivity. In addition to sensor gain and solar illuminations, it takes into account the optical thickness of the atmosphere, the atmospheric pressure, the water vapor amount, the ozone amount, as well as the composition and amount of aerosol gasses.\nIt is also possible to indicate an AERONET file which contains atmospheric parameters (version 1 and version 2 of Aeronet file are supported. Note that computing TOC reflectivity will internally compute first TOA and then TOC reflectance.",
     "returns": "Coverage",
     "args": [{
-      "name": "in",
+      "name": "input",
       "type": "Coverage",
       "description": "Input image filename",
       "optional": "True"
@@ -5216,7 +4900,7 @@
     }, {
       "name": "milli",
       "type": "Boolean",
-      "description": "Flag to use milli-reflectance instead of reflectance.\nThis allows saving the image with integer pixel type (in the range [0, 1000]  instead of floating point in the range [0, 1]. In order to do that, use this option and set the output pixel type (-out filename double for example)",
+      "description": "Flag to use milli-reflectance instead of reflectance.This allows saving the image with integer pixel type (in the range [0, 1000]  instead of floating point in the range [0, 1]. In order to do that, use this option and set the output pixel type (-out filename double for example)",
       "default": "false"
     }, {
       "name": "clamp",
@@ -5553,6 +5237,110 @@
     }]
   },
 
+  "Coverage.gridStatisticsForPolygonsBySAGA": {
+    "description": "Zonal grid statistics. For each polygon statistics based on all covered grid cells will be calculated.",
+    "returns": "void",
+    "args": [
+      {
+        "name": "grids",
+        "type": "CoverageCollection",
+        "description": "Grid"
+      },
+      {
+        "name": "polygons",
+        "type": "Feature",
+        "description": "Polygons"
+      },
+      {
+        "name": "fieldNaming",
+        "type": "Int",
+        "description": "Available Choices: [0] grid number [1] grid name Default: 1",
+        "default": 1
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "Available Choices: [0] simple and fast [1] polygon wise (cell centers) [2] polygon wise (cell area) [3] polygon wise (cell area weighted) Default: 0",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "useMultipleCores",
+        "type": "String",
+        "description": "Default: 0",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "numberOfCells",
+        "type": "String",
+        "description": "PARALLELIZED Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "minimum",
+        "type": "String",
+        "description": "min Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "maximum",
+        "type": "String",
+        "description": "max Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "range",
+        "type": "String",
+        "description": "range Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "sum",
+        "type": "String",
+        "description": "Sum Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "mean",
+        "type": "String",
+        "description": "Mean Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "variance",
+        "type": "String",
+        "description": "Variance Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "standardDeviation",
+        "type": "String",
+        "description": "Standard Deviation Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "gini",
+        "type": "String",
+        "description": "Gini Default: 0",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "percentiles",
+        "type": "String",
+        "description": "QUANTILES Separate the desired percentiles by semicolon, e.g. \"5; 25; 50; 75; 95\""
+      }
+    ]
+  },
 
   "Coverage.histogramMatchingBySAGA": {
     "description": "This tool alters the values of a grid so that its value distribution (its histogram), matches that of a reference grid. The first method simply uses arithmetic mean and standard deviation for adjustment, which usually is sufficient for normal distributed values. The second method performs a more precise adjustment based on the grids' histograms.",
@@ -5644,6 +5432,38 @@
       }
     ]
   },
+  "Coverage.simpleFilterBySAGA": {
+    "description": "Simple standard filters for grids.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "optional": "True",
+        "description": "choice Available Choices: [0] Smooth [1] Sharpen [2] Edge Default: 0",
+        "default": 0
+      },
+      {
+        "name": "kernelType",
+        "type": "Int",
+        "description": "choice Available Choices: [0] Square [1] Circle Default: 1",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "kernelRadius",
+        "type": "Int",
+        "description": "integer number Minimum: 0 Default: 2",
+        "optional": "True",
+        "default": 2
+      }
+    ]
+  },
 
 
   "Coverage.aspectByGDAL": {
@@ -5699,6 +5519,53 @@
       }
     ]
   },
+  "Coverage.sieveByGDAL": {
+    "description": "Removes raster polygons smaller than a provided threshold size (in pixels) and replaces them with the pixel value of the largest neighbour polygon. It is useful if you have a large amount of small areas on your raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Input elevation raster layer."
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "Only raster polygons smaller than this size will be removed.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "eightConnectedness",
+        "type": "String",
+        "description": "Use eight connectedness instead of four connectedness.",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "noMask",
+        "type": "String",
+        "description": "Do not use the default validity mask for the input band.",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "maskLayer",
+        "type": "String",
+        "description": "Validity mask to use instead of the default.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "extra",
+        "type": "String",
+        "description": "Add extra GDAL command line options.",
+        "optional": "True",
+        "default": ""
+      }
+    ]
+  },
+
   "Coverage.contourByGDAL": {
     "description": "Extracts contour lines from any GDAL-supported elevation raster.",
     "returns": "Feature",

@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
-
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
@@ -12,11 +11,12 @@ import org.apache.spark.rdd.RDD
 import org.bouncycastle.util.StringList
 import org.locationtech.jts.geom.{Geometry, _}
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.trigger.Trigger.{dagId, runMain, workTaskJson}
+import whu.edu.cn.trigger.Trigger.{dagId, runMain, userId, workTaskJson}
 import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
 import whu.edu.cn.oge.Feature._
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 
 import scala.collection.mutable
 import scala.collection.mutable.{ListBuffer, Map}
@@ -1304,7 +1304,7 @@ object OTB {
                             acquiViewAzim: Float = 0, acquiGainbias: String, acquiSolarilluminations: String,
                             atmoAerosol: String = "noaersol", atmoOz: Float = 0, atmoWa: Float = 2.5f
                             , atmoPressure: Float = 1030, atmoOpt: Float = 0.2f, atmoAeronet: String,
-                            atmoRsr: String, atmoRadius: Int = 2, atmoPixsize: Float = 1, ram: Int = 256
+                            atmoRsr: String, atmoRadius: Int = 2, atmoPixsize: Float = 1, ram: Int = 256,userId:String, dagId:String
                            ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
@@ -1313,13 +1313,18 @@ object OTB {
     val writePath = algorithmData + "otbOpticalCalibration_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
+    val getacquiGainbiasPath=loadTxtFromUpload(acquiGainbias,userId,dagId)
+    val getacquiSolarilluminationsPath=loadTxtFromUpload(acquiSolarilluminations,userId,dagId)
+    println(getacquiGainbiasPath)
+    println(getacquiSolarilluminationsPath)
+
     try {
       versouSshUtil(host, userName, password, port)
       val st =
         raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $outputTiffPath --level "$level" --milli $milli --clamp $clamp
           --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
           --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
-          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias "$acquiGainbias" --acquiSolarilluminations "$acquiSolarilluminations"
+          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $getacquiGainbiasPath  --acquiSolarilluminations  $getacquiSolarilluminationsPath
            --atmoAerosol "$atmoAerosol" --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet "$atmoAeronet"
            --atmoRsr "$atmoRsr" --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
 
@@ -1435,23 +1440,11 @@ object OTB {
    * @return Output image.
    */
   def otbBundleToPerfectSensor(implicit sc: SparkContext, inp: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                               inxs: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                               elevDem: String,
-                               elevGeoid: String,
-                               elevDefault: Float = 0, mode: String = "default",
-                               method: String = "rcs",
-                               methodRcsRadiusx: Int = 9,
-                               methodRcsRadiusy: Int = 9,
-                               methodLmvmRadiusx: Int = 3,
-                               methodLmvmRadiusy: Int = 3,
-                               methodBayesLambda: Float = 0.9999f,
-                               methodBayesS: Float = 1,
-                               lms: Float = 4,
-                               interpolator: String = "bco",
-                               interpolatorBcoRadius: Int = 2,
-                               fv: Float = 0,
-                               ram: Int = 256)
-  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+                               inxs: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), elevDem: String, elevGeoid: String, elevDefault: Float = 0, mode: String = "default", method: String = "rcs", methodRcsRadiusx: Int = 9,
+                               methodRcsRadiusy: Int = 9, methodLmvmRadiusx: Int = 3,
+                               methodLmvmRadiusy: Int = 3, methodBayesLambda: Float = 0.9999f, methodBayesS: Float = 1, lms: Float = 4, interpolator: String = "bco", interpolatorBcoRadius: Int = 2, fv: Float = 0, ram: Int = 256)
+                               : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
 
     val time = System.currentTimeMillis()
@@ -1480,5 +1473,4 @@ println(s"st = $st")
     makeChangedRasterRDDFromTif(sc, writePath)
   }
 }
-
 

@@ -154,9 +154,8 @@ object ShapeFileUtil {
     }
   }
 
-
   def readShp(implicit sc: SparkContext, shpPath: String, encode: String): RDD[(String, (Geometry, Map[String, Any]))] = {
-    val shapeFile = new File(shpPath)
+    val shapeFile = new File("file:///" + shpPath)
     val store = new ShapefileDataStore(shapeFile.toURI.toURL)
     //设置编码
     val charset = Charset.forName(encode)
