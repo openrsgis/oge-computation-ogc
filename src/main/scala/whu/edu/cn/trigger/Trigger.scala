@@ -772,7 +772,7 @@ object Trigger {
 
         // SAGA
         case "Coverage.gridStatisticsForPolygonsBySAGA" =>
-          SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+          stringList += SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             args("fieldNaming"), args("method"),
             args("useMultipleCores"), args("numberOfCells"), args("minimum"),
             args("maximum"),args("range"),args("sum"),args("mean"),
