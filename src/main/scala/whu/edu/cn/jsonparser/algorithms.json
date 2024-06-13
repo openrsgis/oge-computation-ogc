@@ -2159,6 +2159,28 @@
       }
     ]
   },
+  "Coverage.warpGeoreByGDAL": {
+    "description": "Warp one or several datasets.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "GCPs",
+        "type": "String",
+        "description": "The path of GCPs.",
+        "optional": "True"
+      },
+      {
+        "name": "resampleMethod",
+        "type": "String",
+        "description": " resampling mode."
+      }
+    ]
+  },
   "Feature.rasterizeByGDAL": {
     "description": "Converts vector geometries (points, lines and polygons) into a raster image.",
     "returns": "Coverage",
