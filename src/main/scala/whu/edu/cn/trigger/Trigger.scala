@@ -773,11 +773,11 @@ object Trigger {
 
         // SAGA
         case "Coverage.gridStatisticsForPolygonsBySAGA" =>
-          SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
+          stringList += (UUID -> SAGA.sagaGridStatisticsForPolygons(sc, coverageCollectionRddList(args("grids")), featureRddList(args("polygons")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],
             args("fieldNaming"), args("method"),
             args("useMultipleCores"), args("numberOfCells"), args("minimum"),
             args("maximum"),args("range"),args("sum"),args("mean"),
-            args("variance"), args("standardDeviation"), args("gini"),args("percentiles"))
+            args("variance"), args("standardDeviation"), args("gini"),args("percentiles")))
         case "Coverage.histogramMatchingBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
         case "Coverage.histogramMatchingBySAGA" =>

@@ -23,7 +23,8 @@ object SAGA {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val feature  = makeFeatureRDDFromShp(sc,"D:\\whu_master\\temp\\temp.shp")
+//    val feature  = makeFeatureRDDFromShp(sc,"D:\\whu_master\\temp\\temp.shp")
+    val feature  = makeFeatureRDDFromShp(sc,"/Users/churcy/Desktop/影像文件/temp/temp.shp")
     val list:mutable.ListBuffer[JSONObject] = new mutable.ListBuffer[JSONObject]
     feature.collect().foreach(f =>{
 //      result +=f._2
@@ -36,9 +37,11 @@ object SAGA {
       list.append(mapJson)
     })
     println(list.toArray)
-    shelvePost("info",list.toArray)
-    sendShelvedPost()
-
+    val resultJson = new JSONObject();
+    resultJson.put("info",list.toArray)
+    //    shelvePost("info", list.toArray)
+    //    sendShelvedPost()
+    println(resultJson.toString)
 //    // test
 //    val grid = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata2_1717593290374.tif")
 //    val reference = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata1_1717593290374.tif")
@@ -76,7 +79,7 @@ object SAGA {
                                     standardDeviation: String = "True",
                                     gini: String = "False",
                                     percentiles: String
-                                   ): Unit = {
+                                   ): String = {
     // 枚举类型参数
     val fieldNamingInput: String = mutable.Map(
       "0" -> "0",
@@ -137,8 +140,11 @@ object SAGA {
       list.append(mapJson)
     })
     println(list.toArray)
-    shelvePost("info", list.toArray)
+    val resultJson = new JSONObject();
+    resultJson.put("info",list.toArray)
+//    shelvePost("info", list.toArray)
 //    sendShelvedPost()
+    resultJson.toString
   }
 
   def sagaHistogramMatching(implicit sc: SparkContext,
