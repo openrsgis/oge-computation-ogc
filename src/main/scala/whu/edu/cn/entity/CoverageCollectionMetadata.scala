@@ -17,6 +17,24 @@ class CoverageCollectionMetadata extends Serializable {
   var endTime: LocalDateTime = _
   var extent: Extent = _
   var crs: CRS = _
+  var cloudCoverMin: Float = 0
+  var cloudCoverMax: Float = 100
+
+  def setCloudCoverMin(cloudLevel: Float): Unit ={
+    cloudCoverMin = cloudLevel
+  }
+
+  def setCloudCoverMax(cloudLevel: Float): Unit = {
+    cloudCoverMax = cloudLevel
+  }
+
+  def getCloudCoverMin(): Float = {
+    cloudCoverMin
+  }
+
+  def getCloudCoverMax(): Float ={
+    cloudCoverMax
+  }
 
   def getProductName: String = {
     this.productName

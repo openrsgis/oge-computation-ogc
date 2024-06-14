@@ -5,7 +5,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.{CellwiseCalculation, DoubleArrayTileResult, FocalCalculation, Neighborhood, Square, TargetCell}
 import geotrellis.raster.mapalgebra.local.{LocalTileBinaryOp, LocalTileComparatorOp}
-import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleCellType, DoubleConstantNoDataCellType, FloatCellType, FloatConstantNoDataCellType, GridBounds, IntCellType, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, byteNODATA, doubleNODATA, floatNODATA, isNoData, shortNODATA}
+import geotrellis.raster.{ArrayTile, ByteConstantNoDataCellType, CellType, DoubleCellType, DoubleConstantNoDataCellType, FloatCellType, FloatConstantNoDataCellType, GridBounds, IntCellType, IntConstantNoDataCellType, MultibandTile, NODATA, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType, byteNODATA, doubleNODATA, floatNODATA, isNoData, shortNODATA, ubyteNODATA, ushortNODATA}
 import geotrellis.spark._
 import geotrellis.util.MethodExtensions
 import geotrellis.vector.Extent
@@ -22,6 +22,23 @@ object CoverageUtil {
   // 检查coverage的完整性，包括每个瓦片是否包括所有的波段，以及每个瓦片波段数是否与实际一致。
   def checkValidity(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): Boolean = ???
 
+  def getnoDataAccordingtoCellType(t:CellType) ={
+    if(t.equalDataType(ByteConstantNoDataCellType)){
+      byteNODATA
+    }else if(t.equalDataType(UByteConstantNoDataCellType)){
+      ubyteNODATA
+    }else if(t.equalDataType(ShortConstantNoDataCellType)){
+      shortNODATA
+    }else if(t.equalDataType(UShortConstantNoDataCellType)){
+      ushortNODATA
+    }else if(t.equalDataType(IntCellType)){
+      NODATA
+    }else if(t.equalDataType(FloatCellType)){
+      floatNODATA
+    }else if(t.equalDataType(DoubleCellType)){
+      doubleNODATA
+    }
+  }
   // TODO: lrx: 函数的RDD大写，变量的Rdd小写，为了开源全局改名，提升代码质量
   def makeCoverageRDD(tileRDDReP: RDD[RawTile]): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val extents: (Double, Double, Double, Double) = tileRDDReP.map(t => {

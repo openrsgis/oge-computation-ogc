@@ -16,7 +16,7 @@ import whu.edu.cn.util.PostSender
 
 object Service {
 
-  def getCoverageCollection(productName: String, dateTime: String = null, extent: String = null): CoverageCollectionMetadata = {
+  def getCoverageCollection(productName: String, dateTime: String = null, extent: String = null, cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): CoverageCollectionMetadata = {
     val coverageCollectionMetadata: CoverageCollectionMetadata = new CoverageCollectionMetadata()
     coverageCollectionMetadata.setProductName(productName)
     if (extent != null) {
@@ -27,6 +27,8 @@ object Service {
       coverageCollectionMetadata.setStartTime(timeArray.head)
       coverageCollectionMetadata.setEndTime(timeArray(1))
     }
+    coverageCollectionMetadata.setCloudCoverMin(cloudCoverMin)
+    coverageCollectionMetadata.setCloudCoverMax(cloudCoverMax)
     coverageCollectionMetadata
   }
 

@@ -467,6 +467,20 @@
         "description": "The crs of bbox.",
         "default": "WGS84",
         "optional": "True"
+      },
+      {
+        "name": "cloudCoverMin",
+        "type": "Float",
+        "description": "The minimum value of cloud cover.",
+        "default": "0",
+        "optional": "True"
+      },
+      {
+        "name": "cloudCoverMax",
+        "type": "Float",
+        "description": "The maximum value of cloud cover.",
+        "default": "100",
+        "optional": "True"
       }
     ]
   },
@@ -2145,6 +2159,28 @@
       }
     ]
   },
+  "Coverage.warpGeoreByGDAL": {
+    "description": "Warp one or several datasets.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "GCPs",
+        "type": "String",
+        "description": "The path of GCPs.",
+        "optional": "True"
+      },
+      {
+        "name": "resampleMethod",
+        "type": "String",
+        "description": " resampling mode."
+      }
+    ]
+  },
   "Feature.rasterizeByGDAL": {
     "description": "Converts vector geometries (points, lines and polygons) into a raster image.",
     "returns": "Coverage",
@@ -2916,6 +2952,52 @@
         "name": "options",
         "type": "String",
         "description": "For adding one or more creation options that control the raster to be created.",
+        "optional": "True",
+        "default": ""
+      }
+    ]
+  },
+  "Coverage.sieveByGDAL": {
+    "description": "Removes raster polygons smaller than a provided threshold size (in pixels) and replaces them with the pixel value of the largest neighbour polygon. It is useful if you have a large amount of small areas on your raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Input elevation raster layer."
+      },
+      {
+        "name": "threshold",
+        "type": "Int",
+        "description": "Only raster polygons smaller than this size will be removed.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "eightConnectedness",
+        "type": "String",
+        "description": "Use eight connectedness instead of four connectedness.",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "noMask",
+        "type": "String",
+        "description": "Do not use the default validity mask for the input band.",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "maskLayer",
+        "type": "String",
+        "description": "Validity mask to use instead of the default.",
+        "optional": "True",
+        "default": ""
+      },
+      {
+        "name": "extra",
+        "type": "String",
+        "description": "Add extra GDAL command line options.",
         "optional": "True",
         "default": ""
       }
@@ -4854,6 +4936,7 @@
   },
   "Coverage.obtainUTMZoneFromGeoPointByOTB": {
     "description": "UTM zone determination from a geographic point.",
+    "returns": "void",
     "args": [
       {
         "name": "lat",
@@ -4867,8 +4950,2700 @@
       }
     ]
   },
+  "Coverage.largeScaleMeanShiftVectorByOTB": {
+    "description": "This application chains together the 4 steps of the MeanShift framework, that is the MeanShiftSmoothing, the LSMSSegmentation, the LSMSSmallRegionsMerging and the LSMSVectorization.In this mode, the application will produce a vector file or database and compute field values for each region",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Radius of the spatial neighborhood for averaging. Higher values will result in more smoothing and higher processing time.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Threshold on spectral signature euclidean distance (expressed in radiometry unit) to consider neighborhood pixel for averaging. Higher values will be less edge-preserving (more similar to simple average in neighborhood), whereas lower values will result in less noise smoothing. Note that this parameter has no effect on processing time.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum Segment Size. If, after the segmentation, a segment is of size strictly lower than this criterion, the segment is merged with the segment that has the closest sepctral signature.",
+        "optional": "True",
+        "default": 50
+      },
+      {
+        "name": "tilesizex",
+        "type": "Int",
+        "description": "Size of tiles along the X-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      },
+      {
+        "name": "tilesizey",
+        "type": "Int",
+        "description": "Size of tiles along the Y-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      }
+    ]
+  },
+  "Coverage.largeScaleMeanShiftRasterByOTB": {
+    "description": "This application chains together the 4 steps of the MeanShift framework, that is the MeanShiftSmoothing, the LSMSSegmentation, the LSMSSmallRegionsMerging and the LSMSVectorization.In this mode, the application will produce a standard labeled raster.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Radius of the spatial neighborhood for averaging. Higher values will result in more smoothing and higher processing time.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Threshold on spectral signature euclidean distance (expressed in radiometry unit) to consider neighborhood pixel for averaging. Higher values will be less edge-preserving (more similar to simple average in neighborhood), whereas lower values will result in less noise smoothing. Note that this parameter has no effect on processing time.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum Segment Size. If, after the segmentation, a segment is of size strictly lower than this criterion, the segment is merged with the segment that has the closest sepctral signature.",
+        "optional": "True",
+        "default": 50
+      },
+      {
+        "name": "tilesizex",
+        "type": "Int",
+        "description": "Size of tiles along the X-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      },
+      {
+        "name": "tilesizey",
+        "type": "Int",
+        "description": "Size of tiles along the Y-axis for tile-wise processing.",
+        "optional": "True",
+        "default": 500
+      }
+    ]
+  },
+  "Coverage.meanShiftSmoothingByOTB": {
+    "description": "This application smooths an image using the MeanShift algorithm.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Radius of the spatial neighborhood for averaging. Higher values will result in more smoothing and higher processing time.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Threshold on spectral signature euclidean distance (expressed in radiometry unit) to consider neighborhood pixel for averaging. Higher values will be less edge-preserving (more similar to simple average in neighborhood), whereas lower values will result in less noise smoothing. Note that this parameter has no effect on processing time.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "thres",
+        "type": "Float",
+        "description": "Algorithm will stop if update of average spectral signature and spatial position is below this threshold.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "maxiter",
+        "type": "Int",
+        "description": "Algorithm will stop if convergence threshold is not met after the maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "rangeramp",
+        "type": "Float",
+        "description": "Vary the range radius linearly with the central pixel intensity (experimental).",
+        "optional": "True",
+        "default": 0
+      }
+    ]
+  },
+  "Coverage.localStatisticExtractionByOTB": {
+    "description": "Computes local statistical moments on every pixel in the selected channel of the input image",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index (1 based)",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "radius",
+        "type": "Int",
+        "description": "The computational window radius.",
+        "optional": "True",
+        "default": 3
+      }
+    ]
+  },
+  "Coverage.segmentationMeanshiftRasterByOTB": {
+    "description": "Performs segmentation of an image, and output a raster file.OTB implementation of the Mean-Shift algorithm (multi-threaded).",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Spatial radius of the neighborhood.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Range radius defining the radius (expressed in radiometry unit) in the multispectral space.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "thres",
+        "type": "Float",
+        "description": "Algorithm iterative scheme will stop if mean-shift vector is below this threshold or if iteration number reached maximum number of iterations.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "maxiter",
+        "type": "Int",
+        "description": "Algorithm iterative scheme will stop if convergence hasn’t been reached after the maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum size of a region (in pixel unit) in segmentation. Smaller clusters will be merged to the neighboring cluster with the closest radiometry. If set to 0 no pruning is done.",
+        "optional": "True",
+        "default": 100
+      }
+    ]
+  },
+  "Coverage.segmentationMeanshiftVectorByOTB": {
+    "description": "Performs segmentation of an image, and output a vector file.OTB implementation of the Mean-Shift algorithm (multi-threaded)",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "spatialr",
+        "type": "Int",
+        "description": "Spatial radius of the neighborhood.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "ranger",
+        "type": "Float",
+        "description": "Range radius defining the radius (expressed in radiometry unit) in the multispectral space.",
+        "optional": "True",
+        "default": 15
+      },
+      {
+        "name": "thres",
+        "type": "Float",
+        "description": "Algorithm iterative scheme will stop if mean-shift vector is below this threshold or if iteration number reached maximum number of iterations.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "maxiter",
+        "type": "Int",
+        "description": "Algorithm iterative scheme will stop if convergence hasn’t been reached after the maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Minimum size of a region (in pixel unit) in segmentation. Smaller clusters will be merged to the neighboring cluster with the closest radiometry. If set to 0 no pruning is done.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "neighbor",
+        "type": "Boolean",
+        "description": "Activate 8-Neighborhood connectivity (default is 4).",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "stitch",
+        "type": "Boolean",
+        "description": "Scan polygons on each side of tiles and stitch polygons which connect by more than one pixel",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Objects whose size is below the minimum object size (area in pixels) will be ignored during vectorization.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "simplify",
+        "type": "Float",
+        "description": "Simplify polygons according to a given tolerance (in pixel). This option allows reducing the size of the output file or database.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "tilesize",
+        "type": "Int",
+        "description": "User defined tiles size for tile-based segmentation. Optimal tile size is selected according to available RAM if null.",
+        "optional": "True",
+        "default": 1024
+      },
+      {
+        "name": "startlabel",
+        "type": "Int",
+        "description": "Starting value of the geometry index field",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.segmentationWatershedRasterByOTB": {
+    "description": "Performs segmentation of an image, and output a raster file.The traditional watershed algorithm. The height function is the gradient magnitude of the amplitude (square root of the sum of squared bands).",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "threshold",
+        "type": "Float",
+        "description": "Depth threshold Units in percentage of the maximum depth in the image.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "level",
+        "type": "Float",
+        "description": "flood level for generating the merge tree from the initial segmentation (between 0 and 1).",
+        "optional": "True",
+        "default": 0.1
+      }
+    ]
+  },
+  "Coverage.segmentationWatershedVectorByOTB": {
+    "description": "Performs segmentation of an image, and output a vector file.The traditional watershed algorithm. The height function is the gradient magnitude of the amplitude (square root of the sum of squared bands).",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "threshold",
+        "type": "Float",
+        "description": "Depth threshold Units in percentage of the maximum depth in the image.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "level",
+        "type": "Float",
+        "description": "flood level for generating the merge tree from the initial segmentation (between 0 and 1).",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "neighbor",
+        "type": "Boolean",
+        "description": "Activate 8-Neighborhood connectivity (default is 4).",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "stitch",
+        "type": "Boolean",
+        "description": "Scan polygons on each side of tiles and stitch polygons which connect by more than one pixel",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Objects whose size is below the minimum object size (area in pixels) will be ignored during vectorization.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "simplify",
+        "type": "Float",
+        "description": "Simplify polygons according to a given tolerance (in pixel). This option allows reducing the size of the output file or database.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "tilesize",
+        "type": "Int",
+        "description": "User defined tiles size for tile-based segmentation. Optimal tile size is selected according to available RAM if null.",
+        "optional": "True",
+        "default": 1024
+      },
+      {
+        "name": "startlabel",
+        "type": "Int",
+        "description": "Starting value of the geometry index field",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.segmentationMprofilesdRasterByOTB": {
+    "description": "Performs segmentation of an image, and output a raster file.Segmentation based on morphological profiles.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "Int",
+        "description": "Size of the profiles.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "Initial radius of the structuring element (in pixels).",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "step",
+        "type": "Int",
+        "description": "Radius step along the profile (in pixels)",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "float",
+        "type": "Float",
+        "description": "Profiles values under the threshold will be ignored.",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.gridStatisticsForPolygonsBySAGA": {
+    "description": "Zonal grid statistics. For each polygon statistics based on all covered grid cells will be calculated.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "grids",
+        "type": "CoverageCollection",
+        "description": "Grid"
+      },
+      {
+        "name": "polygons",
+        "type": "Feature",
+        "description": "Polygons"
+      },
+      {
+        "name": "fieldNaming",
+        "type": "Int",
+        "description": "Available Choices: [0] grid number [1] grid name Default: 1",
+        "default": 1
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "Available Choices: [0] simple and fast [1] polygon wise (cell centers) [2] polygon wise (cell area) [3] polygon wise (cell area weighted) Default: 0",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "useMultipleCores",
+        "type": "String",
+        "description": "Default: 0",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "numberOfCells",
+        "type": "String",
+        "description": "PARALLELIZED Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "minimum",
+        "type": "String",
+        "description": "min Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "maximum",
+        "type": "String",
+        "description": "max Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "range",
+        "type": "String",
+        "description": "range Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "sum",
+        "type": "String",
+        "description": "Sum Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "mean",
+        "type": "String",
+        "description": "Mean Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "variance",
+        "type": "String",
+        "description": "Variance Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "standardDeviation",
+        "type": "String",
+        "description": "Standard Deviation Default: 1",
+        "optional": "True",
+        "default": "True"
+      },
+      {
+        "name": "gini",
+        "type": "String",
+        "description": "Gini Default: 0",
+        "optional": "True",
+        "default": "False"
+      },
+      {
+        "name": "percentiles",
+        "type": "String",
+        "description": "QUANTILES Separate the desired percentiles by semicolon, e.g. \"5; 25; 50; 75; 95\""
+      }
+    ]
+  },
+  "Coverage.histogramMatchingBySAGA": {
+    "description": "This tool alters the values of a grid so that its value distribution (its histogram), matches that of a reference grid. The first method simply uses arithmetic mean and standard deviation for adjustment, which usually is sufficient for normal distributed values. The second method performs a more precise adjustment based on the grids' histograms.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "grid",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "referenceGrid",
+        "type": "Coverage",
+        "description": "Reference Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "Available Choices: [0] standard deviation [1] histogram Default: 1",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "nclasses",
+        "type": "Int",
+        "description": "Number of histogram classes for internal use.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "maxSamples",
+        "type": "Int",
+        "description": "If set to zero all data will be used to build the histograms.",
+        "optional": "True",
+        "default": 1000000
+      }
+    ]
+  },
+  "Coverage.ISODATAClusteringForGridsBySAGA": {
+    "description": "This tool executes the Isodata unsupervised classification - clustering algorithm. Isodata stands for Iterative Self-Organizing Data Analysis Techniques. This is a more sophisticated algorithm which allows the number of clusters to be automatically adjusted during the iteration by merging similar clusters and splitting clusters with large standard deviations. The tool is based on Christos Iosifidis' Isodata implementation.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "features",
+        "type": "CoverageCollection",
+        "description": "grid list"
+      },
+      {
+        "name": "normalize",
+        "type": "String",
+        "description": "Normalize",
+        "optional": "True",
+        "default": "0"
+      },
+      {
+        "name": "iterations",
+        "type": "Int",
+        "description": "Maximum Number of Iterations",
+        "optional": "True",
+        "default": 20
+      },
+      {
+        "name": "clusterINI",
+        "type": "Int",
+        "description": "Initial Number of Clusters.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "clusterMAX",
+        "type": "Int",
+        "description": "Maximum Number of Clusters.",
+        "optional": "True",
+        "default": 16
+      },
+      {
+        "name": "samplesMIN",
+        "type": "Int",
+        "description": "Minimum Number of Samples in a Cluster.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "initialize",
+        "type": "String",
+        "description": "Start Partition.choice tAvailable Choices: [0] random [1] periodical [2] keep values",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+  "Coverage.simpleFilterBySAGA": {
+    "description": "Simple standard filters for grids.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "optional": "True",
+        "description": "choice Available Choices: [0] Smooth [1] Sharpen [2] Edge Default: 0",
+        "default": 0
+      },
+      {
+        "name": "kernelType",
+        "type": "Int",
+        "description": "choice Available Choices: [0] Square [1] Circle Default: 1",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "kernelRadius",
+        "type": "Int",
+        "description": "integer number Minimum: 0 Default: 2",
+        "optional": "True",
+        "default": 2
+      }
+    ]
+  },
 
 
+  "Feature.ComputeOGRLayersFeaturesStatisticsByOTB": {
+    "description": "Compute statistics (mean and standard deviation) of the features in a set of OGR Layers, and write them in an XML file. The resulting XML file can then be used by the training application.",
+    "returns": "string",
+    "args": [
+      {
+        "name": "inshp",
+        "type": "Feature",
+        "optional": "True",
+        "description": "Name of the input shapefile"
+      },
+      {
+        "name": "feat",
+        "type": "List<String>",
+        "description": "List of features to consider for statistics.",
+        "default": "['perimeter']"
+      }
+    ]
+  },
+  "Coverage.KMeansClassificationByOTB": {
+    "description": "Unsupervised KMeans image classification. This is a composite application, using existing training and classification applications. The SharkKMeans model is used.",
+    "returns": "Coverage",
+    "args": [{
+      "name": "in",
+      "type": "Coverage",
+      "description": "Input image filename.",
+      "optional": "True"
+    }, {
+      "name": "nc",
+      "type": "Int",
+      "description": "Number of modes, which will be used to generate class membership.",
+      "default": 5
+    }, {
+      "name": "ts",
+      "type": "Int",
+      "description": "Size of the training set (in pixels).",
+      "default": 100
+    }, {
+      "name": "maxit",
+      "type": "Int",
+      "description": "Maximum number of iterations for the learning step. If this parameter is set to 0, the KMeans algorithm will not stop until convergence",
+      "default": 1000
+    }, {
+      "name": "centroids.in",
+      "type": "String",
+      "description": "Input text file containing centroid positions used to initialize the algorithm. Each centroid must be described by p parameters, p being the number of bands in the input image, and the number of centroids must be equal to the number of classes (one centroid per line with values separated by spaces).",
+      "optional": "False"
+    }, {
+      "name": "centroids.out",
+      "type": "String",
+      "description": "Output text file containing centroids after the kmean algorithm.",
+      "optional": "False"
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }, {
+      "name": "sampler",
+      "type": "null",
+      "description": "Type of sampling (periodic, pattern based, random)",
+      "default": "periodic"
+    }, {
+      "name": "sampler.periodic.jitter",
+      "type": "Int",
+      "description": "Jitter amplitude added during sample selection (0 = no jitter)",
+      "default": 0
+    }, {
+      "name": "vm",
+      "type": "Coverage",
+      "description": "Validity mask, only non-zero pixels will be used to estimate KMeans modes.",
+      "optional": "False"
+    }, {
+      "name": "nodatalabel",
+      "type": "Int",
+      "description": "By default, hidden pixels will have the assigned label 0 in the output image. It’s possible to define the label mask by another value, but be careful to not take a label from another class. This application initializes the labels from 0 to N-1, N is the number of class (defined by ‘nc’ parameter).",
+      "default": 0
+    }, {
+      "name": "cleanup",
+      "type": "Boolean",
+      "description": "If activated, the application will try to clean all temporary files it created",
+      "default": "true"
+    }, {
+      "name": "rand",
+      "type": "Int",
+      "description": "Set a specific random seed with integer value.",
+      "optional": "False"
+    }]
+  },
+  "Coverage.SOMClassificationByOTB": {
+    "description": "SOM image classification.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "in",
+        "type": "Coverage",
+        "optional": "True",
+        "description": "Input image to classify"
+      },
+      {
+        "name": "vm",
+        "type": "Coverage",
+        "description": "Validity mask (only pixels corresponding to a mask value greater than 0 will be used for learning)."
+      },
+      {
+        "name": "tp",
+        "type": "Float",
+        "description": "Probability for a sample to be selected in the training set.",
+        "default": 1
+      },
+      {
+        "name": "som",
+        "type": "Coverage",
+        "description": "Output image containing the Self-Organizing Map."
+      },
+      {
+        "name": "ts",
+        "type": "Int",
+        "description": "Maximum training set size (in pixels)."
+      },
+      {
+        "name": "sx",
+        "type": "Int",
+        "description": "X size of the SOM map.",
+        "default": 32
+      },
+      {
+        "name": "sy",
+        "type": "Int",
+        "description": "Y size of the SOM map.",
+        "default": 32
+      },
+      {
+        "name": "nx",
+        "type": "Int",
+        "description": "X size of the initial neighborhood in the SOM map.",
+        "default": 10
+      },
+      {
+        "name": "ny",
+        "type": "Int",
+        "description": "Y size of the initial neighborhood in the SOM map.",
+        "default": 10
+      },
+      {
+        "name": "ni",
+        "type": "Int",
+        "description": "Number of iterations for SOM learning.",
+        "default": 5
+      },
+      {
+        "name": "bi",
+        "type": "Float",
+        "description": "Initial learning coefficient.",
+        "default": 1
+      },
+      {
+        "name": "bf",
+        "type": "Float",
+        "description": "Final learning coefficient.",
+        "default": 0.1
+      },
+      {
+        "name": "iv",
+        "type": "Float",
+        "description": "Maximum initial neuron weight",
+        "default":0
+      },
+      {
+        "name": "rand",
+        "type": "Int",
+        "description": "Set a specific random seed with integer value."
+      },
+      {
+        "name": "ram",
+        "type": "Int",
+        "description": "Available memory for processing (in MB).",
+        "default":256
+      }
+    ]
+  },
+  "Coverage.SampleExtractionByOTB": {
+    "description": "The application extracts samples values from animage using positions contained in a vector data file.",
+    "returns": "Feature",
+    "args": [{
+      "name": "in",
+      "type": "Coverage",
+      "description": "Support image",
+      "optional": "True"
+    }, {
+      "name": "vec",
+      "type": "Feature",
+      "description": "Vector data file containing samplingpositions. (OGR format)",
+      "optional": "True"
+    }, {
+      "name": "outfield",
+      "type": "List<String>",
+      "description": "Choice between naming method for output fields",
+      "default": "prefix"
+    }, {
+      "name": "outfield.prefix.name",
+      "type": "String",
+      "description": "Prefix used to form the field names thatwill contain the extracted values.",
+      "default": "value_"
+    }, {
+      "name": "outfield.list.names",
+      "type": "List<String>",
+      "description": "Full list of output field names.",
+      "optional": "True"
+    }, {
+      "name": "field",
+      "type": "String",
+      "description": "Name of the field carrying the class name in the input vectors."
+    }, {
+      "name": "layer",
+      "type": "Int",
+      "description": "Layer index to read in the input vector file.",
+      "default": 0
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }]
+  },
+  "Feature.SampleSelectionByOTB": {
+    "description": "The application selects a set of samples from geometries intended for training (they should have a field giving the associated class).",
+    "returns": "Feature",
+    "args": [{
+      "name": "in",
+      "type": "Coverage",
+      "description": "Support image that will be classified",
+      "optional": "True"
+    }, {
+      "name": "mask",
+      "type": "Coverage",
+      "description": "Validity mask (only pixels corresponding to a mask value greater than 0 will be used for statistics)",
+      "optional": "False"
+    }, {
+      "name": "vec",
+      "type": "Feature",
+      "description": "Input geometries to analyse",
+      "optional": "True"
+    }, {
+      "name": "instats",
+      "type": "String",
+      "description": "Input file storing statistics (XML format)",
+      "optional": "True"
+    }, {
+      "name": "outrates",
+      "type": "String",
+      "description": "Output rates (CSV formatted)",
+      "optional": "False"
+    }, {
+      "name": "sampler",
+      "type": "List<String>",
+      "description": "Type of sampling (periodic, pattern based, random)",
+      "default": "periodic"
+    }, {
+      "name": "sampler.periodic.jitter",
+      "type": "Int",
+      "description": "Jitter amplitude added during sample selection (0 = no jitter)",
+      "default": 0
+    }, {
+      "name": "strategy",
+     "type": "String",
+      "description": "[Set samples count for each class|Set the same samples counts for all classes| Use a percentage of the samples available for each class|Set the total number of samples to generate, and use class proportions.|Set the same number of samples for all classes, with the smallest class fully sampled|Use all samples]",
+      "default": "smallest"
+    }, {
+      "name": "strategy.byclass.in",
+      "type": "String",
+      "description": "Number of samples by class (CSV format with class name in 1st column and required samples in the 2nd.",
+      "optional": "True"
+    }, {
+      "name": "strategy.constant.nb",
+      "type": "Int",
+      "description": "Number of samples for all classes",
+      "optional": "True"
+    }, {
+      "name": "strategy.percent.p",
+      "type": "Float",
+      "description": "The percentage to use",
+      "default": "0.5"
+    }, {
+      "name": "strategy.total.v",
+      "type": "Int",
+      "description": "The number of samples to generate",
+      "default": 1000
+    }, {
+      "name": "field",
+      "type": "String",
+      "description": "Name of the field carrying the class name in the input vectors."
+    }, {
+      "name": "layer",
+      "type": "Int",
+      "description": "Layer index to read in the input vector file.",
+      "default": 0
+    }, {
+      "name": "elev.dem",
+      "type": "String",
+      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
+    }, {
+      "name": "elev.geoid",
+      "type": "String",
+      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
+    }, {
+      "name": "elev.default",
+      "type": "Float",
+      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
+      "default": 0
+    }, {
+      "name": "rand",
+      "type": "Int",
+      "description": "Set a specific random seed with integer value.",
+      "optional": "False"
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }]
+  },
+  "String.TrainImagesClassifierByOTB": {
+    "description": "Train a classifier from multiple pairs of images and training vector data. Samples are composed of pixel values in each band optionally centered and reduced using an XML statistics file produced by the ComputeImagesStatistics application.",
+    "returns": "String",
+    "args": [{
+      "name": "io.il",
+      "type": "List<Coverage>",
+      "description": "A list of input images.",
+      "optional": "True"
+    }, {
+      "name": "io.vd",
+      "type": "List<Feature>",
+      "description": "A list of vector data to select the training samples.",
+      "optional": "True"
+    }, {
+      "name": "io.valid",
+      "type": "List<Feature>",
+      "description": "A list of vector data to select the validation samples."
+    }, {
+      "name": "io.imstat",
+      "type": "String",
+      "description": "XML file containing mean and variance of each feature."
+    }, {
+      "name": "io.confmatout",
+      "type": "String",
+      "description": "Output file containing the confusion matrix or contingency table (.csv format).The contingency table is output when we unsupervised algorithms is used otherwise the confusion matrix is output."
+    }, {
+      "name": "cleanup",
+      "type": "Boolean",
+      "description": "If activated, the application will try to clean all temporary files it created",
+      "default": "true"
+    }, {
+      "name": "sample.mt",
+      "type": "Int",
+      "description": "Maximum size per class (in pixels) of the training sample list (default = 1000) (no limit = -1). If equal to -1, then the maximal size of the available training sample list per class will be equal to the surface area of the smallest class multiplied by the training sample ratio.",
+      "default": 1000
+    }, {
+      "name": "sample.mv",
+      "type": "Int",
+      "description": "Maximum size per class (in pixels) of the validation sample list (default = 1000) (no limit = -1). If equal to -1, then the maximal size of the available validation sample list per class will be equal to the surface area of the smallest class multiplied by the validation sample ratio.",
+      "default": 1000
+    }, {
+      "name": "sample.bm",
+      "type": "Int",
+      "description": "Bound the number of samples for each class by the number of available samples by the smaller class. Proportions between training and validation are respected. Default is true (=1).",
+      "default": 1
+    }, {
+      "name": "sample.vtr",
+      "type": "Float",
+      "description": "Ratio between training and validation samples (0.0 = all training, 1.0 = all validation) (default = 0.5).",
+      "default": "0.5"
+    }, {
+      "name": "sample.vfn",
+      "type": "String",
+      "description": "Field containing the class id for supervision. The values in this field shall be cast into integers."
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }, {
+      "name": "elev.dem",
+      "type": "String",
+      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
+    }, {
+      "name": "elev.geoid",
+      "type": "String",
+      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
+    }, {
+      "name": "elev.default",
+      "type": "Float",
+      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
+      "default": 0
+    }, {
+      "name": "classifier",
+      "type": "String",
+      "description": "Choice of the classifier to use for the training.",
+      "default": "libsvm"
+    }, {
+      "name": "classifier.libsvm.k",
+      "type": "String",
+      "description": "SVM Kernel Type.",
+      "default": "linear"
+    }, {
+      "name": "classifier.libsvm.m",
+      "type": "String",
+      "description": "Type of SVM formulation.",
+      "default": "csvc"
+    }, {
+      "name": "classifier.libsvm.c",
+      "type": "Float",
+      "description": "SVM models have a cost parameter C (1 by default) to control the trade-off between training errors and forcing rigid margins.",
+      "default": 1
+    }, {
+      "name": "classifier.libsvm.gamma",
+      "type": "Float",
+      "description": "Set gamma parameter in poly/rbf/sigmoid kernel function",
+      "default": 1
+    }, {
+      "name": "classifier.libsvm.coef0",
+      "type": "Float",
+      "description": "Set coef0 parameter in poly/sigmoid kernel function",
+      "default": 0
+    }, {
+      "name": "classifier.libsvm.degree",
+      "type": "Int",
+      "description": "Set polynomial degree in poly kernel function",
+      "default": 3
+    }, {
+      "name": "classifier.libsvm.nu",
+      "type": "Float",
+      "description": "Cost parameter Nu, in the range 0..1, the larger the value, the smoother the decision.",
+      "default": 0.5
+    }, {
+      "name": "classifier.libsvm.opt",
+      "type": "Boolean",
+      "description": "SVM parameters optimization flag.",
+      "default": "false"
+    }, {
+      "name": "classifier.libsvm.prob",
+      "type": "Boolean",
+      "description": "Probability estimation flag.",
+      "default": "false"
+    }, {
+      "name": "classifier.boost.t",
+      "type": "String",
+      "description": "Type of Boosting algorithm.",
+      "default": "real"
+    }, {
+      "name": "classifier.boost.w",
+      "type": "Int",
+      "description": "The number of weak classifiers.",
+      "default": 100
+    }, {
+      "name": "classifier.boost.r",
+      "type": "Float",
+      "description": "A threshold between 0 and 1 used to save computational time. Samples with summary weight <= (1 - weight_trim_rate) do not participate in the next iteration of training. Set this parameter to 0 to turn off this functionality.",
+      "default": 0.95
+    }, {
+      "name": "classifier.boost.m",
+      "type": "Int",
+      "description": "Maximum depth of the tree.",
+      "default": 1
+    }, {
+      "name": "classifier.dt.max",
+      "type": "Int",
+      "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
+      "default": 10
+    }, {
+      "name": "classifier.dt.min",
+      "type": "Int",
+      "description": "If the number of samples in a node is smaller than this parameter, then this node will not be split.",
+      "default": 10
+    }, {
+      "name": "classifier.dt.ra",
+      "type": "Float",
+      "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split further.",
+      "default": 0.01
+    }, {
+      "name": "classifier.dt.cat",
+      "type": "Int",
+      "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+      "default": 10
+    }, {
+      "name": "classifier.dt.r",
+      "type": "Boolean",
+      "description": "If true, then a pruning will be harsher. This will make a tree more compact and more resistant to the training data noise but a bit less accurate."
+    }, {
+      "name": "classifier.dt.t",
+      "type": "Boolean",
+      "description": "If true, then pruned branches are physically removed from the tree."
+    }, {
+      "name": "classifier.ann.t",
+      "type": "String",
+      "description": "Type of training method for the multilayer perceptron (MLP) neural network.",
+      "default": "reg"
+    }, {
+      "name": "classifier.ann.sizes",
+      "type": "List<String>",
+      "description": "The number of neurons in each intermediate layer (excluding input and output layers).",
+      "optional": "True"
+    }, {
+      "name": "classifier.ann.f",
+      "type": "String",
+      "description": "This function determine whether the output of the node is positive or not depending on the output of the transfer function.",
+      "default": "sig"
+    }, {
+      "name": "classifier.ann.a",
+      "type": "Float",
+      "description": "Alpha parameter of the activation function (used only with sigmoid and gaussian functions).",
+      "default": 1
+    }, {
+      "name": "classifier.ann.b",
+      "type": "Float",
+      "description": "Beta parameter of the activation function (used only with sigmoid and gaussian functions).",
+      "default": 1
+    }, {
+      "name": "classifier.ann.bpdw",
+      "type": "Float",
+      "description": "Strength of the weight gradient term in the BACKPROP method. The recommended value is about 0.1.",
+      "default": 0.1
+    }, {
+      "name": "classifier.ann.bpms",
+      "type": "Float",
+      "description": "Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough.",
+      "default": 0.1
+    }, {
+      "name": "classifier.ann.rdw",
+      "type": "Float",
+      "description": "Initial value Delta_0 of update-values Delta_{ij} in RPROP method (default = 0.1).",
+      "default": 0.1
+    }, {
+      "name": "classifier.ann.rdwm",
+      "type": "Float",
+      "description": "Update-values lower limit Delta_{min} in RPROP method. It must be positive (default = 1e-7).",
+      "default": 1e-07
+    }, {
+      "name": "classifier.ann.term",
+      "type": "null",
+      "description": "Termination criteria.",
+      "default": "all"
+    }, {
+      "name": "classifier.ann.eps",
+      "type": "Float",
+      "description": "Epsilon value used in the Termination criteria.",
+      "default": "0.01"
+    }, {
+      "name": "classifier.ann.iter",
+      "type": "Int",
+      "description": "Maximum number of iterations used in the Termination criteria.",
+      "default": 1000
+    }, {
+      "name": "classifier.rf.max",
+      "type": "Int",
+      "description": "The depth of the tree. A low value will likely underfit and conversely a high value will likely overfit. The optimal value can be obtained using cross validation or other suitable methods.",
+      "default": 5
+    }, {
+      "name": "classifier.rf.min",
+      "type": "Int",
+      "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+      "default": 10
+    }, {
+      "name": "classifier.rf.ra",
+      "type": "Float",
+      "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split.",
+      "default": 0
+    }, {
+      "name": "classifier.rf.cat",
+      "type": "Int",
+      "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+      "default": 10
+    }, {
+      "name": "classifier.rf.var",
+      "type": "Int",
+      "description": "The size of the subset of features, randomly selected at each tree node, that are used to find the best split(s). If you set it to 0, then the size will be set to the square root of the total number of features.",
+      "default": 0
+    }, {
+      "name": "classifier.rf.nbtrees",
+      "type": "Int",
+      "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+      "default": 100
+    }, {
+      "name": "classifier.rf.acc",
+      "type": "Float",
+      "description": "Sufficient accuracy (OOB error).",
+      "default": "0.01"
+    }, {
+      "name": "classifier.knn.k",
+      "type": "Int",
+      "description": "The number of neighbors to use.",
+      "default": 32
+    }, {
+      "name": "classifier.sharkrf.nbtrees",
+      "type": "Int",
+      "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+      "default": 100
+    }, {
+      "name": "classifier.sharkrf.nodesize",
+      "type": "Int",
+      "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+      "default": 25
+    }, {
+      "name": "classifier.sharkrf.mtry",
+      "type": "Int",
+      "description": "The number of features (variables) which will be tested at each node in order to compute the split. If set to zero, the square root of the number of features is used.",
+      "default": 0
+    }, {
+      "name": "classifier.sharkrf.oobr",
+      "type": "Float",
+      "description": "Set the fraction of the original training dataset to use as the out of bag sample.A good default value is 0.66.",
+      "default": "0.66"
+    }, {
+      "name": "classifier.sharkkm.maxiter",
+      "type": "Int",
+      "description": "The maximum number of iterations for the kmeans algorithm. 0=unlimited",
+      "default": 10
+    }, {
+      "name": "classifier.sharkkm.k",
+      "type": "Int",
+      "description": "The number of classes used for the kmeans algorithm. Default set to 2 class",
+      "default": 2
+    }, {
+      "name": "classifier.sharkkm.incentroids",
+      "type": "String",
+      "description": "Input text file containing centroid posistions used to initialize the algorithm. Each centroid must be described by p parameters, p being the number of features in the input vector data, and the number of centroids must be equal to the number of classes (one centroid per line with values separated by spaces).",
+      "optional": "False"
+    }, {
+      "name": "classifier.sharkkm.cstats",
+      "type": "String",
+      "description": "A XML file containing mean and standard deviation to centerand reduce the input centroids before the KMeans algorithm, produced by ComputeImagesStatistics application.",
+      "optional": "False"
+    }, {
+      "name": "classifier.sharkkm.outcentroids",
+      "type": "String",
+      "description": "Output text file containing centroids after the kmean algorithm.",
+      "optional": "False"
+    }, {
+      "name": "rand",
+      "type": "Int",
+      "description": "Set a specific random seed with integer value.",
+      "optional": "False"
+    }]
+  },
+
+  "Coverage.segmentationMprofilesdVectorByOTB": {
+    "description": "Performs segmentation of an image, and output a vector file.Segmentation based on morphological profiles.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map"
+      },
+      {
+        "name": "size",
+        "type": "Int",
+        "description": "Size of the profiles.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "start",
+        "type": "Int",
+        "description": "Initial radius of the structuring element (in pixels).",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "step",
+        "type": "Int",
+        "description": "Radius step along the profile (in pixels)",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "float",
+        "type": "Float",
+        "description": "Profiles values under the threshold will be ignored.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "neighbor",
+        "type": "Boolean",
+        "description": "Activate 8-Neighborhood connectivity (default is 4).",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "stitch",
+        "type": "Boolean",
+        "description": "Scan polygons on each side of tiles and stitch polygons which connect by more than one pixel",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "minsize",
+        "type": "Int",
+        "description": "Objects whose size is below the minimum object size (area in pixels) will be ignored during vectorization.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "simplify",
+        "type": "Float",
+        "description": "Simplify polygons according to a given tolerance (in pixel). This option allows reducing the size of the output file or database.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "tilesize",
+        "type": "Int",
+        "description": "User defined tiles size for tile-based segmentation. Optimal tile size is selected according to available RAM if null.",
+        "optional": "True",
+        "default": 1024
+      },
+      {
+        "name": "startlabel",
+        "type": "Int",
+        "description": "Starting value of the geometry index field",
+        "optional": "True",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionLibSvmByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting SVM classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "kernel",
+        "type": "String",
+        "description": "SVM Kernel Type.",
+        "optional": "True",
+        "default": "linear"
+      },
+      {
+        "name": "model",
+        "type": "String",
+        "description": "Type of SVM formulation.",
+        "optional": "True",
+        "default": "epssvr"
+      },
+      {
+        "name": "costc",
+        "type": "Float",
+        "description": "SVM models have a cost parameter C (1 by default) to control the trade-off between training errors and forcing rigid margins.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "gamma",
+        "type": "Float",
+        "description": "Set gamma parameter in poly/rbf/sigmoid kernel function",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "coefficient",
+        "type": "Float",
+        "description": "Set coef0 parameter in poly/sigmoid kernel function",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "degree",
+        "type": "Int",
+        "description": "Set polynomial degree in poly kernel function",
+        "optional": "True",
+        "default": 3
+      },
+      {
+        "name": "costnu",
+        "type": "Float",
+        "description": "Cost parameter Nu, in the range 0..1, the larger the value, the smoother the decision.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "opt",
+        "type": "Boolean",
+        "description": "SVM parameters optimization flag.",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "prob",
+        "type": "Boolean",
+        "description": "Probability estimation flag.",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "epsilon",
+        "type": "Int",
+        "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
+        "optional": "True",
+        "default": 10
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionDtByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting Decision tree classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "max",
+        "type": "Int",
+        "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "min",
+        "type": "Int",
+        "description": "If the number of samples in a node is smaller than this parameter, then this node will not be split.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "ra",
+        "type": "Float",
+        "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split further.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "cat",
+        "type": "Int",
+        "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "r",
+        "type": "Boolean",
+        "description": "If true, then a pruning will be harsher. This will make a tree more compact and more resistant to the training data noise but a bit less accurate.",
+        "optional": "True",
+        "default": false
+      },
+      {
+        "name": "t",
+        "type": "Boolean",
+        "description": "If true, then pruned branches are physically removed from the tree.",
+        "optional": "True",
+        "default": false
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionRfByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting Random forests classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "max",
+        "type": "Int",
+        "description": "The depth of the tree. A low value will likely underfit and conversely a high value will likely overfit. The optimal value can be obtained using cross validation or other suitable methods.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "min",
+        "type": "Int",
+        "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "ra",
+        "type": "Float",
+        "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "cat",
+        "type": "Int",
+        "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "var_",
+        "type": "Int",
+        "description": "The size of the subset of features, randomly selected at each tree node, that are used to find the best split(s). If you set it to 0, then the size will be set to the square root of the total number of features.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "nbtrees",
+        "type":  "Int",
+        "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "acc",
+        "type":  "Float",
+        "description": "Sufficient accuracy (OOB error).",
+        "optional": "True",
+        "default": 0.01
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionKnnByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting KNN classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "number",
+        "type": "Int",
+        "description": "The number of neighbors to use.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "rule",
+        "type": "String",
+        "description": "Decision rule for regression output",
+        "optional": "True",
+        "default": "mean"
+      }
+    ]
+  },
+  "Coverage.trainImagesRegressionSharkrfByOTB": {
+    "description": " Train a regression model from multiple triplets of feature images, predictor images.This group of parameters allows setting Shark Random forests classifier parameters.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "input_predict",
+        "type": "CoverageCollection",
+        "description": "A list of input predictor images."
+      },
+      {
+        "name": "input_label",
+        "type": "CoverageCollection",
+        "description": " A list of input label images"
+      },
+      {
+        "name": "ratio",
+        "type": "Float",
+        "description": "Ratio between training and validation samples.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "nbtrees",
+        "type": "Int",
+        "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "nodesize",
+        "type": "Int",
+        "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+        "optional": "True",
+        "default": 25
+      },
+      {
+        "name": "mtry",
+        "type": "Int",
+        "description": "The number of features (variables) which will be tested at each node in order to compute the split. If set to zero, the square root of the number of features is used.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "oobr",
+        "type": "Float",
+        "description": "Set the fraction of the original training dataset to use as the out of bag sample.A good default value is 0.66.",
+        "optional": "True",
+        "default": 0.66
+      }
+    ]
+  },
+  "Feature.ComputeOGRLayersFeaturesStatisticsByOTB": {
+    "description": "Compute statistics (mean and standard deviation) of the features in a set of OGR Layers, and write them in an XML file. The resulting XML file can then be used by the training application.",
+    "returns": "string",
+    "args": [
+      {
+        "name": "inshp",
+        "type": "Feature",
+        "optional": "True",
+        "description": "Name of the input shapefile"
+      },
+      {
+        "name": "feat",
+        "type": "List<String>",
+        "description": "List of features to consider for statistics.",
+        "default": "['perimeter']"
+      }
+    ]
+  },
+  "Coverage.KMeansClassificationByOTB": {
+    "description": "Unsupervised KMeans image classification. This is a composite application, using existing training and classification applications. The SharkKMeans model is used.",
+    "returns": "Coverage",
+    "args": [{
+      "name": "in",
+      "type": "Coverage",
+      "description": "Input image filename.",
+      "optional": "True"
+    }, {
+      "name": "nc",
+      "type": "Int",
+      "description": "Number of modes, which will be used to generate class membership.",
+      "default": 5
+    }, {
+      "name": "ts",
+      "type": "Int",
+      "description": "Size of the training set (in pixels).",
+      "default": 100
+    }, {
+      "name": "maxit",
+      "type": "Int",
+      "description": "Maximum number of iterations for the learning step. If this parameter is set to 0, the KMeans algorithm will not stop until convergence",
+      "default": 1000
+    }, {
+      "name": "centroids.in",
+      "type": "String",
+      "description": "Input text file containing centroid positions used to initialize the algorithm. Each centroid must be described by p parameters, p being the number of bands in the input image, and the number of centroids must be equal to the number of classes (one centroid per line with values separated by spaces).",
+      "optional": "False"
+    }, {
+      "name": "centroids.out",
+      "type": "String",
+      "description": "Output text file containing centroids after the kmean algorithm.",
+      "optional": "False"
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }, {
+      "name": "sampler",
+      "type": "null",
+      "description": "Type of sampling (periodic, pattern based, random)",
+      "default": "periodic"
+    }, {
+      "name": "sampler.periodic.jitter",
+      "type": "Int",
+      "description": "Jitter amplitude added during sample selection (0 = no jitter)",
+      "default": 0
+    }, {
+      "name": "vm",
+      "type": "Coverage",
+      "description": "Validity mask, only non-zero pixels will be used to estimate KMeans modes.",
+      "optional": "False"
+    }, {
+      "name": "nodatalabel",
+      "type": "Int",
+      "description": "By default, hidden pixels will have the assigned label 0 in the output image. It’s possible to define the label mask by another value, but be careful to not take a label from another class. This application initializes the labels from 0 to N-1, N is the number of class (defined by ‘nc’ parameter).",
+      "default": 0
+    }, {
+      "name": "cleanup",
+      "type": "Boolean",
+      "description": "If activated, the application will try to clean all temporary files it created",
+      "default": "true"
+    }, {
+      "name": "rand",
+      "type": "Int",
+      "description": "Set a specific random seed with integer value.",
+      "optional": "False"
+    }]
+  },
+  "Coverage.SOMClassificationByOTB": {
+    "description": "SOM image classification.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "in",
+        "type": "Coverage",
+        "optional": "True",
+        "description": "Input image to classify"
+      },
+      {
+        "name": "vm",
+        "type": "Coverage",
+        "description": "Validity mask (only pixels corresponding to a mask value greater than 0 will be used for learning)."
+      },
+      {
+        "name": "tp",
+        "type": "Float",
+        "description": "Probability for a sample to be selected in the training set.",
+        "default": 1
+      },
+      {
+        "name": "som",
+        "type": "Coverage",
+        "description": "Output image containing the Self-Organizing Map."
+      },
+      {
+        "name": "ts",
+        "type": "Int",
+        "description": "Maximum training set size (in pixels)."
+      },
+      {
+        "name": "sx",
+        "type": "Int",
+        "description": "X size of the SOM map.",
+        "default": 32
+      },
+      {
+        "name": "sy",
+        "type": "Int",
+        "description": "Y size of the SOM map.",
+        "default": 32
+      },
+      {
+        "name": "nx",
+        "type": "Int",
+        "description": "X size of the initial neighborhood in the SOM map.",
+        "default": 10
+      },
+      {
+        "name": "ny",
+        "type": "Int",
+        "description": "Y size of the initial neighborhood in the SOM map.",
+        "default": 10
+      },
+      {
+        "name": "ni",
+        "type": "Int",
+        "description": "Number of iterations for SOM learning.",
+        "default": 5
+      },
+      {
+        "name": "bi",
+        "type": "Float",
+        "description": "Initial learning coefficient.",
+        "default": 1
+      },
+      {
+        "name": "bf",
+        "type": "Float",
+        "description": "Final learning coefficient.",
+        "default": 0.1
+      },
+      {
+        "name": "iv",
+        "type": "Float",
+        "description": "Maximum initial neuron weight",
+        "default":0
+      },
+      {
+        "name": "rand",
+        "type": "Int",
+        "description": "Set a specific random seed with integer value."
+      },
+      {
+        "name": "ram",
+        "type": "Int",
+        "description": "Available memory for processing (in MB).",
+        "default":256
+      }
+    ]
+  },
+  "Coverage.SampleExtractionByOTB": {
+    "description": "The application extracts samples values from animage using positions contained in a vector data file.",
+    "returns": "Feature",
+    "args": [{
+      "name": "in",
+      "type": "Coverage",
+      "description": "Support image",
+      "optional": "True"
+    }, {
+      "name": "vec",
+      "type": "Feature",
+      "description": "Vector data file containing samplingpositions. (OGR format)",
+      "optional": "True"
+    }, {
+      "name": "outfield",
+      "type": "List<String>",
+      "description": "Choice between naming method for output fields",
+      "default": "prefix"
+    }, {
+      "name": "outfield.prefix.name",
+      "type": "String",
+      "description": "Prefix used to form the field names thatwill contain the extracted values.",
+      "default": "value_"
+    }, {
+      "name": "outfield.list.names",
+      "type": "List<String>",
+      "description": "Full list of output field names.",
+      "optional": "True"
+    }, {
+      "name": "field",
+      "type": "String",
+      "description": "Name of the field carrying the class name in the input vectors."
+    }, {
+      "name": "layer",
+      "type": "Int",
+      "description": "Layer index to read in the input vector file.",
+      "default": 0
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }]
+  },
+  "Feature.SampleSelectionByOTB": {
+    "description": "The application selects a set of samples from geometries intended for training (they should have a field giving the associated class).",
+    "returns": "Feature",
+    "args": [{
+      "name": "in",
+      "type": "Coverage",
+      "description": "Support image that will be classified",
+      "optional": "True"
+    }, {
+      "name": "mask",
+      "type": "Coverage",
+      "description": "Validity mask (only pixels corresponding to a mask value greater than 0 will be used for statistics)",
+      "optional": "False"
+    }, {
+      "name": "vec",
+      "type": "Feature",
+      "description": "Input geometries to analyse",
+      "optional": "True"
+    }, {
+      "name": "instats",
+      "type": "String",
+      "description": "Input file storing statistics (XML format)",
+      "optional": "True"
+    }, {
+      "name": "outrates",
+      "type": "String",
+      "description": "Output rates (CSV formatted)",
+      "optional": "False"
+    }, {
+      "name": "sampler",
+      "type": "List<String>",
+      "description": "Type of sampling (periodic, pattern based, random)",
+      "default": "periodic"
+    }, {
+      "name": "sampler.periodic.jitter",
+      "type": "Int",
+      "description": "Jitter amplitude added during sample selection (0 = no jitter)",
+      "default": 0
+    }, {
+      "name": "strategy",
+      "type": "String",
+      "description": "[Set samples count for each class|Set the same samples counts for all classes| Use a percentage of the samples available for each class|Set the total number of samples to generate, and use class proportions.|Set the same number of samples for all classes, with the smallest class fully sampled|Use all samples]",
+      "default": "smallest"
+    }, {
+      "name": "strategy.byclass.in",
+      "type": "String",
+      "description": "Number of samples by class (CSV format with class name in 1st column and required samples in the 2nd.",
+      "optional": "True"
+    }, {
+      "name": "strategy.constant.nb",
+      "type": "Int",
+      "description": "Number of samples for all classes",
+      "optional": "True"
+    }, {
+      "name": "strategy.percent.p",
+      "type": "Float",
+      "description": "The percentage to use",
+      "default": "0.5"
+    }, {
+      "name": "strategy.total.v",
+      "type": "Int",
+      "description": "The number of samples to generate",
+      "default": 1000
+    }, {
+      "name": "field",
+      "type": "String",
+      "description": "Name of the field carrying the class name in the input vectors."
+    }, {
+      "name": "layer",
+      "type": "Int",
+      "description": "Layer index to read in the input vector file.",
+      "default": 0
+    }, {
+      "name": "elev.dem",
+      "type": "String",
+      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
+    }, {
+      "name": "elev.geoid",
+      "type": "String",
+      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
+    }, {
+      "name": "elev.default",
+      "type": "Float",
+      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
+      "default": 0
+    }, {
+      "name": "rand",
+      "type": "Int",
+      "description": "Set a specific random seed with integer value.",
+      "optional": "False"
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }]
+  },
+  "String.TrainImagesClassifierByOTB": {
+    "description": "Train a classifier from multiple pairs of images and training vector data. Samples are composed of pixel values in each band optionally centered and reduced using an XML statistics file produced by the ComputeImagesStatistics application.",
+    "returns": "String",
+    "args": [{
+      "name": "io.il",
+      "type": "List<Coverage>",
+      "description": "A list of input images.",
+      "optional": "True"
+    }, {
+      "name": "io.vd",
+      "type": "List<Feature>",
+      "description": "A list of vector data to select the training samples.",
+      "optional": "True"
+    }, {
+      "name": "io.valid",
+      "type": "List<Feature>",
+      "description": "A list of vector data to select the validation samples."
+    }, {
+      "name": "io.imstat",
+      "type": "String",
+      "description": "XML file containing mean and variance of each feature."
+    }, {
+      "name": "io.confmatout",
+      "type": "String",
+      "description": "Output file containing the confusion matrix or contingency table (.csv format).The contingency table is output when we unsupervised algorithms is used otherwise the confusion matrix is output."
+    }, {
+      "name": "cleanup",
+      "type": "Boolean",
+      "description": "If activated, the application will try to clean all temporary files it created",
+      "default": "true"
+    }, {
+      "name": "sample.mt",
+      "type": "Int",
+      "description": "Maximum size per class (in pixels) of the training sample list (default = 1000) (no limit = -1). If equal to -1, then the maximal size of the available training sample list per class will be equal to the surface area of the smallest class multiplied by the training sample ratio.",
+      "default": 1000
+    }, {
+      "name": "sample.mv",
+      "type": "Int",
+      "description": "Maximum size per class (in pixels) of the validation sample list (default = 1000) (no limit = -1). If equal to -1, then the maximal size of the available validation sample list per class will be equal to the surface area of the smallest class multiplied by the validation sample ratio.",
+      "default": 1000
+    }, {
+      "name": "sample.bm",
+      "type": "Int",
+      "description": "Bound the number of samples for each class by the number of available samples by the smaller class. Proportions between training and validation are respected. Default is true (=1).",
+      "default": 1
+    }, {
+      "name": "sample.vtr",
+      "type": "Float",
+      "description": "Ratio between training and validation samples (0.0 = all training, 1.0 = all validation) (default = 0.5).",
+      "default": "0.5"
+    }, {
+      "name": "sample.vfn",
+      "type": "String",
+      "description": "Field containing the class id for supervision. The values in this field shall be cast into integers."
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }, {
+      "name": "elev.dem",
+      "type": "String",
+      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
+    }, {
+      "name": "elev.geoid",
+      "type": "String",
+      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
+    }, {
+      "name": "elev.default",
+      "type": "Float",
+      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
+      "default": 0
+    }, {
+      "name": "classifier",
+      "type": "String",
+      "description": "Choice of the classifier to use for the training.",
+      "default": "libsvm"
+    }, {
+      "name": "classifier.libsvm.k",
+      "type": "String",
+      "description": "SVM Kernel Type.",
+      "default": "linear"
+    }, {
+      "name": "classifier.libsvm.m",
+      "type": "String",
+      "description": "Type of SVM formulation.",
+      "default": "csvc"
+    }, {
+      "name": "classifier.libsvm.c",
+      "type": "Float",
+      "description": "SVM models have a cost parameter C (1 by default) to control the trade-off between training errors and forcing rigid margins.",
+      "default": 1
+    }, {
+      "name": "classifier.libsvm.gamma",
+      "type": "Float",
+      "description": "Set gamma parameter in poly/rbf/sigmoid kernel function",
+      "default": 1
+    }, {
+      "name": "classifier.libsvm.coef0",
+      "type": "Float",
+      "description": "Set coef0 parameter in poly/sigmoid kernel function",
+      "default": 0
+    }, {
+      "name": "classifier.libsvm.degree",
+      "type": "Int",
+      "description": "Set polynomial degree in poly kernel function",
+      "default": 3
+    }, {
+      "name": "classifier.libsvm.nu",
+      "type": "Float",
+      "description": "Cost parameter Nu, in the range 0..1, the larger the value, the smoother the decision.",
+      "default": 0.5
+    }, {
+      "name": "classifier.libsvm.opt",
+      "type": "Boolean",
+      "description": "SVM parameters optimization flag.",
+      "default": "false"
+    }, {
+      "name": "classifier.libsvm.prob",
+      "type": "Boolean",
+      "description": "Probability estimation flag.",
+      "default": "false"
+    }, {
+      "name": "classifier.boost.t",
+      "type": "String",
+      "description": "Type of Boosting algorithm.",
+      "default": "real"
+    }, {
+      "name": "classifier.boost.w",
+      "type": "Int",
+      "description": "The number of weak classifiers.",
+      "default": 100
+    }, {
+      "name": "classifier.boost.r",
+      "type": "Float",
+      "description": "A threshold between 0 and 1 used to save computational time. Samples with summary weight <= (1 - weight_trim_rate) do not participate in the next iteration of training. Set this parameter to 0 to turn off this functionality.",
+      "default": 0.95
+    }, {
+      "name": "classifier.boost.m",
+      "type": "Int",
+      "description": "Maximum depth of the tree.",
+      "default": 1
+    }, {
+      "name": "classifier.dt.max",
+      "type": "Int",
+      "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
+      "default": 10
+    }, {
+      "name": "classifier.dt.min",
+      "type": "Int",
+      "description": "If the number of samples in a node is smaller than this parameter, then this node will not be split.",
+      "default": 10
+    }, {
+      "name": "classifier.dt.ra",
+      "type": "Float",
+      "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split further.",
+      "default": 0.01
+    }, {
+      "name": "classifier.dt.cat",
+      "type": "Int",
+      "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+      "default": 10
+    }, {
+      "name": "classifier.dt.r",
+      "type": "Boolean",
+      "description": "If true, then a pruning will be harsher. This will make a tree more compact and more resistant to the training data noise but a bit less accurate."
+    }, {
+      "name": "classifier.dt.t",
+      "type": "Boolean",
+      "description": "If true, then pruned branches are physically removed from the tree."
+    }, {
+      "name": "classifier.ann.t",
+      "type": "String",
+      "description": "Type of training method for the multilayer perceptron (MLP) neural network.",
+      "default": "reg"
+    }, {
+      "name": "classifier.ann.sizes",
+      "type": "List<String>",
+      "description": "The number of neurons in each intermediate layer (excluding input and output layers).",
+      "optional": "True"
+    }, {
+      "name": "classifier.ann.f",
+      "type": "String",
+      "description": "This function determine whether the output of the node is positive or not depending on the output of the transfer function.",
+      "default": "sig"
+    }, {
+      "name": "classifier.ann.a",
+      "type": "Float",
+      "description": "Alpha parameter of the activation function (used only with sigmoid and gaussian functions).",
+      "default": 1
+    }, {
+      "name": "classifier.ann.b",
+      "type": "Float",
+      "description": "Beta parameter of the activation function (used only with sigmoid and gaussian functions).",
+      "default": 1
+    }, {
+      "name": "classifier.ann.bpdw",
+      "type": "Float",
+      "description": "Strength of the weight gradient term in the BACKPROP method. The recommended value is about 0.1.",
+      "default": 0.1
+    }, {
+      "name": "classifier.ann.bpms",
+      "type": "Float",
+      "description": "Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough.",
+      "default": 0.1
+    }, {
+      "name": "classifier.ann.rdw",
+      "type": "Float",
+      "description": "Initial value Delta_0 of update-values Delta_{ij} in RPROP method (default = 0.1).",
+      "default": 0.1
+    }, {
+      "name": "classifier.ann.rdwm",
+      "type": "Float",
+      "description": "Update-values lower limit Delta_{min} in RPROP method. It must be positive (default = 1e-7).",
+      "default": 1e-07
+    }, {
+      "name": "classifier.ann.term",
+      "type": "null",
+      "description": "Termination criteria.",
+      "default": "all"
+    }, {
+      "name": "classifier.ann.eps",
+      "type": "Float",
+      "description": "Epsilon value used in the Termination criteria.",
+      "default": "0.01"
+    }, {
+      "name": "classifier.ann.iter",
+      "type": "Int",
+      "description": "Maximum number of iterations used in the Termination criteria.",
+      "default": 1000
+    }, {
+      "name": "classifier.rf.max",
+      "type": "Int",
+      "description": "The depth of the tree. A low value will likely underfit and conversely a high value will likely overfit. The optimal value can be obtained using cross validation or other suitable methods.",
+      "default": 5
+    }, {
+      "name": "classifier.rf.min",
+      "type": "Int",
+      "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+      "default": 10
+    }, {
+      "name": "classifier.rf.ra",
+      "type": "Float",
+      "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split.",
+      "default": 0
+    }, {
+      "name": "classifier.rf.cat",
+      "type": "Int",
+      "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
+      "default": 10
+    }, {
+      "name": "classifier.rf.var",
+      "type": "Int",
+      "description": "The size of the subset of features, randomly selected at each tree node, that are used to find the best split(s). If you set it to 0, then the size will be set to the square root of the total number of features.",
+      "default": 0
+    }, {
+      "name": "classifier.rf.nbtrees",
+      "type": "Int",
+      "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+      "default": 100
+    }, {
+      "name": "classifier.rf.acc",
+      "type": "Float",
+      "description": "Sufficient accuracy (OOB error).",
+      "default": "0.01"
+    }, {
+      "name": "classifier.knn.k",
+      "type": "Int",
+      "description": "The number of neighbors to use.",
+      "default": 32
+    }, {
+      "name": "classifier.sharkrf.nbtrees",
+      "type": "Int",
+      "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
+      "default": 100
+    }, {
+      "name": "classifier.sharkrf.nodesize",
+      "type": "Int",
+      "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
+      "default": 25
+    }, {
+      "name": "classifier.sharkrf.mtry",
+      "type": "Int",
+      "description": "The number of features (variables) which will be tested at each node in order to compute the split. If set to zero, the square root of the number of features is used.",
+      "default": 0
+    }, {
+      "name": "classifier.sharkrf.oobr",
+      "type": "Float",
+      "description": "Set the fraction of the original training dataset to use as the out of bag sample.A good default value is 0.66.",
+      "default": "0.66"
+    }, {
+      "name": "classifier.sharkkm.maxiter",
+      "type": "Int",
+      "description": "The maximum number of iterations for the kmeans algorithm. 0=unlimited",
+      "default": 10
+    }, {
+      "name": "classifier.sharkkm.k",
+      "type": "Int",
+      "description": "The number of classes used for the kmeans algorithm. Default set to 2 class",
+      "default": 2
+    }, {
+      "name": "classifier.sharkkm.incentroids",
+      "type": "String",
+      "description": "Input text file containing centroid posistions used to initialize the algorithm. Each centroid must be described by p parameters, p being the number of features in the input vector data, and the number of centroids must be equal to the number of classes (one centroid per line with values separated by spaces).",
+      "optional": "False"
+    }, {
+      "name": "classifier.sharkkm.cstats",
+      "type": "String",
+      "description": "A XML file containing mean and standard deviation to centerand reduce the input centroids before the KMeans algorithm, produced by ComputeImagesStatistics application.",
+      "optional": "False"
+    }, {
+      "name": "classifier.sharkkm.outcentroids",
+      "type": "String",
+      "description": "Output text file containing centroids after the kmean algorithm.",
+      "optional": "False"
+    }, {
+      "name": "rand",
+      "type": "Int",
+      "description": "Set a specific random seed with integer value.",
+      "optional": "False"
+    }]
+  },
+  "Coverage.OpticalCalibrationByOTB": {
+    "description": "The application allows converting pixel values from DN (for Digital Numbers) to reflectance. Calibrated values are called surface reflectivity and its values lie in the range [0, 1].\nThe first level is called Top Of Atmosphere (TOA) reflectivity. It takes into account the sensor gain, sensor spectral response and the solar illuminations.\nThe second level is called Top Of Canopy (TOC) reflectivity. In addition to sensor gain and solar illuminations, it takes into account the optical thickness of the atmosphere, the atmospheric pressure, the water vapor amount, the ozone amount, as well as the composition and amount of aerosol gasses.\nIt is also possible to indicate an AERONET file which contains atmospheric parameters (version 1 and version 2 of Aeronet file are supported. Note that computing TOC reflectivity will internally compute first TOA and then TOC reflectance.",
+    "returns": "Coverage",
+    "args": [{
+      "name": "input",
+      "type": "Coverage",
+      "description": "Input image filename",
+      "optional": "True"
+    }, {
+      "name": "level",
+      "type": "String",
+      "description": "",
+      "default": "toa"
+    }, {
+      "name": "milli",
+      "type": "Boolean",
+      "description": "Flag to use milli-reflectance instead of reflectance.\nThis allows saving the image with integer pixel type (in the range [0, 1000]  instead of floating point in the range [0, 1]. In order to do that, use this option and set the output pixel type (-out filename double for example)",
+      "default": "false"
+    }, {
+      "name": "clamp",
+      "type": "Boolean",
+      "description": "Clamping in the range [0, 1]. It can be useful to preserve area with specular reflectance.",
+      "default": "true"
+    }, {
+      "name": "acquiMinute",
+      "type": "Int",
+      "description": "Minute (0-59)",
+      "default": 0
+    }, {
+      "name": "acquiHour",
+      "type": "Int",
+      "description": "Hour (0-23)",
+      "default": 12
+    }, {
+      "name": "acquiDay",
+      "type": "Int",
+      "description": "Day (1-31)",
+      "default": 1
+    }, {
+      "name": "acquiMonth",
+      "type": "Int",
+      "description": "Month (1-12)",
+      "default": 1
+    }, {
+      "name": "acquiYear",
+      "type": "Int",
+      "description": "Year",
+      "default": 2000
+    }, {
+      "name": "acquiFluxnormcoeff",
+      "type": "Float",
+      "description": "Flux Normalization Coefficient"
+    }, {
+      "name": "acquiSolardistance",
+      "type": "Float",
+      "description": "Solar distance (in AU)"
+    }, {
+      "name": "acquiSunElev",
+      "type": "Float",
+      "description": "Sun elevation angle (in degrees)",
+      "default": 90
+    }, {
+      "name": "acquiSunAzim",
+      "type": "Float",
+      "description": "Sun azimuth angle (in degrees)",
+      "default": 0
+    }, {
+      "name": "acquiViewElev",
+      "type": "Float",
+      "description": "Viewing elevation angle (in degrees)",
+      "default": 90
+    }, {
+      "name": "acquiViewAzim",
+      "type": "Float",
+      "description": "Viewing azimuth angle (in degrees)",
+      "default": 0
+    }, {
+      "name": "acquiGainbias",
+      "type": "String",
+      "description": "A text file containing user defined gains and biases"
+    }, {
+      "name": "acquiSolarilluminations",
+      "type": "String",
+      "description": "Solar illuminations (one value per band, in W/m^2/micron)"
+    }, {
+      "name": "atmoAerosol",
+      "type": "String",
+      "description": "",
+      "default": "noaersol"
+    }, {
+      "name": "atmoOz",
+      "type": "Float",
+      "description": "Stratospheric ozone layer content (in cm-atm)",
+      "default": 0
+    }, {
+      "name": "atmoWa",
+      "type": "Float",
+      "description": "Total water vapor content over vertical atmospheric column (in g/cm2)",
+      "default": 2.5
+    }, {
+      "name": "atmoPressure",
+      "type": "Float",
+      "description": "Atmospheric Pressure (in hPa)",
+      "default": 1030
+    }, {
+      "name": "atmoOpt",
+      "type": "Float",
+      "description": "Aerosol Optical Thickness (unitless)",
+      "default": 0.2
+    }, {
+      "name": "atmoAeronet",
+      "type": "String",
+      "description": "Aeronet file containing atmospheric parameters"
+    }, {
+      "name": "atmoRsr",
+      "type": "String",
+      "description": "Sensor relative spectral response file By default the application gets this information in the metadata"
+    }, {
+      "name": "atmoRadius",
+      "type": "Int",
+      "description": "Window radius for adjacency effects correctionsSetting this parameters will enable the correction ofadjacency effects",
+      "default": 2
+    }, {
+      "name": "atmoPixsize",
+      "type": "Float",
+      "description": "Pixel size (in km) used tocompute adjacency effects, it does not have tomatch the image spacing",
+      "default": 1
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }]
+  },
+  "Coverage.OrthoRectificationByOTB": {
+    "description": "This application uses inverse sensor modelling combined with a choice of interpolation functions to resample a sensor geometry image into a ground geometry regular grid. The ground geometry regular grid is defined with respect to a map projection (see map parameter). The application offers several modes to estimate the output grid parameters (origin and ground sampling distance), including automatic estimation of image size, ground sampling distance, or both, from image metadata, user-defined ROI corners, or another ortho-image.A digital Elevation Model along with a geoid file can be specified to account for terrain deformations.In case of SPOT5 images, the sensor model can be approximated by an RPC model in order to speed-up computation.",
+    "returns": "Coverage",
+    "args": [{
+      "name": "ioIn",
+      "type": "Coverage",
+      "description": "The input image to ortho-rectify",
+      "optional": "True"
+    }, {
+      "name": "map",
+      "type": "String",
+      "description": "Defines the map projection to be used.",
+      "default": "utm"
+    }, {
+      "name": "mapUtmZone",
+      "type": "Int",
+      "description": "The zone number ranges from 1 to 60 and allows defining the transverse mercator projection (along with the hemisphere)",
+      "default": 31
+    }, {
+      "name": "mapUtmNorthhem",
+      "type": "Boolean",
+      "description": "The transverse mercator projections are defined by their zone number as well as the hemisphere. Activate this parameter if your image is in the northern hemisphere.",
+      "default": "false"
+    }, {
+      "name": "mapEpsgCode",
+      "type": "Int",
+      "description": "See www.spatialreference.org to find which EPSG code is associated to your projection",
+      "default": 4326
+    }, {
+      "name": "outputsMode",
+      "type": "String",
+      "description": "User Defined|Automatic Size from Spacing|Automatic Spacing from Size|Automatic Size from Spacing and output corners|Fit to ortho",
+      "default": "auto"
+    }, {
+      "name": "outputsUlx",
+      "type": "Double",
+      "description": "Cartographic X coordinate of upper-left corner (meters for cartographic projections, degrees for geographic ones)",
+      "optional": "True"
+    }, {
+      "name": "outputsUly",
+      "type": "Double",
+      "description": "Cartographic Y coordinate of the upper-left corner (meters for cartographic projections, degrees for geographic ones)",
+      "optional": "True"
+    }, {
+      "name": "outputsSizex",
+      "type": "Int",
+      "description": "Size of projected image along X (in pixels)",
+      "optional": "True"
+    }, {
+      "name": "outputsSizey",
+      "type": "Int",
+      "description": "Size of projected image along Y (in pixels)",
+      "optional": "True"
+    }, {
+      "name": "outputsSpacingx",
+      "type": "Double",
+      "description": "Size of each pixel along X axis (meters for cartographic projections, degrees for geographic ones)",
+      "optional": "True"
+    }, {
+      "name": "outputsSpacingy",
+      "type": "Double",
+      "description": "Size of each pixel along Y axis (meters for cartographic projections, degrees for geographic ones)",
+      "optional": "True"
+    }, {
+      "name": "outputsLrx",
+      "type": "Double",
+      "description": "Cartographic X coordinate of the lower-right corner (meters for cartographic projections, degrees for geographic ones)"
+    }, {
+      "name": "outputsLry",
+      "type": "Double",
+      "description": "Cartographic Y coordinate of the lower-right corner (meters for cartographic projections, degrees for geographic ones)"
+    }, {
+      "name": "outputsOrtho",
+      "type": "String",
+      "description": "A model ortho-image that can be used to compute size, origin and spacing of the output"
+    }, {
+      "name": "outputsIsotropic",
+      "type": "Boolean",
+      "description": "Default spacing (pixel size) values are estimated from the sensor modeling of the image. It can therefore result in a non-isotropic spacing. This option allows you to force default values to be isotropic (in this case, the minimum of spacing in both direction is applied. Values overridden by user are not affected by this option.",
+      "default": "true"
+    }, {
+      "name": "outputsDefault",
+      "type": "Double",
+      "description": "Default value to write when outside of input image.",
+      "default": 0
+    }, {
+      "name": "elevDem",
+      "type": "String",
+      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
+    }, {
+      "name": "elevGeoid",
+      "type": "String",
+      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
+    }, {
+      "name": "elevDefault",
+      "type": "Float",
+      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
+      "default": 0
+    }, {
+      "name": "interpolator",
+      "type": "String",
+      "description": "This group of parameters allows one to define how the input image will be interpolated during resampling.",
+      "default": "bco"
+    }, {
+      "name": "interpolatorBcoRadius",
+      "type": "Int",
+      "description": "This parameter allows one to control the size of the bicubic interpolation filter. If the target pixel size is higher than the input pixel size, increasing this parameter will reduce aliasing artifacts.",
+      "default": 2
+    }, {
+      "name": "optRpc",
+      "type": "Int",
+      "description": "Enabling RPC modeling allows one to speed-up SPOT5 ortho-rectification. Value is the number of control points per axis for RPC estimation",
+      "default": 10
+    }, {
+      "name": "optRam",
+      "type": "Int",
+      "description": "This allows setting the maximum amount of RAM available for processing. As the writing task is time consuming, it is better to write large pieces of data, which can be achieved by increasing this parameter (pay attention to your system capabilities)",
+      "default": 256
+    }, {
+      "name": "optGridspacing",
+      "type": "Double",
+      "description": "Resampling is done according to a coordinate mapping deformation grid, whose pixel size is set by this parameter, and expressed in the coordinate system of the output image The closer to the output spacing this parameter is, the more precise will be the ortho-rectified image,but increasing this parameter will reduce processing time.",
+      "default": 4
+    }]
+  },
+  "Coverage.BundleToPerfectSensorByOTB": {
+    "description": "This application performs P+XS pansharpening. The default mode use Pan and XS sensor models to estimate the transformation to superimpose XS over Pan before the fusion (\u201cdefault mode\u201d). The application provides also a PHR mode for Pleiades images which does not use sensor models as Pan and XS products are already coregistered but only estimate an affine transformation to superimpose XS over the Pan.Note that this option is automatically activated in case Pleiades images are detected as input.",
+    "returns": "Coverage",
+    "args": [{
+      "name": "inp",
+      "type": "Coverage",
+      "description": "Input panchromatic image.",
+      "optional": "True"
+    }, {
+      "name": "inxs",
+      "type": "Coverage",
+      "description": "Input XS image.",
+      "optional": "True"
+    }, {
+      "name": "elevDem",
+      "type": "String",
+      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
+    }, {
+      "name": "elevGeoid",
+      "type": "String",
+      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
+    }, {
+      "name": "elevDefault",
+      "type": "Float",
+      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
+      "default": 0
+    }, {
+      "name": "mode",
+      "type": "String",
+      "description": "Superimposition mode",
+      "default": "default"
+    }, {
+      "name": "method",
+      "type": "String",
+      "description": "Selection of the pan-sharpening method.",
+      "default": "rcs"
+    }, {
+      "name": "methodRcsRadiusx",
+      "type": "Int",
+      "description": "Set the x radius of the sliding window.",
+      "default": 9
+    }, {
+      "name": "methodRcsRadiusy",
+      "type": "Int",
+      "description": "Set the y radius of the sliding window.",
+      "default": 9
+    }, {
+      "name": "methodLmvmRadiusx",
+      "type": "Int",
+      "description": "Set the x radius of the sliding window.",
+      "default": 3
+    }, {
+      "name": "methodLmvmRadiusy",
+      "type": "Int",
+      "description": "Set the y radius of the sliding window.",
+      "default": 3
+    }, {
+      "name": "methodBayesLambda",
+      "type": "Float",
+      "description": "Set the weighting value.",
+      "default": 0.9999
+    }, {
+      "name": "methodBayesS",
+      "type": "Float",
+      "description": "Set the S coefficient.",
+      "default": 1
+    }, {
+      "name": "lms",
+      "type": "Float",
+      "description": "Spacing of the deformation field. Default is 10 times the PAN image spacing.",
+      "default": 4
+    }, {
+      "name": "interpolator",
+      "type": "String",
+      "description": "This group of parameters allows defining how the input image will be interpolated during resampling.",
+      "default": "bco"
+    }, {
+      "name": "interpolatorBcoRadius",
+      "type": "Int",
+      "description": "This parameter allows controlling the size of the bicubic interpolation filter. If the target pixel size is higher than the input pixel size, increasing this parameter will reduce aliasing artifacts.",
+      "default": 2
+    }, {
+      "name": "fv",
+      "type": "Float",
+      "description": "Fill value for area outside the reprojected image",
+      "default": 0
+    }, {
+      "name": "ram",
+      "type": "Int",
+      "description": "Available memory for processing (in MB).",
+      "default": 256
+    }]
+  },
 
   "Coverage.neighborsByGrass": {
     "description": "Makes each cell category value a function of the category values assigned to the cells around it,and stores new cell values in an output raster map layers.",
@@ -6395,7 +9170,7 @@
       },
       {
         "name": "level",
-        "type": "Int",
+        "type": "Double",
         "description": "The resampling level. eg:1 for up-sampling and -1 for down-sampling."
       },
       {
@@ -9941,7 +12716,6 @@
       }
     ]
   },
-
   "Coverage.kMeans": {
     "description": "1111",
     "returns": "Coverage",
@@ -10070,14 +12844,14 @@
       },
       {
         "name": "bandList",
-        "type": "List",
+        "type": "List<Short>",
         "description": "111",
         "default": "None",
         "optional": "False"
       },
       {
         "name": "weightList",
-        "type": "List",
+        "type": "List<Double>",
         "description": "111",
         "default": "None",
         "optional": "False"
@@ -10796,6 +13570,38 @@
         "name": "datasetName",
         "type": "String",
         "description": "name of dataset for the encoding"
+      }
+    ]
+  },
+  "AI.ANNClassification": {
+    "description": "Classify image using ANN.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Coverage to be classified."
+      },
+      {
+        "name": "sampleFiles",
+        "type": "List[String]",
+        "description": "Sample files to train the model."
+      }
+    ]
+  },
+  "AI.SVMClassification": {
+    "description": "Classify image using SVM.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Coverage to be classified."
+      },
+      {
+        "name": "sampleFiles",
+        "type": "List[String]",
+        "description": "Sample files to train the model."
       }
     ]
   }

@@ -16,7 +16,7 @@ import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
 import whu.edu.cn.oge.Feature._
 import whu.edu.cn.config.GlobalConfig
-
+import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 import scala.collection.mutable
 import scala.collection.mutable.Map
 import scala.io.Source
@@ -108,10 +108,7 @@ object QGIS {
       case e: Exception =>
         e.printStackTrace()
     }
-
-
     makeRasterRDDFromTif(sc, input, writePath)
-
   }
 
   /**
@@ -706,6 +703,7 @@ object QGIS {
       "0" -> "0",
       "1" -> "1"
     ).getOrElse(strategy, "0")
+
 
     val defaultDirectionInput: String = Map(
       "0" -> "0",
@@ -1916,7 +1914,6 @@ object QGIS {
 
     makeRasterRDDFromTif(sc, input, writePath)
   }
-
   /**
    * Extracts contour lines from any GDAL-supported elevation raster.
    *
@@ -3802,6 +3799,70 @@ object QGIS {
 
     makeChangedRasterRDDFromTif(sc, writePath)
   }
+
+  def gdalSieve(implicit sc: SparkContext,
+                input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                threshold: Int = 10,
+                eightConnectedness: String = "False",
+                noMask: String = "False",
+                maskLayer: String = "",
+                extra: String = "")
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // tif落地
+    val outputTiffPath = algorithmData + "gdalSieve_" + time + ".tif"
+    val writePath = algorithmData + "gdalSieve_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_sieve.py --input "$outputTiffPath" --threshold $threshold --eightConnectedness "$eightConnectedness" --noMask "$noMask" --maskLayer "$maskLayer" --output "$writePath" --extra "$extra"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+  }
+
+  def gdalWarpGeore(implicit sc: SparkContext,
+                    input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                    GCPs: String,
+                    resampleMethod: String = "Linear",userId:String,dagId:String)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // tif落地
+    val outputTiffPath = algorithmData + "gdalWarpGeore_" + time + ".tif"
+    val writePath = algorithmData + "gdalWarpGeore_" + time + "_out.tif"
+    val writGCPsPath = algorithmData + "gdalWarpGeore_" + time + "_gcp.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    val GCPsPath = loadTxtFromUpload(GCPs, userId, dagId)
+    println(GCPsPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_warpGeore.py --imagePath "$outputTiffPath" --GCPsPath "$GCPsPath"  --saveGCPPath "$writGCPsPath" --resampleMethod "$resampleMethod" --savePath "$writePath" """.stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+  }
+
 }
 
 
