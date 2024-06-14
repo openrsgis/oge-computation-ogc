@@ -12,7 +12,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.SAGA.{host, password, port, userName}
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.BosClientUtil_scala
-import whu.edu.cn.util.CoverageUtil.getnoDataAccordingtoCellType
+import whu.edu.cn.util.CoverageUtil.{getnoDataAccordingtoCellType, removeZeroFromCoverage}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
@@ -71,9 +71,9 @@ object ML {
 
     versouSshUtil(host, userName, password, port)
     // nodata的处理很麻烦的一点是如果匹配不到怎么办？
-//    val nodata = getnoDataAccordingtoCellType(coverage._2.cellType)
+    val nodata = getnoDataAccordingtoCellType(coverage._2.cellType)
 
-    val st = s"conda activate cv && python /root/ann/ann.py --imagePath $savePath --samplePath $samplePaths --savePath $resultPath "
+    val st = s"conda activate cv && python /root/ann/ann.py --imagePath $savePath --samplePath $samplePaths --savePath $resultPath --noData $nodata"
 
     Trigger.tempFileList.append(savePath)
     Trigger.tempFileList.append(resultPath)
@@ -82,7 +82,7 @@ object ML {
     runCmd(st, "UTF-8")
     println("Success")
 //    Thread.sleep(200)
-    val result = makeChangedRasterRDDFromTif(sc,resultPath)
+    val result = removeZeroFromCoverage(makeChangedRasterRDDFromTif(sc,resultPath))
 
 
     deleteDirectory(folder)
