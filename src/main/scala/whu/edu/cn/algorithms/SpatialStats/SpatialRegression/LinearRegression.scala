@@ -11,12 +11,12 @@ import scala.collection.mutable
 object LinearRegression {
 
   private var _data: RDD[mutable.Map[String, Any]] = _
-  private var _X: DenseMatrix[Double] = _
-  private var _Y: DenseVector[Double] = _
-  private var _1X: DenseMatrix[Double] = _
-  private var _nameX: Array[String]  = _
-  private var _rows: Int = 0
-  private var _df: Int  = 0
+  private var _X: DenseMatrix[Double] = _  //特征列 样本
+  private var _Y: DenseVector[Double] = _  //因变量
+  private var _1X: DenseMatrix[Double] = _ //考虑截距，与_X相比多增加一列值全为1的特征
+  private var _nameX: Array[String]  = _ //特征名
+  private var _rows: Int = 0 //样本数
+  private var _df: Int  = 0 //列数
 
   private def setX(properties: String, split: String = ",", Intercept: Boolean): Unit = {
     _nameX = properties.split(split)
@@ -47,7 +47,7 @@ object LinearRegression {
    */
   def LinearRegression(sc: SparkContext, data: RDD[mutable.Map[String, Any]], y: String, x: String, Intercept: Boolean =true)
   : RDD[mutable.Map[String, Any]] = {
-    _data=data
+    _data=data //字典类型的RDD，每个样本都是一个字典，通过访问特征Key，搜索对应的特征值
     val split = ","
     setX(x, split, Intercept)
     setY(y)
@@ -56,7 +56,7 @@ object LinearRegression {
       X= _X
     }
     val Y=_Y
-    val W = DenseMatrix.eye[Double](_rows)
+    val W = DenseMatrix.eye[Double](_rows) //创建一个行列数均为_rows的单位矩阵
     val xtw = X.t * W
     val xtwx = xtw * X
     val xtwy = xtw * Y
