@@ -786,6 +786,9 @@ object Trigger {
           coverageRddList += (UUID -> SAGA.sagaISODATAClusteringForGrids(sc, coverageCollectionRddList(args("features")), args("normalize"), args("iterations").toInt, args("clusterINI").toInt, args("clusterMAX").toInt, args("samplesMIN").toInt, args("initialize")))
         case "Coverage.simpleFilterBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaSimpleFilter(sc, coverageRddList(args("input")), args("method").toInt, args("kernelType").toInt, args("kernelRadius").toInt))
+        case "Coverage.svmClassificationBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaSVMClassification(sc, coverageRddList(args("grid")), args("ROI"), args("scaling").toInt, args("message").toInt, args("model_src").toInt, args("ROI_id"), args("svm_type").toInt, args("kernel_type").toInt, args("degree").toInt, args("gamma").toDouble, args("coef0").toDouble, args("cost").toDouble, args("nu").toDouble, args("eps_svr").toDouble, args("cache_size").toDouble, args("eps").toDouble, args("shrinking").toBoolean, args("probability").toBoolean, args("crossval").toInt))
+
 
 
         //    GRASS
