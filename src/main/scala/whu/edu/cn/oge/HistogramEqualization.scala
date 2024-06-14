@@ -10,8 +10,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import scala.collection.mutable.ListBuffer
 
 object HistogramEqualization {
-  //hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
-  //ffffffffffffffffffffffffffffffffffffffffffff
+  //再一次
   //直方图均衡化 局部计算
   def HistogramEqualization(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
