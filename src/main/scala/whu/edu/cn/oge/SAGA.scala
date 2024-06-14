@@ -104,7 +104,7 @@ object SAGA {
       saveRasterRDDToTif(grid._2, tiffPath)
       tiffDockerPathList = tiffDockerPathList :+ tiffDockerPath
     }
-    //    val tiffDockerPathCollection = tiffDockerPathList.mkString(";")
+    val tiffDockerPathCollection = tiffDockerPathList.mkString(";")
     //输入矢量文件路径
     val polygonsPath = algorithmData + "sagaGridStatisticsPolygons_" + time + ".shp"
     //输出结果文件路径
@@ -120,7 +120,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathList -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathCollection -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -190,7 +190,7 @@ object SAGA {
   }
   def sagaISODATAClusteringForGrids(implicit sc: SparkContext,
                                     features: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                                    normalize: Int = 0,
+                                    normalize: String = "0",
                                     iterations: Int = 20,
                                     clusterINI: Int = 5,
                                     clusterMAX: Int = 16,
@@ -229,7 +229,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st2 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE "$normalize" -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE $normalize -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
 
       println(s"st = $st2")
       runCmd(st2, "UTF-8")

@@ -533,6 +533,8 @@ object Trigger {
         case "Coverage.toDouble" =>
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
         //   QGIS
+        case "Coverage.warpGeoreByGDAL" =>
+          coverageRddList += (UUID -> QGIS.gdalWarpGeore(sc, coverageRddList(args("input")), GCPs = args("GCPs"), resampleMethod = args("resampleMethod"), userId, dagId))
         case "Coverage.sieveByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalSieve(sc, input = coverageRddList(args("input")), threshold = args("threshold").toInt, eightConnectedness = args("eightConnectedness"), noMask = args("noMask"), maskLayer = args("maskLayer"), extra = args("extra")))
         case "Coverage.aspectByQGIS" =>
@@ -780,8 +782,8 @@ object Trigger {
             args("variance"), args("standardDeviation"), args("gini"),args("percentiles")))
         case "Coverage.histogramMatchingBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaHistogramMatching(sc, coverageRddList(args("grid")), coverageRddList(args("referenceGrid")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
-        case "Coverage.histogramMatchingBySAGA" =>
-          coverageRddList += (UUID -> SAGA.sagaISODATAClusteringForGrids(sc, coverageCollectionRddList(args("features")), args("normalize").toInt, args("iterations").toInt, args("clusterINI").toInt, args("clusterMAX").toInt, args("samplesMIN").toInt, args("initialize")))
+        case "Coverage.ISODATAClusteringForGridsBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaISODATAClusteringForGrids(sc, coverageCollectionRddList(args("features")), args("normalize"), args("iterations").toInt, args("clusterINI").toInt, args("clusterMAX").toInt, args("samplesMIN").toInt, args("initialize")))
         case "Coverage.simpleFilterBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaSimpleFilter(sc, coverageRddList(args("input")), args("method").toInt, args("kernelType").toInt, args("kernelRadius").toInt))
 
@@ -855,6 +857,7 @@ object Trigger {
           coverageRddList += (UUID -> GrassUtil.r_random(sc,coverageRddList(args("input")),args("npoints")))
         case "Coverage.univarByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_univar(sc,coverageRddList(args("input"))))
+
 
         // Kernel
         case "Kernel.chebyshev" =>
@@ -1242,6 +1245,9 @@ object Trigger {
           stringList += (UUID -> AI.getTrainingDatasetEncoding(args("datasetName")))
         case "AI.ANNClassification" =>
           coverageRddList += (UUID -> ML.ANNClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
+        case "AI.SVMClassification" =>
+          coverageRddList += (UUID -> ML.SVMClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
+
       }
 
 

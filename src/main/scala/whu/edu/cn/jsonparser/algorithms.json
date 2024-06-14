@@ -2159,6 +2159,28 @@
       }
     ]
   },
+  "Coverage.warpGeoreByGDAL": {
+    "description": "Warp one or several datasets.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "GCPs",
+        "type": "String",
+        "description": "The path of GCPs.",
+        "optional": "True"
+      },
+      {
+        "name": "resampleMethod",
+        "type": "String",
+        "description": " resampling mode."
+      }
+    ]
+  },
   "Feature.rasterizeByGDAL": {
     "description": "Converts vector geometries (points, lines and polygons) into a raster image.",
     "returns": "Coverage",
@@ -5508,10 +5530,10 @@
       },
       {
         "name": "normalize",
-        "type": "Int",
+        "type": "String",
         "description": "Normalize",
         "optional": "True",
-        "default": 0
+        "default": "0"
       },
       {
         "name": "iterations",
@@ -13553,6 +13575,22 @@
   },
   "AI.ANNClassification": {
     "description": "Classify image using ANN.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "Coverage to be classified."
+      },
+      {
+        "name": "sampleFiles",
+        "type": "List[String]",
+        "description": "Sample files to train the model."
+      }
+    ]
+  },
+  "AI.SVMClassification": {
+    "description": "Classify image using SVM.",
     "returns": "Coverage",
     "args": [
       {
