@@ -8,6 +8,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
@@ -272,6 +273,74 @@ object SAGA {
 
       val st =
         raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -INPUT "$dockerTiffPath" -RESULT "$writeDockerPath" -METHOD $methodInput -KERNEL_TYPE $kernelTypeInput -KERNEL_RADIUS $kernelRadius""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+  def sagaMinimumDistanceClassification(implicit sc: SparkContext,
+                       grids: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                       training: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                       training_samples: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                       normalise: Boolean = false,
+                       training_class:String,
+                       training_with:Int=0,
+                       train_buffer:Float=1.0f,
+                       threshold_dist:Float=0.0f,
+                       threshold_angle:Float=0.0f,
+                       threshold_prob:Float=0.0f,
+                       file_load:String,
+                       relative_prob:Int=1,
+                       userId:String,
+                       dagId:String):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    val outputTiffPath = algorithmData + "sagaMinimumDistanceClassification_" + time + ".tif"
+    val writePath = algorithmData + "sagaMinimumDistanceClassification_" + time + "_out.tif"
+    saveRasterRDDToTif(grids, outputTiffPath)
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "sagaMinimumDistanceClassification_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "sagaMinimumDistanceClassification_" + time + "_out.tif"
+
+    //输入矢量文件路径
+    val trainingPath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + time + ".shp"
+    //输出结果文件路径
+    val traingwritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + time + "_out.shp"
+
+    saveFeatureRDDToShp(training, trainingPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockertrainingPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_" + time + ".shp"
+    // docker输出结果文件路径
+    val writetrainingDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_" + time + "_out.shp"
+
+    //输入矢量文件路径
+    val training_samplesPath = algorithmData + "sagaMinimumDistanceClassificationtraining_samples_" + time + ".shp"
+    //输出结果文件路径
+    val traing_sampleswritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_samples_" + time + "_out.shp"
+
+    saveFeatureRDDToShp(training_samples, training_samplesPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockertraining_samplesPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_samples_" + time + ".shp"
+    // docker输出结果文件路径
+    val writetraining_samplesDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_samples_" + time + "_out.shp"
+    val file_loadPath=loadTxtFromUpload(file_load,userId,dagId)
+    val save_loadDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationsavaload_" + time + ".txt"
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER "$train_buffer" -THRESHOLD_DIST "$threshold_dist" -THRESHOLD_ANGLE "$threshold_angle" -THRESHOLD_PROB"$threshold_prob" -RELATIVE_PROB" $relative_prob"""
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
