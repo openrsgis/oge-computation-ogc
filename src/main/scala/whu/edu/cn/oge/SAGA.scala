@@ -120,7 +120,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS $tiffDockerPathCollection -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT $writeDockerPath  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS "$tiffDockerPathCollection" -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT "$writeDockerPath"  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
