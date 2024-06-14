@@ -399,21 +399,35 @@
         "description": "The base url of service."
       },
       {
-        "name": "CubeName",
+        "name": "cubeId",
         "type": "String",
-        "description": "The Name of target collection."
+        "description": "The id of target cube."
+      },
+      {
+        "name": "products",
+        "type": "String",
+        "description": "The name of target collection.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bands",
+        "type": "String",
+        "description": "The bands used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "time",
+        "type": "String",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
       },
       {
         "name": "extent",
         "type": "String",
         "description": "The extent used for deleting.",
-        "default": "null",
-        "optional": "True"
-      },
-      {
-        "name": "dateTime",
-        "type": "String",
-        "description": "The range of time used for deleting.",
         "default": "null",
         "optional": "True"
       }
@@ -4685,6 +4699,174 @@
       }
     ]
   },
+  "Coverage.dimensionalityReductionByOTB": {
+    "description": "Performs dimensionality reduction on input image. PCA,NA-PCA,MAF,ICA methods are available. It is also possible to compute the inverse transform to reconstruct the image and to optionally export the transformation matrix to a text file.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The input image to apply dimensionality reduction."
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "Selection of the reduction dimension method.",
+        "optional": "True",
+        "default": "pca"
+      },
+      {
+        "name": "rescale",
+        "type": "String",
+        "description": "Enable rescaling of the reduced output image.",
+        "optional": "True",
+        "default": "no"
+      }
+    ]
+  },
+  "Coverage.SFSTextureExtractionByOTB": {
+    "description": "Computes Structural Feature Set textures on every pixel of the input image selected channel.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "The input image to compute the features on."
+      },
+      {
+        "name": "channel",
+        "type": "Int",
+        "description": "The selected channel index.",
+        "default": 1
+      },
+      {
+        "name": "spectralThreshold",
+        "type": "Double",
+        "description": "Spectral Threshold.",
+        "optional": "True",
+        "default": 50
+      },
+      {
+        "name": "spatialThreshold",
+        "type": "Int",
+        "description": "Spatial Threshold.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "numberOfDirection",
+        "type": "Int",
+        "description": "Number of Direction.",
+        "optional": "True",
+        "default": 20
+      },
+      {
+        "name": "alpha",
+        "type": "Double",
+        "description": "Alpha.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "ratioMaximumConsiderationNumber",
+        "type": "Int",
+        "description": "Ratio Maximum Consideration Number.",
+        "optional": "True",
+        "default": 5
+      }
+    ]
+  },
+  "Coverage.multivariateAlterationDetectorByOTB": {
+    "description": "Change detection by Multivariate Alteration Detector (MAD) algorithm.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "inputBefore",
+        "type": "Coverage",
+        "description": "Multiband image of the scene before perturbations."
+      },
+      {
+        "name": "inputAfter",
+        "type": "Coverage",
+        "description": "Mutliband image of the scene after perturbations."
+      }
+    ]
+  },
+  "Coverage.radiometricIndicesByOTB": {
+    "description": "This application computes radiometric indices using the relevant channels of the input image. The output is a multi band image into which each channel is one of the selected indices.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Input image."
+      },
+      {
+        "name": "channelsBlue",
+        "type": "Int",
+        "description": "Blue channel index",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsGreen",
+        "type": "Int",
+        "description": "Green channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsRed",
+        "type": "Int",
+        "description": "Red channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsNir",
+        "type": "Int",
+        "description": "NIR channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "channelsMir",
+        "type": "Int",
+        "description": "MIR channel index.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "ram",
+        "type": "Int",
+        "description": "Available memory for processing (in MB).",
+        "optional": "True",
+        "default": 256
+      },
+      {
+        "name": "indicesList",
+        "type": "List[String]",
+        "description": "List of available radiometric indices with their relevant channels in brackets.",
+        "optional": "True",
+        "default": ["Vegetation:NDVI"]
+      }
+    ]
+  },
+  "Coverage.obtainUTMZoneFromGeoPointByOTB": {
+    "description": "UTM zone determination from a geographic point.",
+    "args": [
+      {
+        "name": "lat",
+        "type": "Double",
+        "description": "Latitude value of desired point."
+      },
+      {
+        "name": "lon",
+        "type": "Double",
+        "description": "Longitude value of desired point."
+      }
+    ]
+  },
 
 
 
@@ -8646,11 +8828,82 @@
         "description": "The cube to compute NDVI."
       },
       {
-        "name": "bandNames",
+        "name": "band1",
         "type": "List<String>",
         "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
         "optional": "True",
         "default": "None"
+      },
+      {
+        "name": "band2",
+        "type": "List<String>",
+        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
+  "Cube.add": {
+    "description": "Adds the first value to the second for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.subtract": {
+    "description": "Subtracts the second value from the first for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.multiply": {
+    "description": "Multiplies the first value by the second.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
+      }
+    ]
+  },
+  "Cube.divide": {
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in cube1 and cube2.",
+    "returns": "Cube",
+    "args": [
+      {
+        "name": "cube1",
+        "type": "Cube",
+        "description": "The cube from which the left operand bands are taken."
+      },
+      {
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
       }
     ]
   },
@@ -8876,32 +9129,6 @@
         "name": "threshold",
         "type": "Int",
         "description": "The threshold to binary"
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of binary"
-      }
-    ]
-  },
-  "Cube.subtract": {
-    "description": "Compute binarization of the Cube.",
-    "returns": "Cube",
-    "args": [
-      {
-        "name": "input",
-        "type": "Cube",
-        "description": "The cube to compute NDWI."
-      },
-      {
-        "name": "product",
-        "type": "String",
-        "description": "The product to compute binarization."
-      },
-      {
-        "name": "timeList",
-        "type": "List<String>",
-        "description": "The list of time."
       },
       {
         "name": "name",
@@ -9714,6 +9941,7 @@
       }
     ]
   },
+
   "Coverage.kMeans": {
     "description": "1111",
     "returns": "Coverage",
@@ -9789,6 +10017,87 @@
       {
         "name": "k",
         "type": "Int",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.IHSFusion": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.panSharp": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "method",
+        "type": "String",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "bandList",
+        "type": "List",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "weightList",
+        "type": "List",
+        "description": "111",
+        "default": "None",
+        "optional": "False"
+      }
+    ]
+  },
+  "Coverage.catTwoCoverage": {
+    "description": "1111",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The photo to be processed",
+        "default": "None",
+        "optional": "False"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
         "description": "111",
         "default": "None",
         "optional": "False"
@@ -10476,6 +10785,17 @@
         "name": "coverageCollection",
         "type": "Collections",
         "description": "image to be color balance and reference"
+      }
+    ]
+  },
+  "Dataset.encoding": {
+    "description": "TrainingDML-AI encoding of dataset in oge",
+    "returns": "String",
+    "args": [
+      {
+        "name": "datasetName",
+        "type": "String",
+        "description": "name of dataset for the encoding"
       }
     ]
   }
