@@ -143,6 +143,7 @@ object GlobalConfig {
   object Others {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
+    final var sagatempFilePath = "/mnt/storage/SAGA/sagaData/" //SAGA各类临时文件的地址/mnt/storage/SAGA/sagaData
     final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
     final var tmsHost = "192.168.32.5" //tms服务ip
     final var tomcatHost = "120.48.147.38"
