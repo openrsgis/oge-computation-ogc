@@ -5538,18 +5538,17 @@
       },
       {
         "name": "training",
-        "type": "Shape",
+        "type": "Feature",
         "description": "Training Areas"
       },
       {
-        "name": "training_Samples",
-        "type": "Table",
+        "name": "training_samples",
+        "type": "Feature",
         "description": "Provide a class identifier in the first field followed by sample data corresponding to the input feature grids."
       },
       {
         "name": "normalise",
         "type": "Boolean",
-        "optional": "True",
         "default": 0
       },
       {
@@ -5583,9 +5582,9 @@
         "default": 0.0
       },
       {
-        "name": "threshold_angle",
+        "name": "threshold_prob",
         "type": "Float",
-        "description": "Let pixel stay unclassified, if spectral angle distance is greater than threshold.",
+        "description": "Let pixel stay unclassified, if maximum likelihood probability value is less than threshold.",
         "default": 0.0
       },
       {
