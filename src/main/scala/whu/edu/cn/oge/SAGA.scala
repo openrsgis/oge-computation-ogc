@@ -360,7 +360,7 @@ object SAGA {
       val st1 =
         raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER "$train_buffer" -THRESHOLD_DIST "$threshold_dist" -THRESHOLD_ANGLE "$threshold_angle" -THRESHOLD_PROB"$threshold_prob" -RELATIVE_PROB" $relative_prob"""
 
-      val st2 = s"conda activate cv && python /root/svm/svm.py --imagePath $writePathSdat --outputPath $writePath"
+      val st2 = s"conda activate cv;python /root/svm/sdattotif.py --imagePath $writePathSdat --outputPath $writePath"
 
       println(s"st = $st1")
       runCmd(st1, "UTF-8")
