@@ -5642,7 +5642,7 @@
       },
       {
         "name": "ROI",
-        "type": "String",
+        "type": "Feature",
         "description": "ROI"
       },
       {

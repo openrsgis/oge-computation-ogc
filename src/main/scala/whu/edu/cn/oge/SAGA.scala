@@ -379,7 +379,7 @@ object SAGA {
 
   def sagaSVMClassification(implicit sc: SparkContext,
                             grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                            ROI: String,
+                            ROI: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                             scaling: Int = 2,
                             message: Int = 0,
                             model_src: Int = 0,
@@ -416,24 +416,37 @@ object SAGA {
     val docker_load = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_remodel.txt"
     val docker_save = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_smodel.txt"
 
-    val client = BosClientUtil_scala.getClient2
-    //下载文件
-    val path = s"${Trigger.userId}/$ROI"
-    val tempfile = new File(algorithmDockerData + "sagaSVMClassification_" + time + ROI)
-    println(path)
-    val getObjectRequest = new GetObjectRequest("oge-user",path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
+    //输入矢量文件路径
+    val trainingPath = algorithmData + "sagaSVMClassification_" + time + ".shp"
+    //输出结果文件路径
+    //    val traingwritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + "_out.shp"
+
+    saveFeatureRDDToShp(ROI, trainingPath)
+
+    val dockertraining_samplePath = algorithmDockerData + "sagaSVMClassification_" + time + ".shp"
+
+
+    //    val client = BosClientUtil_scala.getClient2
+//    //下载文件
+//    val path = s"${Trigger.userId}/$ROI"
+//    val tempfile = new File(algorithmData + "sagaSVMClassification_" + time + ROI)
+//    println(path)
+//    println(tempfile)
+//    val getObjectRequest = new GetObjectRequest("oge-user",path)
+//    tempfile.createNewFile()
+//    println("这一步完成了吗")
+//    val bosObject = client.getObject(getObjectRequest,tempfile)
+//    println("这一步呢")
 
     // 给每个文件加路径前缀
-    val trainingArea = algorithmDockerData + "sagaSVMClassification_" + time + ROI
+//    val trainingArea = algorithmDockerData + "sagaSVMClassification_" + time + ROI
 
 
     try {
       versouSshUtil(host, userName, password, port)
 
       val st1 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$trainingArea" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval""".stripMargin
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$dockertraining_samplePath" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval""".stripMargin
       val st2 = s"conda activate cv && python /root/svm/svm.py --imagePath $classes --outputPath $writePath"
 
       println(s"st = $st1")
