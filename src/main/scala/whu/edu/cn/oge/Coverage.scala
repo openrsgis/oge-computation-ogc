@@ -3575,12 +3575,20 @@ object Coverage {
     val tempPath = if (loadtype == "saga")
       GlobalConfig.Others.sagatempFilePath  else GlobalConfig.Others.tempFilePath
 //    val tempPath = GlobalConfig.Others.sagatempFilePath
+    println(tempPath)
     val filePath = s"$tempPath${dagId}_$file_idx.txt"
-
+    println(filePath)
     val tempfile = new File(filePath)
     val getObjectRequest = new GetObjectRequest("oge-user", path)
     tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest, tempfile)
+    try {
+      println("filePath3-------")
+      val bosObject = client.getObject(getObjectRequest, tempfile)
+    }
+    catch {
+      case e: Throwable =>
+        println(e)
+    }
     Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
     println(filePath)
     file_idx = file_idx + 1
