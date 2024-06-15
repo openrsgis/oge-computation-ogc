@@ -3844,7 +3844,7 @@ object QGIS {
     val writePath = algorithmData + "gdalWarpGeore_" + time + "_out.tif"
     val writGCPsPath = algorithmData + "gdalWarpGeore_" + time + "_gcp.tif"
     saveRasterRDDToTif(input, outputTiffPath)
-    val GCPsPath = loadTxtFromUpload(GCPs, userId, dagId)
+    val GCPsPath = loadTxtFromUpload(GCPs, userId, dagId,"gdal")
     println(GCPsPath)
 
     try {
