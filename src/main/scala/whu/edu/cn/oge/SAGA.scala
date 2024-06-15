@@ -344,7 +344,9 @@ object SAGA {
     //    val writetraining_samplesDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_samples_" + dagId + time + "_out.shp"
 
     //加载预训练模型
+    print("读取txt")
     val file_loadPath=loadTxtFromUpload(file_load,userId,dagId,"saga")
+    print("读取txt成功")
     val save_loadDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationsavaload_" + dagId + time + ".txt"
     //保存文件
     val  class_lut_writeDockerPath = algorithmDockerData + "sagaMinDisClassification_class_lut" + dagId + time + "_out.dbf"
