@@ -1,13 +1,20 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONObject}
+import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.oge.Coverage.loadTxtFromUpload
+
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.BosClientUtil_scala
+
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
@@ -15,6 +22,7 @@ import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 import scala.collection.immutable.Map
 import scala.collection.mutable.Map
 import scala.collection.{immutable, mutable}
+import java.io.File
 
 object SAGA {
   def main(args: Array[String]): Unit = {
@@ -284,9 +292,167 @@ object SAGA {
     makeChangedRasterRDDFromTif(sc, writePath)
 
   }
+  def sagaMinimumDistanceClassification(implicit sc: SparkContext,
+                       grids: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                       training: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                       training_samples: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                       normalise: Boolean = false,
+                       training_class:String,
+                       training_with:Int=0,
+                       train_buffer:Float=1.0f,
+                       threshold_dist:Float=0.0f,
+                       threshold_angle:Float=0.0f,
+                       threshold_prob:Float=0.0f,
+                       file_load:String,
+                       relative_prob:Int=1,
+                       userId:String,
+                       dagId:String):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    val outputTiffPath = algorithmData + "sagaMinimumDistanceClassification_" + dagId + time + ".tif"
+    val writePathSdat = algorithmData + "sagaMinimumDistanceClassification_" + dagId + time + "_out.sdat"
+    val writePath = algorithmData + "sagaMinimumDistanceClassification_" + dagId + time + "_out.tif"
+    saveRasterRDDToTif(grids, outputTiffPath)
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "sagaMinimumDistanceClassification_" + dagId + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "sagaMinimumDistanceClassification_" + dagId + time + "_out.sdat"
+
+    //输入矢量文件路径
+    val trainingPath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + ".shp"
+    //输出结果文件路径
+//    val traingwritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + "_out.shp"
+
+    saveFeatureRDDToShp(training, trainingPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockertrainingPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + ".shp"
+    // docker输出结果文件路径
+    // val writetrainingDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + "_out.shp"
+
+    //输入矢量文件路径
+    val training_samplesPath = algorithmData + "sagaMinimumDistanceClassificationtraining_samples_" + dagId + time + ".shp"
+    //输出结果文件路径
+    // val traing_sampleswritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_samples_" + dagId + time + "_out.shp"
+
+    saveFeatureRDDToShp(training_samples, training_samplesPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockertraining_samplesPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_samples_" + dagId + time + ".shp"
+    // docker输出结果文件路径
+    //    val writetraining_samplesDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationtraining_samples_" + dagId + time + "_out.shp"
+
+    //加载预训练模型
+    print("读取txt")
+    val file_loadPath=loadTxtFromUpload(file_load,userId,dagId,"saga")
+    print("读取txt成功")
+    val save_loadDockerPath = algorithmDockerData + "sagaMinimumDistanceClassificationsavaload_" + dagId + time + ".txt"
+    //保存文件
+    val  class_lut_writeDockerPath = algorithmDockerData + "sagaMinDisClassification_class_lut" + dagId + time + "_out.dbf"
+    val  quality_writeDockerPath = algorithmDockerData + "sagaMinDisClassification_quality" + dagId + time + "_out.sdat"
 
 
+
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st1 =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_classification 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER $train_buffer -THRESHOLD_DIST $threshold_dist -THRESHOLD_ANGLE $threshold_angle -THRESHOLD_PROB $threshold_prob -RELATIVE_PROB  $relative_prob"""
+
+      val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $writePathSdat --outputPath $writePath"
+
+      println(s"st = $st1")
+      runCmd(st1, "UTF-8")
+      println(s"st = $st2")
+      versouSshUtil(host, userName, password, port)
+      runCmd(st2, "UTF-8")
+      println("Success")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    print(writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
+  def sagaSVMClassification(implicit sc: SparkContext,
+                            grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                            ROI: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                            scaling: Int = 2,
+                            message: Int = 0,
+                            model_src: Int = 0,
+                            ROI_id: String,
+                            svm_type: Int = 0,
+                            kernel_type: Int = 2,
+                            degree: Int = 3,
+                            gamma: Double = 0.000000,
+                            coef0: Double = 0.000000,
+                            cost: Double = 1.000000,
+                            nu: Double = 0.500000,
+                            eps_svr: Double = 0.100000,
+                            cache_size: Double = 100.000000,
+                            eps: Double = 0.001000,
+                            shrinking: Boolean = false,
+                            probability: Boolean = false,
+                            crossval: Int = 0):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    val outputTiffPath = algorithmData + "sagaSVMClassification_" + time + ".tif"
+    val writePath = algorithmData + "sagaSVMClassification_" + time + "_svm_result.tif"
+    val model_load = new File(algorithmData + "sagaSVMClassification_" + time + "_svm_remodel.txt")
+    val model_save = new File(algorithmData + "sagaSVMClassification_" + time + "_svm_smodel.txt")
+    model_load.createNewFile()
+    model_save.createNewFile()
+    saveRasterRDDToTif(grid, outputTiffPath)
+
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "sagaSVMClassification_" + time + ".tif"
+    val classes = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_result.sdat"
+    val outputPath = algorithmData + "sagaSVMClassification_" + time + "_svm_result.sdat"
+    val classes_lut = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_table.dbf"
+    val docker_load = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_remodel.txt"
+    val docker_save = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_smodel.txt"
+
+    //输入矢量文件路径
+    val trainingPath = algorithmData + "sagaSVMClassification_" + time + ".shp"
+    //输出结果文件路径
+    //    val traingwritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + "_out.shp"
+
+    saveFeatureRDDToShp(ROI, trainingPath)
+
+    val dockertraining_samplePath = algorithmDockerData + "sagaSVMClassification_" + time + ".shp"
+
+
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st1 =
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$dockertraining_samplePath" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval"""".stripMargin
+      val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $outputPath --outputPath $writePath"
+
+      println(s"st = $st1")
+      runCmd(st1, "UTF-8")
+      println(s"st = $st2")
+      versouSshUtil(host, userName, password, port)
+      runCmd(st2, "UTF-8")
+      println("Success")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
 
 
 
 }
+
+

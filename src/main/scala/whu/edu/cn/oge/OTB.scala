@@ -1313,8 +1313,8 @@ object OTB {
     val writePath = algorithmData + "otbOpticalCalibration_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
-    val getacquiGainbiasPath=loadTxtFromUpload(acquiGainbias,userId,dagId)
-    val getacquiSolarilluminationsPath=loadTxtFromUpload(acquiSolarilluminations,userId,dagId)
+    val getacquiGainbiasPath=loadTxtFromUpload(acquiGainbias,userId,dagId,"otb")
+    val getacquiSolarilluminationsPath=loadTxtFromUpload(acquiSolarilluminations,userId,dagId,"otb")
     println(getacquiGainbiasPath)
     println(getacquiSolarilluminationsPath)
 
