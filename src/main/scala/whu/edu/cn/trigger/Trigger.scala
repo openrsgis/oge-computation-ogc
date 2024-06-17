@@ -72,6 +72,9 @@ object Trigger {
   var isBatch: Int = _
   // 此次计算工作的任务json
   var workTaskJson: String = _
+
+  // 此次计算工作的来源,"main"为来自通用版本，"edu"为来自教育版
+  var workType: String = _
   // DAG-ID
   var dagId: String = _
   var dagMd5: String = _
@@ -972,7 +975,12 @@ object Trigger {
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           println("isBatch", isBatch)
           if (isBatch == 0) {
-            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+            if(workType.equals("main")){
+              Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+            }else if(workType.equals("edu")){
+              Coverage.visualizeBatch_edu(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
+            }
+
           } else {
             // TODO: 增加添加样式的函数
             coverageRddList += (UUID -> Coverage.addStyles(coverageRddList(args("coverage")), visParam = visParam))
@@ -1362,6 +1370,7 @@ object Trigger {
     }
 
     /* sc,workTaskJson,workID,originTaskID */
+    workType = "main"
     workTaskJson = curWorkTaskJson
     dagId = curDagID
     userId = userID
@@ -1503,6 +1512,125 @@ object Trigger {
 
   }
 
+  def runMain_edu(implicit sc: SparkContext,
+              curWorkTaskJson: String,
+              curDagID: String, userID: String): Unit = {
+
+    // Check if the SparkContext is active
+    if (sc.isStopped) {
+      sendPost(DAG_ROOT_URL + "/deliverUrl", "ERROR")
+      println("Send to boot!")
+      return
+    }
+
+    /* sc,workTaskJson,workID,originTaskID */
+    workType = "edu"
+    workTaskJson = curWorkTaskJson
+    dagId = curDagID
+    userId = userID
+    val time1: Long = System.currentTimeMillis()
+
+    val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
+    println(jsonObject)
+
+    isBatch = jsonObject.getString("isBatch").toInt
+
+
+    layerName = jsonObject.getString("layerName")
+    try {
+      val map: JSONObject = jsonObject.getJSONObject("map")
+      level = map.getString("level").toInt
+      val spatialRange: Array[Double] = map.getString("spatialRange")
+        .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
+      println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
+
+      windowExtent = Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
+      println("WindowExtent", windowExtent.xmin, windowExtent.ymin, windowExtent.xmax, windowExtent.ymax)
+    } catch {
+      case e: Exception =>
+        level = 11
+        windowExtent = null
+    }
+
+    println("***********************************************************")
+
+
+    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.trans(jsonObject, "0")
+    }
+    else {
+      JsonToArg.trans(jsonObject, "0")
+    }
+    println("JsonToArg.dagMap.size = " + JsonToArg.dagMap)
+    JsonToArg.dagMap.foreach(DAGList => {
+      println("************优化前的DAG*************")
+      println(DAGList._1)
+      DAGList._2.foreach(println(_))
+      println("************优化后的DAG*************")
+      val optimizedDAGList: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = optimizedDAG(DAGList._2)
+      optimizedDagMap += (DAGList._1 -> optimizedDAGList)
+      optimizedDAGList.foreach(println(_))
+    })
+
+
+    try {
+      lambda(sc, optimizedDagMap("0"))
+      PostSender.shelvePost("dagId",dagId)
+      PostSender.shelvePost("extStatus",1.toString)
+      PostSender.shelvePost("userId",userID)
+      //返回正常信息,发送到教育版地址
+      PostSender.sendShelvedPost(GlobalConfig.DagBootConf.EDU_ROOT_URL)
+    } catch {
+      case e: Throwable =>
+        e.printStackTrace()
+        val errorJson = new JSONObject
+        errorJson.put("error", e.getCause.getMessage)
+
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("dagId", Trigger.dagId)
+        outJsonObject.put("json", errorJson)
+        outJsonObject.put("extStatus","0")
+        //
+        println("Error json = " + outJsonObject)
+        sendPost(DAG_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
+        println("Send to boot!")
+      //         打印至后端控制台
+
+
+    } finally {
+      Trigger.outputInformationList.clear()
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      //    // TODO lrx: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
+      Trigger.intList.clear()
+      Trigger.doubleList.clear()
+      Trigger.stringList.clear()
+      PostSender.clearShelvedMessages()
+      tempFileList.foreach(tempFile => {
+        if (scala.reflect.io.File(tempFile).exists)
+          scala.reflect.io.File(tempFile).delete()
+      })
+
+      val time2: Long = System.currentTimeMillis()
+      println(time2 - time1)
+
+    }
+  }
+
+
   def runBatch(implicit sc: SparkContext,
                curWorkTaskJson: String,
                curDagId: String, userID: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
@@ -1598,7 +1726,7 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 //        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
-    runMain(sc, workTaskJson, dagId, userId)
+    runMain_edu(sc, workTaskJson, dagId, userId)
 
     println("Finish")
     sc.stop()
