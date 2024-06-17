@@ -358,13 +358,14 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st1 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER "$train_buffer" -THRESHOLD_DIST "$threshold_dist" -THRESHOLD_ANGLE "$threshold_angle" -THRESHOLD_PROB"$threshold_prob" -RELATIVE_PROB" $relative_prob"""
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_classification 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER $train_buffer -THRESHOLD_DIST $threshold_dist -THRESHOLD_ANGLE $threshold_angle -THRESHOLD_PROB $threshold_prob -RELATIVE_PROB  $relative_prob"""
 
-      val st2 = s"conda activate cv;python /root/svm/sdattotif.py --imagePath $writePathSdat --outputPath $writePath"
+      val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $writePathSdat --outputPath $writePath"
 
       println(s"st = $st1")
       runCmd(st1, "UTF-8")
       println(s"st = $st2")
+      versouSshUtil(host, userName, password, port)
       runCmd(st2, "UTF-8")
       println("Success")
 
@@ -379,7 +380,7 @@ object SAGA {
 
   def sagaSVMClassification(implicit sc: SparkContext,
                             grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                            ROI: String,
+                            ROI: RDD[(String, (Geometry, mutable.Map[String, Any]))],
                             scaling: Int = 2,
                             message: Int = 0,
                             model_src: Int = 0,
@@ -412,33 +413,32 @@ object SAGA {
     // docker路径
     val dockerTiffPath = algorithmDockerData + "sagaSVMClassification_" + time + ".tif"
     val classes = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_result.sdat"
+    val outputPath = algorithmData + "sagaSVMClassification_" + time + "_svm_result.sdat"
     val classes_lut = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_table.dbf"
     val docker_load = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_remodel.txt"
     val docker_save = algorithmDockerData + "sagaSVMClassification_" + time + "_svm_smodel.txt"
 
-    val client = BosClientUtil_scala.getClient2
-    //下载文件
-    val path = s"${Trigger.userId}/$ROI"
-    val tempfile = new File(algorithmDockerData + "sagaSVMClassification_" + time + ROI)
-    println(path)
-    val getObjectRequest = new GetObjectRequest("oge-user",path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
+    //输入矢量文件路径
+    val trainingPath = algorithmData + "sagaSVMClassification_" + time + ".shp"
+    //输出结果文件路径
+    //    val traingwritePath = algorithmData + "sagaMinimumDistanceClassificationtraining_" + dagId + time + "_out.shp"
 
-    // 给每个文件加路径前缀
-    val trainingArea = algorithmDockerData + "sagaSVMClassification_" + time + ROI
+    saveFeatureRDDToShp(ROI, trainingPath)
+
+    val dockertraining_samplePath = algorithmDockerData + "sagaSVMClassification_" + time + ".shp"
 
 
     try {
       versouSshUtil(host, userName, password, port)
 
       val st1 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$trainingArea" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval""".stripMargin
-      val st2 = s"conda activate cv && python /root/svm/svm.py --imagePath $classes --outputPath $writePath"
+        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$dockertraining_samplePath" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval"""".stripMargin
+      val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $outputPath --outputPath $writePath"
 
       println(s"st = $st1")
       runCmd(st1, "UTF-8")
       println(s"st = $st2")
+      versouSshUtil(host, userName, password, port)
       runCmd(st2, "UTF-8")
       println("Success")
 
@@ -454,3 +454,5 @@ object SAGA {
 
 
 }
+
+
