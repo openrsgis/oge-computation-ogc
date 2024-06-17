@@ -5519,6 +5519,150 @@
       }
     ]
   },
+  "Coverage.maximumlikelihoodClassificationBySAGA": {
+    "description": "Standard methods for supervised image classification, including minimum distance, maximum likelihood, spectral angle mapping. Classifiers can be trained by areas defined through shapes, samples supplied as table records, or statistics previously stored to file.",
+    "returns": "CoverageCollection",
+    "args": [
+      {
+        "name": "grids",
+        "type": "Coverage",
+        "description": "-"
+      },
+      {
+        "name": "training",
+        "type": "Feature",
+        "description": "Training Areas"
+      },
+      {
+        "name": "training_samples",
+        "type": "Feature",
+        "description": "Provide a class identifier in the first field followed by sample data corresponding to the input feature grids."
+      },
+      {
+        "name": "normalise",
+        "type": "Boolean",
+        "default": 0
+      },
+      {
+        "name": "training_class",
+        "type": "String",
+        "description": "-"
+      },
+      {
+        "name": "training_with",
+        "type": "Int",
+        "description": "Available Choices: [0] training areas [1] training samples [2] load from file Default: 0",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "train_buffer",
+        "type": "Float",
+        "description": "For non-polygon type training areas, distance to buffer the sample area with the grid cell center.",
+        "default": 1.0
+      },
+      {
+        "name": "threshold_dist",
+        "type": "Float",
+        "description": "Let pixel stay unclassified, if minimum Euclidean distance is greater than threshold.",
+        "default": 0.0
+      },
+      {
+        "name": "threshold_angle",
+        "type": "Float",
+        "description": "Let pixel stay unclassified, if spectral angle distance is greater than threshold.",
+        "default": 0.0
+      },
+      {
+        "name": "threshold_prob",
+        "type": "Float",
+        "description": "Let pixel stay unclassified, if maximum likelihood probability value is less than threshold.",
+        "default": 0.0
+      },
+      {
+        "name": "file_load",
+        "type": "String"
+      },
+      {
+        "name": "relative_prob",
+        "type": "Int",
+        "description": "Available Choices: [0] absolute [1] relative Default: 1",
+        "default": 1
+      }
+    ]
+  },
+  "Coverage.minimumdistanceClassificationBySAGA": {
+    "description": "Standard methods for supervised image classification, including minimum distance, maximum likelihood, spectral angle mapping. Classifiers can be trained by areas defined through shapes, samples supplied as table records, or statistics previously stored to file.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "grids",
+        "type": "Coverage",
+        "description": "-"
+      },
+      {
+        "name": "training",
+        "type": "Feature",
+        "description": "Training Areas"
+      },
+      {
+        "name": "training_samples",
+        "type": "Feature",
+        "description": "Provide a class identifier in the first field followed by sample data corresponding to the input feature grids."
+      },
+      {
+        "name": "normalise",
+        "type": "Boolean",
+        "default": 0
+      },
+      {
+        "name": "training_class",
+        "type": "String",
+        "description": "-"
+      },
+      {
+        "name": "training_with",
+        "type": "Int",
+        "description": "Available Choices: [0] training areas [1] training samples [2] load from file Default: 0",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "train_buffer",
+        "type": "Float",
+        "description": "For non-polygon type training areas, distance to buffer the sample area with the grid cell center.",
+        "default": 1.0
+      },
+      {
+        "name": "threshold_dist",
+        "type": "Float",
+        "description": "Let pixel stay unclassified, if minimum Euclidean distance is greater than threshold.",
+        "default": 0.0
+      },
+      {
+        "name": "threshold_angle",
+        "type": "Float",
+        "description": "Let pixel stay unclassified, if spectral angle distance is greater than threshold.",
+        "default": 0.0
+      },
+      {
+        "name": "threshold_prob",
+        "type": "Float",
+        "description": "Let pixel stay unclassified, if maximum likelihood probability value is less than threshold.",
+        "default": 0.0
+      },
+      {
+        "name": "file_load",
+        "type": "String"
+      },
+      {
+        "name": "relative_prob",
+        "type": "Int",
+        "description": "Available Choices: [0] absolute [1] relative Default: 1",
+        "default": 1
+      }
+    ]
+  },
   "Coverage.ISODATAClusteringForGridsBySAGA": {
     "description": "This tool executes the Isodata unsupervised classification - clustering algorithm. Isodata stands for Iterative Self-Organizing Data Analysis Techniques. This is a more sophisticated algorithm which allows the number of clusters to be automatically adjusted during the iteration by merging similar clusters and splitting clusters with large standard deviations. The tool is based on Christos Iosifidis' Isodata implementation.",
     "returns": "Coverage",
@@ -5615,7 +5759,7 @@
       },
       {
         "name": "ROI",
-        "type": "String",
+        "type": "Feature",
         "description": "ROI"
       },
       {
