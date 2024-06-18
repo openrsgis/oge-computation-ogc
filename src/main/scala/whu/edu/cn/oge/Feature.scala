@@ -64,9 +64,9 @@ object Feature {
     val metaData = queryRes._3
     val hbaseTableName = queryRes._2
     val productKey = queryRes._1
-    println(metaData)
-    println(hbaseTableName)
-    println(productKey)
+//    println(metaData)
+//    println(hbaseTableName)
+//    println(productKey)
     //    if(dataTime==null){
     //      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
     //        .flatMap(t=>t)
@@ -584,7 +584,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = s"http://${GlobalConfig.Others.tomcatHost_public}:8888/tomcat-vector/vector_" + time + ".json"
+    val storageURL = s"http://${GlobalConfig.Others.tomcatHost_public}/tomcat-vector/vector_" + time + ".json"
 
     storageURL
   }

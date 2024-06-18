@@ -116,7 +116,7 @@ object GlobalConfig {
     // PostgreSQL 基础配置
     var QGIS_DATA: String = "/mnt/storage/algorithmData/"
     var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
-    var QGIS_HOST: String = "192.168.80.3"
+    var QGIS_HOST: String = "172.22.1.19"
     var QGIS_USERNAME: String = "root"
     var QGIS_PASSWORD: String = "Ypfamily608!"
     var QGIS_PORT: Int = 22
@@ -140,6 +140,6 @@ object GlobalConfig {
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "cc"
-    final var hbaseHost = "192.168.80.10:2181"
+    final var hbaseHost = "172.22.1.8:2181"
   }
 }
