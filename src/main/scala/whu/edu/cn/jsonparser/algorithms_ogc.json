@@ -5456,7 +5456,7 @@
   },
   "Coverage.maximumlikelihoodClassificationBySAGA": {
     "description": "Standard methods for supervised image classification, including minimum distance, maximum likelihood, spectral angle mapping. Classifiers can be trained by areas defined through shapes, samples supplied as table records, or statistics previously stored to file.",
-    "returns": "CoverageCollection",
+    "returns": "Coverage",
     "args": [
       {
         "name": "grids",
@@ -5465,18 +5465,17 @@
       },
       {
         "name": "training",
-        "type": "Shape",
+        "type": "Feature",
         "description": "Training Areas"
       },
       {
-        "name": "training_Samples",
-        "type": "Table",
+        "name": "training_samples",
+        "type": "Feature",
         "description": "Provide a class identifier in the first field followed by sample data corresponding to the input feature grids."
       },
       {
         "name": "normalise",
         "type": "Boolean",
-        "optional": "True",
         "default": 0
       },
       {
@@ -5510,9 +5509,9 @@
         "default": 0.0
       },
       {
-        "name": "threshold_angle",
+        "name": "threshold_prob",
         "type": "Float",
-        "description": "Let pixel stay unclassified, if spectral angle distance is greater than threshold.",
+        "description": "Let pixel stay unclassified, if maximum likelihood probability value is less than threshold.",
         "default": 0.0
       },
       {
@@ -5524,6 +5523,44 @@
         "type": "Int",
         "description": "Available Choices: [0] absolute [1] relative Default: 1",
         "default": 1
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "-",
+        "default": 4
+      }
+    ]
+  },
+  "Coverage.simpleFilterBySAGA": {
+    "description": "Simple standard filters for grids.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Grid"
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "optional": "True",
+        "description": "choice Available Choices: [0] Smooth [1] Sharpen [2] Edge Default: 0",
+        "default": 0
+      },
+      {
+        "name": "kernelType",
+        "type": "Int",
+        "description": "choice Available Choices: [0] Square [1] Circle Default: 1",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "kernelRadius",
+        "type": "Int",
+        "description": "integer number Minimum: 0 Default: 2",
+        "optional": "True",
+        "default": 2
       }
     ]
   },
