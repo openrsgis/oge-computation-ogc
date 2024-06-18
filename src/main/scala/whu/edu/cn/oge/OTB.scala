@@ -33,6 +33,7 @@ object OTB {
 
   val algorithmData = GlobalConfig.OTBConf.OTB_DATA
   val algorithmCode = GlobalConfig.OTBConf.OTB_ALGORITHMCODE
+  val algorithmDockerData = GlobalConfig.OTBConf.OTB_DOCKERDATA
   val host = GlobalConfig.OTBConf.OTB_HOST
   val userName = GlobalConfig.OTBConf.OTB_USERNAME
   val password = GlobalConfig.OTBConf.OTB_PASSWORD
@@ -1313,6 +1314,10 @@ object OTB {
     val writePath = algorithmData + "otbOpticalCalibration_" + time + "_out.tif"
     saveRasterRDDToTif(input, outputTiffPath)
 
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "otbOpticalCalibration_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "otbOpticalCalibration_" + time + "_out.tif"
+
     val getacquiGainbiasPath=loadTxtFromUpload(acquiGainbias,userId,dagId,"otb")
     val getacquiSolarilluminationsPath=loadTxtFromUpload(acquiSolarilluminations,userId,dagId,"otb")
     println(getacquiGainbiasPath)
@@ -1320,14 +1325,15 @@ object OTB {
 
     try {
       versouSshUtil(host, userName, password, port)
-      val st =
-        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $outputTiffPath --level "$level" --milli $milli --clamp $clamp
-          --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
-          --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
-          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $getacquiGainbiasPath  --acquiSolarilluminations  $getacquiSolarilluminationsPath
-           --atmoAerosol "$atmoAerosol" --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet "$atmoAeronet"
-           --atmoRsr "$atmoRsr" --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writePath"""".stripMargin
+//      val st =
+//        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $dockerTiffPath --level "$level" --milli $milli --clamp $clamp
+//          --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
+//          --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
+//          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $getacquiGainbiasPath  --acquiSolarilluminations  $getacquiSolarilluminationsPath
+//           --atmoAerosol "$atmoAerosol" --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet "$atmoAeronet"
+//           --atmoRsr "$atmoRsr" --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writeDockerPath"""".stripMargin
 
+      val st =raw"""docker start serene_black; docker exec serene_black otbcli_OpticalCalibration -in "$dockerTiffPath" -level "$level" -milli $milli -clamp $clamp -acqui.minute $acquiMinute -acqui.hour $acquiHour -acqui.day $acquiDay -acqui.month $acquiMonth -acqui.year $acquiYear  -acqui.fluxnormcoeff $acquiFluxnormcoeff -acqui.solardistance $acquiSolardistance -acqui.sun.elev $acquiSunElev  -acqui.sun.azim $acquiSunAzim -acqui.view.elev $acquiViewElev -acqui.view.azim $acquiViewAzim -acqui.gainbias $getacquiGainbiasPath  -acqui.solarilluminations  $getacquiSolarilluminationsPath -atmo.aerosol "$atmoAerosol" -atmo.oz $atmoOz -atmo.wa $atmoWa -atmo.pressure $atmoPressure -atmo.opt $atmoOpt -atmo.aeronet "$atmoAeronet"  -atmo.rsr "$atmoRsr" -atmo.radius $atmoRadius -atmo.pixsize $atmoPixsize -ram $ram -out $writeDockerPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
