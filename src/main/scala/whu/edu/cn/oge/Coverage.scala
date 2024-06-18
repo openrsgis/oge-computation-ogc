@@ -3536,10 +3536,12 @@ object Coverage {
     val file: File = new File(saveFilePath)
 
     val client: BosClient = BosClientUtil_scala.getClient2
-    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+    val path = Trigger.userId + "/result/" + Trigger.dagId + ".tiff"
     client.putObject("oge-user", path, file)
-
-    PostSender.shelvePost("filename",path)
+    val rasterJsonObject: JSONObject = new JSONObject
+    rasterJsonObject.put("coverage",path)
+    PostSender.shelvePost("raster",rasterJsonObject)
+//    PostSender.shelvePost("filename",path)
   }
 
 

@@ -1545,12 +1545,9 @@ object Trigger {
     try {
       val map: JSONObject = jsonObject.getJSONObject("map")
       level = map.getString("level").toInt
-      val spatialRange: Array[Double] = map.getString("spatialRange")
-        .substring(1, map.getString("spatialRange").length - 1).split(",").map(_.toDouble)
-      println("spatialRange = " + spatialRange.mkString("Array(", ", ", ")"))
 
-      windowExtent = Extent(spatialRange.head, spatialRange(1), spatialRange(2), spatialRange(3))
-      println("WindowExtent", windowExtent.xmin, windowExtent.ymin, windowExtent.xmax, windowExtent.ymax)
+      windowExtent = null
+
     } catch {
       case e: Exception =>
         level = 11
@@ -1581,11 +1578,10 @@ object Trigger {
 
     try {
       lambda(sc, optimizedDagMap("0"))
-      PostSender.shelvePost("dagId",dagId)
       PostSender.shelvePost("extStatus",1.toString)
       PostSender.shelvePost("userId",userID)
       //返回正常信息,发送到教育版地址
-      PostSender.sendShelvedPost(GlobalConfig.DagBootConf.EDU_ROOT_URL)
+      PostSender.sendShelvedPost(GlobalConfig.DagBootConf.EDU_ROOT_URL+ "/deliverUrl")
     } catch {
       case e: Throwable =>
         e.printStackTrace()
@@ -1594,12 +1590,12 @@ object Trigger {
 
         // 回调服务，通过 boot 告知前端：
         val outJsonObject: JSONObject = new JSONObject
-        outJsonObject.put("dagId", Trigger.dagId)
         outJsonObject.put("json", errorJson)
         outJsonObject.put("extStatus","0")
+        outJsonObject.put("workID",Trigger.dagId)
         //
         println("Error json = " + outJsonObject)
-        sendPost(DAG_ROOT_URL + "/deliverUrl",
+        sendPost(GlobalConfig.DagBootConf.EDU_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
       //         打印至后端控制台
