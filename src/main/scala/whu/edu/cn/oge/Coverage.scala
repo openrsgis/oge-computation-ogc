@@ -3591,7 +3591,7 @@ object Coverage {
     val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
 
     val client = MinIOUtil.getMinioClient
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("ogebos").`object`(path).build())
     val outputPath = Paths.get(filePath)
     tempFileList.append(filePath)
     Trigger.file_id += 1
