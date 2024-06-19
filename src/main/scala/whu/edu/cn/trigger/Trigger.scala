@@ -86,6 +86,8 @@ object Trigger {
   // Onthefly输出计算层级
   var ontheFlyLevel: Int = _
 
+  var ProcessName : String = _
+
   var coverageReadFromUploadFile : Boolean = false
 
   val tempFileList = mutable.ListBuffer.empty[String]
@@ -1517,9 +1519,10 @@ object Trigger {
 
   }
 
+  // ProcessName:保存结果的文件名称
   def runMain_edu(implicit sc: SparkContext,
               curWorkTaskJson: String,
-              curDagID: String, userID: String): Unit = {
+              curDagID: String, userID: String, processName:String): Unit = {
 
     // Check if the SparkContext is active
     if (sc.isStopped) {
@@ -1533,6 +1536,7 @@ object Trigger {
     workTaskJson = curWorkTaskJson
     dagId = curDagID
     userId = userID
+    ProcessName = processName
     val time1: Long = System.currentTimeMillis()
 
     val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
@@ -1727,7 +1731,7 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 //        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
-    runMain_edu(sc, workTaskJson, dagId, userId)
+    runMain_edu(sc, workTaskJson, dagId, userId,"a")
 
     println("Finish")
     sc.stop()

@@ -3536,7 +3536,7 @@ object Coverage {
     val file: File = new File(saveFilePath)
 
     val client: BosClient = BosClientUtil_scala.getClient2
-    val path = Trigger.userId + "/result/" + Trigger.dagId + ".tiff"
+    val path = Trigger.userId + "/result/" + Trigger.ProcessName
     client.putObject("oge-user", path, file)
     val rasterJsonObject: JSONObject = new JSONObject
     rasterJsonObject.put("coverage",path)
