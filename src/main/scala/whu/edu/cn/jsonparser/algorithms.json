@@ -5521,7 +5521,7 @@
   },
   "Coverage.maximumlikelihoodClassificationBySAGA": {
     "description": "Standard methods for supervised image classification, including minimum distance, maximum likelihood, spectral angle mapping. Classifiers can be trained by areas defined through shapes, samples supplied as table records, or statistics previously stored to file.",
-    "returns": "CoverageCollection",
+    "returns": "Coverage",
     "args": [
       {
         "name": "grids",
@@ -5588,6 +5588,12 @@
         "type": "Int",
         "description": "Available Choices: [0] absolute [1] relative Default: 1",
         "default": 1
+      },
+      {
+        "name": "method",
+        "type": "Int",
+        "description": "-",
+        "default": 4
       }
     ]
   },

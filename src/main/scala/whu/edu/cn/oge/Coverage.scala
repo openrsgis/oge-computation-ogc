@@ -3576,12 +3576,19 @@ object Coverage {
 
 
     val client = BosClientUtil_scala.getClient2
-    val tempPath = if (loadtype == "saga")
-      GlobalConfig.Others.sagatempFilePath  else GlobalConfig.Others.tempFilePath
+    val tempPath = loadtype match {
+      case "saga" => GlobalConfig.Others.sagatempFilePath
+      case "otb" => GlobalConfig.Others.otbtempFilePath
+      case _ => GlobalConfig.Others.tempFilePath
+    }
 //    val tempPath = GlobalConfig.Others.sagatempFilePath
     println(tempPath)
     val filePath = s"$tempPath${dagId}_$file_idx.txt"
-    println(filePath)
+    val dockerFilePath = loadtype match {
+      case "saga" =>  s"tmp/saga${dagId}_$file_idx.txt"
+      case "otb" => s"tmp/otb${dagId}_$file_idx.txt"
+      case _ => GlobalConfig.Others.tempFilePath
+    }
     val tempfile = new File(filePath)
     val getObjectRequest = new GetObjectRequest("oge-user", path)
     tempfile.createNewFile()
@@ -3594,10 +3601,9 @@ object Coverage {
         println(e)
     }
     Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
-    println(filePath)
     file_idx = file_idx + 1
 
-    filePath
+    dockerFilePath
   }
 
   def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {

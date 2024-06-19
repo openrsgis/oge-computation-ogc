@@ -125,6 +125,7 @@ object GlobalConfig {
   object OTBConf{
     var OTB_DATA: String = "/mnt/storage/otbData/algorithmData/"
     var OTB_ALGORITHMCODE: String = "cd /mnt/storage/otbData/algorithmCodeByOTB/;"
+    var OTB_DOCKERDATA : String = "/tmp/otb/"   // docker的临时目录
     var OTB_HOST: String = "192.168.80.3"
     var OTB_USERNAME: String = "root"
     var OTB_PASSWORD: String = "Ypfamily608!"
@@ -144,6 +145,7 @@ object GlobalConfig {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var sagatempFilePath = "/mnt/storage/SAGA/sagaData/" //SAGA各类临时文件的地址/mnt/storage/SAGA/sagaData
+    final var otbtempFilePath = "/mnt/storage/otbData/algorithmData/" //OTB各类临时文件的地址/mnt/storage/SAGA/sagaData
     final var tmsPath = "http://120.48.147.38/api/oge-tms-png/" //tms服务url
     final var tmsHost = "192.168.32.5" //tms服务ip
     final var tomcatHost = "120.48.147.38"
