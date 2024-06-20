@@ -3574,7 +3574,6 @@ object Coverage {
   def loadTxtFromUpload(txt: String,userID: String, dagId: String,loadtype:String) = {
     var path: String = s"${userID}/$txt"
 
-
     val client = BosClientUtil_scala.getClient2
     val tempPath = loadtype match {
       case "saga" => GlobalConfig.Others.sagatempFilePath
@@ -3582,18 +3581,20 @@ object Coverage {
       case _ => GlobalConfig.Others.tempFilePath
     }
 //    val tempPath = GlobalConfig.Others.sagatempFilePath
-    println(tempPath)
+
     val filePath = s"$tempPath${dagId}_$file_idx.txt"
     val dockerFilePath = loadtype match {
-      case "saga" =>  s"tmp/saga${dagId}_$file_idx.txt"
-      case "otb" => s"tmp/otb${dagId}_$file_idx.txt"
-      case _ => GlobalConfig.Others.tempFilePath
+      case "saga" =>  s"/tmp/saga/${dagId}_$file_idx.txt"
+      case "otb" => s"/tmp/otb/${dagId}_$file_idx.txt"
+      case _ => filePath
     }
+
     val tempfile = new File(filePath)
     val getObjectRequest = new GetObjectRequest("oge-user", path)
     tempfile.createNewFile()
+
     try {
-      println("filePath3-------")
+
       val bosObject = client.getObject(getObjectRequest, tempfile)
     }
     catch {
@@ -3602,7 +3603,7 @@ object Coverage {
     }
     Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
     file_idx = file_idx + 1
-
+    println(filePath,dockerFilePath)
     dockerFilePath
   }
 
