@@ -11,10 +11,9 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.Coverage.loadTxtFromUpload
-
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.BosClientUtil_scala
-
+import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
@@ -535,7 +534,7 @@ object SAGA {
 
     val svm_result = makeChangedRasterRDDFromTif(sc, writePath)
     // 解决黑边值为255影响渲染的问题
-    Coverage.addNum(svm_result, 1)
+    removeZeroFromCoverage(Coverage.addNum(svm_result, 1))
 
   }
 
