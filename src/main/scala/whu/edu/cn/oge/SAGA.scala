@@ -518,7 +518,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st1 =
-        raw"""docker start strange_pare;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$dockertraining_samplePath" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval"""".stripMargin
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS $dockerTiffPath -CLASSES $classes -CLASSES_LUT $classes_lut -SCALING $scaling -MESSAGE $message -MODEL_SRC $model_src -MODEL_LOAD $docker_load -ROI $dockertraining_samplePath -ROI_ID $ROI_id -MODEL_SAVE $docker_save -SVM_TYPE $svm_type -KERNEL_TYPE $kernel_type -DEGREE $degree -GAMMA $gamma -COEF0 $coef0 -COST $cost -NU $nu -EPS_SVR $eps_svr -CACHE_SIZE $cache_size -EPS $eps -SHRINKING $shrinking -PROBABILITY $probability -CROSSVAL $crossval""".stripMargin
       val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $outputPath --outputPath $writePath"
 
       runCmd(st1, "UTF-8")
@@ -533,7 +533,9 @@ object SAGA {
         e.printStackTrace()
     }
 
-    makeChangedRasterRDDFromTif(sc, writePath)
+    val svm_result = makeChangedRasterRDDFromTif(sc, writePath)
+    // 解决黑边值为255影响渲染的问题
+    Coverage.addNum(svm_result, 1)
 
   }
 
