@@ -1,6 +1,6 @@
 package whu.edu.cn.oge
 
-import com.alibaba.fastjson.JSONObject
+import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -29,6 +29,8 @@ import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
+import whu.edu.cn.jsonparser.JsonToArg.jsonAlgorithms
+import whu.edu.cn.jsonparser.JsonToArg.thirdJson
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.trigger.Trigger.windowExtent
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
@@ -37,12 +39,14 @@ import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util._
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import scala.io.{BufferedSource, Source}
 import scala.util.control.Breaks
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
@@ -2810,6 +2814,27 @@ object Coverage {
     coverage1
   }
 
+  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minValue: Double, maxValue: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    // 1. 生成输入数据tif
+    val fileName: String = "clip_" + System.currentTimeMillis().toString
+    makeTIFF(coverage, fileName)
+
+    // 2. 构建参数
+    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+//    args += ("minValue" -> minValue)
+//    args += ("maxValue" -> maxValue)
+    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+    fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
+
+    // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
+    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray)
+
+    println("执行完成")
+    // 4. 将生成的tiff文件转成RDD
+    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "out.tiff")
+    result
+  }
+
   def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val coverageVis1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
@@ -3259,7 +3284,7 @@ object Coverage {
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
+    val writePath: String = GlobalConfig.ThirdApplication.SERVER_DATA + name + ".tiff"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 
@@ -3408,6 +3433,10 @@ object Coverage {
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
+  }
+
+  def main(args: Array[String]): Unit = {
+
   }
 
 }

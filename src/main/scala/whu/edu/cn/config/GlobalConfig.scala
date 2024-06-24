@@ -133,11 +133,21 @@ object GlobalConfig {
     var OTB_PORT: Int = 22
   }
   object Others {
-    final var jsonAlgorithms = "/home/ogeStorage/algorithms_ogc.json" //存储json解析文件地址
+    final var jsonAlgorithms = "/mnt/storage/data/algorithms_ogc.json" //存储json解析文件地址
+//    final var thirdJson = "src/main/scala/whu/edu/cn/jsonparser/third-algorithm-infos.json" //存储第三方算子解析文件地址
+    final var thirdJson = "/mnt/storage/data/third-algorithm-infos.json"
     final var tempFilePath = "/home/ogeStorage/temp/" //各类临时文件的地址
     final var tmsPath = "http://oge.whu.edu.cn/api/oge-tms-png/" //tms服务url
     final var ontheFlyStorage = "/home/ogeStorage/on-the-fly" //tms瓦片存储地址
     final var jsonSavePath = "/home/ogeStorage/algorithmData/" //geojson临时存储地址
     final var platform = "bmr"//平台名称
+  }
+
+  object ThirdApplication {
+    final var THIRD_HOST: String = "192.168.80.3"
+    final var THIRD_USERNAME: String = "root"
+    final var THIRD_PASSWORD: String = "Ypfamily608!"
+    final var DOCKER_DATA: String = "/usr/local/data/"
+    final var SERVER_DATA: String = "/mnt/storage/data/"
   }
 }

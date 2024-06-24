@@ -1,0 +1,52 @@
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.addStyles",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.demRender",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "Service.getCoverage",
+                  "arguments": {
+                    "coverageID": {
+                      "constantValue": "test"
+                    },
+                    "productID": {
+                      "constantValue": "test"
+                    }
+                  }
+                }
+              },
+              "minValue": {
+                "constantValue": -1
+              },
+              "maxValue": {
+                "constantValue": 1
+              }
+            }
+          }
+        },
+        "min": {
+          "constantValue": -1
+        },
+        "max": {
+          "constantValue": 1
+        }
+      }
+    }
+  },
+  "isBatch": "0",
+  "layerName": "demRender",
+  "map": {
+    "level": 7,
+    "spatialRange": [
+      113.907585,
+      30.029745,
+      126.65241,
+      32.405327
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "Coverage.demRender": {
+    "type": "python3.9",
+    "dockerImage": "dem-analysis:v1.0.1",
+    "workDirectory": "/usr/local/dem-analysis",
+    "executePath": "/usr/local/dem-analysis/DoShading.py"
+  }
+}

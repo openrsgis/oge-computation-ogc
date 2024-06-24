@@ -24,8 +24,8 @@ import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, 
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, reduction, standardDeviationCalculation, standardDeviationStretching,IHSFusion,panSharp,catTwoCoverage}
+import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, RDDTransformerUtil, ZCurveUtil}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, panSharp, reduction, standardDeviationCalculation, standardDeviationStretching}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -164,6 +164,7 @@ object Trigger {
             coverageReadFromUploadFile = false
             coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
           }
+//            coverageRddList += (UUID -> RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, "/mnt/storage/data/clip.tiff"))
         case "Service.getCube" =>
           cubeRDDList += (UUID -> Service.getCube(sc, args("cubeId"), args("products"), args("bands"), args("time"), args("extent"), args("tms"), args("resolution")))
         case "Service.getTable" =>
@@ -771,6 +772,10 @@ object Trigger {
           coverageRddList += (UUID -> GrassUtil.r_random(sc,coverageRddList(args("input")),args("npoints")))
         case "Coverage.univarByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_univar(sc,coverageRddList(args("input"))))
+        case "Coverage.demRender" =>
+          val minValue = args("minValue").toDouble
+          val maxValue = args("maxValue").toDouble
+          coverageRddList += (UUID -> Coverage.demRender(sc, coverage = coverageRddList(args("coverage")), minValue, maxValue))
 
 
         // Kernel
@@ -1385,7 +1390,8 @@ object Trigger {
 
 
     /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
-      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+//      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.jsonAlgorithms = "/mnt/storage/data/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
     else {
@@ -1538,8 +1544,8 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+            val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("/usr/local/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1555,9 +1561,33 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 //        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+    println(sc)
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
     sc.stop()
   }
+
+  def thirdTest(implicit sc: SparkContext): Unit = {
+
+    workTaskJson = {
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
+      val line: String = fileSource.mkString
+      fileSource.close()
+      line
+    } // 任务要用的 JSON,应当由命令行参数获取
+
+    dagId = Random.nextInt().toString
+    dagId = "12345678"
+    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
+    // 点击整个run的唯一标识，来自boot
+
+    runMain(sc, workTaskJson, dagId, userId)
+
+    println("Finish")
+    sc.stop()
+  }
+
+
 }

@@ -15,6 +15,28 @@
       }
     ]
   },
+  "Coverage.demRender": {
+    "description": "render the dem",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "minValue",
+        "type": "Double",
+        "description": "Normalized minimum"
+      },
+      {
+        "name": "maxValue",
+        "type": "Double",
+        "description": "Normalized maximum"
+      },
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "DEM Coverage"
+      }
+    ]
+  },
+
   "Coverage.geoDetector": {
     "description": "Calculate to what extent a certain factor X explains the spatial variation of attribute Y.",
     "returns": "String",
