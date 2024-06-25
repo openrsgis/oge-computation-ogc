@@ -1446,10 +1446,12 @@ object OTB {
       } else {
         s" -map.utm.zone $mapUtmZone -map.utm.northhem $mapUtmNorthhem"
       }
-      val st = if (outputsUlx == 0 && outputsUly == 0 && outputsSizex == 0 && outputsSizey == 0 && outputsSpacingx == 0 && outputsSpacingy == 0 && outputsLrx == 0 && outputsLry == 0) {
+      val st = if (outputsUlx == 0 && outputsUly == 0 && outputsSizex == 0 && outputsSizey == 0 && outputsSpacingx == 0 && outputsSpacingy == 0 && outputsLrx == 0 && outptsLry == 0) {
         raw"""docker start serene_black; docker exec serene_black otbcli_OrthoRectification -io.in $dockerTiffPath  -io.out "$writeDockerPath"""".stripMargin
       } else {
-        raw"""docker start serene_black; docker exec serene_black otbcli_OrthoRectification -io.in $dockerTiffPath -map "$map" $mapParams -outputs.mode "$outputsMode" -outputs.ulx $outputsUlx -outputs.uly $outputsUly -outputs.sizex $outputsSizex -outputs.sizey $outputsSizey -outputs.spacingx $outputsSpacingx -outputs.spacingy $outputsSpacingy  -outputs.lrx $outputsLrx -outputs.lry $outputsLry  -outputs.ortho "$outputsOrtho"  -outputs.isotropic $outputsIsotropic  -outputs.default $outputsDefault  -elev.dem "$elevDem"  -elev.geoid "$elevGeoid"  -elev.default $elevDefault  $interpolatorParams  -opt.rpc $optRpc  -opt.ram $optRam  -opt.gridspacing $optGridspacing  -io.out "$writeDockerPath"""".stripMargin
+//        raw"""docker start serene_black; docker exec serene_black otbcli_OrthoRectification -io.in $dockerTiffPath -map "$map" $mapParams -outputs.mode "$outputsMode" -outputs.ulx $outputsUlx -outputs.uly $outputsUly -outputs.sizex $outputsSizex -outputs.sizey $outputsSizey -outputs.spacingx $outputsSpacingx -outputs.spacingy $outputsSpacingy  -outputs.lrx $outputsLrx -outputs.lry $outputsLry  -outputs.ortho "$outputsOrtho"  -outputs.isotropic $outputsIsotropic  -outputs.default $outputsDefault  -elev.dem "$elevDem"  -elev.geoid "$elevGeoid"  -elev.default $elevDefault  $interpolatorParams  -opt.rpc $optRpc  -opt.ram $optRam  -opt.gridspacing $optGridspacing  -io.out "$writeDockerPath"""".stripMargin
+        raw"""docker start serene_black; docker exec serene_black otbcli_OrthoRectification -io.in $dockerTiffPath -map "$map" $mapParams -outputs.mode "$outputsMode" -outputs.ulx $outputsUlx -outputs.uly $outputsUly -outputs.sizex $outputsSizex -outputs.sizey $outputsSizey -outputs.spacingx $outputsSpacingx -outputs.spacingy $outputsSpacingy  -outputs.lrx $outputsLrx -outputs.lry $outputsLry  -outputs.ortho "$outputsOrtho"  -outputs.isotropic $outputsIsotropic  -outputs.default $outputsDefault   -elev.default $elevDefault  $interpolatorParams  -opt.rpc $optRpc  -opt.ram $optRam  -opt.gridspacing $optGridspacing  -io.out "$writeDockerPath"""".stripMargin
+
       }
 
       println(s"st = $st")
