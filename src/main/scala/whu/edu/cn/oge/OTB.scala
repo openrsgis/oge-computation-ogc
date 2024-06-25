@@ -1285,15 +1285,6 @@ object OTB {
    * @param acquiViewAzim           Viewing azimuth angle (in degrees)
    * @param acquiGainbias           A text file containing user defined gains and biases
    * @param acquiSolarilluminations Solar illuminations (one value per band, in W/m^2/micron)
-   * @param atmoAerosol             No Aerosol Model/Continental/Maritime/Urban/Desertic
-   * @param atmoOz                  Stratospheric ozone layer content (in cm-atm)
-   * @param atmoWa                  Total water vapor content over vertical atmospheric column (in g/cm2)
-   * @param atmoPressure            Atmospheric Pressure (in hPa)
-   * @param atmoOpt                 Aerosol Optical Thickness (unitless)
-   * @param atmoAeronet             Aeronet file containing atmospheric parameters
-   * @param atmoRsr                 Sensor relative spectral response file By default the application gets this information in the metadata
-   * @param atmoRadius              Window radius for adjacency effects correctionsSetting this parameters will enable the correction ofadjacency effects
-   * @param atmoPixsize             Pixel size (in km) used tocompute adjacency effects, it doesn’t have tomatch the image spacing
    * @param ram                     Available memory for processing (in MB).
    * @return Output calibrated image filename
    */
@@ -1303,9 +1294,7 @@ object OTB {
                             acquiYear: Int = 2000, acquiFluxnormcoeff: Float, acquiSolardistance: Float,
                             acquiSunElev: Float = 90, acquiSunAzim: Float = 0, acquiViewElev: Float = 90,
                             acquiViewAzim: Float = 0, acquiGainbias: String, acquiSolarilluminations: String,
-                            atmoAerosol: String = "noaersol", atmoOz: Float = 0, atmoWa: Float = 2.5f
-                            , atmoPressure: Float = 1030, atmoOpt: Float = 0.2f, atmoAeronet: String,
-                            atmoRsr: String, atmoRadius: Int = 2, atmoPixsize: Float = 1, ram: Int = 256,userId:String, dagId:String
+                            ram: Int = 256, userId: String, dagId: String
                            ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
@@ -1318,22 +1307,13 @@ object OTB {
     val dockerTiffPath = algorithmDockerData + "otbOpticalCalibration_" + time + ".tif"
     val writeDockerPath = algorithmDockerData + "otbOpticalCalibration_" + time + "_out.tif"
 
-    val getacquiGainbiasPath=loadTxtFromUpload(acquiGainbias,userId,dagId,"otb")
-    val getacquiSolarilluminationsPath=loadTxtFromUpload(acquiSolarilluminations,userId,dagId,"otb")
-    println(getacquiGainbiasPath)
-    println(getacquiSolarilluminationsPath)
+    val getacquiGainbiasPath = loadTxtFromUpload(acquiGainbias, userId, dagId, "otb")
+    val getacquiSolarilluminationsPath = loadTxtFromUpload(acquiSolarilluminations, userId, dagId, "otb")
 
     try {
       versouSshUtil(host, userName, password, port)
-//      val st =
-//        raw"""conda activate otb;${algorithmCode}python otb_opticalcalibration.py --input $dockerTiffPath --level "$level" --milli $milli --clamp $clamp
-//          --acquiMinute $acquiMinute --acquiHour $acquiHour --acquiDay $acquiDay --acquiMonth $acquiMonth --acquiYear $acquiYear
-//          --acquiFluxnormcoeff $acquiFluxnormcoeff --acquiSolardistance $acquiSolardistance --acquiSunElev $acquiSunElev
-//          --acquiSunAzim $acquiSunAzim --acquiViewElev $acquiViewElev --acquiViewAzim $acquiViewAzim --acquiGainbias $getacquiGainbiasPath  --acquiSolarilluminations  $getacquiSolarilluminationsPath
-//           --atmoAerosol "$atmoAerosol" --atmoOz $atmoOz --atmoWa $atmoWa --atmoPressure $atmoPressure --atmoOpt $atmoOpt --atmoAeronet "$atmoAeronet"
-//           --atmoRsr "$atmoRsr" --atmoRadius $atmoRadius --atmoPixsize $atmoPixsize --ram $ram --out "$writeDockerPath"""".stripMargin
 
-      val st =raw"""docker start serene_black; docker exec serene_black otbcli_OpticalCalibration -in "$dockerTiffPath" -level "$level" -milli $milli -clamp $clamp -acqui.minute $acquiMinute -acqui.hour $acquiHour -acqui.day $acquiDay -acqui.month $acquiMonth -acqui.year $acquiYear  -acqui.sun.elev $acquiSunElev  -acqui.sun.azim $acquiSunAzim -acqui.view.elev $acquiViewElev -acqui.view.azim $acquiViewAzim -acqui.gainbias $getacquiGainbiasPath  -acqui.solarilluminations  $getacquiSolarilluminationsPath -atmo.aerosol "$atmoAerosol" -atmo.oz $atmoOz -atmo.wa $atmoWa -atmo.pressure $atmoPressure -atmo.opt $atmoOpt  -atmo.radius $atmoRadius -atmo.pixsize $atmoPixsize -ram $ram -out $writeDockerPath""".stripMargin
+      val st = raw"""docker start serene_black; docker exec serene_black otbcli_OpticalCalibration -in "$dockerTiffPath" -level "$level" -milli $milli -clamp $clamp -acqui.minute $acquiMinute -acqui.hour $acquiHour -acqui.day $acquiDay -acqui.month $acquiMonth -acqui.year $acquiYear  -acqui.sun.elev $acquiSunElev  -acqui.sun.azim $acquiSunAzim -acqui.view.elev $acquiViewElev -acqui.view.azim $acquiViewAzim -acqui.gainbias $getacquiGainbiasPath  -acqui.solarilluminations  $getacquiSolarilluminationsPath  -ram $ram -out $writeDockerPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -1345,6 +1325,63 @@ object OTB {
     makeChangedRasterRDDFromTif(sc, writePath)
   }
 
+  /**
+   * The application allows converting pixel values from DN (for Digital Numbers) to reflectance. Calibrated values are called surface reflectivity and its values lie in the range [0, 1].
+   * The first level is called Top Of Atmosphere (TOA) reflectivity. It takes into account the sensor gain, sensor spectral response and the solar illuminations.
+   * The second level is called Top Of Canopy (TOC) reflectivity. In addition to sensor gain and solar illuminations, it takes into account the optical thickness of the atmosphere, the atmospheric pressure, the water vapor amount, the ozone amount, as well as the composition and amount of aerosol gasses.
+   * It is also possible to indicate an AERONET file which contains atmospheric parameters (version 1 and version 2 of Aeronet file are supported. Note that computing TOC reflectivity will internally compute first TOA and then TOC reflectance.
+   *
+   * @param in                      Input image filename
+   * @param level                   Image to Top Of Atmosphere reflectance/TOA reflectance to Image/Image to Top Of Canopy reflectance (atmospheric corrections)
+   * @param acquiGainbias           A text file containing user defined gains and biases
+   * @param acquiSolarilluminations Solar illuminations (one value per band, in W/m^2/micron)
+   * @param atmoAerosol             No Aerosol Model/Continental/Maritime/Urban/Desertic
+   * @param atmoOz                  Stratospheric ozone layer content (in cm-atm)
+   * @param atmoWa                  Total water vapor content over vertical atmospheric column (in g/cm2)
+   * @param atmoPressure            Atmospheric Pressure (in hPa)
+   * @param atmoOpt                 Aerosol Optical Thickness (unitless)
+   * @param atmoAeronet             Aeronet file containing atmospheric parameters
+   * @param atmoRsr                 Sensor relative spectral response file By default the application gets this information in the metadata
+   * @param atmoRadius              Window radius for adjacency effects correctionsSetting this parameters will enable the correction ofadjacency effects
+   * @param atmoPixsize             Pixel size (in km) used tocompute adjacency effects, it doesn’t have tomatch the image spacing
+   * @param ram                     Available memory for processing (in MB).
+   * @return Output calibrated image filename
+   */
+  def otbOpticalAtmospheric(implicit sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                            acquiGainbias: String, acquiSolarilluminations: String,
+                            atmoAerosol: String = "noaersol", atmoOz: Float = 0, atmoWa: Float = 2.5f
+                            , atmoPressure: Float = 1030, atmoOpt: Float = 0.2f, atmoAeronet: String,
+                            atmoRsr: String, atmoRadius: Int = 2, atmoPixsize: Float = 1, level: String = "toc", ram: Int = 256, userId: String, dagId: String
+                           ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    val outputTiffPath = algorithmData + "otbOpticalAtmospheric_" + time + ".tif"
+    val writePath = algorithmData + "otbOpticalAtmospheric_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "otbOpticalAtmospheric_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "otbOpticalAtmospheric_" + time + "_out.tif"
+
+    val getacquiGainbiasPath = loadTxtFromUpload(acquiGainbias, userId, dagId, "otb")
+    val getacquiSolarilluminationsPath = loadTxtFromUpload(acquiSolarilluminations, userId, dagId, "otb")
+
+
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st = raw"""docker start serene_black; docker exec serene_black otbcli_OpticalCalibration -in "$dockerTiffPath" -level "$level"  -acqui.gainbias $getacquiGainbiasPath  -acqui.solarilluminations  $getacquiSolarilluminationsPath -atmo.aerosol "$atmoAerosol" -atmo.oz $atmoOz -atmo.wa $atmoWa -atmo.pressure $atmoPressure -atmo.opt $atmoOpt  -atmo.radius $atmoRadius -atmo.pixsize $atmoPixsize -ram $ram -out $writeDockerPath""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    makeChangedRasterRDDFromTif(sc, writePath)
+  }
   /**
    * This application uses inverse sensor modelling combined with a choice of interpolation functions to resample a sensor geometry image into a ground geometry regular grid. The ground geometry regular grid is defined with respect to a map projection (see map parameter). The application offers several modes to estimate the output grid parameters (origin and ground sampling distance), including automatic estimation of image size, ground sampling distance, or both, from image metadata, user-defined ROI corners, or another ortho-image.A digital Elevation Model along with a geoid file can be specified to account for terrain deformations.In case of SPOT5 images, the sensor model can be approximated by an RPC model in order to speed-up computation.
    *
@@ -1393,25 +1430,28 @@ object OTB {
     val outputTiffPath = algorithmData + "otbOrthoRectification_" + time + ".tif"
     val writePath = algorithmData + "otbOrthoRectification_" + time + "_out.tif"
     saveRasterRDDToTif(ioIn, outputTiffPath)
-
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "otbOrthoRectification_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "otbOrthoRectification_" + time + "_out.tif"
     try {
       versouSshUtil(host, userName, password, port)
       val interpolatorParams = if (interpolator == "bco") {
-        s"--interpolator '$interpolator' --interpolatorBcoRadius $interpolatorBcoRadius"
+        s"-interpolator '$interpolator' -interpolatorBcoRadius $interpolatorBcoRadius"
       } else {
         s"--interpolator '$interpolator'"
       }
 
       val mapParams = if (map == "epsg") {
-        s" --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem --mapEpsgCode $mapEpsgCode"
+        s" -map.utm.zone $mapUtmZone -map.utm.northhem $mapUtmNorthhem -map.epsg.code $mapEpsgCode"
       } else {
-        s" --mapUtmZone $mapUtmZone --mapUtmNorthhem $mapUtmNorthhem"
+        s" -map.utm.zone $mapUtmZone -map.utm.northhem $mapUtmNorthhem"
       }
-      val st=if (outputsUlx == 0 && outputsUly == 0 && outputsSizex == 0 && outputsSizey == 0 && outputsSpacingx == 0 && outputsSpacingy == 0 && outputsLrx == 0 && outputsLry == 0) {
-        raw"""conda activate otb;${algorithmCode}python otb_orthorectification1.py --ioIn $outputTiffPath  --ioOut "$writePath"""".stripMargin
+      val st = if (outputsUlx == 0 && outputsUly == 0 && outputsSizex == 0 && outputsSizey == 0 && outputsSpacingx == 0 && outputsSpacingy == 0 && outputsLrx == 0 && outputsLry == 0) {
+        raw"""docker start serene_black; docker exec serene_black otbcli_OrthoRectification -io.in $dockerTiffPath  -io.out "$writeDockerPath"""".stripMargin
       } else {
-        raw"""conda activate otb;${algorithmCode}python otb_orthorectification.py --ioIn $outputTiffPath --map "$map" $mapParams --outputsMode "$outputsMode" --outputsUlx $outputsUlx --outputsUly $outputsUly --outputsSizex $outputsSizex --outputsSizey $outputsSizey --outputsSpacingx $outputsSpacingx --outputsSpacingy $outputsSpacingy  --outputsLrx $outputsLrx --outputsLry $outputsLry  --outputsOrtho "$outputsOrtho"  --outputsIsotropic $outputsIsotropic  --outputsDefault $outputsDefault  --elevDem "$elevDem"  --elevGeoid "$elevGeoid"  --elevDefault $elevDefault  $interpolatorParams  --optRpc $optRpc  --optRam $optRam  --optGridspacing $optGridspacing  --ioOut "$writePath"""".stripMargin
+        raw"""docker start serene_black; docker exec serene_black otbcli_OrthoRectification -io.in $dockerTiffPath -map "$map" $mapParams -outputs.mode "$outputsMode" -outputs.ulx $outputsUlx -outputs.uly $outputsUly -outputs.sizex $outputsSizex -outputs.sizey $outputsSizey -outputs.spacingx $outputsSpacingx -outputs.spacingy $outputsSpacingy  -outputs.lrx $outputsLrx -outputs.lry $outputsLry  -outputs.ortho "$outputsOrtho"  -outputs.isotropic $outputsIsotropic  -outputs.default $outputsDefault  -elev.dem "$elevDem"  -elev.geoid "$elevGeoid"  -elev.default $elevDefault  $interpolatorParams  -opt.rpc $optRpc  -opt.ram $optRam  -opt.gridspacing $optGridspacing  -io.out "$writeDockerPath"""".stripMargin
       }
+
       println(s"st = $st")
       runCmd(st, "UTF-8")
 
@@ -1460,16 +1500,25 @@ object OTB {
     val writePath = algorithmData + "otbBundleToPerfectSensor_" + time + "_out.tif"
     saveRasterRDDToTif(inp, outputTiffPath_p)
     saveRasterRDDToTif(inxs, outputTiffPath_in)
+    // docker路径
+    val dockerTiffPath_p = algorithmDockerData + "otbBundleToPerfectSensorP_" + time + ".tif"
+    val dockerTiffPath_in = algorithmDockerData + "otbBundleToPerfectSensorIN_" + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "otbBundleToPerfectSensor_" + time + "_out.tif"
     try {
       versouSshUtil(host, userName, password, port)
-     val st = interpolator match{
-       case "bco" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp "$outputTiffPath_p" --inxs "$outputTiffPath_in" --elevDem "$elevDem" --elevGeoid "$elevGeoid" --elevDefault $elevDefault --mode "$mode" --method "$method"  --lms $lms --interpolator "$interpolator" --interpolatorBcoRadius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
-       case "nn" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp "$outputTiffPath_p" --inxs "$outputTiffPath_in" --elevDem "$elevDem" --elevGeoid "$elevGeoid" --elevDefault $elevDefault --mode "$mode" --method "$method"  --lms $lms --interpolator "$interpolator"  --fv $fv --ram $ram --out "$writePath"""".stripMargin
-       case "linear" => raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp "$outputTiffPath_p" --inxs "$outputTiffPath_in" --elevDem "$elevDem" --elevGeoid "$elevGeoid" --elevDefault $elevDefault --mode "$mode" --method "$method"  --lms $lms --interpolator "$interpolator"  --fv $fv --ram $ram --out "$writePath"""".stripMargin
-     }
-//      val st=
-//     raw"""conda activate otb;${algorithmCode}python otb_bundletoperfectsensor.py --inp $outputTiffPath_p --inxs $outputTiffPath_in --elev.dem $elevDem --elev.geoid $elevGeoid --elev.default $elevDefault --mode $mode --method $method  --lms $lms --interpolator $interpolator --interpolator.bco.radius $interpolatorBcoRadius --fv $fv --ram $ram --out "$writePath"""".stripMargin
+      val methodParams = if (method == "rcs") {
+        s" -method $method -method.rcs.radiusx $methodRcsRadiusx -method.rcs.radiusy $methodRcsRadiusy"
+      } else if (method == "lmvm") {
+        s" -method $method -method.lmvm.radiusx $methodLmvmRadiusx -method.lmvm.radiusy $methodLmvmRadiusy"
+      } else {
+        s" -method $method -method.bayes.lambda $methodBayesLambda -method.bayes.s $methodBayesS"
+      }
 
+      val st = interpolator match {
+        case "bco" => raw"""docker start serene_black; docker exec serene_black otbcli_BundleToPerfectSensor -inp "$dockerTiffPath_p" -inxs "$dockerTiffPath_in"  -elev.default $elevDefault -mode "$mode" $methodParams  -lms $lms -interpolator "$interpolator" -interpolator.bco.radius $interpolatorBcoRadius -fv $fv -ram $ram -out "$writeDockerPath"""".stripMargin
+        case "nn" => raw"""docker start serene_black; docker exec serene_black otbcli_BundleToPerfectSensor -inp "$dockerTiffPath_p" -inxs "$dockerTiffPath_in"  -elev.default $elevDefault -mode "$mode" $methodParams  -lms $lms -interpolator "$interpolator"  -fv $fv -ram $ram -out "$writeDockerPath"""".stripMargin
+        case "linear" => raw"""docker start serene_black; docker exec serene_black otbcli_BundleToPerfectSensor -inp "$dockerTiffPath_p" -inxs "$dockerTiffPath_in" -elev.default $elevDefault -mode "$mode" $methodParams  -lms $lms -interpolator "$interpolator"  -fv $fv -ram $ram -out "$writeDockerPath"""".stripMargin
+      }
 println(s"st = $st")
       runCmd(st, "UTF-8")
     } catch {
