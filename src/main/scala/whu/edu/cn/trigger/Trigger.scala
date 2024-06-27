@@ -166,7 +166,7 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverage" =>
-          if(args("coverageID").startsWith("myData/")){
+          if(args("coverageID").startsWith("myData/") || args("coverageID").startsWith("result/")){
             coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
           } else if(args("coverageID").startsWith("OGE_Case_Data/")){
