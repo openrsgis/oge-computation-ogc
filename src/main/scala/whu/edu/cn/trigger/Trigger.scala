@@ -1717,15 +1717,16 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
-    dagId = "45607c22-dbce-4674-9abf-c9f906668dfa_1718268689911_0"
-    userId = "45607c22-dbce-4674-9abf-c9f906668dfa"
+    dagId = "123456789"
+    userId = "1234567890"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
