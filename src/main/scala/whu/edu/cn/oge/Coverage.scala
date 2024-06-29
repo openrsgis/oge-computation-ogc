@@ -49,7 +49,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RemapWithDefaultValue, RemapWithoutDefaultValue}
+import whu.edu.cn.util.{BashUtil, BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RDDTransformerUtil, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
@@ -2844,6 +2844,27 @@ object Coverage {
       (SpaceTimeBandKey(t._1.spaceTimeKey, bandNames), MultibandTile(newTileBands))
     }), coverage._2)
     coverage1
+  }
+
+  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minValue: Double, maxValue: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    // 1. 生成输入数据tif
+    val fileName: String = "clip_" + System.currentTimeMillis().toString
+    makeTIFF(coverage, fileName)
+
+    // 2. 构建参数
+    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+    //    args += ("minValue" -> minValue)
+    //    args += ("maxValue" -> maxValue)
+    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+    fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
+
+    // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
+    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray)
+
+    println("执行完成")
+    // 4. 将生成的tiff文件转成RDD
+    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "out.tiff")
+    result
   }
 
   def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
