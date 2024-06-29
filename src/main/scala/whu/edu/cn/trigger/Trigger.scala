@@ -1718,7 +1718,7 @@ object Trigger {
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
 //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
+      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest2.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
