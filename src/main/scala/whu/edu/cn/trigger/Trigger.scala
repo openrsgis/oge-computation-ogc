@@ -1734,7 +1734,8 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 //        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
-    runMain_edu(sc, workTaskJson, dagId, userId,"a")
+//    runMain_edu(sc, workTaskJson, dagId, userId,"a")
+    runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
     sc.stop()
