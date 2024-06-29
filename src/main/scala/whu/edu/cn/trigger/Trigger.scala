@@ -994,7 +994,11 @@ object Trigger {
             // TODO: 增加添加样式的函数
             coverageRddList += (UUID -> Coverage.addStyles(coverageRddList(args("coverage")), visParam = visParam))
           }
-
+        // thirdAlgorithm
+        case "Coverage.demRender" =>
+          val minValue = args("minValue").toDouble
+          val maxValue = args("maxValue").toDouble
+          coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage")), minValue, maxValue))
 
         //Feature
         case "Feature.load" =>
@@ -1718,14 +1722,15 @@ object Trigger {
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
-    dagId = "45607c22-dbce-4674-9abf-c9f906668dfa_1718268689911_0"
-    userId = "45607c22-dbce-4674-9abf-c9f906668dfa"
+    dagId = "123456789"
+    userId = "1234567890"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
@@ -1733,7 +1738,8 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 //        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
-    runMain_edu(sc, workTaskJson, dagId, userId,"a")
+//    runMain_edu(sc, workTaskJson, dagId, userId,"a")
+    runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
     sc.stop()

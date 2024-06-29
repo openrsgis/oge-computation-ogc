@@ -3077,6 +3077,27 @@
       }
     ]
   },
+  "Coverage.demRender": {
+    "description": "render the dem",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "DEM Coverage"
+      },
+      {
+        "name": "minValue",
+        "type": "Double",
+        "description": "Normalized minimum"
+      },
+      {
+        "name": "maxValue",
+        "type": "Double",
+        "description": "Normalized maximum"
+      }
+    ]
+  },
   "Coverage.contourPolygonByGDAL": {
     "description": "Extracts contour polygons from any GDAL-supported elevation raster.",
     "returns": "Feature",
