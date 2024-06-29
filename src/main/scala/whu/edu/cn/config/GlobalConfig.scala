@@ -152,6 +152,9 @@ object GlobalConfig {
   }
 
   object Others {
+    //    final var thirdJson = "src/main/scala/whu/edu/cn/jsonparser/third-algorithm-infos.json" //存储第三方算子解析文件地址
+    final var thirdJson = "/mnt/storage/data/third-algorithm-infos.json"
+
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var sagatempFilePath = "/mnt/storage/SAGA/sagaData/" //SAGA各类临时文件的地址/mnt/storage/SAGA/sagaData
