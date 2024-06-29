@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
-
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
@@ -16,7 +15,9 @@ import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
 import whu.edu.cn.oge.Feature._
 import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.oge.Coverage.loadTxtFromUpload
+import whu.edu.cn.oge.Coverage.{loadTxtFromUpload, makeTIFF}
+import whu.edu.cn.util.{BashUtil, RDDTransformerUtil}
+
 import scala.collection.mutable
 import scala.collection.mutable.Map
 import scala.io.Source
@@ -3861,6 +3862,27 @@ object QGIS {
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
+  }
+
+  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minValue: Double, maxValue: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    // 1. 生成输入数据tif
+    val fileName: String = "clip_" + System.currentTimeMillis().toString
+    makeTIFF(coverage, fileName)
+
+    // 2. 构建参数
+    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+    //    args += ("minValue" -> minValue)
+    //    args += ("maxValue" -> maxValue)
+    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+    fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
+
+    // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
+    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray)
+
+    println("执行完成")
+    // 4. 将生成的tiff文件转成RDD
+    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "out.tiff")
+    result
   }
 
 }

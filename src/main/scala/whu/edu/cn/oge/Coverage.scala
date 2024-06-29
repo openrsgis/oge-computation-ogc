@@ -2846,27 +2846,6 @@ object Coverage {
     coverage1
   }
 
-  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minValue: Double, maxValue: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    // 1. 生成输入数据tif
-    val fileName: String = "clip_" + System.currentTimeMillis().toString
-    makeTIFF(coverage, fileName)
-
-    // 2. 构建参数
-    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-    //    args += ("minValue" -> minValue)
-    //    args += ("maxValue" -> maxValue)
-    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
-    fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
-
-    // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
-    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray)
-
-    println("执行完成")
-    // 4. 将生成的tiff文件转成RDD
-    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "out.tiff")
-    result
-  }
-
   def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val coverageVis1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (coverage._1.map(t => (t._1, t._2.convert(DoubleConstantNoDataCellType))), TileLayerMetadata(DoubleConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
