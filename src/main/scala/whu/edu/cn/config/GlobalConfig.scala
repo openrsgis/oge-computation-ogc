@@ -141,6 +141,16 @@ object GlobalConfig {
     var SAGA_PASSWORD: String = "Ypfamily608!"
     var SAGA_PORT: Int = 22
   }
+
+  // 第三方算子
+  object ThirdApplication {
+    final var THIRD_HOST: String = "192.168.80.3"
+    final var THIRD_USERNAME: String = "root"
+    final var THIRD_PASSWORD: String = "Ypfamily608!"
+    final var DOCKER_DATA: String = "/usr/local/data/"
+    final var SERVER_DATA: String = "/mnt/storage/data/"
+  }
+
   object Others {
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
