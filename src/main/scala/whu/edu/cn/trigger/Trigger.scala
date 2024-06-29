@@ -994,7 +994,11 @@ object Trigger {
             // TODO: 增加添加样式的函数
             coverageRddList += (UUID -> Coverage.addStyles(coverageRddList(args("coverage")), visParam = visParam))
           }
-
+        // thirdAlgorithm
+        case "Coverage.demRender" =>
+          val minValue = args("minValue").toDouble
+          val maxValue = args("maxValue").toDouble
+          coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage")), minValue, maxValue))
 
         //Feature
         case "Feature.load" =>
@@ -1717,8 +1721,8 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest2.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
