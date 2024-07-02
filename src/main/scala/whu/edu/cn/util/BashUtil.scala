@@ -26,6 +26,7 @@ object BashUtil {
   private val username: String = GlobalConfig.ThirdApplication.THIRD_USERNAME
   private val host: String = GlobalConfig.ThirdApplication.THIRD_HOST
   private val password: String = GlobalConfig.ThirdApplication.THIRD_PASSWORD
+  private val port : Int = GlobalConfig.ThirdApplication.THIRD_PORT
 
   /**
    *
@@ -80,7 +81,7 @@ object BashUtil {
 
     try {
       val jsch = new JSch()
-      session = jsch.getSession(username, host, 22)
+      session = jsch.getSession(username, host, port)
       session.setPassword(password)
 
       // Avoid asking for key confirmation
