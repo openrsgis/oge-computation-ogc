@@ -104,7 +104,7 @@ object COGUtil {
   def getTileBuf(minioClient: MinioClient, tile: RawTile): RawTile = {
     val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket(MINIO_BUCKET_NAME).`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
     val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](tile.getOffset.toInt)
+    val buffer = new Array[Byte](tile.getByteCount.toInt)
     var len = 0
     while ( {
       len = inputStream.read(buffer)
@@ -496,7 +496,7 @@ object BosCOGUtil1{
     val inputStream: InputStream = bucketObject.getObjectContent()
 //    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
     val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](tile.getOffset.toInt)
+    val buffer = new Array[Byte](tile.getByteCount.toInt)
     var len = 0
     while ( {
       len = inputStream.read(buffer)

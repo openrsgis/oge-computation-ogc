@@ -3472,9 +3472,6 @@ object Coverage {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
-//    if (zoom < Trigger.level) {
-//      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-//    }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
       if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
@@ -3512,19 +3509,8 @@ object Coverage {
     else {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
-//    jsonObject.put("raster", rasterJsonObject)
-//
-//    val outJsonObject: JSONObject = new JSONObject
-//    outJsonObject.put("workID", Trigger.dagId)
-//    outJsonObject.put("json", jsonObject)
 
     PostSender.shelvePost("raster",rasterJsonObject)
-
-//    println("outputJSON: ", outJsonObject.toJSONString)
-
-//    if (sc.master.contains("local")) {
-//      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
-//    }
 
   }
 
@@ -3560,6 +3546,24 @@ object Coverage {
 
   }
 
+  def visualizeBatch_edu(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String): Unit = {
+    // 上传文件
+    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+    saveRasterRDDToTif(coverage,saveFilePath)
+    val file: File = new File(saveFilePath)
+
+    val client: BosClient = BosClientUtil_scala.getClient2
+    val path = Trigger.userId + "/result/" + Trigger.ProcessName
+    client.putObject("oge-user", path, file)
+    val rasterJsonObject: JSONObject = new JSONObject
+    rasterJsonObject.put("coverage",path)
+    PostSender.shelvePost("raster",rasterJsonObject)
+//    PostSender.shelvePost("filename",path)
+  }
+
+
+  //用来标识读取上传文件的编号的自增标识符
+  var file_id:Long = 0
   def loadCoverageFromUpload(implicit sc: SparkContext, coverageId: String, userID: String, dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     var path: String = new String()
     if (coverageId.endsWith(".tiff") || coverageId.endsWith(".tif")) {
@@ -3582,7 +3586,6 @@ object Coverage {
     val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
-
   }
 
   def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {

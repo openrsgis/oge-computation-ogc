@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
-
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
@@ -16,6 +15,8 @@ import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
 import whu.edu.cn.oge.Feature._
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.oge.Coverage.{loadTxtFromUpload, makeTIFF}
+import whu.edu.cn.util.{BashUtil, RDDTransformerUtil}
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
@@ -108,10 +109,7 @@ object QGIS {
       case e: Exception =>
         e.printStackTrace()
     }
-
-
     makeRasterRDDFromTif(sc, input, writePath)
-
   }
 
   /**
@@ -706,6 +704,7 @@ object QGIS {
       "0" -> "0",
       "1" -> "1"
     ).getOrElse(strategy, "0")
+
 
     val defaultDirectionInput: String = Map(
       "0" -> "0",
@@ -1916,7 +1915,6 @@ object QGIS {
 
     makeRasterRDDFromTif(sc, input, writePath)
   }
-
   /**
    * Extracts contour lines from any GDAL-supported elevation raster.
    *
@@ -3802,6 +3800,91 @@ object QGIS {
 
     makeChangedRasterRDDFromTif(sc, writePath)
   }
+
+  def gdalSieve(implicit sc: SparkContext,
+                input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                threshold: Int = 10,
+                eightConnectedness: String = "False",
+                noMask: String = "False",
+                maskLayer: String = "",
+                extra: String = "")
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // tif落地
+    val outputTiffPath = algorithmData + "gdalSieve_" + time + ".tif"
+    val writePath = algorithmData + "gdalSieve_" + time + "_out.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_sieve.py --input "$outputTiffPath" --threshold $threshold --eightConnectedness "$eightConnectedness" --noMask "$noMask" --maskLayer "$maskLayer" --output "$writePath" --extra "$extra"""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+  }
+
+  def gdalWarpGeore(implicit sc: SparkContext,
+                    input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                    GCPs: String,
+                    resampleMethod: String = "Linear",userId:String,dagId:String)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // tif落地
+    val outputTiffPath = algorithmData + "gdalWarpGeore_" + time + ".tif"
+    val writePath = algorithmData + "gdalWarpGeore_" + time + "_out.tif"
+    val writGCPsPath = algorithmData + "gdalWarpGeore_" + time + "_gcp.tif"
+    saveRasterRDDToTif(input, outputTiffPath)
+    val GCPsPath = loadTxtFromUpload(GCPs, userId, dagId,"gdal")
+    println(GCPsPath)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_warpGeore.py --imagePath "$outputTiffPath" --GCPsPath "$GCPsPath"  --saveGCPPath "$writGCPsPath" --resampleMethod "$resampleMethod" --savePath "$writePath" """.stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+  }
+
+  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minValue: Double, maxValue: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    // 1. 生成输入数据tif
+    val fileName: String = "clip_" + System.currentTimeMillis().toString
+    makeTIFF(coverage, fileName)
+
+    // 2. 构建参数
+    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+    //    args += ("minValue" -> minValue)
+    //    args += ("maxValue" -> maxValue)
+    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+    fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
+
+    // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
+    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray)
+
+    println("执行完成")
+    // 4. 将生成的tiff文件转成RDD
+    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "out.tiff")
+    result
+  }
+
 }
 
 

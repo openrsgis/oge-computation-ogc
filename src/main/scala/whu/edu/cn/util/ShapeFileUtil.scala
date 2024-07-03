@@ -154,7 +154,6 @@ object ShapeFileUtil {
     }
   }
 
-
   def readShp(implicit sc: SparkContext, shpPath: String, encode: String): RDD[(String, (Geometry, Map[String, Any]))] = {
     val shapeFile = new File(shpPath)
     val store = new ShapefileDataStore(shapeFile.toURI.toURL)

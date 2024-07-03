@@ -13,6 +13,7 @@ import scala.util.control.Breaks
 // TODO lrx: 解析的时候加上数据类型？
 object JsonToArg {
   var jsonAlgorithms: String = GlobalConfig.Others.jsonAlgorithms
+  var thirdJson: String = GlobalConfig.Others.thirdJson
   var dagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
 
   def numberOfArgs(functionName: String): Int = {

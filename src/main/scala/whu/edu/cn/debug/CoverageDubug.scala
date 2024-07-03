@@ -30,6 +30,7 @@ import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, makeCoverageRDD}
 import whu.edu.cn.util.{ CoverageCollectionUtil, MinIOUtil, RDDTransformerUtil}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
+import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 import java.io.File
 import scala.collection.mutable
@@ -39,19 +40,9 @@ object CoverageDubug {
   def main(args: Array[String]): Unit = {
     val conf: SparkConf = new SparkConf().setMaster("local[8]").setAppName("query")
     val sc = new SparkContext(conf)
-    test1(sc)
-    //    val time1: Long = System.currentTimeMillis()
-    //
-    //    // MOD13Q1.A2022241.mosaic.061.2022301091738.psmcrpgs_000501861676.250m_16_days_NDVI-250m_16_days
-    //    // LC08_L1TP_124038_20181211_20181226_01_T1
-    //    // LE07_L1TP_125039_20130110_20161126_01_T1
-    //
-//    loadLandsat8()
-    //    val time2: Long = System.currentTimeMillis()
-    //    println("Total Time is " + (time2 - time1))
-    //
-    //
-    //    println("_")
+    val coverage = makeChangedRasterRDDFromTif(sc, "/D:/data/bug/svm/new/sagaSVMClassification_1718619217460_svm_result.tif")
+    val coverage1= Coverage.addNum(coverage,1)
+    makeTIFF(coverage1, "svm")
   }
 
   //  def ndviLandsat7(): Unit = {

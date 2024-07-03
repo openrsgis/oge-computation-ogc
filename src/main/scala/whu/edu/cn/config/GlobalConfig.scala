@@ -63,7 +63,7 @@ object GlobalConfig {
   object DagBootConf {
     // dag-boot 服务根路径
     var DAG_ROOT_URL: String = "http://172.22.1.13:8085/oge-dag-22"
-
+    var EDU_ROOT_URL: String = "http://172.22.1.13:8085/oge-dag-22"
   }
 
   object RedisConf {
@@ -122,16 +122,42 @@ object GlobalConfig {
     var QGIS_PORT: Int = 22
   }
   object OTBConf{
-    var OTB_DATA: String = "/mnt/storage/algorithmData/"
-    var OTB_ALGORITHMCODE: String = "cd /root/otb/algorithmCodeByOTB;"
-    var OTB_HOST: String = "120.48.116.93"
+    var OTB_DATA: String = "/mnt/storage/otbData/algorithmData/"
+    var OTB_ALGORITHMCODE: String = "cd /mnt/storage/otbData/algorithmCodeByOTB/;"
+    var OTB_DOCKERDATA : String = "/tmp/otb/"   // docker的临时目录
+    var OTB_HOST: String = "192.168.80.3"
     var OTB_USERNAME: String = "root"
     var OTB_PASSWORD: String = "Ypfamily608!"
     var OTB_PORT: Int = 22
   }
+
+  //TODO：改为私有云
+  object SAGAConf {
+    var SAGA_DATA: String = "/mnt/storage/SAGA/sagaData/"  // docker挂载目录
+    var SAGA_DOCKERDATA: String = "/tmp/saga/"   // docker的临时目录
+    var SAGA_HOST: String = "192.168.80.3"
+    var SAGA_USERNAME: String = "root"
+    var SAGA_PASSWORD: String = "Ypfamily608!"
+    var SAGA_PORT: Int = 22
+  }
+
+  // 第三方算子
+  object ThirdApplication {
+    final var THIRD_HOST: String = "192.168.80.3"
+    final var THIRD_USERNAME: String = "root"
+    final var THIRD_PASSWORD: String = "Ypfamily608!"
+    final var DOCKER_DATA: String = "/usr/local/data/"
+    final var SERVER_DATA: String = "/mnt/storage/data/"
+  }
+
   object Others {
+    //    final var thirdJson = "src/main/scala/whu/edu/cn/jsonparser/third-algorithm-infos.json" //存储第三方算子解析文件地址
+    final var thirdJson = "/mnt/storage/data/third-algorithm-infos.json"
+
     final var jsonAlgorithms = "/mnt/storage/algorithms_ogc.json" //存储json解析文件地址
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
+    final var sagatempFilePath = "/mnt/storage/SAGA/sagaData/" //SAGA各类临时文件的地址/mnt/storage/SAGA/sagaData
+    final var otbtempFilePath = "/mnt/storage/otbData/algorithmData/" //OTB各类临时文件的地址/mnt/storage/otbData/algorithmData/
     final var tmsPath = "http://111.37.195.68:8888/api/oge-tms-png/" //tms服务url
     final var tmsHost = "172.22.1.19" //tms服务ip
     final var tomcatHost = "172.22.1.12"
