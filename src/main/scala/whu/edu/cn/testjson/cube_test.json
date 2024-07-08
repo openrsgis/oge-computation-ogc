@@ -1,0 +1,156 @@
+{
+  "1": {
+    "constantValue": "SR_B3"
+  },
+  "2": {
+    "constantValue": "SR_B5"
+  },
+  "3": {
+    "constantValue": "[SR_B3,SR_B5]"
+  },
+  "4": {
+    "constantValue": "3"
+  },
+  "5": {
+    "constantValue": "[114.16,30.47,114.47,30.69]"
+  },
+  "6": {
+    "constantValue": "[LC08_L2SP_C02_T1]"
+  },
+  "7": {
+    "constantValue": "30"
+  },
+  "8": {
+    "constantValue": "WebMercatorQuad"
+  },
+  "9": {
+    "constantValue": "Landsat 8"
+  },
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Cube.addStyles",
+      "arguments": {
+        "bands": {
+          "constantValue": [
+            "NDVI"
+          ]
+        },
+        "cube": {
+          "functionInvocationValue": {
+            "functionName": "Cube.subtract",
+            "arguments": {
+              "cube1": {
+                "functionInvocationValue": {
+                  "functionName": "Cube.NDVI",
+                  "arguments": {
+                    "bandName1": {
+                      "valueReference": "1"
+                    },
+                    "bandName2": {
+                      "valueReference": "2"
+                    },
+                    "input": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCube",
+                        "arguments": {
+                          "bands": {
+                            "valueReference": "3"
+                          },
+                          "cubeId": {
+                            "valueReference": "4"
+                          },
+                          "extent": {
+                            "valueReference": "5"
+                          },
+                          "products": {
+                            "valueReference": "6"
+                          },
+                          "resolution": {
+                            "valueReference": "7"
+                          },
+                          "time": {
+                            "constantValue": "[2023-01-10 00:00:00,2023-01-17 00:00:00]"
+                          },
+                          "tms": {
+                            "valueReference": "8"
+                          }
+                        }
+                      }
+                    },
+                    "platform1": {
+                      "valueReference": "9"
+                    },
+                    "platform2": {
+                      "valueReference": "9"
+                    }
+                  }
+                }
+              },
+              "cube2": {
+                "functionInvocationValue": {
+                  "functionName": "Cube.NDVI",
+                  "arguments": {
+                    "bandName1": {
+                      "valueReference": "1"
+                    },
+                    "bandName2": {
+                      "valueReference": "2"
+                    },
+                    "input": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCube",
+                        "arguments": {
+                          "bands": {
+                            "valueReference": "3"
+                          },
+                          "cubeId": {
+                            "valueReference": "4"
+                          },
+                          "extent": {
+                            "valueReference": "5"
+                          },
+                          "products": {
+                            "valueReference": "6"
+                          },
+                          "resolution": {
+                            "valueReference": "7"
+                          },
+                          "time": {
+                            "constantValue": "[2023-03-10 00:00:00,2023-03-17 00:00:00]"
+                          },
+                          "tms": {
+                            "valueReference": "8"
+                          }
+                        }
+                      }
+                    },
+                    "platform1": {
+                      "valueReference": "9"
+                    },
+                    "platform2": {
+                      "valueReference": "9"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 500
+        },
+        "min": {
+          "constantValue": 0
+        }
+      }
+    }
+  },
+  "layerName": "layer0",
+  "isBatch":"0",
+  "map":{
+    "level":12,
+    "spatialRange": [
+      113.90954,30.376371,114.41046,30.563435
+    ]
+  }
+}

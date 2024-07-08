@@ -53,7 +53,7 @@ import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, JedisUtil, MinIOUtil, PostSender}
+import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender}
 
 import java.io.{File, FileWriter, Reader, StringReader}
 import java.nio.charset.Charset
@@ -906,154 +906,154 @@ object Cube {
 
 
   def visualizeOnTheFly(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam): Unit = {
-
-    val styledRasterRDD: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Cube.addStyles(rasterTileLayerRdd, visualizationParam)
-
-    val bands: Array[String] = visualizationParam.getBands.toArray
-    val tol_bands: ArrayBuffer[String] = ArrayBuffer()
-    val tol_Extent: ArrayBuffer[String] = ArrayBuffer()
-    val tol_Time: ArrayBuffer[Instant] = ArrayBuffer()
-    val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
-
-    for (i <- styledRasterRDD.indices) {
-
-      val tileRdd: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = styledRasterRDD(i)
-      val styledRasterRDDtime = (tileRdd.map (_._1.time.toInstant.toEpochMilli)).collect().distinct(0)
-
-      val spatialMetadata = TileLayerMetadata(
-        tileRdd._2.cellType,
-        tileRdd._2.layout,
-        tileRdd._2.extent,
-        tileRdd._2.crs,
-        tileRdd._2.bounds.get.toSpatial)
-      var tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRdd._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
-
-      if (BosCOGUtil.tileDifference > 0) {
-        // 首先对其进行上采样
-        // 上采样必须考虑范围缩小，不然非常占用内存
-        val levelUp: Int = BosCOGUtil.tileDifference
-        val layoutOrigin: LayoutDefinition = tileLayerRdd.metadata.layout
-        val extentOrigin: Extent = tileLayerRdd.metadata.layout.extent
-        val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
-        val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
-        val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
-        val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
-
-        val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
-        val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
-        tileLayerRdd = tileLayerRdd.reproject(tileLayerRdd.metadata.crs, layoutNew)._2
-      }
-
-      val tmsCrs: CRS = CRS.fromEpsgCode(3857)
-      val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
-      val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
-        tileLayerRdd.reproject(tmsCrs, layoutScheme)
-
-      val outputPath: String = "/mnt/storage/on-the-fly"
-      // Create the attributes store that will tell us information about our catalog.
-      val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
-      // Create the writer that we will use to store the tiles in the local catalog.
-      val writer: FileLayerWriter = FileLayerWriter(attributeStore)
-
-      if (zoom < Trigger.level) {
-        throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-      }
-
-      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-        if (z == Trigger.level) {
-          val layerId: LayerId = LayerId(Trigger.dagId + styledRasterRDDtime, z)
-          // If the layer exists already, delete it out before writing
-          if (attributeStore.layerExists(layerId)) {
-            //        new FileLayerManager(attributeStore).delete(layerId)
-            try {
-              writer.overwrite(layerId, rdd)
-            } catch {
-              case e: Exception =>
-                e.printStackTrace()
-            }
-          }
-          else {
-            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
-          }
-        }
-      }
-
-      tol_bands.append(bands(0))
-      val Time: Instant = tileRdd.map(_._1.time.toInstant).collect().distinct(0)
-      //    val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-      //    val TimeUtcString: String = dateTimeFormatter.format(Time)
-      tol_Time.append(Time)
-      val extent: String = tileRdd._2.extent.toString()
-      val subExtent: String = extent.substring(6, extent.length).replace("(", "[").replace(")", "]")
-      tol_Extent.append(subExtent)
-
-      val urlObject: JSONObject = new JSONObject
-      urlObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId  + styledRasterRDDtime + "/{z}/{x}/{y}.png")
-      tol_urljson.append(urlObject)
-
-
-      //      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
-      //      val jedis: Jedis = new JedisUtil().getJedis
-      //      jedis.select(1)
-      //      zIndexStrArray.foreach(zIndexStr => {
-      //        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
-      //        jedis.sadd(key, "cached")
-      //        jedis.expire(key, REDIS_CACHE_TTL)
-      //      })
-      //      jedis.close()
-
-      if (sc.master.contains("local")) {
-        whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube" + styledRasterRDDtime)
-      }
-    }
-
-    // 回调服务
-
-    val cl_Extent: Array[String] = tol_Extent.distinct.toArray
-    val cl_Time: Array[Instant] = tol_Time.distinct.toArray
-    val jsonObject: JSONObject = new JSONObject
-    val dim: ArrayBuffer[JSONObject] = ArrayBuffer()
-
-    val dimObject1: JSONObject = new JSONObject
-    dimObject1.put("name", "extent")
-    dimObject1.put("values", cl_Extent)
-    dim.append(dimObject1)
-
-    val dimObject2: JSONObject = new JSONObject
-    dimObject2.put("name", "dateTime")
-    dimObject2.put("values", cl_Time)
-    dim.append(dimObject2)
-
-    val dimObject3: JSONObject = new JSONObject
-    dimObject3.put("name", "bands")
-    dimObject3.put("values", bands)
-    dim.append(dimObject3)
-
-    jsonObject.put("raster", tol_urljson.toArray)
-    jsonObject.put("extent", tol_Extent.toArray)
-    jsonObject.put("dateTime", tol_Time.toArray)
-    jsonObject.put("bands", bands)
-    jsonObject.put("dimension", dim.toArray)
-
-
-    PostSender.shelvePost("cube",jsonObject)
-
-
-
-    // 清空list
-    Trigger.optimizedDagMap.clear()
-    Trigger.coverageCollectionMetadata.clear()
-    Trigger.lazyFunc.clear()
-    Trigger.coverageCollectionRddList.clear()
-    Trigger.coverageRddList.clear()
-    Trigger.zIndexStrArray.clear()
-    JsonToArg.dagMap.clear()
-    //    // TODO lrx: 以下为未检验
-    Trigger.tableRddList.clear()
-    Trigger.kernelRddList.clear()
-    Trigger.featureRddList.clear()
-    Trigger.cubeRDDList.clear()
-    Trigger.cubeLoad.clear()
+    throw new Exception("所请求的数据在Bos中不存在！")
+//    val styledRasterRDD: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Cube.addStyles(rasterTileLayerRdd, visualizationParam)
+//
+//    val bands: Array[String] = visualizationParam.getBands.toArray
+//    val tol_bands: ArrayBuffer[String] = ArrayBuffer()
+//    val tol_Extent: ArrayBuffer[String] = ArrayBuffer()
+//    val tol_Time: ArrayBuffer[Instant] = ArrayBuffer()
+//    val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
+//
+//    for (i <- styledRasterRDD.indices) {
+//
+//      val tileRdd: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = styledRasterRDD(i)
+//      val styledRasterRDDtime = (tileRdd.map (_._1.time.toInstant.toEpochMilli)).collect().distinct(0)
+//
+//      val spatialMetadata = TileLayerMetadata(
+//        tileRdd._2.cellType,
+//        tileRdd._2.layout,
+//        tileRdd._2.extent,
+//        tileRdd._2.crs,
+//        tileRdd._2.bounds.get.toSpatial)
+//      var tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRdd._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
+//
+//      if (BosCOGUtil.tileDifference > 0) {
+//        // 首先对其进行上采样
+//        // 上采样必须考虑范围缩小，不然非常占用内存
+//        val levelUp: Int = BosCOGUtil.tileDifference
+//        val layoutOrigin: LayoutDefinition = tileLayerRdd.metadata.layout
+//        val extentOrigin: Extent = tileLayerRdd.metadata.layout.extent
+//        val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
+//        val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
+//        val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
+//        val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
+//
+//        val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
+//        val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
+//        tileLayerRdd = tileLayerRdd.reproject(tileLayerRdd.metadata.crs, layoutNew)._2
+//      }
+//
+//      val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+//      val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+//      val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+//        tileLayerRdd.reproject(tmsCrs, layoutScheme)
+//
+//      val outputPath: String = "/mnt/storage/on-the-fly"
+//      // Create the attributes store that will tell us information about our catalog.
+//      val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+//      // Create the writer that we will use to store the tiles in the local catalog.
+//      val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+//
+//      if (zoom < Trigger.level) {
+//        throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+//      }
+//
+//      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+//        if (z == Trigger.level) {
+//          val layerId: LayerId = LayerId(Trigger.dagId + styledRasterRDDtime, z)
+//          // If the layer exists already, delete it out before writing
+//          if (attributeStore.layerExists(layerId)) {
+//            //        new FileLayerManager(attributeStore).delete(layerId)
+//            try {
+//              writer.overwrite(layerId, rdd)
+//            } catch {
+//              case e: Exception =>
+//                e.printStackTrace()
+//            }
+//          }
+//          else {
+//            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+//          }
+//        }
+//      }
+//
+//      tol_bands.append(bands(0))
+//      val Time: Instant = tileRdd.map(_._1.time.toInstant).collect().distinct(0)
+//      //    val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+//      //    val TimeUtcString: String = dateTimeFormatter.format(Time)
+//      tol_Time.append(Time)
+//      val extent: String = tileRdd._2.extent.toString()
+//      val subExtent: String = extent.substring(6, extent.length).replace("(", "[").replace(")", "]")
+//      tol_Extent.append(subExtent)
+//
+//      val urlObject: JSONObject = new JSONObject
+//      urlObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId  + styledRasterRDDtime + "/{z}/{x}/{y}.png")
+//      tol_urljson.append(urlObject)
+//
+//
+//      //      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+//      //      val jedis: Jedis = new JedisUtil().getJedis
+//      //      jedis.select(1)
+//      //      zIndexStrArray.foreach(zIndexStr => {
+//      //        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+//      //        jedis.sadd(key, "cached")
+//      //        jedis.expire(key, REDIS_CACHE_TTL)
+//      //      })
+//      //      jedis.close()
+//
+//      if (sc.master.contains("local")) {
+//        whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube" + styledRasterRDDtime)
+//      }
+//    }
+//
+//    // 回调服务
+//
+//    val cl_Extent: Array[String] = tol_Extent.distinct.toArray
+//    val cl_Time: Array[Instant] = tol_Time.distinct.toArray
+//    val jsonObject: JSONObject = new JSONObject
+//    val dim: ArrayBuffer[JSONObject] = ArrayBuffer()
+//
+//    val dimObject1: JSONObject = new JSONObject
+//    dimObject1.put("name", "extent")
+//    dimObject1.put("values", cl_Extent)
+//    dim.append(dimObject1)
+//
+//    val dimObject2: JSONObject = new JSONObject
+//    dimObject2.put("name", "dateTime")
+//    dimObject2.put("values", cl_Time)
+//    dim.append(dimObject2)
+//
+//    val dimObject3: JSONObject = new JSONObject
+//    dimObject3.put("name", "bands")
+//    dimObject3.put("values", bands)
+//    dim.append(dimObject3)
+//
+//    jsonObject.put("raster", tol_urljson.toArray)
+//    jsonObject.put("extent", tol_Extent.toArray)
+//    jsonObject.put("dateTime", tol_Time.toArray)
+//    jsonObject.put("bands", bands)
+//    jsonObject.put("dimension", dim.toArray)
+//
+//
+//    PostSender.shelvePost("cube",jsonObject)
+//
+//
+//
+//    // 清空list
+//    Trigger.optimizedDagMap.clear()
+//    Trigger.coverageCollectionMetadata.clear()
+//    Trigger.lazyFunc.clear()
+//    Trigger.coverageCollectionRddList.clear()
+//    Trigger.coverageRddList.clear()
+//    Trigger.zIndexStrArray.clear()
+//    JsonToArg.dagMap.clear()
+//    //    // TODO lrx: 以下为未检验
+//    Trigger.tableRddList.clear()
+//    Trigger.kernelRddList.clear()
+//    Trigger.featureRddList.clear()
+//    Trigger.cubeRDDList.clear()
+//    Trigger.cubeLoad.clear()
 
   }
 
@@ -1113,48 +1113,49 @@ object Cube {
   }
 
   def getRawTileRDDBos(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
-    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
-    if (metaList.isEmpty) {
-      throw new Exception("No such coverage in database!")
-    }
-
-    var union: Extent = Trigger.windowExtent
-    if(union == null){
-      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
-    }
-    val queryGeometry: Geometry = metaList.head.getGeom
-
-    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
-    val tileRDDFlat: RDD[RawTile] = tileMetadata
-      .mapPartitions(par => {
-        val minIOUtil = MinIOUtil
-        val client: BosClient = BosClientUtil_scala.getClient
-        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
-          val time1: Long = System.currentTimeMillis()
-          val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
-            tiles
-          }
-          val time2: Long = System.currentTimeMillis()
-          println("Get Tiles Meta Time is " + (time2 - time1))
-          // 根据元数据和范围查询后端瓦片
-          if (rawTiles.nonEmpty) rawTiles
-          else mutable.Buffer.empty[RawTile]
-        })
-        result
-      }).flatMap(t => t).persist()
-
-    val tileNum: Int = tileRDDFlat.count().toInt
-    println("tileNum = " + tileNum)
-    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
-    tileRDDFlat.unpersist()
-    val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
-      val client: BosClient = BosClientUtil_scala.getClient
-      par.map(t => {
-        BosCOGUtil.getTileBuf(client, t)
-      })
-    })
-    rawTileRdd
+    throw new Exception("所请求的数据在Bos中不存在！")
+//    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
+//    if (metaList.isEmpty) {
+//      throw new Exception("No such coverage in database!")
+//    }
+//
+//    var union: Extent = Trigger.windowExtent
+//    if(union == null){
+//      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
+//    }
+//    val queryGeometry: Geometry = metaList.head.getGeom
+//
+//    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
+//    val tileRDDFlat: RDD[RawTile] = tileMetadata
+//      .mapPartitions(par => {
+//        val minIOUtil = MinIOUtil
+//        val client: BosClient = BosClientUtil_scala.getClient
+//        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
+//          val time1: Long = System.currentTimeMillis()
+//          val rawTiles: mutable.ArrayBuffer[RawTile] = {
+//            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
+//            tiles
+//          }
+//          val time2: Long = System.currentTimeMillis()
+//          println("Get Tiles Meta Time is " + (time2 - time1))
+//          // 根据元数据和范围查询后端瓦片
+//          if (rawTiles.nonEmpty) rawTiles
+//          else mutable.Buffer.empty[RawTile]
+//        })
+//        result
+//      }).flatMap(t => t).persist()
+//
+//    val tileNum: Int = tileRDDFlat.count().toInt
+//    println("tileNum = " + tileNum)
+//    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
+//    tileRDDFlat.unpersist()
+//    val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
+//      val client: BosClient = BosClientUtil_scala.getClient
+//      par.map(t => {
+//        BosCOGUtil.getTileBuf(client, t)
+//      })
+//    })
+//    rawTileRdd
   }
 
   def getRawTileRDD(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
@@ -1284,23 +1285,24 @@ object Cube {
 
   // coverage visualize
   def visualizeBatch(implicit sc: SparkContext, exportedRasterRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String) : Unit = {
-    val rasterArray: Array[(SpatialKey, Tile)] = exportedRasterRdd._1.map(t => {
-      (t._1.spaceTimeKey.spatialKey, t._2)
-    }).collect()
-    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(rasterArray)
-    val stitchedTile: Raster[Tile] = Raster(tile, exportedRasterRdd._2.tileLayerMetadata.extent)
-    var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
-    val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
-    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
-
-    // 上传文件
-    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-    val file :File = new File(saveFilePath)
-
-    val client: BosClient = BosClientUtil_scala.getClient2
-    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.putObject("oge-user", path, file)
+    throw new Exception("所请求的数据在Bos中不存在！")
+//    val rasterArray: Array[(SpatialKey, Tile)] = exportedRasterRdd._1.map(t => {
+//      (t._1.spaceTimeKey.spatialKey, t._2)
+//    }).collect()
+//    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(rasterArray)
+//    val stitchedTile: Raster[Tile] = Raster(tile, exportedRasterRdd._2.tileLayerMetadata.extent)
+//    var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
+//    val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
+//    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
+//
+//    // 上传文件
+//    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+//    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+//    val file :File = new File(saveFilePath)
+//
+//    val client: BosClient = BosClientUtil_scala.getClient2
+//    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+//    client.putObject("oge-user", path, file)
   }
 
 

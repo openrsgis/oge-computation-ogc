@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
-
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
@@ -40,11 +39,12 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{BosClientUtil_scala, MinIOUtil, PostSender, PostgresqlUtil}
-import java.nio.file.Paths
+import whu.edu.cn.util.{MinIOUtil, PostSender, PostgresqlUtil}
 
+import java.nio.file.Paths
 import com.baidubce.services.bos.model.GetObjectRequest
 
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
@@ -64,9 +64,9 @@ object Feature {
     val metaData = queryRes._3
     val hbaseTableName = queryRes._2
     val productKey = queryRes._1
-    println(metaData)
-    println(hbaseTableName)
-    println(productKey)
+//    println(metaData)
+//    println(hbaseTableName)
+//    println(productKey)
     //    if(dataTime==null){
     //      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
     //        .flatMap(t=>t)
@@ -571,7 +571,7 @@ object Feature {
 
     versouSshUtil(host, userName, password, port)
 
-    val st = s"scp -P 608 $outputVectorPath root@${GlobalConfig.Others.tmsHost}:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
+    val st = s"scp  $outputVectorPath root@${GlobalConfig.Others.tomcatHost}:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
     //本地测试使用代码
 //      val exitCode: Int = st.!
@@ -584,7 +584,7 @@ object Feature {
       runCmd(st, "UTF-8")
       println(s"st = $st")
 
-    val storageURL = s"http://${GlobalConfig.Others.tomcatHost}:8080/oge_vector/vector_" + time + ".json"
+    val storageURL = s"http://${GlobalConfig.Others.tomcatHost_public}/tomcat-vector/vector_" + time + ".json"
 
     storageURL
   }
@@ -1125,8 +1125,8 @@ object Feature {
     geoJson.put("render", render)
     PostSender.shelvePost("vector",geoJson)
   }
-  //feature用户上传文件自增id
-  var feature_id:Long = 0
+
+
   // 下载用户上传的geojson文件
   def loadFeatureFromUpload(implicit sc: SparkContext, featureId: String, userID: String, dagId: String, crs: String = "EPSG:4326"): (RDD[(String, (Geometry, Map[String, Any]))]) = {
     var path: String = new String()
@@ -1136,18 +1136,17 @@ object Feature {
       path = s"$userID/$featureId.geojson"
     }
 
-    val client = BosClientUtil_scala.getClient2
+    val client = MinIOUtil.getMinioClient
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}_$feature_id.geojson"
-    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
-    feature_id += 1
-    val tempfile = new File(filePath)
-    val getObjectRequest = new GetObjectRequest("oge-user",path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
-    println(filePath)
-    val temp = Source.fromFile(filePath).mkString
-    val feature = geometry(sc, temp,crs)
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+
+    val outputPath = Paths.get(filePath)
+    Trigger.file_id += 1
+
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    inputStream.close()
+    val feature = geometry(sc, filePath,crs)
     feature
   }
 

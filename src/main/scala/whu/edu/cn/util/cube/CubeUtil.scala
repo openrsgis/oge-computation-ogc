@@ -1,22 +1,17 @@
 package whu.edu.cn.util.cube
 
-import geotrellis.layer
-import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
+import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellType, MultibandTile, Tile, TileLayout}
-import geotrellis.spark.MultibandTileLayerRDD
+import geotrellis.raster.{CellType, Tile, TileLayout}
 import geotrellis.spark._
 import geotrellis.vector.Extent
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.entity.cube.OGECubeDataType.OGECubeDataType
 import whu.edu.cn.entity.cube.{BandKey, CubeCOGMetadata, CubeTileKey, OGECubeDataType, ProductKey, SpaceKey, TimeKey}
-import whu.edu.cn.util.CoverageUtil.checkProjResoExtent
 
 import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.util.zip.Inflater
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object CubeUtil {

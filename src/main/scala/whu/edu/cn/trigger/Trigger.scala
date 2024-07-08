@@ -40,7 +40,8 @@ import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
 import whu.edu.cn.entity.cube.CubeTileKey
 
-import scala.collection.mutable.{ArrayBuffer, Map}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer,Map}
+
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -85,6 +86,14 @@ object Trigger {
 
   // Onthefly输出计算层级
   var ontheFlyLevel: Int = _
+  //用来标识读取上传文件的编号的自增标识符
+  var file_id: Long = 0
+  val tempFileList = new ListBuffer[String]
+
+  //任务来源
+  var dagType = ""
+  //任务结果文件名
+  var outputFile = ""
 
   var ProcessName : String = _
 
@@ -1249,13 +1258,18 @@ object Trigger {
           coverageRddList += (UUID -> ColorBalance.colorBalance(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.colorbalanceRef.ColorBalanceWithRef.colorBalanceRef" =>
           coverageRddList += (UUID -> ColorBalanceWithRef.colorBalanceRef(sc, coverageCollectionRddList(args("coverageCollection"))))
+        //Cube
+        //        case "Service.getCollections" =>
+        //          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
+        //        case "Collections.toCube" =>
+        //          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
+          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("bandName1"), platform1 = args("platform1"), bandName2 = args("bandName2"), platform2 = args("platform2")))
         case "Cube.add" =>
           cubeRDDList += (UUID -> CubeNew.add(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
         case "Cube.subtract" =>
@@ -1393,7 +1407,23 @@ object Trigger {
     println(jsonObject)
 
     isBatch = jsonObject.getString("isBatch").toInt
-
+    //教育版判断
+    try{
+      if (jsonObject.getString("dagType").equals("edu")) {
+        dagType = "edu"
+        outputFile = jsonObject.getString("outputFile")
+      }}catch {
+      case e:Exception =>
+        dagType = ""
+        outputFile = ""
+    }
+//    if(jsonObject.getString("dagType").equals("edu")){
+//      dagType = "edu"
+//      outputFile = jsonObject.getString("outputFile")
+//    }else{
+//      dagType = ""
+//      outputFile = ""
+//    }
 
     layerName = jsonObject.getString("layerName")
     try{
@@ -1689,6 +1719,8 @@ object Trigger {
 
     try {
       lambda(sc, optimizedDagMap("0"))
+      //返回正常信息
+      PostSender.sendShelvedPost()
     } catch {
       case e: Throwable =>
         val errorJson = new JSONObject
@@ -1708,11 +1740,13 @@ object Trigger {
     } finally {
       val tempFilePath = GlobalConfig.Others.tempFilePath
       val filePath = s"${tempFilePath}${dagId}.tiff"
-      if (scala.reflect.io.File(filePath).exists)
-        scala.reflect.io.File(filePath).delete()
-      val featurePath = s"${tempFilePath}${dagId}.geojson"
-      if (scala.reflect.io.File(featurePath).exists)
-        scala.reflect.io.File(featurePath).delete()
+
+      tempFileList.foreach(file =>{
+        if(scala.reflect.io.File(file).exists)
+          scala.reflect.io.File(file).delete()
+      })
+
+      tempFileList.clear()
     }
   }
 
@@ -1729,8 +1763,8 @@ object Trigger {
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
-    dagId = "123456789"
-    userId = "1234567890"
+    dagId = "12345678"
+    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
@@ -1738,7 +1772,6 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 //        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
-//    runMain_edu(sc, workTaskJson, dagId, userId,"a")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")

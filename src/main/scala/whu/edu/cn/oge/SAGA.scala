@@ -12,7 +12,6 @@ import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.BosClientUtil_scala
 import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
