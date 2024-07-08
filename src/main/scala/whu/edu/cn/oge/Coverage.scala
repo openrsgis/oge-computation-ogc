@@ -38,6 +38,7 @@ import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
+import whu.edu.cn.util.RDDTransformerUtil.saveRasterRDDToTif
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import java.io.{File, FileInputStream}
@@ -3551,14 +3552,12 @@ object Coverage {
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     saveRasterRDDToTif(coverage,saveFilePath)
     val file: File = new File(saveFilePath)
-
-    val client: BosClient = BosClientUtil_scala.getClient2
     val path = Trigger.userId + "/result/" + Trigger.ProcessName
-    client.putObject("oge-user", path, file)
+    MinIOUtil.MinIOUpload("oge-user",path,saveFilePath)
+
     val rasterJsonObject: JSONObject = new JSONObject
     rasterJsonObject.put("coverage",path)
     PostSender.shelvePost("raster",rasterJsonObject)
-//    PostSender.shelvePost("filename",path)
   }
 
 
@@ -3603,6 +3602,40 @@ object Coverage {
     val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
+  }
+
+  var file_idx:Long = 0
+  def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
+    var path: String = s"${userID}/$txt"
+
+
+    val tempPath = loadtype match {
+      case "saga" => GlobalConfig.Others.sagatempFilePath
+      case "otb" => GlobalConfig.Others.otbtempFilePath
+      case _ => GlobalConfig.Others.tempFilePath
+    }
+    //    val tempPath = GlobalConfig.Others.sagatempFilePath
+
+    val filePath = s"$tempPath${dagId}_$file_idx.txt"
+    val dockerFilePath = loadtype match {
+      case "saga" => s"/tmp/saga/${dagId}_$file_idx.txt"
+      case "otb" => s"/tmp/otb/${dagId}_$file_idx.txt"
+      case _ => filePath
+    }
+
+    val tempfile = new File(filePath)
+    try {
+
+      MinIOUtil.MinIODownload("oge-user",path,filePath)
+    }
+    catch {
+      case e: Throwable =>
+        println(e)
+    }
+    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
+    file_idx = file_idx + 1
+    println(filePath, dockerFilePath)
+    dockerFilePath
   }
 
 }

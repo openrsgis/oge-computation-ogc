@@ -11,8 +11,8 @@ import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.SAGA.{host, password, port, userName}
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.BosClientUtil_scala
 import whu.edu.cn.util.CoverageUtil.{getnoDataAccordingtoCellType, removeZeroFromCoverage}
+import whu.edu.cn.util.MinIOUtil.MinIODownload
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
@@ -50,17 +50,15 @@ object ML {
     val userFolder = s"$tempFilePath${Trigger.userId}"
     val folder = new File(userFolder)
     folder.mkdir()
-    val client = BosClientUtil_scala.getClient2
+
     //下载文件
     sampleFiles.foreach(f =>{
       val fileName = f.split('/')(1)
       val filePath = s"$userFolder/$fileName"
       val path = s"${Trigger.userId}/$f"
-      val tempfile = new File(filePath)
       println(path)
-      val getObjectRequest = new GetObjectRequest("oge-user",path)
-      tempfile.createNewFile()
-      val bosObject = client.getObject(getObjectRequest,tempfile)
+
+      MinIODownload("oge-user",path,filePath)
     })
 
     // 给每个文件加路径前缀
@@ -100,17 +98,14 @@ object ML {
     val userFolder = s"$tempFilePath${Trigger.userId}"
     val folder = new File(userFolder)
     folder.mkdir()
-    val client = BosClientUtil_scala.getClient2
     //下载文件
-    sampleFiles.foreach(f =>{
+    sampleFiles.foreach(f => {
       val fileName = f.split('/')(1)
       val filePath = s"$userFolder/$fileName"
       val path = s"${Trigger.userId}/$f"
-      val tempfile = new File(filePath)
       println(path)
-      val getObjectRequest = new GetObjectRequest("oge-user",path)
-      tempfile.createNewFile()
-      val bosObject = client.getObject(getObjectRequest,tempfile)
+
+      MinIODownload("oge-user", path, filePath)
     })
 
     // 给每个文件加路径前缀
