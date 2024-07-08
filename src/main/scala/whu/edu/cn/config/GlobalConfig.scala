@@ -118,7 +118,8 @@ object GlobalConfig {
     var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
     var QGIS_HOST: String = "172.22.1.19"
     var QGIS_USERNAME: String = "root"
-    var QGIS_PASSWORD: String = "YPfamily608!"
+//    var QGIS_PASSWORD: String = "YPfamily608!"
+    var QGIS_PASSWORD: String = "BaiduUMS@2024"
     var QGIS_PORT: Int = 22
   }
   object OTBConf{
@@ -127,7 +128,7 @@ object GlobalConfig {
     var OTB_DOCKERDATA : String = "/tmp/otb/"   // docker的临时目录
     var OTB_HOST: String = "172.22.1.19"
     var OTB_USERNAME: String = "root"
-    var OTB_PASSWORD: String = "YPfamily608!"
+    var OTB_PASSWORD: String = "BaiduUMS@2024"
     var OTB_PORT: Int = 22
   }
 
@@ -137,7 +138,7 @@ object GlobalConfig {
     var SAGA_DOCKERDATA: String = "/tmp/saga/"   // docker的临时目录
     var SAGA_HOST: String = "172.22.1.19"
     var SAGA_USERNAME: String = "root"
-    var SAGA_PASSWORD: String = "YPfamily608!"
+    var SAGA_PASSWORD: String = "BaiduUMS@2024"
     var SAGA_PORT: Int = 22
   }
 
@@ -145,7 +146,7 @@ object GlobalConfig {
   object ThirdApplication {
     final var THIRD_HOST: String = "172.22.1.19"
     final var THIRD_USERNAME: String = "root"
-    final var THIRD_PASSWORD: String = "YPfamily608!"
+    final var THIRD_PASSWORD: String = "BaiduUMS@2024"
     final var DOCKER_DATA: String = "/usr/local/data/"
     final var SERVER_DATA: String = "/mnt/storage/data/"
     final var THIRD_PORT: Int = 22
