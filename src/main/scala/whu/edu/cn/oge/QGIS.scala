@@ -3871,8 +3871,8 @@ object QGIS {
 
     // 2. 构建参数
     val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-    //    args += ("minValue" -> minValue)
-    //    args += ("maxValue" -> maxValue)
+        args += ("minValue" -> minValue)
+        args += ("maxValue" -> maxValue)
     val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
     fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
 

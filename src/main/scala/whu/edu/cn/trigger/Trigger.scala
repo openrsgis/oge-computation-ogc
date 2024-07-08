@@ -1490,7 +1490,7 @@ object Trigger {
         sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
-      //         打印至后端控制台
+        //     打印至后端控制台
 
 
     } finally {
