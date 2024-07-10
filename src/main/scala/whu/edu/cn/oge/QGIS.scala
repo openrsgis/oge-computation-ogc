@@ -3874,7 +3874,7 @@ object QGIS {
     // 2. 构建参数，目前不暴露出参数，输出路径写死
     val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
     val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
-    fileNames += filePath + fileName + ".tiff"
+    fileNames += filePath + fileName + ".tif"
 
     // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
     BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray, time)
