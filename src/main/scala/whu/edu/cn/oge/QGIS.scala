@@ -3864,20 +3864,20 @@ object QGIS {
     makeChangedRasterRDDFromTif(sc, writePath)
   }
 
-  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minValue: Double, maxValue: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     // 1. 生成输入数据tif
-    val fileName: String = "clip_" + System.currentTimeMillis().toString
-    makeTIFF(coverage, fileName)
+    val time = System.currentTimeMillis().toString
+    val fileName: String = "clip_" + time
+    val filePath: String = "/mnt/dem/"
+    makeTIFF(coverage, fileName, filePath)
 
-    // 2. 构建参数
+    // 2. 构建参数，目前不暴露出参数，输出路径写死
     val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-        args += ("minValue" -> minValue)
-        args += ("maxValue" -> maxValue)
     val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
-    fileNames += GlobalConfig.ThirdApplication.DOCKER_DATA + fileName + ".tiff"
+    fileNames += filePath + fileName + ".tif"
 
     // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
-    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray)
+    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray, time)
 
     println("执行完成")
     // 4. 将生成的tiff文件转成RDD
