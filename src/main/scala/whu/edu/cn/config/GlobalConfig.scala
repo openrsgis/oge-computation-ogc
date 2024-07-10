@@ -146,8 +146,8 @@ object GlobalConfig {
     final var THIRD_HOST: String = "172.22.1.19"
     final var THIRD_USERNAME: String = "root"
     final var THIRD_PASSWORD: String = "Ypfamily608!"
-    final var DOCKER_DATA: String = "/usr/local/data/"
-    final var SERVER_DATA: String = "/mnt/storage/data/"
+    final var DOCKER_DATA: String = "/home/dell/cppGDAL/"
+    final var SERVER_DATA: String = "/mnt/dem/"
     final var THIRD_PORT: Int = 22
   }
 

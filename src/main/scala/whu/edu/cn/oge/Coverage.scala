@@ -3395,14 +3395,14 @@ object Coverage {
   }
 
 
-  def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), name: String): Unit = {
+  def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), name: String, path: String): Unit = {
     val coverageArray: Array[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = s"$tempFilePath$name.tif"
+    val writePath: String = s"$path$name.tif"
     GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
   }
 

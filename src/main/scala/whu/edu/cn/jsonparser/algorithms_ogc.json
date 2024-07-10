@@ -6012,16 +6012,6 @@
         "name": "coverage",
         "type": "Coverage",
         "description": "DEM Coverage"
-      },
-      {
-        "name": "minValue",
-        "type": "Double",
-        "description": "Normalized minimum"
-      },
-      {
-        "name": "maxValue",
-        "type": "Double",
-        "description": "Normalized maximum"
       }
     ]
   },
