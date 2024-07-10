@@ -3795,7 +3795,7 @@ object QGIS {
 
     } catch {
       case e: Exception =>
-        e.printStackTrace()
+        throw new Exception(e)
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
@@ -3826,7 +3826,7 @@ object QGIS {
 
     } catch {
       case e: Exception =>
-        e.printStackTrace()
+        throw new Exception(e)
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
