@@ -117,8 +117,8 @@ object GlobalConfig {
     var QGIS_DATA: String = "/mnt/storage/algorithmData/"
     var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
     var QGIS_HOST: String = "172.22.1.19"
-//    var QGIS_USERNAME: String = "root"
-//    var QGIS_PASSWORD: String = "Ypfamily608!"
+    var QGIS_USERNAME: String = "root"
+    var QGIS_PASSWORD: String = "Ypfamily608!"
     var QGIS_PORT: Int = 22
   }
   object OTBConf{
@@ -126,8 +126,8 @@ object GlobalConfig {
     var OTB_ALGORITHMCODE: String = "cd /mnt/storage/otbData/algorithmCodeByOTB/;"
     var OTB_DOCKERDATA : String = "/tmp/otb/"   // docker的临时目录
     var OTB_HOST: String = "172.22.1.19"
-//    var OTB_USERNAME: String = "root"
-//    var OTB_PASSWORD: String = "Ypfamily608!"
+    var OTB_USERNAME: String = "root"
+    var OTB_PASSWORD: String = "Ypfamily608!"
     var OTB_PORT: Int = 22
   }
 
@@ -136,8 +136,8 @@ object GlobalConfig {
     var SAGA_DATA: String = "/mnt/storage/SAGA/sagaData/"  // docker挂载目录
     var SAGA_DOCKERDATA: String = "/tmp/saga/"   // docker的临时目录
     var SAGA_HOST: String = "172.22.1.19"
-//    var SAGA_USERNAME: String = "root"
-//    var SAGA_PASSWORD: String = "Ypfamily608!"
+    var SAGA_USERNAME: String = "root"
+    var SAGA_PASSWORD: String = "Ypfamily608!"
     var SAGA_PORT: Int = 22
   }
 
