@@ -4,6 +4,7 @@ import com.alibaba.fastjson.{JSON, JSONObject}
 import com.jcraft.jsch.{ChannelShell, JSch, Session}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.jsonparser.JsonToArg.thirdJson
+import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import java.io._
 import java.util
@@ -26,6 +27,7 @@ object BashUtil {
   private val username: String = GlobalConfig.ThirdApplication.THIRD_USERNAME
   private val host: String = GlobalConfig.ThirdApplication.THIRD_HOST
   private val password: String = GlobalConfig.ThirdApplication.THIRD_PASSWORD
+  private val port : Int = GlobalConfig.ThirdApplication.THIRD_PORT
 
   /**
    *
@@ -34,12 +36,10 @@ object BashUtil {
    * @param argumentSeparator 调用命令的参数分隔符
    * @param inputFiles 第三方算子的输入文件路径
    */
-  def execute(functionName: String, args: mutable.Map[String, Any], argumentSeparator: String, inputFiles: Array[String]): Unit = {
-
-    val algorithmInfo: JSONObject = algorithmInfos.getJSONObject(functionName)
+  def execute(functionName: String, args: mutable.Map[String, Any], argumentSeparator: String, inputFiles: Array[String], time: String): Unit = {
     //     编写调用算子的sh命令
-    val baseContent: String =  "docker run --rm -v /mnt/storage/data:/usr/local/data -w " + algorithmInfo.getString("workDirectory") + " " + algorithmInfo.getString("dockerImage") + " " + algorithmInfo.getString("type") + " " + algorithmInfo.getString("executePath")
-    //    val baseContent: String =  "docker exec -w /usr/local/dem-analysis d6adf492a6cd " + algorithmInfo.getString("type") + " " + algorithmInfo.getString("executePath")
+    val outputPath = " --output ./clip_" + time + "_out.tif"
+    val baseContent: String =  "docker run --rm -v /mnt/dem:/home/dell/cppGDAL -w " + "/home/dell/cppGDAL" + " " + "gdaltorch:v1" + " " + "python DoShading.py" + outputPath
     var inputIndex = 0
     val argsContent = args.map(kv => argumentSeparator + kv._1 + " " + kv._2).mkString(" ") + " " + inputFiles.map(in => {
       inputIndex += 1
@@ -49,7 +49,17 @@ object BashUtil {
     val command = baseContent + " " + argsContent
     println(command)
     // 远程执行sh命令
-    shellProcess(command)
+//    shellProcess(command)
+    try {
+      versouSshUtil(host, username, password, port)
+
+      println(s"st = $command")
+      runCmd(command, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
   }
 
   /**
@@ -62,7 +72,7 @@ object BashUtil {
 
     val algorithmInfo: JSONObject = algorithmInfos.getJSONObject(functionName)
     //     编写调用算子的sh命令
-    val baseContent: String =  "docker run --rm -v /mnt/storage/data:/usr/local/data -w " + algorithmInfo.getString("workDirectory") + " " + algorithmInfo.getString("dockerImage") + " " + algorithmInfo.getString("type") + " " + algorithmInfo.getString("executePath")
+    val baseContent: String =  "docker run --rm -v /mnt/dem:/home/dell/cppGDAL -w " + "/home/dell/cppGDAL" + " " + "gdaltorch:v1" + " " + "python DoShading.py"
     val argsContent = args.values.mkString(" ") + " " + inputFiles.mkString(" ")
     val command = baseContent + " " + argsContent
     println(command)
@@ -80,7 +90,7 @@ object BashUtil {
 
     try {
       val jsch = new JSch()
-      session = jsch.getSession(username, host, 22)
+      session = jsch.getSession(username, host, port)
       session.setPassword(password)
 
       // Avoid asking for key confirmation
@@ -126,11 +136,11 @@ object BashUtil {
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
-    fileNames += "/usr/local/data/clip.tiff"
-    execute("Coverage.demRender", args, "--", fileNames.toArray)
-  }
+//  def main(args: Array[String]): Unit = {
+//    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+//    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
+//    fileNames += "/usr/local/data/clip.tiff"
+//    execute("Coverage.demRender", args, "--", fileNames.toArray)
+//  }
 }
 

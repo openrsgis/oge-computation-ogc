@@ -1004,9 +1004,7 @@ object Trigger {
           }
         // thirdAlgorithm
         case "Coverage.demRender" =>
-          val minValue = args("minValue").toDouble
-          val maxValue = args("maxValue").toDouble
-          coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage")), minValue, maxValue))
+          coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage"))))
 
         //Feature
         case "Feature.load" =>
