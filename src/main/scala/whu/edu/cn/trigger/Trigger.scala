@@ -99,7 +99,6 @@ object Trigger {
 
   var coverageReadFromUploadFile : Boolean = false
 
-//  val tempFileList = mutable.ListBuffer.empty[String]
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -1518,7 +1517,7 @@ object Trigger {
         sendPost(DAG_ROOT_URL + "/deliverUrl",
           outJsonObject.toJSONString)
         println("Send to boot!")
-        //     打印至后端控制台
+      //         打印至后端控制台
 
 
     } finally {

@@ -1136,17 +1136,14 @@ object Feature {
       path = s"$userID/$featureId.geojson"
     }
 
-    val client = MinIOUtil.getMinioClient
+
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.geojson"
 
-    val outputPath = Paths.get(filePath)
-    Trigger.file_id += 1
-
-    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
-    inputStream.close()
-    val feature = geometry(sc, filePath,crs)
+    MinIOUtil.MinIODownload("oge-user", path, filePath)
+    println(s"Download $filePath")
+    val temp = Source.fromFile(filePath).mkString
+    val feature = geometry(sc, temp,crs)
     feature
   }
 
