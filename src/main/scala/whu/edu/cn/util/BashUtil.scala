@@ -36,17 +36,11 @@ object BashUtil {
    * @param argumentSeparator 调用命令的参数分隔符
    * @param inputFiles 第三方算子的输入文件路径
    */
-  def execute(functionName: String, args: mutable.Map[String, Any], argumentSeparator: String, inputFiles: Array[String], time: String): Unit = {
+  def execute(fileName: String, args: mutable.Map[String, Any], argumentSeparator: String, time: String): Unit = {
     //     编写调用算子的sh命令
     val outputPath = " --output ./clip_" + time + "_out.tif"
-    val baseContent: String =  "docker run --rm -v /mnt/dem:/home/dell/cppGDAL -w " + "/home/dell/cppGDAL" + " " + "gdaltorch:v1" + " " + "python DoShading.py" + outputPath
-    var inputIndex = 0
-    val argsContent = args.map(kv => argumentSeparator + kv._1 + " " + kv._2).mkString(" ") + " " + inputFiles.map(in => {
-      inputIndex += 1
-      val result = argumentSeparator + "input" + inputIndex + " " + in
-      result
-    }).mkString(" ")
-    val command = baseContent + " " + argsContent
+    val baseContent: String =  "docker run --rm -v /mnt/storage/dem:/home/dell/cppGDAL -w " + "/home/dell/cppGDAL" + " " + "gdaltorch:v1" + " " + "python DoShading.py" + outputPath
+    val command = baseContent
     println(command)
     // 远程执行sh命令
 //    shellProcess(command)
@@ -58,7 +52,7 @@ object BashUtil {
 
     } catch {
       case e: Exception =>
-        e.printStackTrace()
+        throw new Exception(e)
     }
   }
 

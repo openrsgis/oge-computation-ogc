@@ -28,6 +28,13 @@ object QGIS {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
+
+    val tifPath = "/C:\\Users\\BBL\\Desktop\\algorithm\\clip.tiff"
+    val RDD = makeChangedRasterRDDFromTif(sc, tifPath)
+
+    val outRDD = demRender(sc, RDD)
+    saveRasterRDDToTif(outRDD, "C:\\Users\\BBL\\Desktop\\algorithm\\111.tif")
+
   }
   val algorithmData = GlobalConfig.QGISConf.QGIS_DATA
   val algorithmCode= GlobalConfig.QGISConf.QGIS_ALGORITHMCODE
@@ -3873,11 +3880,10 @@ object QGIS {
 
     // 2. 构建参数，目前不暴露出参数，输出路径写死
     val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-    val fileNames: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
-    fileNames += filePath + fileName + ".tif"
+    val fileNameNew: String = fileName + ".tif"
 
     // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
-    BashUtil.execute("Coverage.demRender", args, "--", fileNames.toArray, time)
+    BashUtil.execute(fileNameNew, args, "--", time)
 
     println("执行完成")
     // 4. 将生成的tiff文件转成RDD
