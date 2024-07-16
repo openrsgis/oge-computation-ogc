@@ -3875,19 +3875,32 @@ object QGIS {
     // 1. 生成输入数据tif
     val time = System.currentTimeMillis().toString
     val fileName: String = "clip_" + time
-    val filePath: String = "/mnt/dem/"
-    makeTIFF(coverage, fileName, filePath)
+//    val filePath: String = "/mnt/dem/storage/"
+//    makeTIFF(coverage, fileName, filePath)
 
     // 2. 构建参数，目前不暴露出参数，输出路径写死
     val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
     val fileNameNew: String = fileName + ".tif"
 
     // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
-    BashUtil.execute(fileNameNew, args, "--", time)
+    //     编写调用算子的sh命令
+    val outputPath = " --output ./clip_" + time + "_out.tif"
+    val command: String = "docker run --rm -v /mnt/storage/dem:/home/dell/cppGDAL -w " + "/home/dell/cppGDAL" + " " + "gdaltorch:v1" + " " + "python DoShading.py" + outputPath
+    println(command)
 
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      println(s"st = $command")
+      runCmd(command, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        throw new Exception(e)
+    }
     println("执行完成")
     // 4. 将生成的tiff文件转成RDD
-    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "out.tiff")
+    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "clip_"+  time + "_out.tif")
     result
   }
 
