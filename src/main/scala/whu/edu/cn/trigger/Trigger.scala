@@ -143,6 +143,7 @@ object Trigger {
     coverages.toList
   }
 
+
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
     try {
@@ -434,6 +435,8 @@ object Trigger {
           coverageRddList += (UUID -> panSharp(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), method = args("method").toString, bandList = bandList, weightList = weightList))
         case "Coverage.catTwoCoverage" =>
           coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.reflectanceReconstruction" =>
+          coverageRddList += (UUID -> QGIS.reflectanceReconstruction(sc, coverageRddList(args("MOD09A1")), coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("EVI")), coverageRddList(args("FVC")), coverageRddList(args("GPP")), coverageRddList(args("NPP")), coverageRddList(args("ALBEDO")), coverageRddList(args("COPY"))))
         case "Coverage.IHSFusion" =>
           coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.atan" =>

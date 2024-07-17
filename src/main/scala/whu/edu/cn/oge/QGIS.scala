@@ -3904,6 +3904,44 @@ object QGIS {
     result
   }
 
+  def reflectanceReconstruction(implicit sc: SparkContext,
+                                MOD09A1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                LAI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                FAPAR: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                NDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                EVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                FVC: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                GPP: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                NPP: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                ALBEDO: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                COPY: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // 输入影像暂时不落地，sh已经写死
+    val outputTiffPath = "/mnt/storage/OGE_ref_rec/ref_rec_tile/dist/result/recon_refl.tif"
+
+    val  host_minio1 =  "172.22.1.28"
+    val password_minio1 = "BaiduUMS@2024"
+    try {
+      versouSshUtil(host_minio1, "root", password_minio1, 22)
+      val st =
+        raw"""conda activate ref_rec;bash /mnt/storage/OGE_ref_rec/ref_rec_tile/dist/ref_rec_tile_minio.sh""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, outputTiffPath)
+  }
+
+
+
 }
 
 

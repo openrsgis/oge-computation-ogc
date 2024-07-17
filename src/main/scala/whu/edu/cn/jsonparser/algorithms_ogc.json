@@ -13670,5 +13670,61 @@
         "description": "Sample files to train the model."
       }
     ]
+  },
+  "Coverage.reflectanceReconstruction": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "MOD09A1",
+        "type": "Coverage",
+        "description": "Coverage1"
+      },
+      {
+        "name": "LAI",
+        "type": "Coverage",
+        "description": "Coverage2"
+      },
+      {
+        "name": "FAPAR",
+        "type": "Coverage",
+        "description": "Coverage3"
+      },
+      {
+        "name": "NDVI",
+        "type": "Coverage",
+        "description": "Coverage4"
+      },
+      {
+        "name": "EVI",
+        "type": "Coverage",
+        "description": "Coverage5"
+      },
+      {
+        "name": "FVC",
+        "type": "Coverage",
+        "description": "Coverage6"
+      },
+      {
+        "name": "GPP",
+        "type": "Coverage",
+        "description": "Coverage7"
+      },
+      {
+        "name": "NPP",
+        "type": "Coverage",
+        "description": "Coverage8"
+      },
+      {
+        "name": "ALBEDO",
+        "type": "Coverage",
+        "description": "Coverage9"
+      },
+      {
+        "name": "COPY",
+        "type": "Coverage",
+        "description": "Coverage10"
+      }
+    ]
   }
 }
