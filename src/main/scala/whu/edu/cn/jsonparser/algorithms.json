@@ -13981,5 +13981,121 @@
         "description": "Coverage10"
       }
     ]
+  },
+  "MLlib.Classifier.randomForestTrain": {
+    "description": "randomForest classification training method.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "featuresPath",
+        "type": "String",
+        "description": "The path of feature coverage."
+      },
+      {
+        "name": "labelPath",
+        "type": "String",
+        "description": "The path of label coverage."
+      },
+      {
+        "name": "modelOutputPath",
+        "type": "String",
+        "description": "The output path of model."
+      },
+      {
+        "name": "labelCol",
+        "type": "Int",
+        "description": "The column of label in label coverage."
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "featureSubsetStrategy",
+        "type": "String",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "numTrees",
+        "type": "Int",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 20
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "One parameter of classifier.",
+        "optional": "True"
+      },
+      {
+        "name": "subsamplingRate",
+        "type": "Double",
+        "description": "One parameter of classifier.",
+        "optional": "True",
+        "default": 1.0
+      }
+    ]
+  },
+  "MLlib.Classifier.classify": {
+    "description": "classification method.",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "featuresPath",
+        "type": "String",
+        "description": "The path of feature coverage."
+      },
+      {
+        "name": "modelPath",
+        "type": "String",
+        "description": "The path of saved model."
+      },
+      {
+        "name": "classifiedOutputPath",
+        "type": "String",
+        "description": "The output path of prediction coverage."
+      }
+    ]
   }
 }
