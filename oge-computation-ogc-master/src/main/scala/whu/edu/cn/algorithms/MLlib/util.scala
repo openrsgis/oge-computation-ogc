@@ -311,4 +311,6 @@ object util {
     })
     rowRdd
   }
+
 }
+

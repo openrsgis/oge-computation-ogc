@@ -379,6 +379,7 @@ object Classifier {
     saveRasterRDDToTif(prediction,"C:\\Users\\HUAWEI\\Desktop\\oge\\coverage_resources1\\MLlib_Multi_0801.tiff")
     println(Evaluator.multiclassClassificationEvaluator(spark, label, prediction, metricName = List("f1"), 4))
     //    sc.stop()
+
   }
 
 

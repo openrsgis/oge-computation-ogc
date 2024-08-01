@@ -394,5 +394,6 @@ object Evaluator {
       else throw new IllegalArgumentException(s"metricName中包含不支持的精度评估方法$name！")
     }
     accuracyList.toList
+
   }
 }
