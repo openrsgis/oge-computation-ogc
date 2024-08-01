@@ -37,6 +37,18 @@ public class SSHClientUtil {
         session.setTimeout(timeout); // 设置timeout时间
         session.connect(); // 通过Session建立链接
     }
+    public static void versouSshUtil(String host) throws Exception{
+        log.info("尝试连接到....host:" + host );
+        JSch jsch = new JSch(); // 创建JSch对象
+        session = jsch.getSession(host); // 根据用户名，主机ip，端口获取一个Session对象
+//        session.setPassword(password); // 设置密码
+        Properties config = new Properties();
+        config.put("StrictHostKeyChecking", "no");
+        session.setConfig(config); // 为Session对象设置properties
+        session.setTimeout(timeout); // 设置timeout时间
+        session.connect(); // 通过Session建立链接
+    }
+
     /**
      * 在远程服务器上执行命令
      * @param cmd 要执行的命令字符串

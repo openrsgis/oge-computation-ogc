@@ -10,7 +10,7 @@ import io.minio.{GetObjectArgs, MinioClient}
 import org.locationtech.jts.geom.{Envelope, Geometry}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.{CoverageMetadata, RawTile}
-import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_HEAD_SIZE
+import whu.edu.cn.config.GlobalConfig.MinioConf.{MINIO_BUCKET_NAME, MINIO_HEAD_SIZE}
 
 import java.io.{ByteArrayOutputStream, InputStream}
 import scala.collection.mutable
@@ -69,30 +69,29 @@ object COGUtil {
     val geoTrans: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val cell: mutable.ArrayBuffer[Double] = mutable.ArrayBuffer.empty[Double]
     val tileOffsets: mutable.ArrayBuffer[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]] = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[mutable.ArrayBuffer[Long]]]
-    try{
-      val inputStream_test: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(1).build)
-    }catch {
-      case e:Exception =>
-        throw new Exception("Minio中不存在相应数据，请联系管理员检查数据完整性。")
-    }
-    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
-    // Read data from stream
-    val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](MINIO_HEAD_SIZE)
-    var len: Int = 0
-    while ( {
-      len = inputStream.read(buffer)
-      len != -1
-    }) {
-      outStream.write(buffer, 0, len)
-    }
-    val headerByte: Array[Byte] = outStream.toByteArray
-    outStream.close()
-    inputStream.close()
+//    try{
+      val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket(MINIO_BUCKET_NAME).`object`(coverageMetadata.getPath).offset(0L).length(MINIO_HEAD_SIZE).build)
+      // Read data from stream
+      val outStream = new ByteArrayOutputStream
+      val buffer = new Array[Byte](MINIO_HEAD_SIZE)
+      var len: Int = 0
+      while ( {
+        len = inputStream.read(buffer)
+        len != -1
+      }) {
+        outStream.write(buffer, 0, len)
+      }
+      val headerByte: Array[Byte] = outStream.toByteArray
+      outStream.close()
+      inputStream.close()
 
-    parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
+      parse(headerByte, tileOffsets, cell, geoTrans, tileByteCounts, imageSize, bandCount)
 
-    getTiles(level, coverageMetadata,  tileOffsets, cell, geoTrans, tileByteCounts, bandCount,windowsExtent,queryGeometry)
+      getTiles(level, coverageMetadata, tileOffsets, cell, geoTrans, tileByteCounts, bandCount, windowsExtent, queryGeometry)
+//    }catch {
+//      case e:Exception =>
+//        throw new Exception("Minio中不存在相应数据，请联系管理员检查数据完整性。")
+//    }
 
   }
 
@@ -103,9 +102,9 @@ object COGUtil {
    * @return
    */
   def getTileBuf(minioClient: MinioClient, tile: RawTile): RawTile = {
-    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
+    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket(MINIO_BUCKET_NAME).`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
     val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](tile.getOffset.toInt)
+    val buffer = new Array[Byte](tile.getByteCount.toInt)
     var len = 0
     while ( {
       len = inputStream.read(buffer)
@@ -403,7 +402,7 @@ object COGUtil {
 }
 
 import whu.edu.cn.util.BosClientUtil
-object BosCOGUtil{
+object BosCOGUtil1{
   var tileDifference = 0
   var tmsLevel = 0 // Scaling levels of the front-end TMS
   var extent: Extent = _
@@ -497,7 +496,7 @@ object BosCOGUtil{
     val inputStream: InputStream = bucketObject.getObjectContent()
 //    val inputStream: InputStream = minioClient.getObject(GetObjectArgs.builder.bucket("oge").`object`(tile.getPath).offset(tile.getOffset).length(tile.getByteCount).build)
     val outStream = new ByteArrayOutputStream
-    val buffer = new Array[Byte](tile.getOffset.toInt)
+    val buffer = new Array[Byte](tile.getByteCount.toInt)
     var len = 0
     while ( {
       len = inputStream.read(buffer)

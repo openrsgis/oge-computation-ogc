@@ -1,7 +1,6 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
-
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
@@ -16,7 +15,9 @@ import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
 import whu.edu.cn.oge.Feature._
 import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.oge.Coverage.loadTxtFromUpload
+import whu.edu.cn.oge.Coverage.{loadTxtFromUpload, makeTIFF}
+import whu.edu.cn.util.{BashUtil, RDDTransformerUtil}
+
 import scala.collection.mutable
 import scala.collection.mutable.Map
 import scala.io.Source
@@ -27,6 +28,13 @@ object QGIS {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
+
+    val tifPath = "/C:\\Users\\BBL\\Desktop\\algorithm\\clip.tiff"
+    val RDD = makeChangedRasterRDDFromTif(sc, tifPath)
+
+    val outRDD = demRender(sc, RDD)
+    saveRasterRDDToTif(outRDD, "C:\\Users\\BBL\\Desktop\\algorithm\\111.tif")
+
   }
   val algorithmData = GlobalConfig.QGISConf.QGIS_DATA
   val algorithmCode= GlobalConfig.QGISConf.QGIS_ALGORITHMCODE
@@ -3794,7 +3802,7 @@ object QGIS {
 
     } catch {
       case e: Exception =>
-        e.printStackTrace()
+        throw new Exception(e)
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
@@ -3825,7 +3833,7 @@ object QGIS {
 
     } catch {
       case e: Exception =>
-        e.printStackTrace()
+        throw new Exception(e)
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
@@ -3862,6 +3870,77 @@ object QGIS {
 
     makeChangedRasterRDDFromTif(sc, writePath)
   }
+
+  def demRender(sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    // 1. 生成输入数据tif
+    val time = System.currentTimeMillis().toString
+    val fileName: String = "clip_" + time
+//    val filePath: String = "/mnt/dem/storage/"
+//    makeTIFF(coverage, fileName, filePath)
+
+    // 2. 构建参数，目前不暴露出参数，输出路径写死
+    val args: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+    val fileNameNew: String = fileName + ".tif"
+
+    // 3. docker run 第三方算子镜像 + 命令行运行第三方算子
+    //     编写调用算子的sh命令
+    val outputPath = " --output ./clip_" + time + "_out.tif"
+    val command: String = "docker run --rm -v /mnt/storage/dem:/home/dell/cppGDAL -w " + "/home/dell/cppGDAL" + " " + "gdaltorch:v1" + " " + "python DoShading.py" + outputPath
+    println(command)
+
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      println(s"st = $command")
+      runCmd(command, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        throw new Exception(e)
+    }
+    println("执行完成")
+    // 4. 将生成的tiff文件转成RDD
+    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, GlobalConfig.ThirdApplication.SERVER_DATA + "clip_"+  time + "_out.tif")
+    result
+  }
+
+  def reflectanceReconstruction(implicit sc: SparkContext,
+                                MOD09A1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                LAI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                FAPAR: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                NDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                EVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                FVC: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                GPP: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                NPP: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                ALBEDO: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                COPY: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+
+    // 输入影像暂时不落地，sh已经写死
+    val outputTiffPath = "/mnt/storage/OGE_ref_rec/ref_rec_tile/dist/result/recon_refl.tif"
+
+    val  host_minio1 =  "172.22.1.28"
+    val password_minio1 = "BaiduUMS@2024"
+    try {
+      versouSshUtil(host_minio1, "root", password_minio1, 22)
+      val st =
+        raw"""conda activate ref_rec;bash /mnt/storage/OGE_ref_rec/ref_rec_tile/dist/ref_rec_tile_minio.sh""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, outputTiffPath)
+  }
+
+
 
 }
 

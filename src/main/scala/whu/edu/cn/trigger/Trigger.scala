@@ -40,7 +40,8 @@ import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
 import whu.edu.cn.entity.cube.CubeTileKey
 
-import scala.collection.mutable.{ArrayBuffer, Map}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer,Map}
+
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
@@ -72,6 +73,9 @@ object Trigger {
   var isBatch: Int = _
   // 此次计算工作的任务json
   var workTaskJson: String = _
+
+  // 此次计算工作的来源,"main"为来自通用版本，"edu"为来自教育版
+  var workType: String = _
   // DAG-ID
   var dagId: String = _
   var dagMd5: String = _
@@ -82,10 +86,19 @@ object Trigger {
 
   // Onthefly输出计算层级
   var ontheFlyLevel: Int = _
+  //用来标识读取上传文件的编号的自增标识符
+  var file_id: Long = 0
+  val tempFileList = new ListBuffer[String]
+
+  //任务来源
+  var dagType = ""
+  //任务结果文件名
+  var outputFile = ""
+
+  var ProcessName : String = _
 
   var coverageReadFromUploadFile : Boolean = false
 
-  val tempFileList = mutable.ListBuffer.empty[String]
   def isOptionalArg(args: mutable.Map[String, String], name: String): String = {
     if (args.contains(name)) {
       args(name)
@@ -130,6 +143,7 @@ object Trigger {
     coverages.toList
   }
 
+
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
     try {
@@ -161,7 +175,7 @@ object Trigger {
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverage" =>
-          if(args("coverageID").startsWith("myData/")){
+          if(args("coverageID").startsWith("myData/") || args("coverageID").startsWith("result/")){
             coverageReadFromUploadFile = true
             coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
           } else if(args("coverageID").startsWith("OGE_Case_Data/")){
@@ -421,6 +435,8 @@ object Trigger {
           coverageRddList += (UUID -> panSharp(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2")), method = args("method").toString, bandList = bandList, weightList = weightList))
         case "Coverage.catTwoCoverage" =>
           coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
+        case "Coverage.reflectanceReconstruction" =>
+          coverageRddList += (UUID -> QGIS.reflectanceReconstruction(sc, coverageRddList(args("MOD09A1")), coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("EVI")), coverageRddList(args("FVC")), coverageRddList(args("GPP")), coverageRddList(args("NPP")), coverageRddList(args("ALBEDO")), coverageRddList(args("COPY"))))
         case "Coverage.IHSFusion" =>
           coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.atan" =>
@@ -681,7 +697,9 @@ object Trigger {
           coverageRddList += (UUID -> OTB.otbSOMClassification(sc, coverageRddList(args("in")), vm = args("vm"), tp = args("tp").toFloat, ts = args("ts").toInt, som = args("som"), sx = args("sx").toInt, sy = args("sy").toInt, nx = args("nx").toInt, ny = args("ny").toInt, ni = args("ni").toInt, bi = args("bi").toFloat, bf = args("bf").toFloat, iv = args("iv").toFloat, rand = args("rand").toInt, ram = args("ram").toInt))
 
         case "Coverage.OpticalCalibrationByOTB" =>
-          coverageRddList += (UUID -> OTB.otbOpticalCalibration(sc, coverageRddList(args("input")), level = args("level"), milli = args("milli").toBoolean, clamp = args("clamp").toBoolean, acquiMinute = args("acquiMinute").toInt, acquiHour = args("acquiHour").toInt, acquiDay = args("acquiDay").toInt, acquiMonth = args("acquiMonth").toInt, acquiYear = args("acquiYear").toInt, acquiFluxnormcoeff = args("acquiFluxnormcoeff").toFloat, acquiSolardistance = args("acquiSolardistance").toFloat, acquiSunElev = args("acquiSunElev").toFloat, acquiSunAzim = args("acquiSunAzim").toFloat, acquiViewElev = args("acquiViewElev").toFloat, acquiViewAzim = args("acquiViewAzim").toFloat, acquiGainbias = args("acquiGainbias"), acquiSolarilluminations = args("acquiSolarilluminations"), atmoAerosol = args("atmoAerosol"), atmoOz = args("atmoOz").toFloat, atmoWa = args("atmoWa").toFloat, atmoPressure = args("atmoPressure").toFloat, atmoOpt = args("atmoOpt").toFloat, atmoAeronet = args("atmoAeronet"), atmoRsr = args("atmoRsr"), atmoRadius = args("atmoRadius").toInt, atmoPixsize = args("atmoPixsize").toFloat, ram = args("ram").toInt,userId, dagId))
+          coverageRddList += (UUID -> OTB.otbOpticalCalibration(sc, coverageRddList(args("input")), level = args("level"), milli = args("milli").toBoolean, clamp = args("clamp").toBoolean, acquiMinute = args("acquiMinute").toInt, acquiHour = args("acquiHour").toInt, acquiDay = args("acquiDay").toInt, acquiMonth = args("acquiMonth").toInt, acquiYear = args("acquiYear").toInt, acquiFluxnormcoeff = args("acquiFluxnormcoeff").toFloat, acquiSolardistance = args("acquiSolardistance").toFloat, acquiSunElev = args("acquiSunElev").toFloat, acquiSunAzim = args("acquiSunAzim").toFloat, acquiViewElev = args("acquiViewElev").toFloat, acquiViewAzim = args("acquiViewAzim").toFloat, acquiGainbias = args("acquiGainbias"), acquiSolarilluminations = args("acquiSolarilluminations"), ram = args("ram").toInt, userId, dagId))
+        case "Coverage.OpticalAtmosphericByOTB" =>
+          coverageRddList += (UUID -> OTB.otbOpticalAtmospheric(sc, coverageRddList(args("input")), acquiGainbias = args("acquiGainbias"), acquiSolarilluminations = args("acquiSolarilluminations"), atmoAerosol = args("atmoAerosol"), atmoOz = args("atmoOz").toFloat, atmoWa = args("atmoWa").toFloat, atmoPressure = args("atmoPressure").toFloat, atmoOpt = args("atmoOpt").toFloat, atmoAeronet = args("atmoAeronet"), atmoRsr = args("atmoRsr"), atmoRadius = args("atmoRadius").toInt, atmoPixsize = args("atmoPixsize").toFloat, level = args("level"), ram = args("ram").toInt, userId, dagId))
         case "Coverage.OrthoRectificationByOTB" =>
           coverageRddList += (UUID -> OTB.otbOrthoRectification(sc, ioIn = coverageRddList(args("ioIn")), map = args("map"), mapUtmZone = args("mapUtmZone").toInt, mapUtmNorthhem = args("mapUtmNorthhem").toBoolean, mapEpsgCode = args("mapEpsgCode").toInt, outputsMode = args("outputsMode"), outputsUlx = args("outputsUlx").toDouble, outputsUly = args("outputsUly").toDouble, outputsSizex = args("outputsSizex").toInt, outputsSizey = args("outputsSizey").toInt, outputsSpacingx = args("outputsSpacingx").toDouble, outputsSpacingy = args("outputsSpacingy").toDouble, outputsLrx = args("outputsLrx").toDouble, outputsLry = args("outputsLry").toDouble, outputsOrtho = args("outputsOrtho"), outputsIsotropic = args("outputsIsotropic").toBoolean, outputsDefault = args("outputsDefault").toDouble, elevDem = args("elevDem"), elevGeoid = args("elevGeoid"), elevDefault = args("elevDefault").toFloat, interpolator = args("interpolator"), interpolatorBcoRadius = args("interpolatorBcoRadius").toInt, optRpc = args("optRpc").toInt, optRam = args("optRam").toInt, optGridspacing = args("optGridspacing").toDouble))
 //        case "Coverage.PansharpeningByOTB" =>
@@ -789,6 +807,9 @@ object Trigger {
 
         case "Coverage.minimumdistanceClassificationBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaMinimumDistanceClassification(sc, coverageRddList(args("grids")), featureRddList(args("training")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],  featureRddList(args("training_samples")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("normalise").toBoolean, args("training_class"), args("training_with").toInt, args("train_buffer").toFloat, args("threshold_dist").toFloat, args("threshold_angle").toFloat,args("threshold_prob").toFloat,args("file_load"), args("relative_prob").toInt,userId,dagId))
+
+        case "Coverage.maximumlikelihoodClassificationBySAGA" =>
+          coverageRddList += (UUID -> SAGA.sagaMaximumLikelihoodClassification(sc, coverageRddList(args("grids")), featureRddList(args("training")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]],  featureRddList(args("training_samples")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("normalise").toBoolean, args("training_class"), args("training_with").toInt, args("train_buffer").toFloat, args("threshold_dist").toFloat, args("threshold_angle").toFloat,args("threshold_prob").toFloat,args("file_load"), args("relative_prob").toInt,args("method").toInt,userId,dagId))
 
         case "Coverage.svmClassificationBySAGA" =>
           coverageRddList += (UUID -> SAGA.sagaSVMClassification(sc, coverageRddList(args("grid")), featureRddList(args("ROI")).asInstanceOf[RDD[(String, (Geometry, Map[String, Any]))]], args("scaling").toInt, args("message").toInt, args("model_src").toInt, args("ROI_id"), args("svm_type").toInt, args("kernel_type").toInt, args("degree").toInt, args("gamma").toDouble, args("coef0").toDouble, args("cost").toDouble, args("nu").toDouble, args("eps_svr").toDouble, args("cache_size").toDouble, args("eps").toDouble, args("shrinking").toBoolean, args("probability").toBoolean, args("crossval").toInt))
@@ -974,12 +995,19 @@ object Trigger {
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           println("isBatch", isBatch)
           if (isBatch == 0) {
-            Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+            if(workType.equals("main")){
+              Coverage.visualizeOnTheFly(sc, coverage = coverageRddList(args("coverage")), visParam = visParam)
+            }else if(workType.equals("edu")){
+              Coverage.visualizeBatch_edu(sc, coverage = coverageRddList(args("coverage")), batchParam = batchParam, dagId)
+            }
+
           } else {
             // TODO: 增加添加样式的函数
             coverageRddList += (UUID -> Coverage.addStyles(coverageRddList(args("coverage")), visParam = visParam))
           }
-
+        // thirdAlgorithm
+        case "Coverage.demRender" =>
+          coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage"))))
 
         //Feature
         case "Feature.load" =>
@@ -1230,13 +1258,18 @@ object Trigger {
           coverageRddList += (UUID -> ColorBalance.colorBalance(sc, coverageRddList(args("coverage"))))
         case "algorithms.gmrc.colorbalanceRef.ColorBalanceWithRef.colorBalanceRef" =>
           coverageRddList += (UUID -> ColorBalanceWithRef.colorBalanceRef(sc, coverageCollectionRddList(args("coverageCollection"))))
+        //Cube
+        //        case "Service.getCollections" =>
+        //          cubeLoad += (UUID -> (isOptionalArg(args, "productIDs"), isOptionalArg(args, "datetime"), isOptionalArg(args, "bbox")))
+        //        case "Collections.toCube" =>
+        //          cubeRDDList += (UUID -> Cube.load(sc, productList = cubeLoad(args("input"))._1, dateTime = cubeLoad(args("input"))._2, geom = cubeLoad(args("input"))._3, bandList = isOptionalArg(args, "bands")))
         case "Cube.addStyles" => {
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
           CubeNew.visualizeOnTheFly(sc, cubeRDDList(args("cube")), visParam)
         }
         case "Cube.NDVI" =>
-          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("band1").substring(1, args("band1").length - 1).split(",")(0), platform1 = args("band1").substring(1, args("band1").length - 1).split(",")(1), bandName2 = args("band2").substring(1, args("band2").length - 1).split(",")(0), platform2 = args("band2").substring(1, args("band2").length - 1).split(",")(1)))
+          cubeRDDList += (UUID -> CubeNew.normalizedDifference(sc, cubeRDDList(args("input")), bandName1 = args("bandName1"), platform1 = args("platform1"), bandName2 = args("bandName2"), platform2 = args("platform2")))
         case "Cube.add" =>
           cubeRDDList += (UUID -> CubeNew.add(cube1 = cubeRDDList(args("cube1")), cube2 = cubeRDDList(args("cube2"))))
         case "Cube.subtract" =>
@@ -1364,6 +1397,7 @@ object Trigger {
     }
 
     /* sc,workTaskJson,workID,originTaskID */
+    workType = "main"
     workTaskJson = curWorkTaskJson
     dagId = curDagID
     userId = userID
@@ -1373,7 +1407,23 @@ object Trigger {
     println(jsonObject)
 
     isBatch = jsonObject.getString("isBatch").toInt
-
+    //教育版判断
+    try{
+      if (jsonObject.getString("dagType").equals("edu")) {
+        dagType = "edu"
+        outputFile = jsonObject.getString("outputFile")
+      }}catch {
+      case e:Exception =>
+        dagType = ""
+        outputFile = ""
+    }
+//    if(jsonObject.getString("dagType").equals("edu")){
+//      dagType = "edu"
+//      outputFile = jsonObject.getString("outputFile")
+//    }else{
+//      dagType = ""
+//      outputFile = ""
+//    }
 
     layerName = jsonObject.getString("layerName")
     try{
@@ -1505,6 +1555,123 @@ object Trigger {
 
   }
 
+  // ProcessName:保存结果的文件名称
+  def runMain_edu(implicit sc: SparkContext,
+              curWorkTaskJson: String,
+              curDagID: String, userID: String, processName:String): Unit = {
+
+    // Check if the SparkContext is active
+    if (sc.isStopped) {
+      sendPost(DAG_ROOT_URL + "/deliverUrl", "ERROR")
+      println("Send to boot!")
+      return
+    }
+
+    /* sc,workTaskJson,workID,originTaskID */
+    workType = "edu"
+    workTaskJson = curWorkTaskJson
+    dagId = curDagID
+    userId = userID
+    ProcessName = processName
+    val time1: Long = System.currentTimeMillis()
+
+    val jsonObject: JSONObject = JSON.parseObject(workTaskJson)
+    println(jsonObject)
+
+    isBatch = jsonObject.getString("isBatch").toInt
+
+
+    layerName = jsonObject.getString("layerName")
+    try {
+      val map: JSONObject = jsonObject.getJSONObject("map")
+      level = map.getString("level").toInt
+
+      windowExtent = null
+
+    } catch {
+      case e: Exception =>
+        level = 11
+        windowExtent = null
+    }
+
+    println("***********************************************************")
+
+
+    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
+      JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
+      JsonToArg.trans(jsonObject, "0")
+    }
+    else {
+      JsonToArg.trans(jsonObject, "0")
+    }
+    println("JsonToArg.dagMap.size = " + JsonToArg.dagMap)
+    JsonToArg.dagMap.foreach(DAGList => {
+      println("************优化前的DAG*************")
+      println(DAGList._1)
+      DAGList._2.foreach(println(_))
+      println("************优化后的DAG*************")
+      val optimizedDAGList: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = optimizedDAG(DAGList._2)
+      optimizedDagMap += (DAGList._1 -> optimizedDAGList)
+      optimizedDAGList.foreach(println(_))
+    })
+
+
+    try {
+      lambda(sc, optimizedDagMap("0"))
+      PostSender.shelvePost("extStatus",1.toString)
+      PostSender.shelvePost("userId",userID)
+      //返回正常信息,发送到教育版地址
+      PostSender.sendShelvedPost(GlobalConfig.DagBootConf.EDU_ROOT_URL+ "/deliverUrl")
+    } catch {
+      case e: Throwable =>
+        e.printStackTrace()
+        val errorJson = new JSONObject
+        errorJson.put("error", e.getCause.getMessage)
+
+        // 回调服务，通过 boot 告知前端：
+        val outJsonObject: JSONObject = new JSONObject
+        outJsonObject.put("json", errorJson)
+        outJsonObject.put("extStatus","0")
+        outJsonObject.put("workID",Trigger.dagId)
+        //
+        println("Error json = " + outJsonObject)
+        sendPost(GlobalConfig.DagBootConf.EDU_ROOT_URL + "/deliverUrl",
+          outJsonObject.toJSONString)
+        println("Send to boot!")
+      //         打印至后端控制台
+
+
+    } finally {
+      Trigger.outputInformationList.clear()
+      Trigger.optimizedDagMap.clear()
+      Trigger.coverageCollectionMetadata.clear()
+      Trigger.lazyFunc.clear()
+      Trigger.coverageCollectionRddList.clear()
+      Trigger.coverageRddList.clear()
+      Trigger.zIndexStrArray.clear()
+      JsonToArg.dagMap.clear()
+      //    // TODO lrx: 以下为未检验
+      Trigger.tableRddList.clear()
+      Trigger.kernelRddList.clear()
+      Trigger.featureRddList.clear()
+      Trigger.cubeRDDList.clear()
+      Trigger.cubeLoad.clear()
+      Trigger.intList.clear()
+      Trigger.doubleList.clear()
+      Trigger.stringList.clear()
+      PostSender.clearShelvedMessages()
+      tempFileList.foreach(tempFile => {
+        if (scala.reflect.io.File(tempFile).exists)
+          scala.reflect.io.File(tempFile).delete()
+      })
+
+      val time2: Long = System.currentTimeMillis()
+      println(time2 - time1)
+
+    }
+  }
+
+
   def runBatch(implicit sc: SparkContext,
                curWorkTaskJson: String,
                curDagId: String, userID: String, crs: String, scale: String, folder: String, fileName: String, format: String): Unit = {
@@ -1552,6 +1719,8 @@ object Trigger {
 
     try {
       lambda(sc, optimizedDagMap("0"))
+      //返回正常信息
+      PostSender.sendShelvedPost()
     } catch {
       case e: Throwable =>
         val errorJson = new JSONObject
@@ -1571,11 +1740,13 @@ object Trigger {
     } finally {
       val tempFilePath = GlobalConfig.Others.tempFilePath
       val filePath = s"${tempFilePath}${dagId}.tiff"
-      if (scala.reflect.io.File(filePath).exists)
-        scala.reflect.io.File(filePath).delete()
-      val featurePath = s"${tempFilePath}${dagId}.geojson"
-      if (scala.reflect.io.File(featurePath).exists)
-        scala.reflect.io.File(featurePath).delete()
+
+      tempFileList.foreach(file =>{
+        if(scala.reflect.io.File(file).exists)
+          scala.reflect.io.File(file).delete()
+      })
+
+      tempFileList.clear()
     }
   }
 
@@ -1585,14 +1756,15 @@ object Trigger {
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
       val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+//      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
     } // 任务要用的 JSON,应当由命令行参数获取
 
     dagId = Random.nextInt().toString
-    dagId = "45607c22-dbce-4674-9abf-c9f906668dfa_1718268689911_0"
-    userId = "45607c22-dbce-4674-9abf-c9f906668dfa"
+    dagId = "12345678"
+    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()

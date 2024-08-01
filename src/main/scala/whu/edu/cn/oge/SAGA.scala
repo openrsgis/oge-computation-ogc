@@ -11,10 +11,8 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.Coverage.loadTxtFromUpload
-
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.BosClientUtil_scala
-
+import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
@@ -128,7 +126,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS "$tiffDockerPathCollection" -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT "$writeDockerPath"  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd shapes_grid 2 -GRIDS "$tiffDockerPathCollection" -POLYGONS "$dockerPolygonsPath" -NAMING $fieldNamingInput -METHOD $methodInput -PARALLELIZED $useMultipleCores -RESULT "$writeDockerPath"  -COUNT $numberOfCells -MIN $minimum -MAX $maximum -RANGE $range -SUM $sum -MEAN $mean -VAR $variance -STDDEV $standardDeviation -GINI $gini -QUANTILES "$percentiles" """.stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -183,7 +181,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -237,7 +235,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st2 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE $normalize -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd imagery_isocluster 0 -FEATURES "$tiffDockerPathCollection" -CLUSTER "$writeDockerPath" -STATISTICS "$dockerDbfPath" -NORMALIZE $normalize -ITERATIONS $iterations -CLUSTER_INI $clusterINI -CLUSTER_MAX $clusterMAX -SAMPLES_MIN $samplesMIN -INITIALIZE "$initializeInput"""".stripMargin
 
       println(s"st = $st2")
       runCmd(st2, "UTF-8")
@@ -279,7 +277,7 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd grid_filter 0 -INPUT "$dockerTiffPath" -RESULT "$writeDockerPath" -METHOD $methodInput -KERNEL_TYPE $kernelTypeInput -KERNEL_RADIUS $kernelRadius""".stripMargin
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd grid_filter 0 -INPUT "$dockerTiffPath" -RESULT "$writeDockerPath" -METHOD $methodInput -KERNEL_TYPE $kernelTypeInput -KERNEL_RADIUS $kernelRadius""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -358,7 +356,93 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st1 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_classification 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER $train_buffer -THRESHOLD_DIST $threshold_dist -THRESHOLD_ANGLE $threshold_angle -THRESHOLD_PROB $threshold_prob -RELATIVE_PROB  $relative_prob"""
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd imagery_classification 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER $train_buffer -THRESHOLD_DIST $threshold_dist -THRESHOLD_ANGLE $threshold_angle -THRESHOLD_PROB $threshold_prob -RELATIVE_PROB  $relative_prob"""
+
+      val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $writePathSdat --outputPath $writePath"
+
+      println(s"st = $st1")
+      runCmd(st1, "UTF-8")
+      println(s"st = $st2")
+      versouSshUtil(host, userName, password, port)
+      runCmd(st2, "UTF-8")
+      println("Success")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    print(writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+  def sagaMaximumLikelihoodClassification(implicit sc: SparkContext,
+                                        grids: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                        training: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                        training_samples: RDD[(String, (Geometry, mutable.Map[String, Any]))],
+                                        normalise: Boolean = false,
+                                        training_class:String,
+                                        training_with:Int=0,
+                                        train_buffer:Float=1.0f,
+                                        threshold_dist:Float=0.0f,
+                                        threshold_angle:Float=0.0f,
+                                        threshold_prob:Float=0.0f,
+                                        file_load:String,
+                                        relative_prob:Int=1,
+                                        method:Int=4,
+                                        userId:String,
+                                        dagId:String):
+  (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+    // 服务器上挂载的路径
+    val outputTiffPath = algorithmData + "sagaMaximumLikelihoodClassification_" + dagId + time + ".tif"
+    val writePathSdat = algorithmData + "sagaMaximumLikelihoodClassification_" + dagId + time + "_out.sdat"
+    val writePath = algorithmData + "sagaMaximumLikelihoodClassification_" + dagId + time + "_out.tif"
+    saveRasterRDDToTif(grids, outputTiffPath)
+    // docker路径
+    val dockerTiffPath = algorithmDockerData + "sagaMaximumLikelihoodClassification_" + dagId + time + ".tif"
+    val writeDockerPath = algorithmDockerData + "sagaMaximumLikelihoodClassification_" + dagId + time + "_out.sdat"
+
+    //输入矢量文件路径
+    val trainingPath = algorithmData + "sagaMaximumLikelihoodClassificationtraining_" + dagId + time + ".shp"
+    //输出结果文件路径
+    //    val traingwritePath = algorithmData + "sagaMaximumLikelihoodClassificationtraining_" + dagId + time + "_out.shp"
+
+    saveFeatureRDDToShp(training, trainingPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockertrainingPath = algorithmDockerData + "sagaMaximumLikelihoodClassificationtraining_" + dagId + time + ".shp"
+    // docker输出结果文件路径
+    // val writetrainingDockerPath = algorithmDockerData + "sagaMaximumLikelihoodClassificationtraining_" + dagId + time + "_out.shp"
+
+    //输入矢量文件路径
+    val training_samplesPath = algorithmData + "sagaMaximumLikelihoodClassificationtraining_samples_" + dagId + time + ".shp"
+    //输出结果文件路径
+    // val traing_sampleswritePath = algorithmData + "ssagaMaximumLikelihoodClassificationtraining_samples_" + dagId + time + "_out.shp"
+
+    saveFeatureRDDToShp(training_samples, training_samplesPath)
+    // docker路径
+    // docker矢量文件路径
+    val dockertraining_samplesPath = algorithmDockerData + "sagaMaximumLikelihoodClassificationtraining_samples_" + dagId + time + ".shp"
+    // docker输出结果文件路径
+    //    val writetraining_samplesDockerPath = algorithmDockerData + "sagaMaximumLikelihoodClassificationtraining_samples_" + dagId + time + "_out.shp"
+
+    //加载预训练模型
+    print("读取txt")
+    val file_loadPath=loadTxtFromUpload(file_load,userId,dagId,"saga")
+    print("读取txt成功")
+    val save_loadDockerPath = algorithmDockerData + "sagaMaximumLikelihoodClassificationsavaload_" + dagId + time + ".txt"
+    //保存文件
+    val  class_lut_writeDockerPath = algorithmDockerData + "sagaMaximumLikelihoodClassification_class_lut" + dagId + time + "_out.dbf"
+    val  quality_writeDockerPath = algorithmDockerData + "sagaMaximumLikelihoodClassification_quality" + dagId + time + "_out.sdat"
+
+
+
+    try {
+      versouSshUtil(host, userName, password, port)
+
+      val st1 =
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd imagery_classification 0 -GRIDS "$dockerTiffPath" -NORMALISE $normalise -CLASSES "$writeDockerPath" -CLASSES_LUT "$class_lut_writeDockerPath" -QUALITY "$quality_writeDockerPath" -TRAIN_WITH $training_with -TRAINING "$dockertrainingPath" -TRAINING_CLASS "$training_class" -TRAIN_SAMPLES "$dockertraining_samplesPath" -FILE_LOAD "$file_loadPath" -FILE_SAVE "$save_loadDockerPath" -TRAIN_BUFFER $train_buffer -THRESHOLD_DIST $threshold_dist -THRESHOLD_ANGLE $threshold_angle -THRESHOLD_PROB $threshold_prob -RELATIVE_PROB  $relative_prob -METHOD $method"""
 
       val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $writePathSdat --outputPath $writePath"
 
@@ -432,11 +516,11 @@ object SAGA {
       versouSshUtil(host, userName, password, port)
 
       val st1 =
-        raw"""docker start 8bb3a634bcd6;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS "$dockerTiffPath" -CLASSES "$classes" -CLASSES_LUT "$classes_lut" -SCALING "$scaling" -MESSAGE "$message" -MODEL_SRC "$model_src" -MODEL_LOAD "$docker_load" -ROI "$dockertraining_samplePath" -ROI_ID "$ROI_id" -MODEL_SAVE "$docker_save" -SVM_TYPE "$svm_type" -KERNEL_TYPE "$kernel_type" -DEGREE "$degree" -GAMMA "$gamma" -COEF0 "$coef0" -COST "$cost" -NU "$nu" -EPS_SVR "$eps_svr" -CACHE_SIZE "$cache_size" -EPS "$eps" -SHRINKING "$shrinking" -PROBABILITY "$probability" -CROSSVAL "$crossval"""".stripMargin
+        raw"""docker start strange_pare;docker exec strange_pare saga_cmd imagery_svm 0 -GRIDS $dockerTiffPath -CLASSES $classes -CLASSES_LUT $classes_lut -SCALING $scaling -MESSAGE $message -MODEL_SRC $model_src -MODEL_LOAD $docker_load -ROI $dockertraining_samplePath -ROI_ID $ROI_id -MODEL_SAVE $docker_save -SVM_TYPE $svm_type -KERNEL_TYPE $kernel_type -DEGREE $degree -GAMMA $gamma -COEF0 $coef0 -COST $cost -NU $nu -EPS_SVR $eps_svr -CACHE_SIZE $cache_size -EPS $eps -SHRINKING $shrinking -PROBABILITY $probability -CROSSVAL $crossval""".stripMargin
       val st2 = s"conda activate cv && python /root/svm/sdattotif.py --imagePath $outputPath --outputPath $writePath"
 
-      println(s"st = $st1")
       runCmd(st1, "UTF-8")
+      println(s"st = $st1")
       println(s"st = $st2")
       versouSshUtil(host, userName, password, port)
       runCmd(st2, "UTF-8")
@@ -447,7 +531,9 @@ object SAGA {
         e.printStackTrace()
     }
 
-    makeChangedRasterRDDFromTif(sc, writePath)
+    val svm_result = makeChangedRasterRDDFromTif(sc, writePath)
+    // 解决黑边值为255影响渲染的问题
+    removeZeroFromCoverage(Coverage.addNum(svm_result, 1))
 
   }
 

@@ -11,7 +11,7 @@ import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import io.minio.{GetObjectArgs, MinioClient, UploadObjectArgs}
+import io.minio.{GetObjectArgs, MinioClient, PutObjectArgs, UploadObjectArgs}
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -28,27 +28,28 @@ import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
+import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.{dagId, layerName, windowExtent}
+import whu.edu.cn.trigger.Trigger.{batchParam, dagId, layerName, tempFileList, userId, windowExtent}
 import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
+import whu.edu.cn.util.RDDTransformerUtil.saveRasterRDDToTif
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
-import java.io.File
-import scala.sys.process._
-import java.nio.file.Paths
+import java.io.{File, FileInputStream}
+import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{BosCOGUtil, BosClientUtil_scala, Cbrt, CoverageOverloadUtil, Entropy, Mod, PostSender, RemapWithDefaultValue, RemapWithoutDefaultValue}
+import whu.edu.cn.util.{COGUtil, Cbrt, CoverageOverloadUtil, Entropy, MinIOUtil, Mod, PostSender, RDDTransformerUtil, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
@@ -84,11 +85,11 @@ object Coverage {
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val client: BosClient = BosClientUtil_scala.getClient
+        val client: MinioClient = MinIOUtil.getMinioClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
+            val tiles: mutable.ArrayBuffer[RawTile] = COGUtil.tileQuery(client, level, t, union,queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -109,9 +110,9 @@ object Coverage {
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
 
-      val client: BosClient = BosClientUtil_scala.getClient
+      val client: MinioClient = MinIOUtil.getMinioClient
       par.map(t => {
-        BosCOGUtil.getTileBuf(client, t)
+        COGUtil.getTileBuf(client, t)
       })
     })
     println("Loading data Time: " + (System.currentTimeMillis() - time1))
@@ -2209,7 +2210,7 @@ object Coverage {
 
 
     //val level: Int = COGUtil.tileDifference
-    val level: Int = targetZoom - BosCOGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
+    val level: Int = targetZoom - COGUtil.tmsLevel // The difference between the target level and the zoom level of the front-end TMS
 
     if (level > 0) {
       val time1 = System.currentTimeMillis()
@@ -3394,18 +3395,38 @@ object Coverage {
   }
 
 
-  def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), name: String): Unit = {
+  def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), name: String, path: String = ""): Unit = {
     val coverageArray: Array[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
     }).collect()
 
     val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(coverageArray)
     val stitchedTile: Raster[MultibandTile] = Raster(tile, coverage._2.extent)
-    val writePath: String = "D:\\cog\\out\\" + name + ".tiff"
-    GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
+    if (path.nonEmpty) {
+      val writePath: String = s"$path$name.tif"
+      GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
+    }
+    else {
+      val writePath: String = s"$tempFilePath$name.tif"
+      GeoTiff(stitchedTile, coverage._2.crs).write(writePath)
+    }
+
   }
 
   def visualizeOnTheFly(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): Unit = {
+    // 教育版额外的判断,保存结果,调用回调接口
+    if(Trigger.dagType.equals("edu")){
+      makeTIFF(coverage,dagId)
+      val client: MinioClient = MinIOUtil.getMinioClient
+
+      val saveFilePath = s"$tempFilePath$dagId.tif"
+
+      val path = s"$userId/result/${Trigger.outputFile}"
+      //上传
+      client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+    }
+
+
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
       reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(Trigger.level))
     } else {
@@ -3424,13 +3445,13 @@ object Coverage {
 
     //     TODO lrx:后面要不要考虑直接从MinIO读出来的数据进行上下采样？
     //     大于0是上采样
-    if (BosCOGUtil.tileDifference > 0) {
+    if (COGUtil.tileDifference > 0) {
       // 首先对其进行上采样
       // 上采样必须考虑范围缩小，不然非常占用内存
-      val levelUp: Int = BosCOGUtil.tileDifference
+      val levelUp: Int = COGUtil.tileDifference
       val layoutOrigin: LayoutDefinition = coverageTMS.metadata.layout
       val extentOrigin: Extent = coverageTMS.metadata.layout.extent
-      val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
+      val extentIntersect: Extent = extentOrigin.intersection(COGUtil.extent).orNull
       val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
       val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
       val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
@@ -3459,9 +3480,6 @@ object Coverage {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer: FileLayerWriter = FileLayerWriter(attributeStore)
 
-//    if (zoom < Trigger.level) {
-//      throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-//    }
 
     Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
       if (Trigger.level - z <= 2 && Trigger.level - z >= 0) {
@@ -3499,19 +3517,8 @@ object Coverage {
     else {
       rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
     }
-//    jsonObject.put("raster", rasterJsonObject)
-//
-//    val outJsonObject: JSONObject = new JSONObject
-//    outJsonObject.put("workID", Trigger.dagId)
-//    outJsonObject.put("json", jsonObject)
 
     PostSender.shelvePost("raster",rasterJsonObject)
-
-//    println("outputJSON: ", outJsonObject.toJSONString)
-
-//    if (sc.master.contains("local")) {
-//      whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "lsOrigin")
-//    }
 
   }
 
@@ -3531,16 +3538,36 @@ object Coverage {
     // 上传文件
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-    val file :File = new File(saveFilePath)
 
-    val client: BosClient = BosClientUtil_scala.getClient2
+
+    val client: MinioClient = MinIOUtil.getMinioClient
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    client.putObject("oge-user",path,file)
-//    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+    val obj: JSONObject = new JSONObject
+    obj.put("path",path.toString)
+    PostSender.shelvePost("info",obj)
+//    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
 
+    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+
+//    client.putObject(PutObjectArgs)
     //    minIOUtil.releaseMinioClient(client)
 
   }
+
+  def visualizeBatch_edu(implicit sc: SparkContext, coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String): Unit = {
+    // 上传文件
+    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+    saveRasterRDDToTif(coverage,saveFilePath)
+    val file: File = new File(saveFilePath)
+    val path = Trigger.userId + "/result/" + Trigger.ProcessName
+    MinIOUtil.MinIOUpload("oge-user",path,saveFilePath)
+
+    val rasterJsonObject: JSONObject = new JSONObject
+    rasterJsonObject.put("coverage",path)
+    PostSender.shelvePost("raster",rasterJsonObject)
+  }
+
+
   //用来标识读取上传文件的编号的自增标识符
   var file_id:Long = 0
   def loadCoverageFromUpload(implicit sc: SparkContext, coverageId: String, userID: String, dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -3551,63 +3578,71 @@ object Coverage {
       path = s"$userID/$coverageId.tiff"
     }
 
-    val client = BosClientUtil_scala.getClient2
+    val client = MinIOUtil.getMinioClient
     val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}_$file_id.tiff"
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
 
-    val tempfile = new File(filePath)
-    val getObjectRequest = new GetObjectRequest("oge-user",path)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
-    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
-    println(filePath)
-    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
-    file_id = file_id + 1
+    val outputPath = Paths.get(filePath)
+
+    tempFileList.append(filePath)
+    Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    inputStream.close()
+    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
 
     coverage
   }
+
+  def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val path = "/" + coverageId
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
+
+    val client = MinIOUtil.getMinioClient
+    val inputStream = client.getObject(GetObjectArgs.builder.bucket("ogebos").`object`(path).build())
+    val outputPath = Paths.get(filePath)
+    tempFileList.append(filePath)
+    Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+
+    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+
+    coverage
+  }
+
   var file_idx:Long = 0
-  def loadTxtFromUpload(txt: String,userID: String, dagId: String,loadtype:String) = {
+  def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
     var path: String = s"${userID}/$txt"
 
 
-    val client = BosClientUtil_scala.getClient2
-    val tempPath = if (loadtype == "saga")
-      GlobalConfig.Others.sagatempFilePath  else GlobalConfig.Others.tempFilePath
-//    val tempPath = GlobalConfig.Others.sagatempFilePath
-    println(tempPath)
+    val tempPath = loadtype match {
+      case "saga" => GlobalConfig.Others.sagatempFilePath
+      case "otb" => GlobalConfig.Others.otbtempFilePath
+      case _ => GlobalConfig.Others.tempFilePath
+    }
+    //    val tempPath = GlobalConfig.Others.sagatempFilePath
+
     val filePath = s"$tempPath${dagId}_$file_idx.txt"
-    println(filePath)
+    val dockerFilePath = loadtype match {
+      case "saga" => s"/tmp/saga/${dagId}_$file_idx.txt"
+      case "otb" => s"/tmp/otb/${dagId}_$file_idx.txt"
+      case _ => filePath
+    }
+
     val tempfile = new File(filePath)
-    val getObjectRequest = new GetObjectRequest("oge-user", path)
-    tempfile.createNewFile()
     try {
-      println("filePath3-------")
-      val bosObject = client.getObject(getObjectRequest, tempfile)
+
+      MinIOUtil.MinIODownload("oge-user",path,filePath)
     }
     catch {
       case e: Throwable =>
         println(e)
     }
     Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
-    println(filePath)
     file_idx = file_idx + 1
-
-    filePath
-  }
-
-  def loadCoverageFromCaseData(implicit sc: SparkContext, coverageId: String,  dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val path = "/" + coverageId
-    val client = BosClientUtil_scala.getClient
-    val tempPath = GlobalConfig.Others.tempFilePath
-    val filePath = s"$tempPath${dagId}.tiff"
-    val getObjectRequest = new GetObjectRequest("ogebos",path)
-    val tempfile = new File(filePath)
-    tempfile.createNewFile()
-    val bosObject = client.getObject(getObjectRequest,tempfile)
-    val coverage = whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
-
-    coverage
+    println(filePath, dockerFilePath)
+    dockerFilePath
   }
 
 }
