@@ -45,25 +45,25 @@ object TriggerEdu {
     val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate)
       .train(spark, featursCoverage, labelCoverage, labelCol)
     model.write.overwrite().save(modelOutputPath)
+    util.compressFile(modelOutputPath, modelOutputPath+".zip")
     println("SUCCESS")
   }
   def classify(implicit sc: SparkContext, featuresPath: String, modelPath: String, classifiedOutputPath: String): Unit = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featursCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
+    util.unCompressFile(modelPath+".zip")
     val model: PipelineModel = PipelineModel.load(modelPath)
     val predictedCoverage = Classifier.classify(spark, featursCoverage, model)("prediction")
     makeTIFF(predictedCoverage, classifiedOutputPath)
     println("SUCCESS")
   }
 
-
-
   def main(args: Array[String]): Unit = {
     val conf: SparkConf = new SparkConf().setAppName("New Coverage").setMaster("local[*]")
     val sc = new SparkContext(conf)
     //    reprojectEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1_reprojected.tif", "EPSG:3857", 100)
-    //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model", 4)
-    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
+    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0816new", 4)
+    //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0815", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
   }
 
 }
