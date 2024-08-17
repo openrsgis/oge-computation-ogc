@@ -1008,6 +1008,8 @@ object Trigger {
         // thirdAlgorithm
         case "Coverage.demRender" =>
           coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage"))))
+        case "Coverage.surfaceAlbedoLocalNoon" =>
+          coverageRddList += (UUID -> QuantRS.surfaceAlbedoLocalNoon(sc, coverageRddList(args("TOAReflectance")), coverageRddList(args("solarZenith")), coverageRddList(args("solarAzimuth")), coverageRddList(args("sensorZenith")), coverageRddList(args("sensorAzimuth")), coverageRddList(args("cloudMask")), args("timeStamp"), args("localnoonCoefs"), args("parameters"), args("bands").toInt))
 
         //Feature
         case "Feature.load" =>
