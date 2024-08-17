@@ -28,37 +28,6 @@ object SAGA {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-
-//    val feature  = makeFeatureRDDFromShp(sc,"D:\\whu_master\\temp\\temp.shp")
-    val feature  = makeFeatureRDDFromShp(sc,"/Users/churcy/Desktop/影像文件/temp/temp.shp")
-    val list:mutable.ListBuffer[JSONObject] = new mutable.ListBuffer[JSONObject]
-    feature.collect().foreach(f =>{
-//      result +=f._2
-//      println(f._2._2.get())
-      val map = f._2._2
-      val mapJson = new JSONObject();
-      map.foreach(m =>{
-        mapJson.put(m._1,m._2)
-      })
-      list.append(mapJson)
-    })
-    println(list.toArray)
-    val resultJson = new JSONObject();
-    resultJson.put("info",list.toArray)
-    //    shelvePost("info", list.toArray)
-    //    sendShelvedPost()
-    println(resultJson.toString)
-//    // test
-//    val grid = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata2_1717593290374.tif")
-//    val reference = makeChangedRasterRDDFromTif(sc, "/D:/mnt/storage/SAGA/sagaData/sagaISODATAClusteringForGridsdata1_1717593290374.tif")
-//
-//
-//    val inputMap: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Map()
-//    val updatedMap1 = inputMap + ("data1" -> grid)
-//    val updatedMap2 = updatedMap1 + ("data2" -> reference)
-//
-//    val resultRDD =  sagaISODATAClusteringForGrids(sc, updatedMap2)
-//    saveRasterRDDToTif(resultRDD, "/C:/Users/BBL/Desktop/algorithm/saga_algorithms/result.tif")
   }
 
   val algorithmData = GlobalConfig.SAGAConf.SAGA_DATA
@@ -178,7 +147,7 @@ object SAGA {
     val dockerTiffPath2 = algorithmDockerData + "sagaHistogramMatchingReference_" + time + ".tif"
     val writeDockerPath = algorithmDockerData + "sagaHistogramMatching_" + time + "_out.tif"
     try {
-      versouSshUtil(host, userName, password, port)
+      versouSshUtil("39.102.214.100", "root", "Ybl000301", 22)
 
       val st =
         raw"""docker start strange_pare;docker exec strange_pare saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin

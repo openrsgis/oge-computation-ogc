@@ -101,6 +101,7 @@ object GlobalConfig {
   }
   // GcConst
   object GcConf {
+
     final val localDataRoot = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/data/gdc_api/"
     final val httpDataRoot = "http://125.220.153.26:8093/data/gdc_api/"
     final val localHtmlRoot = "/home/geocube/tomcat8/apache-tomcat-8.5.57/webapps/html/"
