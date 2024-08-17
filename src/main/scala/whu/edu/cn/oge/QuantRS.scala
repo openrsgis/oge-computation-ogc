@@ -55,5 +55,67 @@ object QuantRS {
 
     makeChangedRasterRDDFromTif(sc, outputTiffPath)
   }
+
+  /**
+   * MERSI反照率计算
+   * @param sc
+   * @param TOAReflectance
+   * @param solarZenith
+   * @param solarAzimuth
+   * @param sensorZenith
+   * @param sensorAzimuth
+   * @param cloudMask
+   * @param timeStamp
+   * @param localnoonCoefs
+   * @param parameters
+   * @param bands
+   * @return
+   */
+  def surfaceAlbedoLocalNoon(implicit sc: SparkContext,
+                              TOAReflectance: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                              solarZenith: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                              solarAzimuth: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                              sensorZenith: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                              sensorAzimuth: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                              cloudMask: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                              timeStamp: String,
+                              localnoonCoefs: String,
+                              parameters: String,
+                              bands: Int)
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+    // RDD落地
+    val TOAReflectancePath = algorithmData + "TOAReflectance_" + time + ".tif"
+    val solarZenithPath = algorithmData + "solarZenith_" + time + ".tif"
+    val solarAzimuthPath = algorithmData + "solarAzimuth_" + time + ".tif"
+    val sensorZenithPath = algorithmData + "sensorZenith_" + time + ".tif"
+    val sensorAzimuthPath = algorithmData + "sensorAzimuth_" + time + ".tif"
+    val cloudMaskPath = algorithmData + "cloudMask_" + time + ".tif"
+    saveRasterRDDToTif(TOAReflectance, TOAReflectancePath)
+    saveRasterRDDToTif(solarZenith, solarZenithPath)
+    saveRasterRDDToTif(solarAzimuth, solarAzimuthPath)
+    saveRasterRDDToTif(sensorZenith, sensorZenithPath)
+    saveRasterRDDToTif(sensorAzimuth, sensorAzimuthPath)
+    saveRasterRDDToTif(cloudMask,cloudMaskPath)
+
+    val writeName = "surfaceAlbedoLocalNoon_" + time + "_out.tif"
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw""""/mnt/storage/htTeam/albedo_MERSI/Surface_Albedo_LocalNoon_Cal" $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefs $parameters $bands $algorithmData $writeName """.stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, algorithmData + writeName)
+  }
+
+
 }
 
