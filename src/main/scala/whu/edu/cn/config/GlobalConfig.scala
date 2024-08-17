@@ -141,7 +141,14 @@ object GlobalConfig {
     var SAGA_PASSWORD: String = "Ypfamily608!"
     var SAGA_PORT: Int = 22
   }
-
+//定量遥感算法
+  object QuantConf {
+    var Quant_DataPath:String = "/mnt/storage/htTeam/data/"
+    var Quant_HOST: String = "172.22.1.20"
+    var Quant_USERNAME: String = "root"
+    var Quant_PASSWORD: String = "Ypfamily608!"
+    var Quant_PORT: Int = 22
+  }
   // 第三方算子
   object ThirdApplication {
     final var THIRD_HOST: String = "172.22.1.19"
