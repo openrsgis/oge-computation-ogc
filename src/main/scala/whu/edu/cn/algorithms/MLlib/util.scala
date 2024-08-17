@@ -1,6 +1,9 @@
 package whu.edu.cn.algorithms.MLlib
 
+import java.io._
+import java.nio.file.Paths
 import java.text.SimpleDateFormat
+import java.util.zip.{ZipEntry, ZipFile, ZipInputStream, ZipOutputStream}
 
 import geotrellis.layer.SpaceTimeKey
 import geotrellis.raster.{CellType, DoubleArrayTile, MultibandTile, Tile}
@@ -16,7 +19,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{findSpatialKeyMinMax}
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 
 
 object util {
@@ -310,6 +313,110 @@ object util {
       Row(list:_*)
     })
     rowRdd
+  }
+  def compressFile(srcFilePath: String, destZipPath: String): Unit = {
+    var zos: ZipOutputStream = null
+    try {
+      val fos: FileOutputStream = new FileOutputStream(new File(destZipPath))
+      zos = new ZipOutputStream(fos)
+      val sourceFile = new File(srcFilePath)
+      compress(sourceFile, zos, sourceFile.getName, true)
+    } catch {
+      case e: Exception =>
+        throw new RuntimeException("zip error from ZipUtils", e)
+    } finally {
+      if (zos != null) {
+        try {
+          zos.close()
+        } catch {
+          case e: IOException => e.printStackTrace()
+        }
+      }
+    }
+  }
+  def compress(sourceFile: File, zos: ZipOutputStream, name: String, keepDirStructure: Boolean): Unit = {
+    val buf = new Array[Byte](1024) //TODO BufferSize先写1024
+    if (sourceFile.isFile) {
+      // 向zip输出流中添加一个zip实体，构造器中name为zip实体的文件的名字
+      zos.putNextEntry(new ZipEntry(name))
+      val in = new FileInputStream(sourceFile)
+      try {
+        var len = in.read(buf)
+        while (len != -1) {
+          zos.write(buf, 0, len)
+          len = in.read(buf)
+        }
+        // 完成一个entry
+        zos.closeEntry()
+      } finally {
+        in.close()
+      }
+    } else {
+      val listFiles = sourceFile.listFiles()
+      if (listFiles == null || listFiles.isEmpty) {
+        // 需要保留原来的文件结构时,需要对空文件夹进行处理
+        if (keepDirStructure) {
+          // 空文件夹的处理
+          zos.putNextEntry(new ZipEntry(name + "/"))
+          zos.closeEntry()
+        }
+      } else {
+        for (file <- listFiles) {
+          // 判断是否需要保留原来的文件结构
+          if (keepDirStructure) {
+            // 注意：file.getName()前面需要带上父文件夹的名字加一斜杠,
+            // 不然最后压缩包中就不能保留原来的文件结构,即：所有文件都跑到压缩包根目录下了
+            compress(file, zos, name + "/" + file.getName, keepDirStructure)
+          } else {
+            compress(file, zos, file.getName, keepDirStructure)
+          }
+        }
+      }
+    }
+  }
+  def unCompressFile(srcZipPath: String): Unit = {
+    // 待解压的zip文件，需要在zip文件上构建输入流，读取数据到Java中
+    val file = new File(srcZipPath) // 定义压缩文件名称
+    var outFile: File = null // 输出文件的时候要有文件夹的操作
+    val zipFile = new ZipFile(file) // 实例化ZipFile对象
+    var zipInput: ZipInputStream = null // 定义压缩输入流
+
+    // 定义解压的文件名
+    var out: OutputStream = null // 定义输出流，用于输出每一个实体内容
+    var input: InputStream = null // 定义输入流，读取每一个ZipEntry
+    var entry: ZipEntry = null // 每一个压缩实体
+    zipInput = new ZipInputStream(new FileInputStream(file)) // 实例化ZipInputStream
+
+    // 遍历压缩包中的文件
+    while ({ entry = zipInput.getNextEntry(); entry } != null) { // 得到一个压缩实体
+      //      println(s"解压缩 ${entry.getName} 文件")
+      println(entry.getName)
+      outFile = new File(Paths.get(srcZipPath).getParent().toString() + s"/${entry.getName}") // 定义输出的文件路径
+      if (!outFile.getParentFile.exists()) { // 如果输出文件夹不存在
+        outFile.getParentFile.mkdirs() // 创建文件夹
+      }
+      if (!outFile.exists()) { // 判断输出文件是否存在
+        if (entry.isDirectory) {
+          outFile.mkdirs()
+          //          println("create directory...")
+        } else {
+          outFile.createNewFile() // 创建文件
+          //          println("create file...")
+        }
+      }
+      if (!entry.isDirectory) {
+        input = zipFile.getInputStream(entry) // 得到每一个实体的输入流
+        out = new FileOutputStream(outFile) // 实例化文件输出流
+        var temp = 0
+        while ({ temp = input.read(); temp != -1 }) {
+          out.write(temp)
+        }
+        input.close() // 关闭输入流
+        out.close() // 关闭输出流
+      }
+    }
+    zipInput.closeEntry()
+    zipInput.close()
   }
 
 }
