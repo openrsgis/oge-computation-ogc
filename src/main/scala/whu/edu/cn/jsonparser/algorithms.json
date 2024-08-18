@@ -14037,5 +14037,46 @@
         "description": "bands num"
       }
     ]
+  },
+  "Coverage.imaginaryConstellations": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "MOD09A1",
+        "type": "Coverage",
+        "description": "Coverage1"
+      },
+      {
+        "name": "LAI",
+        "type": "Coverage",
+        "description": "Coverage2"
+      },
+      {
+        "name": "FAPAR",
+        "type": "Coverage",
+        "description": "Coverage3"
+      },
+      {
+        "name": "NDVI",
+        "type": "Coverage",
+        "description": "Coverage4"
+      },
+      {
+        "name": "EVI",
+        "type": "Coverage",
+        "description": "Coverage5"
+      },
+      {
+        "name": "FVC",
+        "type": "Coverage",
+        "description": "Coverage6"
+      },
+      {
+        "name": "ALBEDO",
+        "type": "Coverage",
+        "description": "Coverage7"
+      }
+    ]
   }
 }

@@ -1010,6 +1010,8 @@ object Trigger {
           coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage"))))
         case "Coverage.surfaceAlbedoLocalNoon" =>
           coverageRddList += (UUID -> QuantRS.surfaceAlbedoLocalNoon(sc, coverageRddList(args("TOAReflectance")), coverageRddList(args("solarZenith")), coverageRddList(args("solarAzimuth")), coverageRddList(args("sensorZenith")), coverageRddList(args("sensorAzimuth")), coverageRddList(args("cloudMask")), args("timeStamp"), args("localnoonCoefs"), args("parameters"), args("bands").toInt))
+        case "Coverage.imaginaryConstellations" =>
+          coverageRddList += (UUID -> QuantRS.imaginaryConstellations(sc, coverageRddList(args("MOD09A1")), coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("EVI")), coverageRddList(args("FVC")), coverageRddList(args("ALBEDO"))))
 
         //Feature
         case "Feature.load" =>
