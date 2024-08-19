@@ -13,6 +13,7 @@ import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 import java.nio.file.Paths
 import org.apache.spark.ml.PipelineModel
+
 import org.apache.spark.sql.SparkSession
 import whu.edu.cn.algorithms.MLlib._
 
@@ -23,6 +24,7 @@ import org.jpmml.sparkml.PipelineModelUtil
 import java.io.{File, IOException}
 import sys.process._
 import com.google.common.io.{MoreFiles, RecursiveDeleteOption}
+import org.apache.spark.ml.util.MLWriter
 import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
 import geotrellis.spark.MultibandTileLayerRDD
@@ -55,28 +57,22 @@ object TriggerEdu {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featursCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
     val labelCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, labelPath)
-
     val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate)
       .train(spark, featursCoverage, labelCoverage, labelCol)
-    val file: File = new File(modelOutputPath)
-    file.createNewFile()
-    val tmpDir = File.createTempFile("PipelineModel", "")
-    if (!tmpDir.delete) throw new IOException
-    else {
-      PipelineModelUtil.store(model, tmpDir)
-      PipelineModelUtil.compress(tmpDir, file)
-      tmpDir.delete()
-    }
+    model.write.overwrite().save("file://" + modelOutputPath)
+      PipelineModelUtil.compress(new File(modelOutputPath), new File(modelOutputPath + ".zip"))
+    new File(modelOutputPath).delete() //TODO 检查是否删成功
     println("SUCCESS")
   }
   def classify(implicit sc: SparkContext, featuresPath: String, modelPath: String, classifiedOutputPath: String): Unit = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featursCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
-    val file: File = new File(modelPath)
-    val tmpDir: File = PipelineModelUtil.uncompress(file)
-    val model: PipelineModel = PipelineModelUtil.load(spark, tmpDir)
+    //若用户未添加后缀，为其添加
+    val modelPathWithZip = if (modelPath.endsWith(".zip")) modelPath else modelPath + ".zip"
+    PipelineModelUtil.uncompress(new File(modelPathWithZip), new File(modelPathWithZip.stripSuffix(".zip")))
+    val model: PipelineModel = PipelineModelUtil.load(spark, new File(modelPathWithZip.stripSuffix(".zip")))
     val predictedCoverage = Classifier.classify(spark, featursCoverage, model)("prediction")
-    tmpDir.delete()
+    new File(modelPathWithZip.stripSuffix(".zip")).delete()
     makeTIFF(predictedCoverage, classifiedOutputPath)
     println("SUCCESS")
   }
@@ -160,9 +156,8 @@ object TriggerEdu {
     val conf: SparkConf = new SparkConf().setAppName("New Coverage").setMaster("local[*]")
     val sc = new SparkContext(conf)
     //    reprojectEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1_reprojected.tif", "EPSG:3857", 100)
-//    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", 4)
+    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
 //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
-    visualizeOnTheFlyEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/TMS", 7, "strgsrtg", false, null, null)
   }
 
 }
