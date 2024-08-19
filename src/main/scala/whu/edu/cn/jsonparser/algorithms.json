@@ -14043,11 +14043,6 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "MOD09A1",
-        "type": "Coverage",
-        "description": "Coverage1"
-      },
-      {
         "name": "LAI",
         "type": "Coverage",
         "description": "Coverage2"
@@ -14061,11 +14056,6 @@
         "name": "NDVI",
         "type": "Coverage",
         "description": "Coverage4"
-      },
-      {
-        "name": "EVI",
-        "type": "Coverage",
-        "description": "Coverage5"
       },
       {
         "name": "FVC",

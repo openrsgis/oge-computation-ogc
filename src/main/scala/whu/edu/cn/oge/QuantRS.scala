@@ -31,48 +31,40 @@ object QuantRS {
    * 虚拟星座30米
    *
    * @param sc
-   * @param MOD09A1
    * @param LAI
    * @param FAPAR
    * @param NDVI
-   * @param EVI
    * @param FVC
    * @param ALBEDO
    * @return
    */
 
   def imaginaryConstellations(implicit sc: SparkContext,
-                                MOD09A1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                                 LAI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                                 FAPAR: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                                 NDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                                EVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                                 FVC: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                               ALBEDO: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
     // RDD落地
-    val MOD09A1Path = algorithmData + "MOD09A1_" + time + ".tif"
     val LAIPath = algorithmData + "LAI_" + time + ".tif"
     val FAPARPath = algorithmData + "FAPAR_" + time + ".tif"
     val NDVIPath = algorithmData + "NDVI_" + time + ".tif"
-    val EVIPath = algorithmData + "EVI_" + time + ".tif"
     val FVCPath = algorithmData + "FVC_" + time + ".tif"
     val ALBEDOPath = algorithmData + "ALBEDO_" + time + ".tif"
 
-    saveRasterRDDToTif(MOD09A1, MOD09A1Path)
     saveRasterRDDToTif(LAI, LAIPath)
     saveRasterRDDToTif(FAPAR, FAPARPath)
     saveRasterRDDToTif(NDVI, NDVIPath)
-    saveRasterRDDToTif(EVI, EVIPath)
     saveRasterRDDToTif(FVC,FVCPath)
     saveRasterRDDToTif(ALBEDO,ALBEDOPath)
     val outputTiffPath = "/mnt/storage/htTeam/ref_rec_30/result/result.tif"
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh  $MOD09A1Path $LAIPath $FAPARPath $NDVIPath $EVIPath $FVCPath $ALBEDOPath""".stripMargin
+        raw"""bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
