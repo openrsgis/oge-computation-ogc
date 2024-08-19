@@ -13,7 +13,6 @@ import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 import java.nio.file.Paths
 import org.apache.spark.ml.PipelineModel
-
 import org.apache.spark.sql.SparkSession
 import whu.edu.cn.algorithms.MLlib._
 
@@ -33,6 +32,7 @@ import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
+import whu.edu.cn.config.GlobalConfig
 
 object TriggerEdu {
   def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), outputPath: String): Unit = {
@@ -77,7 +77,7 @@ object TriggerEdu {
     println("SUCCESS")
   }
 
-  def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
+  def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): String = {
 
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
     val visParam: VisualizationParam = new VisualizationParam
@@ -149,6 +149,7 @@ object TriggerEdu {
           }
         }
       }
+      GlobalConfig.Others.tmsPath + jobId + "/{z}/{x}/{y}.png"
     }
   }
 
