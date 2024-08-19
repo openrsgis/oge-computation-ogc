@@ -147,7 +147,7 @@ object SAGA {
     val dockerTiffPath2 = algorithmDockerData + "sagaHistogramMatchingReference_" + time + ".tif"
     val writeDockerPath = algorithmDockerData + "sagaHistogramMatching_" + time + "_out.tif"
     try {
-      versouSshUtil("39.102.214.100", "root", "Ybl000301", 22)
+      versouSshUtil(host, userName, password, port)
 
       val st =
         raw"""docker start strange_pare;docker exec strange_pare saga_cmd grid_calculus 21 -GRID "$dockerTiffPath1" -REFERENCE "$dockerTiffPath2" -MATCHED "$writeDockerPath" -METHOD $methodInput -NCLASSES $nclasses -MAXSAMPLES $maxSamples""".stripMargin
