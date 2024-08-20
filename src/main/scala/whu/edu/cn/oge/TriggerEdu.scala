@@ -77,7 +77,7 @@ object TriggerEdu {
     println("SUCCESS")
   }
 
-  def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): String = {
+  def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Int = {
 
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
     val visParam: VisualizationParam = new VisualizationParam
@@ -149,7 +149,7 @@ object TriggerEdu {
           }
         }
       }
-      "http://www.openearth.org.cn/api/oge-tms-png/" + jobId + "/{z}/{x}/{y}.png"
+      zoom
     }
   }
 
