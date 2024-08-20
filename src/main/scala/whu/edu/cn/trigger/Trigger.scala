@@ -26,7 +26,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, panSharp, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, panSharp, reduction, standardDeviationCalculation, standardDeviationStretching, histogramBin, reduceRegion, RandomForestTrainAndRegress}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -1289,7 +1289,12 @@ object Trigger {
           coverageRddList += (UUID -> ML.ANNClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
         case "AI.SVMClassification" =>
           coverageRddList += (UUID -> ML.SVMClassification(sc,coverage = coverageRddList(args("coverage")),args("sampleFiles").slice(1, args("sampleFiles").length - 1).split(',').toList.map(_.toString)))
-
+        case "RandomForestTrainAndRegress" =>
+          coverageRddList += (UUID -> RandomForestTrainAndRegress(featuresCoverage = coverageRddList(args("featuresCoverage")),labelCoverage = coverageRddList(args("labelCoverage")),predictCoverage = coverageRddList(args("predictCoverage")),args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
+        case "histogramBin" =>
+          stringList += (UUID -> histogramBin(coverage = coverageRddList(args("coverage")), args("min").toInt, args("max").toInt, args("binSize").toInt, args("bandIndex").toInt).toString())
+        case "reduceRegion" =>
+          doubleList += (UUID -> reduceRegion(coverage = coverageRddList(args("coverage")), args("reducer"), args("bandIndex").toInt))
       }
 
 

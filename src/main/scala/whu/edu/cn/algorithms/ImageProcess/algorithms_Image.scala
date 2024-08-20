@@ -1,17 +1,19 @@
 package whu.edu.cn.algorithms.ImageProcess
-import breeze.linalg.{DenseMatrix=>BreezeDenseMatrix, DenseVector=>BreezeDenseVector}
+import breeze.linalg.{DenseMatrix => BreezeDenseMatrix, DenseVector => BreezeDenseVector}
 import breeze.linalg.Tensor.transposeTensor
 import breeze.linalg.{DenseMatrix, InjectNumericOps}
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
-import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, IntArrayTile, MultibandTile, Tile, UShortConstantNoDataCellType, isNoData}
+import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, Histogram, IntArrayTile, IntCellType, IntConstantNoDataCellType, MultibandTile, Tile, UShortConstantNoDataCellType, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
+import org.apache.spark.SparkContext
 import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.ml.feature.{PCA, VectorAssembler}
 import org.apache.spark.ml.linalg.DenseVector
+import org.apache.spark.ml.{PipelineModel, regression}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
 import org.apache.spark.sql.{Row, SparkSession}
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.{OTSU, findMinMaxValue, findMinMaxValueDouble, findSpatialKeyMinMax, findTotalPixel, globalNormalize, globalNormalizeDouble}
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools._
 import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.paddingRDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
@@ -19,11 +21,13 @@ import whu.edu.cn.util.CoverageUtil.checkProjResoExtent
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 //import whu.edu.cn.geocube.core.entity.SpaceTimeBandKey
 
 import scala.collection.mutable.ListBuffer
 import scala.math.sqrt
 import scala.util.control.Breaks.{break, breakable}
+import whu.edu.cn.algorithms.MLlib._
 
 object algorithms_Image {
   //双边滤波
@@ -1737,7 +1741,6 @@ def panSharp(coverage1: RDDImage, coverage2: RDDImage, method: String = "IHS", b
 
 def catTwoCoverage(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
   //对齐像素、分辨率等等
-  //对齐像素、分辨率等等
   val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
   //    val (newCoverage1, newCoverage2) = (coverage1, coverage2)
   val cellType1: CellType = newCoverage1._1.first()._2.cellType
@@ -1772,4 +1775,79 @@ def catTwoCoverage(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
   val metaData = TileLayerMetadata(cellType, newCoverage1._2.layout, newCoverage1._2.extent, newCoverage1._2.crs, newCoverage1._2.bounds)
   (newCoverageRdd, metaData)
 }
+
+//8.19对接王川算子
+def histogramBin(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), min: Int, max: Int, binSize: Int, bandIndex: Int = 0): Map[Int, Long] = {
+  //当前会把最后一个区间的数值作为一个分箱
+  //coverage的黑边好像值是0，还不清楚原因，但王川算法后面会将0值筛除所以不影响
+  //返回RDD[像素值, 累计像素频率)]
+  val bandPixelFrequency: RDD[(Int, Long)] = coverage._1.flatMap(imageRdd => {
+    val PixelFrequency: ListBuffer[(Int, Long)] = ListBuffer.empty[(Int, Long)]
+    val tile: Tile = imageRdd._2.band(bandIndex)
+    val Rows = tile.rows
+    val Cols = tile.cols
+    // 计算每个像素灰度值的频率
+    for (i <- 0 until Rows; j <- 0 until Cols) {
+      val pixel = tile.get(j, i)
+      if (!isNoData(pixel)) PixelFrequency.append((pixel, 1))
+    }
+    PixelFrequency.toList
+  })
+  //整张影像的[(像素值, 像素频率)]
+  val bandPixelFrequencyToCount: RDD[(Int, Long)] = bandPixelFrequency.reduceByKey(_ + _)
+  //字典，方便查询
+  val collectDictionary: Map[Int, Long] = bandPixelFrequencyToCount.collect().toMap
+  // 初始化一个Map来存储每个分箱的像素计数
+  var binMap: Map[Int, Long] = Map().withDefaultValue(0)
+  // 遍历直方图中的所有值
+  collectDictionary.foreach { item =>
+    if (item._1 >= min && item._1 <= max) {
+      // 计算该值属于哪个分箱
+      val binIndex = ((item._1 - min) / binSize).toInt
+      // 计算该分箱的起始值
+      val binKey = min + (binIndex * binSize)
+      // 将该值的计数累加到对应分箱中
+      binMap = binMap.updated(binKey, binMap(binKey) + item._2)
+    }
+  }
+  var res :String = new String()
+  binMap.foreach(item => {
+    res += s"${item._1} -> ${item._2} \n"
+  })
+//  res
+  binMap
+}
+def reduceRegion(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), reducer: String, bandIndex: Int = 0): Double = {
+  // reducer 聚合操作类型 (比如 "histogram", "mean" 等)
+  val res: Double =
+  reducer match{
+    case "mean" =>
+      val meanMap = meanValueCalculate(coverage)
+      meanMap(bandIndex)
+    // 其他聚合操作可以类似添加
+    case "min" =>
+      val minmaxMap: Map[Int, (Double, Double)] = findMinMaxValueDouble(coverage)
+      minmaxMap(bandIndex)._1
+    case "max" =>
+      val minmaxMap: Map[Int, (Double, Double)] = findMinMaxValueDouble(coverage)
+      minmaxMap(bandIndex)._2
+    case "num" =>
+      findTotalPixel(coverage)
+    case "std" =>
+      val stdMap = standardDeviationCalculate(coverage)
+      stdMap(bandIndex)
+    case _ =>
+      throw new UnsupportedOperationException(s"Reducer '$reducer' not supported.")
+  }
+  res
+}
+def RandomForestTrainAndRegress(featuresCoverage: RDDImage, labelCoverage: RDDImage, predictCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): RDDImage ={
+  //暂时不提供筛选波段，前端可以使用Coverage.selectBands选
+  val spark = SparkSession.builder().appName("RandomForestJob").getOrCreate()
+  val model: PipelineModel = Regressor.randomForestRegression(checkpointInterval, featureSubsetStrategy, impurity, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate)
+    .train(spark, featuresCoverage, labelCoverage)
+  val regressCoverage: RDDImage = Regressor.regress(spark, predictCoverage, model)("prediction")
+  regressCoverage
+}
+
 }

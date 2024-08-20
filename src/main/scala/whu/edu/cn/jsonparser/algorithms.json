@@ -14068,5 +14068,134 @@
         "description": "Coverage7"
       }
     ]
+  },
+  "Coverage.RandomForestTrainAndRegress": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "featuresCoverage",
+        "type": "Coverage",
+        "description": "featuresCoverage"
+      },
+      {
+        "name": "labelCoverage",
+        "type": "Coverage",
+        "description": "labelCoverage"
+      },
+      {
+        "name": "predictCoverage",
+        "type": "Coverage",
+        "description": "predictCoverage"
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "checkpointInterval"
+      },
+      {
+        "name": "featureSubsetStrategy",
+        "type": "String",
+        "description": "featureSubsetStrategy"
+      },
+      {
+        "name": "impurity",
+        "type": "String",
+        "description": "impurity"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "maxBins"
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "maxDepth"
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "minInfoGain"
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "minInstancesPerNode"
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "minWeightFractionPerNode"
+      },
+      {
+        "name": "numTrees",
+        "type": "Int",
+        "description": "numTrees"
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "seed"
+      },
+      {
+        "name": "subsamplingRate",
+        "type": "Double",
+        "description": "subsamplingRate"
+      }
+    ]
+  },
+  "Coverage.histogramBin": {
+    "description": "",
+    "returns": "Map[Int,Long]",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "coverage"
+      },
+      {
+        "name": "min",
+        "type": "Int",
+        "description": "min"
+      },
+      {
+        "name": "max",
+        "type": "Int",
+        "description": "max"
+      },
+      {
+        "name": "binSize",
+        "type": "Int",
+        "description": "binSize"
+      },
+      {
+        "name": "bandIndex",
+        "type": "Int",
+        "description": "bandIndex"
+      }
+    ]
+  },
+  "Coverage.reduceRegion": {
+    "description": "",
+    "returns": "Double",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "coverage"
+      },
+      {
+        "name": "reducer",
+        "type": "String",
+        "description": "reducer"
+      },
+      {
+        "name": "bandIndex",
+        "type": "Int",
+        "description": "bandIndex"
+      }
+    ]
   }
+
 }
