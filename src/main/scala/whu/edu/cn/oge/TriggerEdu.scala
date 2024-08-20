@@ -103,7 +103,7 @@ object TriggerEdu {
       coverageTMS.reproject(tmsCrs, layoutScheme)
 
     if (level > zoom) {
-      throw new Exception("level can not > zoom")
+      throw new Exception("level can not > " + zoom)
     }
     else {
       // 待修改dagId
@@ -149,7 +149,7 @@ object TriggerEdu {
           }
         }
       }
-      GlobalConfig.Others.tmsPath + jobId + "/{z}/{x}/{y}.png"
+      "http://www.openearth.org.cn/api/oge-tms-png/" + jobId + "/{z}/{x}/{y}.png"
     }
   }
 
@@ -157,8 +157,9 @@ object TriggerEdu {
     val conf: SparkConf = new SparkConf().setAppName("New Coverage").setMaster("local[*]")
     val sc = new SparkContext(conf)
     //    reprojectEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1_reprojected.tif", "EPSG:3857", 100)
-    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
+//    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
 //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
+    visualizeOnTheFlyEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/TMS", 18, "222", false)
   }
 
 }
