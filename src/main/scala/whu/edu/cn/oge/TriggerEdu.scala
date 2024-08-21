@@ -1,5 +1,6 @@
 package whu.edu.cn.oge
 
+import com.alibaba.fastjson.JSONObject
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.proj4.CRS
@@ -76,10 +77,12 @@ object TriggerEdu {
     makeTIFF(predictedCoverage, classifiedOutputPath)
     println("SUCCESS")
   }
-  def getZoom(implicit sc: SparkContext, inputPath: String): Int = {
+  def getZoom(implicit sc: SparkContext, inputPath: String): JSONObject = {
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    val coordinateCrs: CRS = CRS.fromEpsgCode(4326)
     val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+    val layoutScheme1: ZoomedLayoutScheme = ZoomedLayoutScheme(coordinateCrs, tileSize = 256)
     val newBounds: Bounds[SpatialKey] = Bounds(coverage._2.bounds.get.minKey.spatialKey, coverage._2.bounds.get.maxKey.spatialKey)
     val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverage._2.cellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, newBounds)
     val coverageNoTimeBand: RDD[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
@@ -90,7 +93,19 @@ object TriggerEdu {
     val (zoom, _): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) = {
       coverageTMS.reproject(tmsCrs, layoutScheme)
     }
-    zoom
+    val (_, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) = {
+      coverageTMS.reproject(coordinateCrs, layoutScheme1)
+    }
+
+    val extentStr = reprojected.metadata.extent.toString()
+    val pattern = """\(([^)]+)\)""".r
+    // 匹配并提取子字符串
+    val extracted = pattern.findFirstMatchIn(extentStr).map(_.group(1)).getOrElse("No match found")
+
+    val jsonObject: JSONObject = new JSONObject
+    jsonObject.put("level", zoom)
+    jsonObject.put("extent", extracted)
+    jsonObject
   }
   def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
 
