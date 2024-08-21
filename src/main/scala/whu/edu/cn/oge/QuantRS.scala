@@ -60,11 +60,11 @@ object QuantRS {
     saveRasterRDDToTif(NDVI, NDVIPath)
     saveRasterRDDToTif(FVC,FVCPath)
     saveRasterRDDToTif(ALBEDO,ALBEDOPath)
-    val outputTiffPath = "/mnt/storage/htTeam/ref_rec_30/result/result.tif"
+    val outputTiffPath = algorithmData+"ref30_result_"+ time + ".tif"
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath""".stripMargin
+        raw"""bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath $outputTiffPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -74,9 +74,79 @@ object QuantRS {
         e.printStackTrace()
     }
 
-    makeChangedRasterRDDFromTif(sc, outputTiffPath)
+    val result=makeChangedRasterRDDFromTif(sc, outputTiffPath)
+    // 解决黑边值为255影响渲染的问题
+    removeZeroFromCoverage(Coverage.addNum(result, 1))
   }
 
+  /**
+   * 虚拟星座500米
+   *
+   * @param sc
+   * @param MOD09A1
+   * @param LAI
+   * @param FAPAR
+   * @param NDVI
+   * @param EVI
+   * @param FVC
+   * @param GPP
+   * @param NPP
+   * @param ALBEDO
+   * @param COPY
+   * @return
+   */
+  def reflectanceReconstruction(implicit sc: SparkContext,
+                                MOD09A1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                LAI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                FAPAR: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                NDVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                EVI: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                FVC: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                GPP: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                NPP: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                ALBEDO: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                COPY: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))
+  : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    val time = System.currentTimeMillis()
+    // RDD落地
+    val MOD09A1Path = algorithmData + "MOD09A1500_" + time + ".tif"
+    val LAIPath = algorithmData + "LAI500_" + time + ".tif"
+    val FAPARPath = algorithmData + "FAPAR500_" + time + ".tif"
+    val NDVIPath = algorithmData + "NDVI500_" + time + ".tif"
+    val EVIPath = algorithmData + "EVI500_" + time + ".tif"
+    val FVCPath = algorithmData + "FVC500_" + time + ".tif"
+    val GPPPath = algorithmData + "GPP500_" + time + ".tif"
+    val NPPPath = algorithmData + "NPP500_" + time + ".tif"
+    val ALBEDOPath = algorithmData + "ALBEDO500_" + time + ".tif"
+    val COPYPath = algorithmData + "COPY500_" + time + ".tif"
+    saveRasterRDDToTif(MOD09A1, MOD09A1Path)
+    saveRasterRDDToTif(LAI, LAIPath)
+    saveRasterRDDToTif(FAPAR, FAPARPath)
+    saveRasterRDDToTif(NDVI, NDVIPath)
+    saveRasterRDDToTif(EVI, EVIPath)
+    saveRasterRDDToTif(FVC, FVCPath)
+    saveRasterRDDToTif(GPP, GPPPath)
+    saveRasterRDDToTif(NPP, NPPPath)
+    saveRasterRDDToTif(ALBEDO, ALBEDOPath)
+    saveRasterRDDToTif(COPY, COPYPath)
+    val outputTiffPath = algorithmData + "ref500_result_" + time + ".tif"
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""bash /mnt/storage/htTeam/ref_rec_500/ref_rec_500_v1.sh   $MOD09A1Path $LAIPath $FAPARPath $NDVIPath $EVIPath  $FVCPath $GPPPath $NPPPath $ALBEDOPath $COPYPath  $outputTiffPath""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+    val result = makeChangedRasterRDDFromTif(sc, outputTiffPath)
+    // 解决黑边值为255影响渲染的问题
+    removeZeroFromCoverage(Coverage.addNum(result, 1))
+  }
   /**
    * MERSI反照率计算
    * @param sc

@@ -436,7 +436,7 @@ object Trigger {
         case "Coverage.catTwoCoverage" =>
           coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.reflectanceReconstruction" =>
-          coverageRddList += (UUID -> QGIS.reflectanceReconstruction(sc, coverageRddList(args("MOD09A1")), coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("EVI")), coverageRddList(args("FVC")), coverageRddList(args("GPP")), coverageRddList(args("NPP")), coverageRddList(args("ALBEDO")), coverageRddList(args("COPY"))))
+          coverageRddList += (UUID -> QuantRS.reflectanceReconstruction(sc, coverageRddList(args("MOD09A1")), coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("EVI")), coverageRddList(args("FVC")), coverageRddList(args("GPP")), coverageRddList(args("NPP")), coverageRddList(args("ALBEDO")), coverageRddList(args("COPY"))))
         case "Coverage.IHSFusion" =>
           coverageRddList += (UUID -> catTwoCoverage(coverage1 = coverageRddList(args("coverage1")), coverage2 = coverageRddList(args("coverage2"))))
         case "Coverage.atan" =>
