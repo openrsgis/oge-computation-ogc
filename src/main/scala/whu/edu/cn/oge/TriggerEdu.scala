@@ -103,7 +103,7 @@ object TriggerEdu {
     val extracted = pattern.findFirstMatchIn(extentStr).map(_.group(1)).getOrElse("No match found")
 
     val jsonObject: JSONObject = new JSONObject
-    jsonObject.put("level", zoom)
+    jsonObject.put("zoom", zoom)
     jsonObject.put("extent", extracted)
     jsonObject
   }
