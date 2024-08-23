@@ -61,7 +61,7 @@ object TriggerEdu {
     val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate)
       .train(spark, featursCoverage, labelCoverage, labelCol)
     model.write.overwrite().save("file://" + modelOutputPath)
-      PipelineModelUtil.compress(new File(modelOutputPath), new File(modelOutputPath + ".zip"))
+    PipelineModelUtil.compress(new File(modelOutputPath), new File(modelOutputPath + ".zip"))
     new File(modelOutputPath).delete() //TODO 检查是否删成功
     println("SUCCESS")
   }
@@ -71,7 +71,8 @@ object TriggerEdu {
     //若用户未添加后缀，为其添加
     val modelPathWithZip = if (modelPath.endsWith(".zip")) modelPath else modelPath + ".zip"
     PipelineModelUtil.uncompress(new File(modelPathWithZip), new File(modelPathWithZip.stripSuffix(".zip")))
-    val model: PipelineModel = PipelineModelUtil.load(spark, new File(modelPathWithZip.stripSuffix(".zip")))
+    //    val model: PipelineModel = PipelineModelUtil.load(spark, new File(modelPathWithZip.stripSuffix(".zip")))
+    val model: PipelineModel = PipelineModel.load("file://" + modelPathWithZip.stripSuffix(".zip"))
     val predictedCoverage = Classifier.classify(spark, featursCoverage, model)("prediction")
     new File(modelPathWithZip.stripSuffix(".zip")).delete()
     makeTIFF(predictedCoverage, classifiedOutputPath)
