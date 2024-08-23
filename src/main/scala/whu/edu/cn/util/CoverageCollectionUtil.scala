@@ -317,27 +317,27 @@ object CoverageCollectionUtil {
         case "min" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            (t._1, tiles.reduce((a, b) => Min(a, b)))
+            (t._1, tiles.reduce((a, b) => CoverageOverloadUtil.Min(a, b)))
           })
         case "max" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            (t._1, tiles.reduce((a, b) => Max(a, b)))
+            (t._1, tiles.reduce((a, b) => CoverageOverloadUtil.Max(a, b)))
           })
         case "sum" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            (t._1, tiles.reduce((a, b) => Add(Mean(a, b), Mean(a, b))))
+            (t._1, tiles.reduce((a, b) => CoverageOverloadUtil.Add(a, b)))
           })
         case "or" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            (t._1, tiles.reduce((a, b) => Or(a, b)))
+            (t._1, tiles.reduce((a, b) => CoverageOverloadUtil.OrCollection(a, b)))
           })
         case "and" =>
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            (t._1, tiles.reduce((a, b) => And(a, b)))
+            (t._1, tiles.reduce((a, b) => CoverageOverloadUtil.AndCollection(a, b)))
           })
         case "mean" =>
           groupedTiles.map(t => {
@@ -345,140 +345,148 @@ object CoverageCollectionUtil {
             (t._1, tiles.reduce((a, b) => Mean(a, b)))
           })
         case "median" =>
+          //          groupedTiles.map(t => {
+          //            val tiles: Iterable[Tile] = t._2
+          //            tiles.head.cellType.toString() match {
+          //              // 以下为尝试修改部分，若修改正确，可直接将该部分的匹配项添加在"int32" | "int32raw"后面
+          //              case "int8" | "int8raw" =>
+          //                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Int] = tile.toArray()
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val medianValues: Array[Int] = bandArrays.transpose.map(t => {
+          //                  if (t.length % 2 == 1) {
+          //                    t.sorted.apply(bandArrays.length / 2)
+          //                  }
+          //                  else {
+          //                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2
+          //                  }
+          //                })
+          //                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, medianTile)
+          //              //以下为原代码部分
+          //              case "int32" | "int32raw" =>
+          //                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Int] = tile.toArray()
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val medianValues: Array[Int] = bandArrays.transpose.map(t => {
+          //                  if (t.length % 2 == 1) {
+          //                    t.sorted.apply(bandArrays.length / 2)
+          //                  }
+          //                  else {
+          //                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2
+          //                  }
+          //                })
+          //                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, medianTile)
+          //              case "float32" | "float32raw" =>
+          //                val bandArrays: Array[Array[Float]] = Array.ofDim[Float](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Float] = tile.toArrayDouble().map(_.toFloat)
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val medianValues: Array[Float] = bandArrays.transpose.map(t => {
+          //                  if (t.length % 2 == 1) {
+          //                    t.sorted.apply(bandArrays.length / 2)
+          //                  }
+          //                  else {
+          //                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2.0f
+          //                  }
+          //                })
+          //                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, medianTile)
+          //              case "float64" | "float64raw" =>
+          //                val bandArrays: Array[Array[Double]] = Array.ofDim[Double](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Double] = tile.toArrayDouble()
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val medianValues: Array[Double] = bandArrays.transpose.map(t => {
+          //                  if (t.length % 2 == 1) {
+          //                    t.sorted.apply(bandArrays.length / 2)
+          //                  }
+          //                  else {
+          //                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2.0
+          //                  }
+          //                })
+          //                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, medianTile)
+          //            }
+          //          })
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            tiles.head.cellType.toString() match {
-              // 以下为尝试修改部分，若修改正确，可直接将该部分的匹配项添加在"int32" | "int32raw"后面
-              case "int8" | "int8raw" =>
-                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Int] = tile.toArray()
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val medianValues: Array[Int] = bandArrays.transpose.map(t => {
-                  if (t.length % 2 == 1) {
-                    t.sorted.apply(bandArrays.length / 2)
-                  }
-                  else {
-                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2
-                  }
-                })
-                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
-                (t._1, medianTile)
-              //以下为原代码部分
-              case "int32" | "int32raw" =>
-                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Int] = tile.toArray()
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val medianValues: Array[Int] = bandArrays.transpose.map(t => {
-                  if (t.length % 2 == 1) {
-                    t.sorted.apply(bandArrays.length / 2)
-                  }
-                  else {
-                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2
-                  }
-                })
-                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
-                (t._1, medianTile)
-              case "float32" | "float32raw" =>
-                val bandArrays: Array[Array[Float]] = Array.ofDim[Float](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Float] = tile.toArrayDouble().map(_.toFloat)
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val medianValues: Array[Float] = bandArrays.transpose.map(t => {
-                  if (t.length % 2 == 1) {
-                    t.sorted.apply(bandArrays.length / 2)
-                  }
-                  else {
-                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2.0f
-                  }
-                })
-                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
-                (t._1, medianTile)
-              case "float64" | "float64raw" =>
-                val bandArrays: Array[Array[Double]] = Array.ofDim[Double](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Double] = tile.toArrayDouble()
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val medianValues: Array[Double] = bandArrays.transpose.map(t => {
-                  if (t.length % 2 == 1) {
-                    t.sorted.apply(bandArrays.length / 2)
-                  }
-                  else {
-                    (t.sorted.apply(bandArrays.length / 2) + t.sorted.apply(bandArrays.length / 2 - 1)) / 2.0
-                  }
-                })
-                val medianTile: Tile = ArrayTile(medianValues, tiles.head.cols, tiles.head.rows)
-                (t._1, medianTile)
-            }
+            (t._1, tiles.reduce((a, b) => CoverageOverloadUtil.Median(a, b)))
           })
         case "mode" =>
+          //          groupedTiles.map(t => {
+          //            val tiles: Iterable[Tile] = t._2
+          //            tiles.head.cellType.toString() match {
+          //              // 以下为尝试修改部分
+          //              case "int8" | "int8raw" =>
+          //                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Int] = tile.toArray()
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val modeValues: Array[Int] = bandArrays.transpose.map(array => {
+          //                  val counts: Map[Int, Int] = array.groupBy(identity).mapValues(_.length)
+          //                  val maxCount: Int = counts.values.max
+          //                  val modes: List[Int] = counts.filter(_._2 == maxCount).keys.toList
+          //                  modes(Random.nextInt(modes.size))
+          //                })
+          //                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, modeTile)
+          //              // 以下为原代码部分
+          //              case "int32" | "int32raw" =>
+          //                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Int] = tile.toArray()
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val modeValues: Array[Int] = bandArrays.transpose.map(array => {
+          //                  val counts: Map[Int, Int] = array.groupBy(identity).mapValues(_.length)
+          //                  val maxCount: Int = counts.values.max
+          //                  val modes: List[Int] = counts.filter(_._2 == maxCount).keys.toList
+          //                  modes(Random.nextInt(modes.size))
+          //                })
+          //                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, modeTile)
+          //              case "float32" | "float32raw" =>
+          //                val bandArrays: Array[Array[Float]] = Array.ofDim[Float](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Float] = tile.toArrayDouble().map(_.toFloat)
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val modeValues: Array[Float] = bandArrays.transpose.map(array => {
+          //                  val counts: Map[Float, Int] = array.groupBy(identity).mapValues(_.length)
+          //                  val maxCount: Int = counts.values.max
+          //                  val modes: List[Float] = counts.filter(_._2 == maxCount).keys.toList
+          //                  modes(Random.nextInt(modes.size))
+          //                })
+          //                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, modeTile)
+          //              case "float64" | "float64raw" =>
+          //                val bandArrays: Array[Array[Double]] = Array.ofDim[Double](tiles.size, tiles.head.rows * tiles.head.cols)
+          //                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
+          //                  val data: Array[Double] = tile.toArrayDouble()
+          //                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
+          //                }
+          //                val modeValues: Array[Double] = bandArrays.transpose.map(array => {
+          //                  val counts: Map[Double, Int] = array.groupBy(identity).mapValues(_.length)
+          //                  val maxCount: Int = counts.values.max
+          //                  val modes: List[Double] = counts.filter(_._2 == maxCount).keys.toList
+          //                  modes(Random.nextInt(modes.size))
+          //                })
+          //                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
+          //                (t._1, modeTile)
+          //            }
+          //          })
           groupedTiles.map(t => {
             val tiles: Iterable[Tile] = t._2
-            tiles.head.cellType.toString() match {
-              // 以下为尝试修改部分
-              case "int8" | "int8raw" =>
-                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Int] = tile.toArray()
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val modeValues: Array[Int] = bandArrays.transpose.map(array => {
-                  val counts: Map[Int, Int] = array.groupBy(identity).mapValues(_.length)
-                  val maxCount: Int = counts.values.max
-                  val modes: List[Int] = counts.filter(_._2 == maxCount).keys.toList
-                  modes(Random.nextInt(modes.size))
-                })
-                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
-                (t._1, modeTile)
-              // 以下为原代码部分
-              case "int32" | "int32raw" =>
-                val bandArrays: Array[Array[Int]] = Array.ofDim[Int](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Int] = tile.toArray()
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val modeValues: Array[Int] = bandArrays.transpose.map(array => {
-                  val counts: Map[Int, Int] = array.groupBy(identity).mapValues(_.length)
-                  val maxCount: Int = counts.values.max
-                  val modes: List[Int] = counts.filter(_._2 == maxCount).keys.toList
-                  modes(Random.nextInt(modes.size))
-                })
-                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
-                (t._1, modeTile)
-              case "float32" | "float32raw" =>
-                val bandArrays: Array[Array[Float]] = Array.ofDim[Float](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Float] = tile.toArrayDouble().map(_.toFloat)
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val modeValues: Array[Float] = bandArrays.transpose.map(array => {
-                  val counts: Map[Float, Int] = array.groupBy(identity).mapValues(_.length)
-                  val maxCount: Int = counts.values.max
-                  val modes: List[Float] = counts.filter(_._2 == maxCount).keys.toList
-                  modes(Random.nextInt(modes.size))
-                })
-                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
-                (t._1, modeTile)
-              case "float64" | "float64raw" =>
-                val bandArrays: Array[Array[Double]] = Array.ofDim[Double](tiles.size, tiles.head.rows * tiles.head.cols)
-                tiles.zipWithIndex.foreach { case (tile, bandIndex) =>
-                  val data: Array[Double] = tile.toArrayDouble()
-                  Array.copy(data, 0, bandArrays(bandIndex), 0, data.length)
-                }
-                val modeValues: Array[Double] = bandArrays.transpose.map(array => {
-                  val counts: Map[Double, Int] = array.groupBy(identity).mapValues(_.length)
-                  val maxCount: Int = counts.values.max
-                  val modes: List[Double] = counts.filter(_._2 == maxCount).keys.toList
-                  modes(Random.nextInt(modes.size))
-                })
-                val modeTile: Tile = ArrayTile(modeValues, tiles.head.cols, tiles.head.rows)
-                (t._1, modeTile)
-            }
+            (t._1, tiles.reduce((a, b) => Majority(a, b)))
           })
         case _ =>
           throw new IllegalArgumentException("Error: 该拼接方法不存在:" + method)
