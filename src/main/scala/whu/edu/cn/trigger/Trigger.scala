@@ -1295,6 +1295,8 @@ object Trigger {
           stringList += (UUID -> histogramBin(coverage = coverageRddList(args("coverage")), args("min").toInt, args("max").toInt, args("binSize").toInt, args("bandIndex").toInt).toString())
         case "Coverage.reduceRegion" =>
           doubleList += (UUID -> reduceRegion(coverage = coverageRddList(args("coverage")), args("reducer"), args("bandIndex").toInt))
+        case "Coverage.filter" =>
+          coverageRddList += (UUID -> Coverage.filter(coverage = coverageRddList(args("coverage")), args("min").toDouble, args("max").toDouble))
       }
 
 

@@ -14091,57 +14091,79 @@
       {
         "name": "checkpointInterval",
         "type": "Int",
-        "description": "checkpointInterval"
+        "description": "checkpointInterval",
+        "optional": "True",
+        "default": "10"
       },
       {
         "name": "featureSubsetStrategy",
         "type": "String",
-        "description": "featureSubsetStrategy"
+        "description": "featureSubsetStrategy",
+        "optional": "True",
+        "default": "auto"
       },
       {
         "name": "impurity",
         "type": "String",
-        "description": "impurity"
+        "description": "impurity",
+        "optional": "True",
+        "default": "variance"
       },
       {
         "name": "maxBins",
         "type": "Int",
-        "description": "maxBins"
+        "description": "maxBins",
+        "optional": "True",
+        "default": "32"
       },
       {
         "name": "maxDepth",
         "type": "Int",
-        "description": "maxDepth"
+        "description": "maxDepth",
+        "optional": "True",
+        "default": "5"
       },
       {
         "name": "minInfoGain",
         "type": "Double",
-        "description": "minInfoGain"
+        "description": "minInfoGain",
+        "optional": "True",
+        "default": "0.0"
       },
       {
         "name": "minInstancesPerNode",
         "type": "Int",
-        "description": "minInstancesPerNode"
+        "description": "minInstancesPerNode",
+        "optional": "True",
+        "default": "1"
       },
       {
         "name": "minWeightFractionPerNode",
         "type": "Double",
-        "description": "minWeightFractionPerNode"
+        "description": "minWeightFractionPerNode",
+        "optional": "True",
+        "default": "0.0"
       },
       {
         "name": "numTrees",
         "type": "Int",
-        "description": "numTrees"
+        "description": "numTrees",
+        "optional": "True",
+        "default": "20"
       },
       {
         "name": "seed",
         "type": "Long",
-        "description": "seed"
+        "description": "seed",
+        "optional": "True",
+        "default": "123L"
       },
       {
         "name": "subsamplingRate",
         "type": "Double",
-        "description": "subsamplingRate"
+        "description": "subsamplingRate",
+        "optional": "True",
+        "default": "1.0"
       }
     ]
   },
@@ -14172,7 +14194,9 @@
       {
         "name": "bandIndex",
         "type": "Int",
-        "description": "bandIndex"
+        "description": "bandIndex",
+        "optional": "True",
+        "default": "0"
       }
     ]
   },
@@ -14193,7 +14217,30 @@
       {
         "name": "bandIndex",
         "type": "Int",
-        "description": "bandIndex"
+        "description": "bandIndex",
+        "optional": "True",
+        "default": "0"
+      }
+    ]
+  },
+  "Coverage.filter": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "coverage"
+      },
+      {
+        "name": "min",
+        "type": "Double",
+        "description": "min"
+      },
+      {
+        "name": "max",
+        "type": "Double",
+        "description": "max"
       }
     ]
   }
