@@ -2597,12 +2597,14 @@ object Coverage {
     } else {
       val name: String = coverage._1.first()._1.measurementName(0)
       var names = mutable.ListBuffer.empty[String]
-      var tiles: Vector[Tile] = Vector[Tile]()
       for (i <- 0 until (nums)) {
-        tiles = tiles :+ coverage._1.first()._2.bands(0)
         names += name
       }
       (coverage._1.map(t => {
+        var tiles: Vector[Tile] = Vector[Tile]()
+        for (i <- 0 until (nums)) {
+          tiles = tiles :+ t._2.bands(0)
+        }
         (SpaceTimeBandKey(t._1.spaceTimeKey, names), MultibandTile(tiles))
       }), coverage._2)
     }
