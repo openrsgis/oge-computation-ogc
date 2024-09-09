@@ -136,8 +136,6 @@ object CoverageArray {
     }
 
     def visualizeOnTheFly(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam, index: Int): Unit = {
-      Trigger.level = 8
-      Trigger.dagId = "test"
       val dagId = Trigger.dagId + index
 
       // 教育版额外的判断,保存结果,调用回调接口
@@ -189,7 +187,7 @@ object CoverageArray {
 
       val (zoom, reprojected) = coverageTMS.reproject(tmsCrs, layoutScheme)
 
-      val on_the_fly_path = "/D:/Intermediate_results/TMS/" + dagId
+      val on_the_fly_path = GlobalConfig.Others.ontheFlyStorage + dagId
       val file = new File(on_the_fly_path)
       if (file.exists() && file.isDirectory) {
         println("Delete existed on_the_fly_path")
@@ -200,8 +198,7 @@ object CoverageArray {
       }
 
 
-      //    val outputPath: String = GlobalConfig.Others.ontheFlyStorage
-      val outputPath: String = "/D:/Intermediate_results/TMS/"
+      val outputPath: String = GlobalConfig.Others.ontheFlyStorage
       // Create the attributes store that will tell us information about our catalog.
       val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
       // Create the writer that we will use to store the tiles in the local catalog.
@@ -235,17 +232,17 @@ object CoverageArray {
         }
       }
 
-//          // 回调服务
-//          val jsonObject: JSONObject = new JSONObject
-//          val rasterJsonObject: JSONObject = new JSONObject
-//          if (visParam.getFormat == "png") {
-//            rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.png")
-//          }
-//          else {
-//            rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + Trigger.dagId + "/{z}/{x}/{y}.jpg")
-//          }
-//
-//          PostSender.shelvePost("raster",rasterJsonObject)
+          // 回调服务
+          val jsonObject: JSONObject = new JSONObject
+          val rasterJsonObject: JSONObject = new JSONObject
+          if (visParam.getFormat == "png") {
+            rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + dagId + "/{z}/{x}/{y}.png")
+          }
+          else {
+            rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + dagId + "/{z}/{x}/{y}.jpg")
+          }
+
+          PostSender.shelvePost("raster",rasterJsonObject)
 
     }
 
