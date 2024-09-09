@@ -26,7 +26,7 @@ import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramEqualization, kMeans, linearTransformation, panSharp, reduction, standardDeviationCalculation, standardDeviationStretching, histogramBin, reduceRegion, RandomForestTrainAndRegress}
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, RandomForestTrainAndRegress, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramBin, histogramEqualization, kMeans, linearTransformation, panSharp, reduceRegion, reduction, standardDeviationCalculation, standardDeviationStretching}
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -39,8 +39,9 @@ import whu.edu.cn.oge.Sheet.CsvData
 import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
 import whu.edu.cn.entity.cube.CubeTileKey
+import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
 
-import scala.collection.mutable.{ArrayBuffer, ListBuffer,Map}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
@@ -52,7 +53,8 @@ object Trigger {
   var doubleList: mutable.Map[String, Double] = mutable.Map.empty[String, Double]
   var stringList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var intList: mutable.Map[String, Int] = mutable.Map.empty[String, Int]
-  var SheetList:mutable.Map[String,CsvData] =mutable.Map.empty[String,CsvData]
+  var SheetList: mutable.Map[String,CsvData] = mutable.Map.empty[String,CsvData]
+  var coverageParamsList: mutable.Map[String, Array[(String, String)]] = mutable.Map.empty[String, Array[(String, String)]]
 
   // TODO lrx: 以下为未检验
 
@@ -116,8 +118,12 @@ object Trigger {
           val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
           coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax()))
         }
+      case OGEClassType.CoverageArray =>
+        val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
+        coverageParamsList += (UUID -> CoverageArray.getLoadParams(productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax()))
     }
   }
+
 
 
   def getValue(name:String):(String,String)={
@@ -172,6 +178,9 @@ object Trigger {
           Sheet.printSheet(sheet, args("name"))
         // Service
         case "Service.getCoverageCollection" =>
+          lazyFunc += (UUID -> (funcName, args))
+          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
+        case "Service.getCoverageArray" =>
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverage" =>
@@ -273,6 +282,63 @@ object Trigger {
           else {
             CoverageCollection.visualizeBatch(sc, coverageCollection = coverageCollectionRddList(args("coverageCollection")))
           }
+
+        case "CoverageArray.add" =>
+          funcNameList += "CoverageArray.add"
+          funcArgs += List(coverageRddList(args("coverage")))
+        case "CoverageArray.subtract" =>
+          funcNameList += "CoverageArray.subtract"
+          funcArgs += List(coverageRddList(args("coverage")))
+        case "CoverageArray.divide" =>
+          funcNameList += "CoverageArray.divide"
+          funcArgs += List(coverageRddList(args("coverage")))
+        case "CoverageArray.multiply" =>
+          funcNameList += "CoverageArray.multiply"
+          funcArgs += List(coverageRddList(args("coverage")))
+        case "CoverageArray.addNum" =>
+          funcNameList += "CoverageArray.addNum"
+          funcArgs += List(args("i").toDouble)
+        case "CoverageArray.subtractNum" =>
+          funcNameList += "CoverageArray.subtractNum"
+          funcArgs += List(args("i").toDouble)
+        case "CoverageArray.multiplyNum" =>
+          funcNameList += "CoverageArray.multiplyNum"
+          funcArgs += List(args("i").toDouble)
+        case "CoverageArray.normalizedDifference" =>
+          funcNameList += "CoverageArray.normalizedDifference"
+          funcArgs += List(args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList)
+        case "CoverageArray.toInt8" =>
+          funcNameList += "CoverageArray.toInt8"
+        case "CoverageArray.toUint8" =>
+          funcNameList += "CoverageArray.toUint8"
+        case "CoverageArray.toInt16" =>
+          funcNameList += "CoverageArray.toInt16"
+        case "CoverageArray.toUint16" =>
+          funcNameList += "CoverageArray.toUint16"
+        case "CoverageArray.toInt32" =>
+          funcNameList += "CoverageArray.toInt32"
+        case "CoverageArray.toFloat" =>
+          funcNameList += "CoverageArray.toFloat"
+        case "CoverageArray.toDouble" =>
+          funcNameList += "CoverageArray.toDouble"
+        case "CoverageArray.visualizeOnTheFly" =>
+          funcNameList += "CoverageArray.visualizeOnTheFly"
+          isActioned(sc, args("coverageArray"), OGEClassType.CoverageArray)
+          val visParam: VisualizationParam = new VisualizationParam
+          visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+          val coverageArray: Array[(String, String)] = coverageParamsList(args("coverageArray"))
+          coverageArray.zipWithIndex.foreach {case (element, index) =>
+            val coverage = Coverage.load(sc, element._1, element._2, level)
+            val firstCoverage: (Int, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = (0 -> coverage)
+            CoverageList += firstCoverage
+            funcArgs += List(visParam, index)
+            for (i <- funcNameList.indices) {
+              process(funcNameList(i), funcArgs(i), i)
+            }
+            funcArgs.remove(funcArgs.length - 1)
+            CoverageList.clear()
+          }
+
 
         // TODO lrx: 这里要改造
         // Table
@@ -1670,6 +1736,8 @@ object Trigger {
       Trigger.intList.clear()
       Trigger.doubleList.clear()
       Trigger.stringList.clear()
+      CoverageArray.funcNameList.clear()
+      CoverageArray.funcArgs.clear()
       PostSender.clearShelvedMessages()
       tempFileList.foreach(tempFile => {
         if (scala.reflect.io.File(tempFile).exists)

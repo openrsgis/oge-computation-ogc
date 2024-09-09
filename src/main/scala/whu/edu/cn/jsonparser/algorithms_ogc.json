@@ -11521,6 +11521,229 @@
       }
     ]
   },
+  "CoverageArray.add": {
+    "description": "Adds the first value to the second for each matched pair of bands in every image of the CoverageArray and image. If either image of the CoverageArray or image has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types. ",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "CoverageArray.multiply": {
+    "description": "Multiplies the first value by the second. If either image of the CoverageArray or image has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "CoverageArray.subtract": {
+    "description": "Subtracts the second value from the first for each matched pair of bands in every image of the CoverageArray and image. If either image of the CoverageArray or image has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "CoverageArray.divide": {
+    "description": "Divides the first value by the second, returning 0 for division by 0 for each matched pair of bands in every image of the CoverageArray and image2. If either image of the CoverageArray or image has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The image from which the left operand bands are taken."
+      },
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The image from which the right operand bands are taken."
+      }
+    ]
+  },
+  "CoverageArray.addNum": {
+    "description": "Add the value to the CoverageArray.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value to add."
+      }
+    ]
+  },
+  "CoverageArray.subtractNum": {
+    "description": "Subtract the corresponding value from the CoverageArray.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for subtract."
+      }
+    ]
+  },
+  "CoverageArray.divideNum": {
+    "description": "Divide the corresponding value from the CoverageArray.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for divide."
+      }
+    ]
+  },
+  "CoverageArray.multiplyNum": {
+    "description": "Multiply the corresponding value to the CoverageArray.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray for operation."
+      },
+      {
+        "name": "i",
+        "type": "Double",
+        "description": "The value for multiply."
+      }
+    ]
+  },
+  "CoverageArray.toInt8": {
+    "description": "Casts the input value to a signed 8-bit integer.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.toUint8": {
+    "description": "Casts the input value to a unsigned 8-bit integer.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.toInt16": {
+    "description": "Casts the input value to a signed 16-bit integer.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.toUint16": {
+    "description": "Casts the input value to a unsigned 16-bit integer.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.toInt32": {
+    "description": "Casts the input value to a signed 32-bit integer.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.toFloat": {
+    "description": "Casts the input value to a 32-bit float.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.toDouble": {
+    "description": "Casts the input value to a 64-bit float.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to which the operation is applied."
+      }
+    ]
+  },
+  "CoverageArray.normalizedDifference": {
+    "description": "Computes the normalized difference between two bands.The normalized difference is computed as (first − second) / (first + second). ",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The input CoverageArray"
+      },
+      {
+        "name": "bandNames",
+        "type": "List<String>",
+        "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
+        "optional": "True",
+        "default": "None"
+      }
+    ]
+  },
   "Service.getTable": {
     "description": "从service中获取表格数据",
     "returns": "Table",

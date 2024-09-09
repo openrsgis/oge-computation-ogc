@@ -8,7 +8,7 @@ import geotrellis.raster.{MultibandTile, Raster}
 import geotrellis.raster.io.geotiff.GeoTiff
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity.{SpaceTimeBandKey, VisualizationParam}
+import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.Coverage.{addStyles, reproject, resolutionTMSArray}
 import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
@@ -189,7 +189,7 @@ object TriggerEdu {
     //    reprojectEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1_reprojected.tif", "EPSG:3857", 100)
 //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
 //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
-    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
+//    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
   }
 
 }
