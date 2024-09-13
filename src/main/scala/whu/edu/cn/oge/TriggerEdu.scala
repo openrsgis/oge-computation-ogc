@@ -2,14 +2,14 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer.stitch.TileLayoutStitcher
-import geotrellis.layer.{Bounds, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
+import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.proj4.CRS
-import geotrellis.raster.{MultibandTile, Raster}
+import geotrellis.raster.{CellType, MultibandTile, Raster}
 import geotrellis.raster.io.geotiff.GeoTiff
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey, VisualizationParam}
-import whu.edu.cn.oge.Coverage.{addStyles, reproject, resolutionTMSArray}
+import whu.edu.cn.oge.Coverage.{addStyles, reproject, resolutionTMSArray, selectBands}
 import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 import java.nio.file.Paths
@@ -46,6 +46,7 @@ object TriggerEdu {
     GeoTiff(stitchedTile, coverage._2.crs).write(outputPath)
 
   }
+
   def reprojectEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, Crs: String, scale: Double) = {
     val epsg: Int = Crs.split(":")(1).toInt
     val crs: CRS = CRS.fromEpsgCode(epsg)
@@ -54,6 +55,7 @@ object TriggerEdu {
     makeTIFF(coverage2, outputPath)
     println("SUCCESS")
   }
+
   def randomForestTrain(implicit sc: SparkContext, featuresPath: String, labelPath: String, modelOutputPath: String, labelCol: Int = 0, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0) = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featursCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
@@ -65,6 +67,7 @@ object TriggerEdu {
     new File(modelOutputPath).delete() //TODO 检查是否删成功
     println("SUCCESS")
   }
+
   def classify(implicit sc: SparkContext, featuresPath: String, modelPath: String, classifiedOutputPath: String): Unit = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featursCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
@@ -78,6 +81,7 @@ object TriggerEdu {
     makeTIFF(predictedCoverage, classifiedOutputPath)
     println("SUCCESS")
   }
+
   def getZoom(implicit sc: SparkContext, inputPath: String): JSONObject = {
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
@@ -108,17 +112,15 @@ object TriggerEdu {
     jsonObject.put("extent", extracted)
     jsonObject
   }
-  def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
 
-    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
-    val visParam: VisualizationParam = new VisualizationParam
-    visParam.setAllParam(bands, min, max, gain, bias, gamma, palette, opacity, format)
-    // 待修改Trigger.coverageReadFromUploadFile
-    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (coverageReadFromUploadFile) {
-      reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(level))
-    } else {
-      coverage
-    }, visParam)
+  def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(makeChangedRasterRDDFromTif(sc, inputPath))
+    val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+      if (coverage._1.first()._2.bandCount >= 3) {
+        (coverage._1.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1), rdd._2.band(2)))), coverage._2)
+      }
+      else coverage
+    }
 
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
     val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
@@ -132,6 +134,9 @@ object TriggerEdu {
 
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
+
+    val reprojectedWithoutNodata = reprojected.map(rdd => (rdd._1, rdd._2.mapBands((_, tile) => tile.mapDouble(value => if (value.equals(0.0)) Double.NaN else value))))
+    val reprojectedWithMetadata = ContextRDD(reprojectedWithoutNodata, reprojected.metadata)
 
     if (level > zoom) {
       throw new Exception("level can not > " + zoom)
@@ -154,8 +159,8 @@ object TriggerEdu {
       val writer: FileLayerWriter = FileLayerWriter(attributeStore1)
 
 
-      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-        if (level - z <= 2 && level - z >= 0) {
+      Pyramid.upLevels(reprojectedWithMetadata, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+        if (level - z <= 5 && level - z >= 0) {
           val layerId: LayerId = LayerId(jobId, z)
           println(layerId)
           // If the layer exists already, delete it out before writing
@@ -187,9 +192,10 @@ object TriggerEdu {
     val conf: SparkConf = new SparkConf().setAppName("New Coverage").setMaster("local[*]")
     val sc = new SparkContext(conf)
     //    reprojectEdu(sc, "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1.tif", "/D:/TMS/07-29-2024-09-25-29_files_list/LC08_L1TP_002017_20190105_20200829_02_T1_B1_reprojected.tif", "EPSG:3857", 100)
-//    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
-//    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
-//    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
+    //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
+    //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
+    //    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
+    visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/black_race/936_231375d0-8103-418e-bc9d-325aef1955b3_SpatialFilter-OUTPUT_FILE_PATH-7cd92345b69e43b8a404a5d17cb15688.tif", "/D:/Intermediate_results/TMS", 12, "iso", false)
   }
 
 }

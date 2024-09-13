@@ -481,6 +481,57 @@
       }
     ]
   },
+  "Service.getCoverageArray": {
+    "description": "Getting resource coverageArray of certain id",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of target array."
+      },
+      {
+        "name": "bbox",
+        "type": "List<Float>",
+        "description": "The range of space used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "bboxCrs",
+        "type": "String",
+        "description": "The crs of bbox.",
+        "default": "WGS84",
+        "optional": "True"
+      },
+      {
+        "name": "cloudCoverMin",
+        "type": "Float",
+        "description": "The minimum value of cloud cover.",
+        "default": "0",
+        "optional": "True"
+      },
+      {
+        "name": "cloudCoverMax",
+        "type": "Float",
+        "description": "The maximum value of cloud cover.",
+        "default": "100",
+        "optional": "True"
+      }
+    ]
+  },
   "Service.getCoverage": {
     "description": "Getting resource coverage of certain id",
     "returns": "Coverage",
@@ -11741,6 +11792,127 @@
         "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used",
         "optional": "True",
         "default": "None"
+      }
+    ]
+  },
+  "CoverageArray.addStyles": {
+    "description": "Add the styles to the coverageArray.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The coverageArray to be added styles"
+      },
+      {
+        "name": "bands",
+        "type": "List<String>",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gain",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "bias",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "min",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "max",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "gamma",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "opacity",
+        "type": "Float",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "palette",
+        "type": "Object",
+        "description": "",
+        "default": "None",
+        "optional": "True"
+      },
+      {
+        "name": "format",
+        "type": "String",
+        "description": "",
+        "default": "png",
+        "optional": "True"
+      }
+    ]
+  },
+  "CoverageArray.export": {
+    "description": "Export a coverageArray.",
+    "returns": "CoverageArray",
+    "args": [
+      {
+        "name": "coverageArray",
+        "type": "CoverageArray",
+        "description": "The CoverageArray to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the CoverageArray",
+        "optional": "True"
+      },
+      {
+        "name": "crs",
+        "type": "String",
+        "description": "The crs of the exported CoverageArray",
+        "optional": "True"
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The scale of the exported CoverageArray",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported CoverageArray",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported CoverageArray",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported CoverageArray",
+        "optional": "True"
       }
     ]
   },

@@ -1,1 +1,40 @@
-{"0":{"functionInvocationValue":{"functionName":"Cube.addStyles","arguments":{"min":{"constantValue":"0"},"max":{"constantValue":"500"},"palette":{"constantValue":["GoldenRod","Gold","LightGreen","LimeGreen","Green"]},"cube":{"functionInvocationValue":{"functionName":"Cube.NDVI","arguments":{"input":{"functionInvocationValue":{"functionName":"Service.getCube","arguments":{"extent":{"constantValue":"[114.16,30.47,114.47,30.69]"},"time":{"constantValue":"[2023-01-10 00:00:00,2023-01-17 00:00:00]"},"tms":{"constantValue":"WebMercatorQuad"},"bands":{"constantValue":"[SR_B3,SR_B5]"},"resolution":{"constantValue":"30"},"cubeId":{"constantValue":"3"},"products":{"constantValue":"[LC08_L2SP_C02_T1]"}}}},"band1":{"arrayValue":{"values":[{"constantValue":"SR_B3"},{"valueReference":"1"}]}},"band2":{"arrayValue":{"values":[{"constantValue":"SR_B5"},{"valueReference":"1"}]}}}}},"bands":{"constantValue":"[NDVI]"}}}},"1":{"constantValue":"Landsat 8"},"layerName":"layer0","isBatch":"0","map":{"level":12,"spatialRange":[113.90954,30.376371,114.41046,30.563435]}}
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.export",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.addStyles",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "Service.getCoverage",
+                  "arguments": {
+                    "baseUrl": {
+                      "constantValue": "https://maps.gnosis.earth/ogcapi/"
+                    },
+                    "coverageID": {
+                      "constantValue": "sentinel2"
+                    },
+                    "productID": {
+                      "constantValue": "sentinel2-l2a"
+                    }
+                  }
+                }
+              },
+              "max": {
+                "constantValue": 255
+              },
+              "min": {
+                "constantValue": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "isBatch": 1
+}
+

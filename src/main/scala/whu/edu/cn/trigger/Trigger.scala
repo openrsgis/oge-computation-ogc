@@ -46,6 +46,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
   var coverageCollectionMetadata: mutable.Map[String, CoverageCollectionMetadata] = mutable.Map.empty[String, CoverageCollectionMetadata]
+  var coverageArrayMetadata: ListBuffer[CoverageCollectionMetadata] = ListBuffer.empty[CoverageCollectionMetadata]
   var lazyFunc: mutable.Map[String, (String, mutable.Map[String, String])] = mutable.Map.empty[String, (String, mutable.Map[String, String])]
   var coverageCollectionRddList: mutable.Map[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]] = mutable.Map.empty[String, immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]]
   var coverageRddList: mutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = mutable.Map.empty[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])]
@@ -119,7 +120,7 @@ object Trigger {
           coverageCollectionRddList += (UUID -> CoverageCollection.load(sc, productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax()))
         }
       case OGEClassType.CoverageArray =>
-        val metadata: CoverageCollectionMetadata = coverageCollectionMetadata(UUID)
+        val metadata: CoverageCollectionMetadata = coverageArrayMetadata.head
         coverageParamsList += (UUID -> CoverageArray.getLoadParams(productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax()))
     }
   }
@@ -182,7 +183,7 @@ object Trigger {
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverageArray" =>
           lazyFunc += (UUID -> (funcName, args))
-          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
+          coverageArrayMetadata += Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat)
         case "Service.getCoverage" =>
           if(args("coverageID").startsWith("myData/") || args("coverageID").startsWith("result/")){
             coverageReadFromUploadFile = true
@@ -309,29 +310,58 @@ object Trigger {
           funcArgs += List(args("bandNames").substring(1, args("bandNames").length - 1).split(",").toList)
         case "CoverageArray.toInt8" =>
           funcNameList += "CoverageArray.toInt8"
+          funcArgs += List.empty
         case "CoverageArray.toUint8" =>
           funcNameList += "CoverageArray.toUint8"
+          funcArgs += List.empty
         case "CoverageArray.toInt16" =>
           funcNameList += "CoverageArray.toInt16"
+          funcArgs += List.empty
         case "CoverageArray.toUint16" =>
           funcNameList += "CoverageArray.toUint16"
+          funcArgs += List.empty
         case "CoverageArray.toInt32" =>
           funcNameList += "CoverageArray.toInt32"
+          funcArgs += List.empty
         case "CoverageArray.toFloat" =>
           funcNameList += "CoverageArray.toFloat"
+          funcArgs += List.empty
         case "CoverageArray.toDouble" =>
           funcNameList += "CoverageArray.toDouble"
-        case "CoverageArray.visualizeOnTheFly" =>
-          funcNameList += "CoverageArray.visualizeOnTheFly"
-          isActioned(sc, args("coverageArray"), OGEClassType.CoverageArray)
+          funcArgs += List.empty
+        case "CoverageArray.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
+          if (isBatch == 0) {
+            isActioned(sc, args("coverageArray"), OGEClassType.CoverageArray)
+            val coverageArray: Array[(String, String)] = coverageParamsList(args("coverageArray"))
+            funcNameList += "CoverageArray.visualizeOnTheFly"
+            coverageArray.zipWithIndex.foreach {case (element, index) =>
+              val coverage = Coverage.load(sc, element._1, element._2, level)
+              val firstCoverage: (Int, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = (0 -> coverage)
+              CoverageList += firstCoverage
+              funcArgs += List(visParam, index)
+              for (i <- funcNameList.indices) {
+                process(funcNameList(i), funcArgs(i), i)
+              }
+              funcArgs.remove(funcArgs.length - 1)
+              CoverageList.clear()
+            }
+          } else {
+            funcNameList += "CoverageArray.addStyles"
+            funcArgs += List(visParam)
+          }
+
+        case "CoverageArray.export" =>
+          funcNameList += "CoverageArray.visualizeBatch"
+          isActioned(sc, args("coverageArray"), OGEClassType.CoverageArray)
           val coverageArray: Array[(String, String)] = coverageParamsList(args("coverageArray"))
           coverageArray.zipWithIndex.foreach {case (element, index) =>
             val coverage = Coverage.load(sc, element._1, element._2, level)
             val firstCoverage: (Int, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = (0 -> coverage)
             CoverageList += firstCoverage
-            funcArgs += List(visParam, index)
+            println("index: ", index)
+            funcArgs += List(batchParam, Trigger.dagId + index)
             for (i <- funcNameList.indices) {
               process(funcNameList(i), funcArgs(i), i)
             }
@@ -1834,7 +1864,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coverageArrayExport.json")
 //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
@@ -1850,7 +1880,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-//        runBatch(sc,workTaskJson,dagId,"Teng","EPSG:4326","100","","a98","tiff")
+//    runBatch(sc,workTaskJson,dagId,"zy","EPSG:4326","100","","","tif")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")

@@ -135,6 +135,10 @@ object CoverageArray {
       Coverage.toDouble(coverage)
     }
 
+    def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+      Coverage.addStyles(coverage, visParam)
+    }
+
     def visualizeOnTheFly(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam, index: Int): Unit = {
       val dagId = Trigger.dagId + index
 
@@ -333,7 +337,7 @@ object CoverageArray {
 //    //    coverageArray.foreach(t => TriggerEdu.makeTIFF(t, "/D:/TMS/coverageArray/" + System.currentTimeMillis() + ".tif"))
 //    funcNameList += "CoverageArray.toDouble"
 //    funcNameList += "CoverageArray.normalizedDifference"
-//    funcNameList += "CoverageArray.visualizeOnTheFly"
+//    funcNameList += "CoverageArray.visualizeBatch"
 //    funcArgs += List()
 //    funcArgs += List(List("MSS1_band2", "MSS1_band4"))
 //
@@ -342,8 +346,11 @@ object CoverageArray {
 //      val firstCoverage: (Int, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = (0 -> coverage)
 //      CoverageList += firstCoverage
 //      println(CoverageList.toString())
-//      val visParam: VisualizationParam = new VisualizationParam
-//      funcArgs += List(visParam, index)
+////      val visParam: VisualizationParam = new VisualizationParam
+//      val batchParam = new BatchParam
+//      batchParam.setCrs("EPSG:4326")
+//      batchParam.setScale("100")
+//      funcArgs += List(batchParam, Trigger.dagId + index)
 //      println(funcArgs.toString())
 //      for (i <- funcNameList.indices) {
 //        println(i)
@@ -355,6 +362,6 @@ object CoverageArray {
 //      funcArgs.remove(funcArgs.length - 1)
 //      CoverageList.clear()
 //    }
-//
+
 //  }
 }

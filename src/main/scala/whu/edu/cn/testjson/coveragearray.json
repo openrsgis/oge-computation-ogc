@@ -1,0 +1,59 @@
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "CoverageArray.addStyles",
+      "arguments": {
+        "coverageArray": {
+          "functionInvocationValue": {
+            "functionName": "CoverageArray.normalizedDifference",
+            "arguments": {
+              "bandNames": {
+                "constantValue": [
+                  "MSS1_band2", "MSS1_band4"
+                ]
+              },
+              "coverageArray": {
+                "functionInvocationValue": {
+                  "functionName": "CoverageArray.toFloat",
+                  "arguments": {
+                    "coverageArray": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCoverageArray",
+                        "arguments": {
+                          "baseUrl": {
+                            "constantValue": "http://localhost"
+                          },
+                          "bbox": {
+                            "constantValue": "[114.3, 30, 114.5, 31]"
+                          },
+                          "datetime": {
+                            "constantValue": "[2000-01-01 00:00:00,2023-12-31 00:00:00]"
+                          },
+                          "productID": {
+                            "constantValue": "GF1_L1_PMS1_EO"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "max": {
+          "constantValue": 1
+        },
+        "min": {
+          "constantValue": -1
+        },
+        "palette": {
+          "constantValue": [
+            "red", "blue", "yellow"
+          ]
+        }
+      }
+    }
+  },
+  "isBatch": 0
+}
