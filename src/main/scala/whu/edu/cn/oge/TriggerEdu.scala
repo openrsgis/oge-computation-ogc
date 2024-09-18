@@ -9,7 +9,7 @@ import geotrellis.raster.io.geotiff.GeoTiff
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey, VisualizationParam}
-import whu.edu.cn.oge.Coverage.{addStyles, reproject, resolutionTMSArray, selectBands}
+import whu.edu.cn.oge.Coverage.{addStyles1Band, addStyles2Band, addStyles3Band, reproject, resolutionTMSArray, selectBands}
 import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 import java.nio.file.Paths
@@ -115,11 +115,24 @@ object TriggerEdu {
 
   def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(makeChangedRasterRDDFromTif(sc, inputPath))
+    val visParam: VisualizationParam = new VisualizationParam()
+    val reprojectedWithoutNodata = coverage.map(rdd => (rdd._1, rdd._2.mapBands((_, tile) => tile.mapDouble(value => if (value.equals(0.0)) Double.NaN else value))))
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       if (coverage._1.first()._2.bandCount >= 3) {
-        (coverage._1.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1), rdd._2.band(2)))), coverage._2)
+        val coverageWith3band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1), rdd._2.band(2)))), coverage._2)
+        addStyles3Band(coverageWith3band, visParam)
       }
-      else coverage
+      else if (coverage._1.first()._2.bandCount == 2) {
+        val coverageWith2band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1)))), coverage._2)
+        addStyles2Band(coverageWith2band, visParam)
+      }
+      else if (coverage._1.first()._2.bandCount == 1) {
+        val coverageWith1band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0)))), coverage._2)
+        addStyles1Band(coverageWith1band, visParam)
+      }
+      else {
+        throw new Exception("bandCounts can not be 0")
+      }
     }
 
     val tmsCrs: CRS = CRS.fromEpsgCode(3857)
@@ -135,8 +148,15 @@ object TriggerEdu {
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
 
-    val reprojectedWithoutNodata = reprojected.map(rdd => (rdd._1, rdd._2.mapBands((_, tile) => tile.mapDouble(value => if (value.equals(0.0)) Double.NaN else value))))
-    val reprojectedWithMetadata = ContextRDD(reprojectedWithoutNodata, reprojected.metadata)
+//    val time = System.currentTimeMillis()
+//    val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(reprojected.metadata.bounds.get.minKey.col, reprojected.metadata.bounds.get.minKey.row, time), SpaceTimeKey(reprojected.metadata.bounds.get.maxKey.col, reprojected.metadata.bounds.get.maxKey.row, time))
+//    val bands = coverage._1.collect().head._1.measurementName
+//    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (reprojected.map{case (spatialKey, tile) =>
+//      val spaceTimeKey = new SpaceTimeKey(spatialKey.col, spatialKey.row, time)
+//      val spaceTimeBandKey = SpaceTimeBandKey(spaceTimeKey, bands)
+//      (spaceTimeBandKey, tile)
+//    }, TileLayerMetadata(reprojected.metadata.cellType, LayoutDefinition(reprojected.metadata.extent, reprojected.metadata.tileLayout), reprojected.metadata.extent, reprojected.metadata.crs, bounds))
+//    makeTIFF(result, "/D:/Intermediate_results/test.tif")
 
     if (level > zoom) {
       throw new Exception("level can not > " + zoom)
@@ -158,8 +178,7 @@ object TriggerEdu {
       // Create the writer that we will use to store the tiles in the local catalog.
       val writer: FileLayerWriter = FileLayerWriter(attributeStore1)
 
-
-      Pyramid.upLevels(reprojectedWithMetadata, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
         if (level - z <= 5 && level - z >= 0) {
           val layerId: LayerId = LayerId(jobId, z)
           println(layerId)
@@ -181,7 +200,6 @@ object TriggerEdu {
                 println(e)
                 println("Continue writing Layers!")
             }
-
           }
         }
       }
@@ -195,7 +213,8 @@ object TriggerEdu {
     //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
     //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
     //    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
-    visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/black_race/936_231375d0-8103-418e-bc9d-325aef1955b3_SpatialFilter-OUTPUT_FILE_PATH-7cd92345b69e43b8a404a5d17cb15688.tif", "/D:/Intermediate_results/TMS", 12, "iso", false)
+    visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/black_race/Landsat_wh_iso.tif", "/D:/Intermediate_results/TMS", 12, "iso3", coverageReadFromUploadFile = false)
+
   }
 
 }

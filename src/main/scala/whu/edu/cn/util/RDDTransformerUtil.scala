@@ -1,13 +1,17 @@
 package whu.edu.cn.util
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream, OutputStreamWriter, PrintWriter}
-import geotrellis.layer.{Bounds, FloatingLayoutScheme, SpaceTimeKey, SpatialKey, TileLayerMetadata}
+import geotrellis.layer.{Bounds, FloatingLayoutScheme, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.raster.{DoubleCellType, MultibandTile, Raster, Tile}
 import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.raster.render.Png
 import geotrellis.raster.resample.Bilinear
+import geotrellis.spark.store.file.FileLayerReader
 import geotrellis.spark.store.hadoop.{HadoopGeoTiffRDD, HadoopSparkContextMethodsWrapper}
 import geotrellis.spark.{withCollectMetadataMethods, withTilerMethods}
+import geotrellis.store.LayerId
+import geotrellis.store.file.FileAttributeStore
 import geotrellis.vector.ProjectedExtent
 import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
@@ -144,6 +148,28 @@ object RDDTransformerUtil {
     val featureRDD = readShp(sc, sourceShpPath, "utf-8")
     println("成功读取shp")
     featureRDD
+  }
+
+
+  def convertTileToPNG(sc: SparkContext, outputPath: String, pngOutputPath: String, layerId: LayerId): Unit = {
+    // Create the attribute store and layer reader
+    val attributeStore = FileAttributeStore(outputPath)
+    val layerReader = FileLayerReader(attributeStore)(sc)
+
+    // Read back the data
+    val readBackRDD: RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] =
+      layerReader.read[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](layerId)
+
+
+    // Stitch the tiles into a single raster
+    val coverageArray: Array[(SpatialKey, MultibandTile)] = readBackRDD.collect()
+    val (tile, _, _) = TileLayoutStitcher.stitch(coverageArray)
+    val stitchedTile: Raster[MultibandTile] = Raster(tile, readBackRDD.metadata.extent)
+    // Convert the stitched raster to a BufferedImage
+    val image: Png = stitchedTile.tile.renderPng()
+    // Write the image to a file
+    image.write(pngOutputPath)
+
   }
 
 }
