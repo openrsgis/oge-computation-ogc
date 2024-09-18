@@ -22,6 +22,8 @@ import org.jpmml.sparkml.PMMLBuilder
 import org.jpmml.sparkml.PipelineModelUtil
 
 import java.io.{File, IOException}
+import java.util
+
 import sys.process._
 import com.google.common.io.{MoreFiles, RecursiveDeleteOption}
 import org.apache.spark.ml.util.MLWriter
@@ -33,7 +35,14 @@ import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
+import org.locationtech.jts.geom.{Geometry, LineString}
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.debug.FeatureDebug.{DEF_GEOM_KEY, createShp, makeFeatureRDDFromShp, saveFeatureRDDToShp}
+import whu.edu.cn.oge.CoverageCollection.mosaic
+
+import scala.collection.mutable
+import whu.edu.cn.oge.QGIS.{gdalClipRasterByExtent, gdalClipRasterByMaskLayer}
+import scala.util.parsing.json._
 
 object TriggerEdu {
   def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), outputPath: String): Unit = {
@@ -56,6 +65,56 @@ object TriggerEdu {
     println("SUCCESS")
   }
 
+  def mosaicEdu(implicit sc: SparkContext, inputListPath: String, outputPath: String): Unit ={
+//    val inputList: List[String] = inputListPath.substring(1, inputListPath.length - 1)
+//      .split(",").filter(_.nonEmpty).map(t=>{
+//      val noMargin = t.replace(" ", "")
+//      noMargin.substring(1,noMargin.length-1)
+//    }).toList
+    println(inputListPath)
+    val inputList: List[String] = JSON.parseFull(inputListPath) match {
+      case Some(list: List[String]) => list
+      case _ => throw new IllegalArgumentException("Invalid inputListPath format")
+    }
+    val coverageCollection: Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] =
+      inputList.map(input=>{
+        (input, makeChangedRasterRDDFromTif(sc, input))
+      }).toMap
+    val newCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = mosaic(coverageCollection)
+    makeTIFF(newCoverage, outputPath)
+  }
+  def clipRasterByMaskLayerEdu(implicit sc: SparkContext,
+                               inputPath: String,
+                               mask: String,
+                               outputPath: String,
+                               cropToCutLine: String = "True",
+                               targetExtent: String = "",
+                               setResolution: String = "False",
+                               extra: String = "",
+                               targetCrs: String = "",
+                               keepResolution: String = "False",
+                               alphaBand: String = "False",
+                               options: String = "",
+                               multithreading: String = "False",
+                               dataType: String = "0",
+                               sourceCrs: String = ""): Unit ={
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
+    val feature: RDD[(String, (Geometry, mutable.Map[String, Any]))] = makeFeatureRDDFromShp(sc, mask)
+    val newCoverage = gdalClipRasterByMaskLayer(sc, coverage, feature, cropToCutLine, targetExtent, setResolution, extra, targetCrs, keepResolution, alphaBand, options, multithreading, dataType, sourceCrs)
+    makeTIFF(newCoverage, outputPath)
+  }
+  def clipRasterByExtentEdu(implicit sc: SparkContext,
+                            inputPath: String,
+                            outputPath: String,
+                            projwin: String = "",
+                            extra: String = "",
+                            nodata: Double = 0.0,
+                            dataType: String = "0",
+                            options: String = "") = {
+    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, inputPath)
+    val newCoverage = gdalClipRasterByExtent(sc, coverage, projwin, extra, nodata, dataType, options)
+    makeTIFF(newCoverage, outputPath)
+  }
   def randomForestTrain(implicit sc: SparkContext, featuresPath: String, labelPath: String, modelOutputPath: String, labelCol: Int = 0, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0) = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featursCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
@@ -215,6 +274,12 @@ object TriggerEdu {
     //    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
     visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/black_race/Landsat_wh_iso.tif", "/D:/Intermediate_results/TMS", 12, "iso3", coverageReadFromUploadFile = false)
 
+//    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
+//    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
+//    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
+    clipRasterByMaskLayerEdu(sc, "/C:/Users/HUAWEI/Desktop/毕设/应用_监督分类结果/RGB_Mean.tif","/C:/Users/HUAWEI/Desktop/oge/OGE竞赛/out/polygon4.shp", "/C:/Users/HUAWEI/Desktop/oge/OGE竞赛/out/clip.tiff")
+
+    //    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
   }
 
 }
