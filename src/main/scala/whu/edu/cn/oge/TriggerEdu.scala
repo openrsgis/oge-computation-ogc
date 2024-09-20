@@ -49,7 +49,7 @@ import scala.util.parsing.json._
 object TriggerEdu {
   def focalMedian(implicit sc: SparkContext,
                   inputPath: String,
-                  kernelType: String,
+                  kernelType: String = "square",
                   radius: Int,
                   outputPath: String) = {
     val coverage = makeChangedRasterRDDFromTif(sc, inputPath)
