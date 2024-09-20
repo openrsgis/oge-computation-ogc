@@ -40,6 +40,8 @@ import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
 import whu.edu.cn.entity.cube.CubeTileKey
 import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
+import whu.edu.cn.algorithms.MLlib.algorithms.{randomForestClassifierModel, modelClassify}
+
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 
@@ -61,6 +63,7 @@ object Trigger {
 
   var tableRddList: mutable.Map[String, String] = mutable.Map.empty[String, String]
   var kernelRddList: mutable.Map[String, geotrellis.raster.mapalgebra.focal.Kernel] = mutable.Map.empty[String, geotrellis.raster.mapalgebra.focal.Kernel]
+  var mlmodelRddList: mutable.Map[String, org.apache.spark.ml.PipelineModel] = mutable.Map.empty[String, org.apache.spark.ml.PipelineModel]
   var featureRddList: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
   var grassResultList: mutable.Map[String, Any] = mutable.Map.empty[String, Any] //GRASS部分返回String类的算子
   //  var cubeRDDList: mutable.Map[String, mutable.Map[String, Any]] = mutable.Map.empty[String, mutable.Map[String, Any]]
@@ -1393,6 +1396,10 @@ object Trigger {
           doubleList += (UUID -> reduceRegion(coverage = coverageRddList(args("coverage")), args("reducer"), args("bandIndex").toInt))
         case "Coverage.filter" =>
           coverageRddList += (UUID -> Coverage.filter(coverage = coverageRddList(args("coverage")), args("min").toDouble, args("max").toDouble))
+        case "MLmodel.randomForestClassifierModel" =>
+          mlmodelRddList += (UUID -> randomForestClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt))
+        case "MLmodel.modelClassify" =>
+          coverageRddList += (UUID -> modelClassify(sc, coverage = coverageRddList(args("coverage")), model = mlmodelRddList(args("model"))))
       }
 
 
@@ -1410,6 +1417,7 @@ object Trigger {
         // TODO forDece: 以下为未检验
         Trigger.tableRddList.clear()
         Trigger.kernelRddList.clear()
+        Trigger.mlmodelRddList.clear()
         Trigger.featureRddList.clear()
         Trigger.cubeRDDList.clear()
         Trigger.cubeLoad.clear()
@@ -1642,6 +1650,7 @@ object Trigger {
       //    // TODO lrx: 以下为未检验
       Trigger.tableRddList.clear()
       Trigger.kernelRddList.clear()
+      Trigger.mlmodelRddList.clear()
       Trigger.featureRddList.clear()
       Trigger.cubeRDDList.clear()
       Trigger.cubeLoad.clear()
@@ -1760,6 +1769,7 @@ object Trigger {
       //    // TODO lrx: 以下为未检验
       Trigger.tableRddList.clear()
       Trigger.kernelRddList.clear()
+      Trigger.mlmodelRddList.clear()
       Trigger.featureRddList.clear()
       Trigger.cubeRDDList.clear()
       Trigger.cubeLoad.clear()
@@ -1864,7 +1874,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coverageArrayExport.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test1.json")
 //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()

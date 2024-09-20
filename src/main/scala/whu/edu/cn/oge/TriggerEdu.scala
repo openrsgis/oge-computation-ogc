@@ -47,10 +47,14 @@ import whu.edu.cn.util.CoverageUtil.focalMethods
 import scala.util.parsing.json._
 
 object TriggerEdu {
-  def focalMedian(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+  def focalMedian(implicit sc: SparkContext,
+                  inputPath: String,
                   kernelType: String,
-                  radius: Int):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
-    focalMethods(coverage, kernelType, focal.Median.apply, radius)
+                  radius: Int,
+                  outputPath: String) = {
+    val coverage = makeChangedRasterRDDFromTif(sc, inputPath)
+    val resRDD = focalMethods(coverage, kernelType, focal.Median.apply, radius)
+    makeTIFF(resRDD, outputPath)
   }
 
   def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), outputPath: String): Unit = {

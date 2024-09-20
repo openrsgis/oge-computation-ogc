@@ -1,0 +1,84 @@
+{
+  "0": {
+    "functionInvocationValue": {
+      "functionName": "MLmodel.modelClassify",
+      "arguments": {
+        "coverage": {
+          "valueReference": "1"
+        },
+        "model": {
+          "functionInvocationValue": {
+            "functionName": "MLmodel.randomForestClassifierModel",
+            "arguments": {
+              "checkpointInterval": {
+                "constantValue": 10
+              },
+              "featuresCoverage": {
+                "valueReference": "1"
+              },
+              "labelCoverage": {
+                "functionInvocationValue": {
+                  "functionName": "Coverage.selectBands",
+                  "arguments": {
+                    "bands": {
+                      "constantValue": [
+                        "Red"
+                      ]
+                    },
+                    "coverage": {
+                      "valueReference": "2"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "1": {
+    "functionInvocationValue": {
+      "functionName": "Coverage.selectBands",
+      "arguments": {
+        "bands": {
+          "constantValue": [
+            "Red",
+            "Near-Infrared",
+            "Blue"
+          ]
+        },
+        "coverage": {
+          "valueReference": "2"
+        }
+      }
+    }
+  },
+  "2": {
+    "functionInvocationValue": {
+      "functionName": "Service.getCoverage",
+      "arguments": {
+        "baseUrl": {
+          "constantValue": "http://localhost"
+        },
+        "coverageID": {
+          "constantValue": "LE07_L1TP_ARD_EO"
+        },
+        "productID": {
+          "constantValue": "Red"
+        }
+      }
+    }
+  },
+  "isBatch": 0,
+  "map": {
+    "level": 11,
+    "spatialRange": [
+      117.51476648622568,
+      22.684498262780092,
+      124.7106782367174,
+      24.43893723104236
+    ]
+  },
+  "layerName": "prediction"
+}
