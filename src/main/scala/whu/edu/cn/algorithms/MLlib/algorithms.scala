@@ -54,9 +54,11 @@ object algorithms {
     val regressCoverage: RDDImage = Regressor.regress(spark, coverage, model)("prediction")
     regressCoverage
   }
-  def randomForestClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel = {
+  def randomForestClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, featuresCoverage, labelCoverage)
+//    , featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0
+//    val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, featuresCoverage, labelCoverage)
+    val model: PipelineModel = Classifier.randomForest(checkpointInterval, "auto", 32, 5, 0.0, 1, 0.0, 20, 123L, 1.0).train(spark, featuresCoverage, labelCoverage)
     model
   }
   def modelClassify(implicit sc: SparkContext, coverage: RDDImage, model: PipelineModel): RDDImage = {

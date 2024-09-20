@@ -14638,6 +14638,43 @@
         "description": "max"
       }
     ]
+  },
+  "MLmodel.randomForestClassifierModel": {
+    "description": "randomForestClassifierModel training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "featuresCoverage",
+        "type": "Coverage",
+        "description": "The featuresCoverage."
+      },
+      {
+        "name": "labelCoverage",
+        "type": "Coverage",
+        "description": "The labelCoverage."
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Integer",
+        "description": "One of the parameters."
+      }
+    ]
+  },
+  "MLmodel.modelClassify": {
+    "description": "classifying method.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be predicted."
+      },
+      {
+        "name": "model",
+        "type": "MLmodel",
+        "description": "The model."
+      }
+    ]
   }
 
 }
