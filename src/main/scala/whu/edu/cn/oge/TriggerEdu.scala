@@ -23,9 +23,9 @@ import org.jpmml.sparkml.PipelineModelUtil
 
 import java.io.{File, IOException}
 import java.util
-
 import sys.process._
 import com.google.common.io.{MoreFiles, RecursiveDeleteOption}
+import geotrellis.raster.mapalgebra.focal
 import org.apache.spark.ml.util.MLWriter
 import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
@@ -42,9 +42,17 @@ import whu.edu.cn.oge.CoverageCollection.mosaic
 
 import scala.collection.mutable
 import whu.edu.cn.oge.QGIS.{gdalClipRasterByExtent, gdalClipRasterByMaskLayer}
+import whu.edu.cn.util.CoverageUtil.focalMethods
+
 import scala.util.parsing.json._
 
 object TriggerEdu {
+  def focalMedian(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                  kernelType: String,
+                  radius: Int):(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    focalMethods(coverage, kernelType, focal.Median.apply, radius)
+  }
+
   def makeTIFF(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), outputPath: String): Unit = {
     val coverageArray: Array[(SpatialKey, MultibandTile)] = coverage._1.map(t => {
       (t._1.spaceTimeKey.spatialKey, t._2)
