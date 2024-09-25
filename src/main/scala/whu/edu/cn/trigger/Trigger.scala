@@ -332,6 +332,9 @@ object Trigger {
         case "CoverageArray.toDouble" =>
           funcNameList += "CoverageArray.toDouble"
           funcArgs += List.empty
+//        case "CoverageArray.clipRasterByMaskLayerByGDAL" =>
+//          funcNameList += "CoverageArray.clipRasterByMaskLayerByGDAL"
+//          funcArgs += List(sc, )
         case "CoverageArray.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
@@ -1874,7 +1877,7 @@ object Trigger {
 
     workTaskJson = {
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test1.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
 //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()

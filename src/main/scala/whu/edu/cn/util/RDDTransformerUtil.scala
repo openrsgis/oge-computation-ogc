@@ -1,7 +1,7 @@
 package whu.edu.cn.util
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream, OutputStreamWriter, PrintWriter}
-import geotrellis.layer.{Bounds, FloatingLayoutScheme, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
+import geotrellis.layer.{Bounds, FloatingLayoutScheme, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.raster.{DoubleCellType, MultibandTile, Raster, Tile}
 import geotrellis.raster.io.geotiff.GeoTiff
@@ -12,7 +12,7 @@ import geotrellis.spark.store.hadoop.{HadoopGeoTiffRDD, HadoopSparkContextMethod
 import geotrellis.spark.{withCollectMetadataMethods, withTilerMethods}
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
-import geotrellis.vector.ProjectedExtent
+import geotrellis.vector.{Extent, ProjectedExtent}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -132,6 +132,51 @@ object RDDTransformerUtil {
 
     println("成功读取tif")
     (tiledOut, metaData)
+  }
+
+  def makeChangedRasterRDDFromTifNew(
+                                      sc: SparkContext,
+                                      sourceTiffPath: String
+                                    ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val hadoopPath = sourceTiffPath
+    val inputRdd: RDD[(ProjectedExtent, MultibandTile)] =
+      HadoopGeoTiffRDD.spatialMultiband(new Path(hadoopPath))(sc)
+    // 1. 指定划分的单张瓦片的大小
+    val localLayoutScheme = FloatingLayoutScheme(256)
+    // 2. 根据布局方案计算并收集影像的元数据信息，包括布局、空间范围、坐标系等
+    val (_: Int, metadata: TileLayerMetadata[SpatialKey]) =
+      inputRdd.collectMetadata[SpatialKey](localLayoutScheme)
+    // 3. 将影像数据按照指定的布局方案划分为瓦片，并缓存已经更正空间范围为新瓦片布局下的空间范围到内存中以提高后续计算的效率
+    val tiled = inputRdd.tileToLayout[SpatialKey](metadata).cache()
+    // 4. 添加时间维度元数据信息
+    val srcBounds = metadata.bounds
+    val now = "1000-01-01 00:00:00"
+    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val date = sdf.parse(now).getTime
+    val newBounds = Bounds(
+      SpaceTimeKey(srcBounds.get.minKey._1, srcBounds.get.minKey._2, date),
+      SpaceTimeKey(srcBounds.get.maxKey._1, srcBounds.get.maxKey._2, date)
+    )
+    /* 5.
+       步骤2没有修正空间范围，
+       我认为是 geotrellis 框架本身源码写的有疏漏，
+       更正空间范围为新瓦片布局下的空间范围，左上角原点不变,
+       然后更新布局参数信息
+     */
+    val newLeft = metadata.extent.xmin
+    val newTop = metadata.extent.ymax
+    val newRight = newLeft + metadata.cellheight * metadata.cols
+    val newBottom = newTop - metadata.cellwidth * metadata.rows
+    val newExtent = Extent(newLeft, newBottom, newRight, newTop)
+    val newLayout = LayoutDefinition(newExtent, metadata.tileLayout)
+    // 6. 更新元数据信息
+    val newMetaData = TileLayerMetadata(metadata.cellType, newLayout, newExtent, metadata.crs, newBounds)
+    // 7. 将原有的瓦片数据映射为具有空间、时间和波段键的RDD
+    val tiledOut = tiled.map(t => {
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), ListBuffer[String]("Aspect")), t._2)
+    })
+    println("成功读取tif")
+    (tiledOut, newMetaData)
   }
 
   def saveFeatureRDDToShp(input: RDD[(String, (Geometry, mutable.Map[String, Any]))], outputShpPath: String): Unit = {

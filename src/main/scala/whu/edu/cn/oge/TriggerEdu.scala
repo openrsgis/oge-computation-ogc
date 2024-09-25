@@ -2,7 +2,7 @@ package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
 import geotrellis.layer.stitch.TileLayoutStitcher
-import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
+import geotrellis.layer.{Bounds, FloatingLayoutScheme, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, MultibandTile, Raster}
 import geotrellis.raster.io.geotiff.GeoTiff
@@ -10,7 +10,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.Coverage.{addStyles1Band, addStyles2Band, addStyles3Band, reproject, resolutionTMSArray, selectBands}
-import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
+import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeChangedRasterRDDFromTifNew}
 
 import java.nio.file.Paths
 import org.apache.spark.ml.PipelineModel
@@ -32,9 +32,12 @@ import geotrellis.spark._
 import geotrellis.spark.MultibandTileLayerRDD
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.file.FileLayerWriter
+import geotrellis.spark.store.hadoop.HadoopGeoTiffRDD
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
+import geotrellis.vector.{Extent, ProjectedExtent}
+import org.apache.hadoop.fs.Path
 import org.locationtech.jts.geom.{Geometry, LineString}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.debug.FeatureDebug.{DEF_GEOM_KEY, createShp, makeFeatureRDDFromShp, saveFeatureRDDToShp}
@@ -185,9 +188,24 @@ object TriggerEdu {
   }
 
   def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
-    val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(makeChangedRasterRDDFromTif(sc, inputPath))
+    val coverage = Coverage.toDouble(makeChangedRasterRDDFromTifNew(sc, inputPath))
+    val inputRdd: RDD[(ProjectedExtent, MultibandTile)] =
+      HadoopGeoTiffRDD.spatialMultiband(new Path(inputPath))(sc)
+    // 1. 指定划分的单张瓦片的大小
+    val localLayoutScheme = FloatingLayoutScheme(256)
+    // 2. 根据布局方案计算并收集影像的元数据信息，包括布局、空间范围、坐标系等
+    val (_: Int, metadataOriginal: TileLayerMetadata[SpatialKey]) =
+      inputRdd.collectMetadata[SpatialKey](localLayoutScheme)
+    val extentOriginal = metadataOriginal.extent
     val visParam: VisualizationParam = new VisualizationParam()
-    val reprojectedWithoutNodata = coverage.map(rdd => (rdd._1, rdd._2.mapBands((_, tile) => tile.mapDouble(value => if (value.equals(0.0)) Double.NaN else value))))
+    val reprojectedWithoutNodata = (coverage._1.map { rdd =>
+      val extent: Extent = coverage._2.mapTransform(rdd._1.spaceTimeKey.col, rdd._1.spaceTimeKey.row)
+      (rdd._1, rdd._2.mapBands((_, tile) => tile.mapDouble{ (col, row, value) =>
+        val cellSize = math.abs(coverage._2.layout.cellSize.width)
+        val coordinate = (extent.xmin + cellSize * col, extent.ymax - cellSize * row)
+        if (extentOriginal.contains(coordinate._1, coordinate._2)) value else Double.NaN
+      }))}, coverage._2)
+
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       if (coverage._1.first()._2.bandCount >= 3) {
         val coverageWith3band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1), rdd._2.band(2)))), coverage._2)
@@ -227,7 +245,6 @@ object TriggerEdu {
 //      val spaceTimeBandKey = SpaceTimeBandKey(spaceTimeKey, bands)
 //      (spaceTimeBandKey, tile)
 //    }, TileLayerMetadata(reprojected.metadata.cellType, LayoutDefinition(reprojected.metadata.extent, reprojected.metadata.tileLayout), reprojected.metadata.extent, reprojected.metadata.crs, bounds))
-//    makeTIFF(result, "/D:/Intermediate_results/test.tif")
 
     if (level > zoom) {
       throw new Exception("level can not > " + zoom)
@@ -284,7 +301,7 @@ object TriggerEdu {
     //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
     //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
     //    print(getZoom(sc, "/D:/研究生材料/OGE/应用需求/Vv_part.tif"))
-    visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/black_race/Landsat_wh_iso.tif", "/D:/Intermediate_results/TMS", 12, "iso3", coverageReadFromUploadFile = false)
+    visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/black_race/Landsat_wh_iso.tif", "/D:/Intermediate_results/TMS", 12, "iso", coverageReadFromUploadFile = false)
 
 //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
 //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")

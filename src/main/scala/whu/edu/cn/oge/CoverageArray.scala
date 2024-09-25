@@ -18,6 +18,7 @@ import geotrellis.vector.Extent
 import io.minio.{MinioClient, UploadObjectArgs}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.locationtech.jts.geom.Geometry
 import spire.math.Polynomial.x
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
@@ -32,7 +33,7 @@ import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 import java.io.File
 import scala.+:
 import scala.collection.{immutable, mutable}
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 import scala.reflect.runtime.universe._
 import scala.reflect.runtime.{currentMirror => cm}
 import sys.process._
@@ -133,6 +134,24 @@ object CoverageArray {
     def toDouble(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
       (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       Coverage.toDouble(coverage)
+    }
+
+    def gdalClipRasterByMaskLayer(implicit sc: SparkContext,
+                                  coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                                  mask: RDD[(String, (Geometry, Map[String, Any]))],
+                                  cropToCutLine: String = "True",
+                                  targetExtent: String = "",
+                                  setResolution: String = "False",
+                                  extra: String = "",
+                                  targetCrs: String = "",
+                                  keepResolution: String = "False",
+                                  alphaBand: String = "False",
+                                  options: String = "",
+                                  multithreading: String = "False",
+                                  dataType: String = "0",
+                                  sourceCrs: String = "")
+    : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+      QGIS.gdalClipRasterByMaskLayer(sc, coverage, mask, cropToCutLine, targetExtent, setResolution, extra, targetCrs, keepResolution, alphaBand, options, multithreading, dataType, sourceCrs)
     }
 
     def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
@@ -237,16 +256,16 @@ object CoverageArray {
       }
 
           // 回调服务
-          val jsonObject: JSONObject = new JSONObject
-          val rasterJsonObject: JSONObject = new JSONObject
-          if (visParam.getFormat == "png") {
-            rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + dagId + "/{z}/{x}/{y}.png")
-          }
-          else {
-            rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + dagId + "/{z}/{x}/{y}.jpg")
-          }
+      val jsonObject: JSONObject = new JSONObject
+      val rasterJsonObject: JSONObject = new JSONObject
+      if (visParam.getFormat == "png") {
+        rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + dagId + "/{z}/{x}/{y}.png")
+      }
+      else {
+        rasterJsonObject.put(Trigger.layerName, GlobalConfig.Others.tmsPath + dagId + "/{z}/{x}/{y}.jpg")
+      }
 
-          PostSender.shelvePost("raster",rasterJsonObject)
+      PostSender.shelvePost("raster",rasterJsonObject)
 
     }
 
