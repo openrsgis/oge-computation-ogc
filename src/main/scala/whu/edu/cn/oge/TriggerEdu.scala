@@ -282,7 +282,7 @@ object TriggerEdu {
   }
 
   def visualizeOnTheFlyEduForClassification(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
-    val coverage = Coverage.toDouble(makeChangedRasterRDDFromTif(sc, inputPath))
+    val coverage = Coverage.toDouble(makeChangedRasterRDDFromTifNew(sc, inputPath))
     val hadoopPath = "file://" + inputPath
     val inputRdd: RDD[(ProjectedExtent, MultibandTile)] =
       HadoopGeoTiffRDD.spatialMultiband(new Path(hadoopPath))(sc)
