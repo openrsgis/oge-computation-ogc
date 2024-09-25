@@ -223,15 +223,15 @@ object TriggerEdu {
     val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
       coverageTMS.reproject(tmsCrs, layoutScheme)
 
-    val time = System.currentTimeMillis()
-    val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(reprojected.metadata.bounds.get.minKey.col, reprojected.metadata.bounds.get.minKey.row, time), SpaceTimeKey(reprojected.metadata.bounds.get.maxKey.col, reprojected.metadata.bounds.get.maxKey.row, time))
-    val bands = coverage._1.collect().head._1.measurementName
-    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (reprojected.map{case (spatialKey, tile) =>
-      val spaceTimeKey = new SpaceTimeKey(spatialKey.col, spatialKey.row, time)
-      val spaceTimeBandKey = SpaceTimeBandKey(spaceTimeKey, bands)
-      (spaceTimeBandKey, tile)
-    }, TileLayerMetadata(reprojected.metadata.cellType, LayoutDefinition(reprojected.metadata.extent, reprojected.metadata.tileLayout), reprojected.metadata.extent, reprojected.metadata.crs, bounds))
-    makeTIFF(result, "/D:/Intermediate_results/test1.tif")
+//    val time = System.currentTimeMillis()
+//    val bounds: Bounds[SpaceTimeKey] = Bounds(SpaceTimeKey(reprojected.metadata.bounds.get.minKey.col, reprojected.metadata.bounds.get.minKey.row, time), SpaceTimeKey(reprojected.metadata.bounds.get.maxKey.col, reprojected.metadata.bounds.get.maxKey.row, time))
+//    val bands = coverage._1.collect().head._1.measurementName
+//    val result: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = (reprojected.map{case (spatialKey, tile) =>
+//      val spaceTimeKey = new SpaceTimeKey(spatialKey.col, spatialKey.row, time)
+//      val spaceTimeBandKey = SpaceTimeBandKey(spaceTimeKey, bands)
+//      (spaceTimeBandKey, tile)
+//    }, TileLayerMetadata(reprojected.metadata.cellType, LayoutDefinition(reprojected.metadata.extent, reprojected.metadata.tileLayout), reprojected.metadata.extent, reprojected.metadata.crs, bounds))
+//    makeTIFF(result, "/D:/Intermediate_results/test1.tif")
 
     if (level > zoom) {
       throw new Exception("level can not > " + zoom)
