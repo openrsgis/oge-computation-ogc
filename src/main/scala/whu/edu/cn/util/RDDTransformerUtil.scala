@@ -138,7 +138,7 @@ object RDDTransformerUtil {
                                       sc: SparkContext,
                                       sourceTiffPath: String
                                     ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val hadoopPath = sourceTiffPath
+    val hadoopPath = "file://" + sourceTiffPath
     val inputRdd: RDD[(ProjectedExtent, MultibandTile)] =
       HadoopGeoTiffRDD.spatialMultiband(new Path(hadoopPath))(sc)
     // 1. 指定划分的单张瓦片的大小
