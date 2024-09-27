@@ -1402,6 +1402,39 @@ object Trigger {
           doubleList += (UUID -> reduceRegion(coverage = coverageRddList(args("coverage")), args("reducer"), args("bandIndex").toInt))
         case "Coverage.filter" =>
           coverageRddList += (UUID -> Coverage.filter(coverage = coverageRddList(args("coverage")), args("min").toDouble, args("max").toDouble))
+        // func已达最大大小，新增算子添加至func1
+        case _ =>
+          func1(sc, UUID, funcName, args)
+      }
+
+    } catch {
+      case e: Throwable =>
+        // 清空list
+        Trigger.optimizedDagMap.clear()
+        Trigger.coverageCollectionMetadata.clear()
+        Trigger.lazyFunc.clear()
+        Trigger.coverageCollectionRddList.clear()
+        Trigger.coverageRddList.clear()
+        Trigger.zIndexStrArray.clear()
+        JsonToArg.dagMap.clear()
+        // TODO forDece: 以下为未检验
+        Trigger.tableRddList.clear()
+        Trigger.kernelRddList.clear()
+        Trigger.mlmodelRddList.clear()
+        Trigger.featureRddList.clear()
+        Trigger.cubeRDDList.clear()
+        Trigger.cubeLoad.clear()
+        Trigger.SheetList.clear()
+
+        throw e
+    }
+  }
+
+  def func1(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
+    try {
+      val tempNoticeJson = new JSONObject
+      println("args:", funcName + args)
+      funcName match {
         // MLlib 分类
         case "MLmodel.randomForestClassifierModel" =>
           mlmodelRddList += (UUID -> randomForestClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
@@ -1452,8 +1485,8 @@ object Trigger {
         // 精度评估
         case "MLmodel,multiclassClassificationEvaluator" =>
           stringList += (UUID -> multiclassClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel.clusteringEvaluator"=>
-          stringList += (UUID ->clusteringEvaluator(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName"), args("distanceMeasure")).toString)
+        case "MLmodel.clusteringEvaluator" =>
+          stringList += (UUID -> clusteringEvaluator(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName"), args("distanceMeasure")).toString)
         case "MLmodel,multilabelClassificationEvaluator" =>
           stringList += (UUID -> multilabelClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
         case "MLmodel,binaryClassificationEvaluator" =>
@@ -1464,9 +1497,6 @@ object Trigger {
           stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
 
       }
-
-
-
     } catch {
       case e: Throwable =>
         // 清空list
