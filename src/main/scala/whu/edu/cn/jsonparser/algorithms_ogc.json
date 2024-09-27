@@ -15489,7 +15489,7 @@
 
   "kMeans": {
     "description": "K-means clustering model training method.",
-    "returns": "MLmodel",
+    "returns": "Coverage",
     "args": [
       {
         "name": "featuresCoverage",
@@ -15528,7 +15528,7 @@
   },
   "latentDirichletAllocation": {
     "description": "Latent Dirichlet Allocation (LDA) model training method.",
-    "returns": "MLmodel",
+    "returns": "Coverage",
     "args": [
       {
         "name": "featuresCoverage",
@@ -15588,7 +15588,7 @@
   },
   "bisectingKMeans": {
     "description": "Bisecting K-means clustering model training method.",
-    "returns": "MLmodel",
+    "returns": "Coverage",
     "args": [
       {
         "name": "featuresCoverage",
@@ -15627,7 +15627,7 @@
   },
   "gaussianMixture": {
     "description": "Gaussian Mixture Model (GMM) training method.",
-    "returns": "MLmodel",
+    "returns": "Coverage",
     "args": [
       {
         "name": "featuresCoverage",
@@ -15667,7 +15667,7 @@
 
   "multiclassClassificationEvaluator": {
     "description": "Multiclass classification evaluator method.",
-    "returns": "EvaluationMetrics",
+    "returns": "String",
     "args": [
       {
         "name": "labelCoverage",
@@ -15690,7 +15690,7 @@
   },
   "clusteringEvaluator": {
     "description": "Clustering evaluator method.",
-    "returns": "EvaluationMetrics",
+    "returns": "String",
     "args": [
       {
         "name": "featuresCoverage",
@@ -15720,7 +15720,7 @@
   },
   "multilabelClassificationEvaluator": {
     "description": "Multilabel classification evaluator method.",
-    "returns": "EvaluationMetrics",
+    "returns": "String",
     "args": [
       {
         "name": "labelCoverage",
@@ -15743,7 +15743,7 @@
   },
   "binaryClassificationEvaluator": {
     "description": "Binary classification evaluator method.",
-    "returns": "EvaluationMetrics",
+    "returns": "String",
     "args": [
       {
         "name": "labelCoverage",
@@ -15766,7 +15766,7 @@
   },
   "regressionEvaluator": {
     "description": "Regression evaluator method.",
-    "returns": "EvaluationMetrics",
+    "returns": "String",
     "args": [
       {
         "name": "labelCoverage",
@@ -15789,7 +15789,7 @@
   },
   "rankingEvaluator": {
     "description": "Ranking evaluator method.",
-    "returns": "EvaluationMetrics",
+    "returns": "String",
     "args": [
       {
         "name": "labelCoverage",
@@ -15810,4 +15810,5 @@
       }
     ]
   }
+
 }
