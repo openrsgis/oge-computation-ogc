@@ -242,9 +242,9 @@ object Regressor {
 //      .setQuantileProbabilities(Array(0.3, 0.6))
 //      .setQuantilesCol("quantiles"))
 //  }
-  def isotonicRegression(featureIndex: Int = 0, isotonic: Boolean = true): Regressor = {
+  def isotonicRegression(isotonic: Boolean = true): Regressor = {
     new Regressor(new regression.IsotonicRegression()
-      .setFeatureIndex(featureIndex)
+      .setFeaturesCol("indexedFeatures")
       .setIsotonic(isotonic)
       .setLabelCol("label")
       .setFeaturesCol("indexedFeatures"))
