@@ -160,7 +160,7 @@ object algorithms {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: Model[_] = Clusterer.latentDirichletAllocation(checkpointInterval, k, maxIter, optimizer, seed, subsamplingRate, topicConcentration)
       .train(spark, featuresCoverage)
-    val predictedCoverage = Clusterer.cluster(spark, featuresCoverage, model)("prediction")
+    val predictedCoverage = Clusterer.cluster(spark, featuresCoverage, model)("topicDistribution")
     predictedCoverage
   }
   def bisectingKMeans(implicit sc: SparkContext, featuresCoverage: RDDImage, distanceMeasure: String = "euclidean", k: Int = 4, maxIter: Int = 10, seed: Long = Random.nextLong()): RDDImage = {

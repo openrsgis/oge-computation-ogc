@@ -1445,7 +1445,7 @@ object Trigger {
         case "MLmodel.gbtClassifierClassifierModel" =>
           mlmodelRddList += (UUID -> gbtClassifierClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("featureSubsetStrategy"), args("checkpointInterval").toInt, args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subSamplingRate").toDouble))
         case "MLmodel.multilayerPerceptronClassifierModel" =>
-          mlmodelRddList += (UUID -> multilayerPerceptronClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("layers").slice(1, args("sampleFiles").length - 1).split(',').map(_.toInt), args("blockSize").toInt, args("seed").toLong, args("maxIter").toInt, args("stepSize").toDouble, args("tol").toDouble))
+          mlmodelRddList += (UUID -> multilayerPerceptronClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("layers").slice(1, args("layers").length - 1).split(',').map(_.toInt), args("blockSize").toInt, args("seed").toLong, args("maxIter").toInt, args("stepSize").toDouble, args("tol").toDouble))
         case "MLmodel.linearSVCClassifierModel" =>
           mlmodelRddList += (UUID -> linearSVCClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble))
         case "MLmodel.naiveBayesClassifierModel" =>
@@ -1483,17 +1483,17 @@ object Trigger {
         case "MLmodel.gaussianMixture" =>
           coverageRddList += (UUID -> gaussianMixture(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
         // 精度评估
-        case "MLmodel,multiclassClassificationEvaluator" =>
+        case "MLmodel.multiclassClassificationEvaluator" =>
           stringList += (UUID -> multiclassClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
         case "MLmodel.clusteringEvaluator" =>
           stringList += (UUID -> clusteringEvaluator(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName"), args("distanceMeasure")).toString)
-        case "MLmodel,multilabelClassificationEvaluator" =>
+        case "MLmodel.multilabelClassificationEvaluator" =>
           stringList += (UUID -> multilabelClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel,binaryClassificationEvaluator" =>
+        case "MLmodel.binaryClassificationEvaluator" =>
           stringList += (UUID -> binaryClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel,regressionEvaluator" =>
+        case "MLmodel.regressionEvaluator" =>
           stringList += (UUID -> regressionEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel,rankingEvaluator" =>
+        case "MLmodel.rankingEvaluator" =>
           stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
 
       }
@@ -1966,8 +1966,8 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test.json")
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
+            val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test2.json")
+//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
 //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()

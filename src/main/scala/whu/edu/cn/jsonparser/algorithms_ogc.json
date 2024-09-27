@@ -14768,6 +14768,36 @@
       }
     ]
   },
+  "MLmodel.linearSVCClassifierModel": {
+    "description": "Linear Support Vector Classifier (SVC) model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "featuresCoverage",
+        "type": "Coverage",
+        "description": "The RDD of images representing feature data."
+      },
+      {
+        "name": "labelCoverage",
+        "type": "Coverage",
+        "description": "The RDD of images representing label data."
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations for training.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter to prevent overfitting.",
+        "optional": "True",
+        "default": 0.1
+      }
+    ]
+  },
   "MLmodel.naiveBayesClassifierModel": {
     "description": "Naive Bayes classifier model training method.",
     "returns": "MLmodel",
@@ -15487,7 +15517,7 @@
     ]
   },
 
-  "kMeans": {
+  "MLmodel.mlKMeans": {
     "description": "K-means clustering model training method.",
     "returns": "Coverage",
     "args": [
@@ -15526,7 +15556,7 @@
       }
     ]
   },
-  "latentDirichletAllocation": {
+  "MLmodel.latentDirichletAllocation": {
     "description": "Latent Dirichlet Allocation (LDA) model training method.",
     "returns": "Coverage",
     "args": [
@@ -15586,7 +15616,7 @@
       }
     ]
   },
-  "bisectingKMeans": {
+  "MLmodel.bisectingKMeans": {
     "description": "Bisecting K-means clustering model training method.",
     "returns": "Coverage",
     "args": [
@@ -15625,7 +15655,7 @@
       }
     ]
   },
-  "gaussianMixture": {
+  "MLmodel.gaussianMixture": {
     "description": "Gaussian Mixture Model (GMM) training method.",
     "returns": "Coverage",
     "args": [
@@ -15665,7 +15695,7 @@
     ]
   },
 
-  "multiclassClassificationEvaluator": {
+  "MLmodel.multiclassClassificationEvaluator": {
     "description": "Multiclass classification evaluator method.",
     "returns": "String",
     "args": [
@@ -15688,7 +15718,7 @@
       }
     ]
   },
-  "clusteringEvaluator": {
+  "MLmodel.clusteringEvaluator": {
     "description": "Clustering evaluator method.",
     "returns": "String",
     "args": [
@@ -15718,7 +15748,7 @@
       }
     ]
   },
-  "multilabelClassificationEvaluator": {
+  "MLmodel.multilabelClassificationEvaluator": {
     "description": "Multilabel classification evaluator method.",
     "returns": "String",
     "args": [
@@ -15741,7 +15771,7 @@
       }
     ]
   },
-  "binaryClassificationEvaluator": {
+  "MLmodel.binaryClassificationEvaluator": {
     "description": "Binary classification evaluator method.",
     "returns": "String",
     "args": [
@@ -15764,7 +15794,7 @@
       }
     ]
   },
-  "regressionEvaluator": {
+  "MLmodel.regressionEvaluator": {
     "description": "Regression evaluator method.",
     "returns": "String",
     "args": [
@@ -15787,7 +15817,7 @@
       }
     ]
   },
-  "rankingEvaluator": {
+  "MLmodel.rankingEvaluator": {
     "description": "Ranking evaluator method.",
     "returns": "String",
     "args": [
