@@ -125,8 +125,12 @@ object RDDTransformerUtil {
     val date = sdf.parse(now).getTime
     val newBounds = Bounds(SpaceTimeKey(srcBounds.get.minKey._1, srcBounds.get.minKey._2, date), SpaceTimeKey(srcBounds.get.maxKey._1, srcBounds.get.maxKey._2, date))
     val metaData = TileLayerMetadata(cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    // measurementName从"B1"开始依次为各波段命名，解决用户上传数据无法筛选波段的问题（没有波段名称）
+    val bandCount: Int = tiled.first()._2.bandCount
+    val measurementName = ListBuffer.empty[String]
+    for (i <- 1 to bandCount) measurementName.append(s"B$i")
     val tiledOut = tiled.map(t => {
-      (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), ListBuffer("Aspect")), t._2)
+      (entity.SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), measurementName), t._2)
     })
 
 
@@ -172,8 +176,12 @@ object RDDTransformerUtil {
     // 6. 更新元数据信息
     val newMetaData = TileLayerMetadata(metadata.cellType, newLayout, newExtent, metadata.crs, newBounds)
     // 7. 将原有的瓦片数据映射为具有空间、时间和波段键的RDD
+    // measurementName从"B1"开始依次为各波段命名，解决用户上传数据无法筛选波段的问题（没有波段名称）
+    val bandCount: Int = tiled.first()._2.bandCount
+    val measurementName = ListBuffer.empty[String]
+    for (i <- 1 to bandCount) measurementName.append(s"B$i")
     val tiledOut = tiled.map(t => {
-      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), ListBuffer[String]("Aspect")), t._2)
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), measurementName), t._2)
     })
     println("成功读取tif")
     (tiledOut, newMetaData)
