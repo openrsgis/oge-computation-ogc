@@ -4,30 +4,24 @@ import com.alibaba.fastjson.JSONObject
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, FloatingLayoutScheme, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellType, MultibandTile, Raster}
+import geotrellis.raster.{MultibandTile, Raster, Tile}
 import geotrellis.raster.io.geotiff.GeoTiff
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey, VisualizationParam}
-import whu.edu.cn.oge.Coverage.{addStyles1Band, addStyles2Band, addStyles3Band, reproject, resolutionTMSArray, selectBands}
+import whu.edu.cn.entity.{SpaceTimeBandKey, VisualizationParam}
+import whu.edu.cn.oge.Coverage.reproject
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeChangedRasterRDDFromTifNew}
 
-import java.nio.file.Paths
 import org.apache.spark.ml.PipelineModel
 import org.apache.spark.sql.SparkSession
 import whu.edu.cn.algorithms.MLlib._
 
 import scala.util.Random
-import org.jpmml.sparkml.PMMLBuilder
 import org.jpmml.sparkml.PipelineModelUtil
 
-import java.io.{File, IOException}
-import java.util
+import java.io.File
 import sys.process._
-import com.google.common.io.{MoreFiles, RecursiveDeleteOption}
-import geotrellis.raster.geotiff.GeoTiffRasterSource
 import geotrellis.raster.mapalgebra.focal
-import org.apache.spark.ml.util.MLWriter
 import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
 import geotrellis.spark.MultibandTileLayerRDD
@@ -39,9 +33,8 @@ import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.{Extent, ProjectedExtent}
 import org.apache.hadoop.fs.Path
-import org.locationtech.jts.geom.{Geometry, LineString}
-import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.debug.FeatureDebug.{DEF_GEOM_KEY, createShp, makeFeatureRDDFromShp, saveFeatureRDDToShp}
+import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.debug.FeatureDebug.makeFeatureRDDFromShp
 import whu.edu.cn.oge.CoverageCollection.mosaic
 
 import scala.collection.mutable
@@ -188,22 +181,202 @@ object TriggerEdu {
     jsonObject
   }
 
+  def addStyles1Band(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var coverageOneBand: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage
+    val band1: Array[Double] = coverageOneBand._1.collect().flatMap(t => t._2.band(0).toArrayDouble()).filter(!_.isNaN)
+    val sortedBand1 = band1.sorted
+    val b1 = 0.02 * (sortedBand1.length - 1)
+    val t1 = 0.98 * (sortedBand1.length - 1)
+    val f1 = b1.floor.toInt
+    val c1 = t1.ceil.toInt
+    val min1 = sortedBand1(f1)
+    val max1 = sortedBand1(c1)
+
+      //没有调色盘的情况,保证值不为0
+    val interval: Double = (max1 - min1)
+    coverageOneBand = (coverageOneBand._1.map(t => {
+      val bandR: Tile = t._2.bands(0).mapDouble(d => {
+        if (d.isNaN)
+          d
+        else {
+          val value = 1 + 254.0 * (d - min1) / interval
+          if (value < 0) 0
+          else if (value > 255) 255
+          else value
+        }
+      })
+      val bandG: Tile = t._2.bands(0).mapDouble(d => {
+        if (d.isNaN)
+          d
+        else {
+          val value = 1 + 254.0 * (d - min1) / interval
+          if (value < 0) 0
+          else if (value > 255) 255
+          else value
+        }
+      })
+      val bandB: Tile = t._2.bands(0).mapDouble(d => {
+        if (d.isNaN)
+          d
+        else {
+          val value = 1 + 254.0 * (d - min1) / interval
+          if (value < 0) 0
+          else if (value > 255) 255
+          else value
+        }
+      })
+      (t._1, MultibandTile(bandR, bandG, bandB))
+    }), coverageOneBand._2)
+    coverageOneBand
+
+  }
+
+  def addStyles2Band(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var coverageTwoBand: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage
+    val band1: Array[Double] = coverageTwoBand._1.collect().flatMap(t => t._2.band(0).toArrayDouble()).filter(!_.isNaN)
+    val band2: Array[Double] = coverageTwoBand._1.collect().flatMap(t => t._2.band(1).toArrayDouble()).filter(!_.isNaN)
+    val sortedBand1 = band1.sorted
+    val b1 = 0.02 * (sortedBand1.length - 1)
+    val t1 = 0.98 * (sortedBand1.length - 1)
+    val sortedBand2 = band2.sorted
+    val b2 = 0.02 * (sortedBand2.length - 1)
+    val t2 = 0.98 * (sortedBand1.length - 1)
+    val f1 = b1.floor.toInt
+    val f2 = b2.floor.toInt
+    val c1 = t1.ceil.toInt
+    val c2 = t2.ceil.toInt
+    val min1 = sortedBand1(f1)
+    val min2 = sortedBand2(f2)
+    val max1 = sortedBand1(c1)
+    val max2 = sortedBand2(c2)
+
+    // 拉伸图像
+    val interval1: Double = (max1 - min1)
+    val interval2: Double = (max2 - min2)
+
+    coverageTwoBand = (coverageTwoBand._1.map(
+      t => {
+        val bandR: Tile = t._2.bands(0).mapDouble(d => {
+          if (d.isNaN)
+            d
+          else {
+            val value = 1 + 254.0 * (d - min1) / interval1
+            if (value < 0) 0
+            else if (value > 255) 255
+            else value
+          }
+        })
+        val bandG: Tile = t._2.bands(1).mapDouble(d => {
+          if (d.isNaN)
+            d
+          else {
+            val value = 1 + 254.0 * (d - min2) / interval2
+            if (value < 0) 0
+            else if (value > 255) 255
+            else value
+          }
+        })
+        val bandB: Tile = t._2.bands(0).mapDouble(d => {
+          if (d.isNaN)
+            d
+          else
+            63
+        })
+        (t._1, MultibandTile(bandR, bandG, bandB))
+      }),coverageTwoBand._2)
+    coverageTwoBand
+  }
+
+  def addStyles3Band(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    var coverageThreeBand: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage
+    val band1: Array[Double] = coverageThreeBand._1.collect().flatMap(t => t._2.band(0).toArrayDouble()).filter(!_.isNaN)
+    val band2: Array[Double] = coverageThreeBand._1.collect().flatMap(t => t._2.band(1).toArrayDouble()).filter(!_.isNaN)
+    val band3: Array[Double] = coverageThreeBand._1.collect().flatMap(t => t._2.band(2).toArrayDouble()).filter(!_.isNaN)
+    val sortedBand1 = band1.sorted
+    val b1 = 0.02 * (sortedBand1.length - 1)
+    val t1 = 0.98 * (sortedBand1.length - 1)
+    val sortedBand2 = band2.sorted
+    val b2 = 0.02 * (sortedBand2.length - 1)
+    val t2 = 0.98 * (sortedBand1.length - 1)
+    val sortedBand3 = band3.sorted
+    val b3 = 0.02 * (sortedBand3.length - 1)
+    val t3 = 0.98 * (sortedBand1.length - 1)
+    val f1 = b1.floor.toInt
+    val f2 = b2.floor.toInt
+    val f3 = b3.floor.toInt
+    val c1 = t1.ceil.toInt
+    val c2 = t2.ceil.toInt
+    val c3 = t3.ceil.toInt
+    val min1 = sortedBand1(f1)
+    val min2 = sortedBand2(f2)
+    val min3 = sortedBand3(f3)
+    val max1 = sortedBand1(c1)
+    val max2 = sortedBand2(c2)
+    val max3 = sortedBand3(c3)
+    println(min1)
+    println(min2)
+    println(min3)
+    println(max1)
+    println(max2)
+    println(max3)
+
+    // 拉伸图像
+    val interval1: Double = (max1 - min1)
+    val interval2: Double = (max2 - min2)
+    val interval3: Double = (max3 - min3)
+    coverageThreeBand = (coverageThreeBand._1.map(
+      t => {
+        val bandR: Tile = t._2.bands(0).mapDouble(d => {
+          if (d.isNaN)
+            d
+          else {
+            val value = 1 + 254.0 * (d - min1) / interval1
+            if (value < 0) 0
+            else if (value > 255) 255
+            else value
+          }
+        })
+        val bandG: Tile = t._2.bands(1).mapDouble(d => {
+          if (d.isNaN)
+            d
+          else {
+            val value = 1 + 254.0 * (d - min2) / interval2
+            if (value < 0) 0
+            else if (value > 255) 255
+            else value
+          }
+        })
+        val bandB: Tile = t._2.bands(2).mapDouble(d => {
+          if (d.isNaN)
+            d
+          else {
+            val value = 1 + 254.0 * (d - min3) / interval3
+            if (value < 0) 0
+            else if (value > 255) 255
+            else value
+          }
+        })
+        (t._1, MultibandTile(bandR, bandG, bandB))
+      }), coverageThreeBand._2)
+
+    coverageThreeBand
+  }
+
   def visualizeOnTheFlyEdu(implicit sc: SparkContext, inputPath: String, outputPath: String, level: Int, jobId: String, coverageReadFromUploadFile: Boolean, bands: String = null, min: String = null, max: String = null, gain: String = null, bias: String = null, gamma: String = null, palette: String = null, opacity: String = null, format: String = null): Unit = {
     val coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = Coverage.toDouble(makeChangedRasterRDDFromTifNew(sc, inputPath))
-    val visParam: VisualizationParam = new VisualizationParam()
     val reprojectedWithoutNodata = coverage.map(rdd => (rdd._1, rdd._2.mapBands((_, tile) => tile.mapDouble(value => if (value.equals(0.0)) Double.NaN else value))))
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       if (coverage._1.first()._2.bandCount >= 3) {
         val coverageWith3band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1), rdd._2.band(2)))), coverage._2)
-        addStyles3Band(coverageWith3band, visParam)
+        addStyles3Band(coverageWith3band)
       }
       else if (coverage._1.first()._2.bandCount == 2) {
         val coverageWith2band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1)))), coverage._2)
-        addStyles2Band(coverageWith2band, visParam)
+        addStyles2Band(coverageWith2band)
       }
       else if (coverage._1.first()._2.bandCount == 1) {
         val coverageWith1band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0)))), coverage._2)
-        addStyles1Band(coverageWith1band, visParam)
+        addStyles1Band(coverageWith1band)
       }
       else {
         throw new Exception("bandCounts can not be 0")
@@ -231,7 +404,8 @@ object TriggerEdu {
 //      val spaceTimeBandKey = SpaceTimeBandKey(spaceTimeKey, bands)
 //      (spaceTimeBandKey, tile)
 //    }, TileLayerMetadata(reprojected.metadata.cellType, LayoutDefinition(reprojected.metadata.extent, reprojected.metadata.tileLayout), reprojected.metadata.extent, reprojected.metadata.crs, bounds))
-//    makeTIFF(result, "/D:/Intermediate_results/test1.tif")
+//    result._1.collect().head._2.band(0).foreach(t => println(t))
+//    makeTIFF(result, "/D:/Intermediate_results/ISO.tif")
 
     if (level > zoom) {
       throw new Exception("level can not > " + zoom)
@@ -304,15 +478,15 @@ object TriggerEdu {
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       if (coverage._1.first()._2.bandCount >= 3) {
         val coverageWith3band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1), rdd._2.band(2)))), coverage._2)
-        addStyles3Band(coverageWith3band, visParam)
+        addStyles3Band(coverageWith3band)
       }
       else if (coverage._1.first()._2.bandCount == 2) {
         val coverageWith2band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0), rdd._2.band(1)))), coverage._2)
-        addStyles2Band(coverageWith2band, visParam)
+        addStyles2Band(coverageWith2band)
       }
       else if (coverage._1.first()._2.bandCount == 1) {
         val coverageWith1band = (reprojectedWithoutNodata.map(rdd => (rdd._1, MultibandTile(rdd._2.band(0)))), coverage._2)
-        addStyles1Band(coverageWith1band, visParam)
+        addStyles1Band(coverageWith1band)
       }
       else {
         throw new Exception("bandCounts can not be 0")
@@ -340,7 +514,7 @@ object TriggerEdu {
 //      val spaceTimeBandKey = SpaceTimeBandKey(spaceTimeKey, bands)
 //      (spaceTimeBandKey, tile)
 //    }, TileLayerMetadata(reprojected.metadata.cellType, LayoutDefinition(reprojected.metadata.extent, reprojected.metadata.tileLayout), reprojected.metadata.extent, reprojected.metadata.crs, bounds))
-//    makeTIFF(result, "/D:/Intermediate_results/test.tif")
+//    makeTIFF(result, "/D:/Intermediate_results/ANN.tif")
 
     if (level > zoom) {
       throw new Exception("level can not > " + zoom)
@@ -397,7 +571,7 @@ object TriggerEdu {
     //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
     //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
 //    print(getZoom(sc, "/D:/Intermediate_results/Data/black_race/Landsat_wh_iso.tif"))
-    visualizeOnTheFlyEdu(sc, "/D:/Intermediate_results/Data/Reproject-outputPath-62968a6b01da4449ac630cd4b408d502.tif", "/D:/Intermediate_results/TMS", 12, "remove", coverageReadFromUploadFile = false)
+    visualizeOnTheFlyEduForClassification(sc, "/D:/Intermediate_results/classification/ann.tif", "/D:/Intermediate_results/TMS", 12, "ANN", coverageReadFromUploadFile = false)
 
 //    randomForestTrain(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0818.zip", 4)
 //    classify(sc, "C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\model0817new.zip", "C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\result.tif")
