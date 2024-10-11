@@ -1,19 +1,22 @@
 package whu.edu.cn.algorithms.MLlib
 
-import org.apache.spark.ml.evaluation
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.ml.{Model, evaluation}
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
+import whu.edu.cn.algorithms.terrain.core.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
+import whu.edu.cn.oge.Coverage.selectBands
 
 import scala.collection.mutable.ListBuffer
 
 
 object Evaluator {
   //TODO 后面看是否要更改actual和predicted为List[String] 多标签使用MultilabelClassificationEvaluator
-  def multiclassClassificationEvaluator(spark: SparkSession, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1"), labelBandIndex: Int = 0, predictionBandIndex: Int = 0): List[Double] = {
+  def multiclassClassificationEvaluator(spark: SparkSession, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1"), labelBandIndex: Int = 0, predictionBandIndex: Int = 0, metricLabel: Double = 0): List[Double] = {
     val labelRows: Int = findSpatialKeyMinMax(labelCoverage)._1 //瓦片行数
     val labelCols: Int = findSpatialKeyMinMax(labelCoverage)._2 //瓦片列数
     val predictionRows: Int = findSpatialKeyMinMax(predictionCoverage)._1 //瓦片行数
@@ -63,6 +66,7 @@ object Evaluator {
         val evaluator = new evaluation.MulticlassClassificationEvaluator()
           .setLabelCol("label")
           .setPredictionCol("prediction")
+          .setMetricLabel(metricLabel)
           .setMetricName(name)
         accuracyList.append(evaluator.evaluate(df))
       }
@@ -111,7 +115,7 @@ object Evaluator {
       val list = List(t._1._1.toDouble, t._1._2.toDouble, t._1._3.toDouble, t._1._4.toDouble) ::: t._2._1 ::: List(t._2._2)
       Row(list:_*)
     })
-    val fieldTypes = List.fill(6)(DoubleType)
+    val fieldTypes = List.fill(4+featuresBandCount+1)(DoubleType)
     val colNames: ListBuffer[String] = ListBuffer.empty[String]
     for (i <- 1 to featuresBandCount) {
       colNames.append(s"feature$i")
@@ -140,6 +144,7 @@ object Evaluator {
     evaluator.evaluate(assembledDF)
   }
 
+  //TODO 未检验 该函数与multiclassClassificationEvaluator的区别是：multilabelClassificationEvaluator可以有多个标签列而multiclassClassificationEvaluator只能有一个标签列
   def multilabelClassificationEvaluator(spark: SparkSession, labelsCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1Measure")): List[Double] = {
     val labelsRows: Int = findSpatialKeyMinMax(labelsCoverage)._1 //瓦片行数
     val labelsCols: Int = findSpatialKeyMinMax(labelsCoverage)._2 //瓦片列数
@@ -337,6 +342,7 @@ object Evaluator {
     accuracyList.toList
   }
 
+  //TODO 未检验
   def rankingEvaluator(spark: SparkSession, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("meanAveragePrecision"), labelBandIndex: Int = 0, predictionBandIndex: Int = 0): List[Double] = {
     val labelRows: Int = findSpatialKeyMinMax(labelCoverage)._1 //瓦片行数
     val labelCols: Int = findSpatialKeyMinMax(labelCoverage)._2 //瓦片列数
@@ -395,4 +401,7 @@ object Evaluator {
     accuracyList.toList
 
   }
+
+
+
 }

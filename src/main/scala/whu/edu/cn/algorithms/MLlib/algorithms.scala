@@ -180,9 +180,9 @@ object algorithms {
 
   //精度评估
   //暂时不提供筛选波段，前端可以使用Coverage.selectBands选
-  def multiclassClassificationEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1")): List[Double] = {
+  def multiclassClassificationEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1"), metricLabel: Double = 0.0): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.multiclassClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.multiclassClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0, metricLabel)
   }
   def clusteringEvaluator(implicit sc: SparkContext, featuresCoverage: RDDImage, predictionCoverage: RDDImage, metricName: String = "silhouette", distanceMeasure: String = "squaredEuclidean"): Double = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
