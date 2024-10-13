@@ -1484,7 +1484,7 @@ object Trigger {
           coverageRddList += (UUID -> gaussianMixture(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
         // 精度评估
         case "MLmodel.multiclassClassificationEvaluator" =>
-          stringList += (UUID -> multiclassClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+          stringList += (UUID -> multiclassClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString), args("metricLabel").toDouble).toString)
         case "MLmodel.clusteringEvaluator" =>
           stringList += (UUID -> clusteringEvaluator(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName"), args("distanceMeasure")).toString)
         case "MLmodel.multilabelClassificationEvaluator" =>
