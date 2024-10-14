@@ -243,8 +243,12 @@ object RDDTransformerUtil {
     )
     val metaData =
       TileLayerMetadata(metadata.cellType, srcLayout, srcExtent, srcCrs, newBounds)
+    // measurementName从"B1"开始依次为各波段命名，解决用户上传数据无法筛选波段的问题（没有波段名称）
+    val bandCount: Int = tiled.first()._2.bandCount
+    val measurementName = ListBuffer.empty[String]
+    for (i <- 1 to bandCount) measurementName.append(s"B$i")
     val tiledOut = tiled.map(t => {
-      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), ListBuffer("Aspect")), t._2)
+      (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), measurementName), t._2)
     })
     println("成功读取tif")
     (tiledOut, metaData)

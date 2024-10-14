@@ -15715,6 +15715,13 @@
         "description": "List of metric names to evaluate.",
         "optional": "True",
         "default": "['f1']"
+      },
+      {
+        "name": "metricLabel",
+        "type": "Double",
+        "description": "The class label for which the metric will be evaluated.",
+        "optional": "True",
+        "default": 0.0
       }
     ]
   },
