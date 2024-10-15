@@ -16,11 +16,11 @@ import geotrellis.vector.Extent
 import io.minio.MinioClient
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.entity.{CoverageCollectionMetadata, CoverageMetadata, RawTile, SpaceTimeBandKey}
 import whu.edu.cn.oge.CoverageCollection.mosaic
-import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageCollectionUtil.makeCoverageCollectionRDD
-import whu.edu.cn.util.MinIOUtil
+import whu.edu.cn.util.{COGUtil, ClientUtil}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 
 import java.time.LocalDateTime
@@ -70,6 +70,8 @@ object CoverageCollectionDubug {
   def loadCoverageCollection(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: LocalDateTime = null, endTime: LocalDateTime = null, extent: Extent = null, crs: CRS = null, level: Int = 0): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime.toString, endTime.toString, extent, crs)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
+    val cogUtil: COGUtil = COGUtil.createCOGUtil(CLIENT_NAME)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val rawTileRdd: Map[String, RDD[RawTile]] = metaListGrouped.map(t => {
       val metaListCoverage: ListBuffer[CoverageMetadata] = t._2
       val tileDataTuple: RDD[CoverageMetadata] = sc.makeRDD(metaListCoverage)
@@ -77,8 +79,8 @@ object CoverageCollectionDubug {
         .map(t => {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val client: MinioClient = MinIOUtil.getMinioClient
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, extent,metaList.head.getGeom)
+            val client = clientUtil.getClient
+            val tiles: mutable.ArrayBuffer[RawTile] = cogUtil.tileQuery(client, level, t, extent,metaList.head.getGeom)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -94,9 +96,9 @@ object CoverageCollectionDubug {
       val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 90))
       (t._1, tileRDDRePar.map(t => {
         val time1: Long = System.currentTimeMillis()
-        val client: MinioClient = MinIOUtil.getMinioClient
-        val tile: RawTile = getTileBuf(client, t)
-//        MinIOUtil.releaseMinioClient(client)
+        val client = clientUtil.getClient
+        val tile: RawTile = cogUtil.getTileBuf(client, t)
+        //        MinIOUtil.releaseMinioClient(client)
         val time2: Long = System.currentTimeMillis()
         println("Get Tile Time1 is " + (time2 - time1))
         tile

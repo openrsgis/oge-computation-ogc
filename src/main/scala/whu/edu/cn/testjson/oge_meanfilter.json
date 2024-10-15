@@ -1,0 +1,76 @@
+{
+  "layerName": "a",
+  "isBatch": "0",
+  "map":{
+    "level":9,
+    "spatialRange":[
+      111.85902,
+      29.909586,
+      116.74098,
+      31.2121331
+    ]
+  },
+  "0":{
+    "functionInvocationValue":{
+      "functionName":"Coverage.addStyles",
+      "arguments": {
+        "coverage": {
+          "functionInvocationValue": {
+            "functionName": "Coverage.focalMean",
+            "arguments": {
+              "coverage": {
+                "functionInvocationValue": {
+                  "functionName": "Coverage.selectBands",
+                  "arguments": {
+                    "coverage": {
+                      "functionInvocationValue": {
+                        "functionName": "Service.getCoverage",
+                        "arguments": {
+                          "coverageID": {
+                            "constantValue": "LC81220392015275LGN00"
+                          },
+                          "baseUrl": {
+                            "constantValue": "http://localhost"
+                          },
+                          "productID": {
+                            "constantValue": "LC08_L1T"
+                          }
+                        }
+                      }
+                    },
+                    "bands": {
+                      "constantValue": [
+                        "B3"
+                      ]
+                    }
+                  }
+                }
+              },
+              "radius": {
+                "constantValue": 1
+              },
+              "kernelType": {
+                "constantValue": "square"
+              }
+            }
+          }
+        },
+        "min": {
+          "constantValue": -1
+        },
+        "max": {
+          "constantValue": 1
+        },
+        "palette": {
+          "constantValue": [
+            "gold",
+            "yellow",
+            "brown",
+            "lightblue",
+            "blue"
+          ]
+        }
+      }
+    }
+  }
+}

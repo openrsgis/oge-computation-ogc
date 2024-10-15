@@ -31,6 +31,7 @@ import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, VisualizationParam}
@@ -49,11 +50,10 @@ import whu.edu.cn.geocube.util.PostgresqlService
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge.Coverage.removeZeroFromTile
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
-import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender}
+import whu.edu.cn.util.{COGUtil, ClientUtil, JedisUtil, PostSender}
 
 import java.io.{File, FileWriter, Reader, StringReader}
 import java.nio.charset.Charset
@@ -907,196 +907,196 @@ object Cube {
 
   def visualizeOnTheFly(implicit sc: SparkContext, rasterTileLayerRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), visualizationParam: VisualizationParam): Unit = {
     throw new Exception("所请求的数据在Bos中不存在！")
-//    val styledRasterRDD: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Cube.addStyles(rasterTileLayerRdd, visualizationParam)
-//
-//    val bands: Array[String] = visualizationParam.getBands.toArray
-//    val tol_bands: ArrayBuffer[String] = ArrayBuffer()
-//    val tol_Extent: ArrayBuffer[String] = ArrayBuffer()
-//    val tol_Time: ArrayBuffer[Instant] = ArrayBuffer()
-//    val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
-//
-//    for (i <- styledRasterRDD.indices) {
-//
-//      val tileRdd: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = styledRasterRDD(i)
-//      val styledRasterRDDtime = (tileRdd.map (_._1.time.toInstant.toEpochMilli)).collect().distinct(0)
-//
-//      val spatialMetadata = TileLayerMetadata(
-//        tileRdd._2.cellType,
-//        tileRdd._2.layout,
-//        tileRdd._2.extent,
-//        tileRdd._2.crs,
-//        tileRdd._2.bounds.get.toSpatial)
-//      var tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRdd._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
-//
-//      if (BosCOGUtil.tileDifference > 0) {
-//        // 首先对其进行上采样
-//        // 上采样必须考虑范围缩小，不然非常占用内存
-//        val levelUp: Int = BosCOGUtil.tileDifference
-//        val layoutOrigin: LayoutDefinition = tileLayerRdd.metadata.layout
-//        val extentOrigin: Extent = tileLayerRdd.metadata.layout.extent
-//        val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
-//        val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
-//        val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
-//        val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
-//
-//        val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
-//        val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
-//        tileLayerRdd = tileLayerRdd.reproject(tileLayerRdd.metadata.crs, layoutNew)._2
-//      }
-//
-//      val tmsCrs: CRS = CRS.fromEpsgCode(3857)
-//      val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
-//      val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
-//        tileLayerRdd.reproject(tmsCrs, layoutScheme)
-//
-//      val outputPath: String = "/mnt/storage/on-the-fly"
-//      // Create the attributes store that will tell us information about our catalog.
-//      val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
-//      // Create the writer that we will use to store the tiles in the local catalog.
-//      val writer: FileLayerWriter = FileLayerWriter(attributeStore)
-//
-//      if (zoom < Trigger.level) {
-//        throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
-//      }
-//
-//      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
-//        if (z == Trigger.level) {
-//          val layerId: LayerId = LayerId(Trigger.dagId + styledRasterRDDtime, z)
-//          // If the layer exists already, delete it out before writing
-//          if (attributeStore.layerExists(layerId)) {
-//            //        new FileLayerManager(attributeStore).delete(layerId)
-//            try {
-//              writer.overwrite(layerId, rdd)
-//            } catch {
-//              case e: Exception =>
-//                e.printStackTrace()
-//            }
-//          }
-//          else {
-//            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
-//          }
-//        }
-//      }
-//
-//      tol_bands.append(bands(0))
-//      val Time: Instant = tileRdd.map(_._1.time.toInstant).collect().distinct(0)
-//      //    val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-//      //    val TimeUtcString: String = dateTimeFormatter.format(Time)
-//      tol_Time.append(Time)
-//      val extent: String = tileRdd._2.extent.toString()
-//      val subExtent: String = extent.substring(6, extent.length).replace("(", "[").replace(")", "]")
-//      tol_Extent.append(subExtent)
-//
-//      val urlObject: JSONObject = new JSONObject
-//      urlObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId  + styledRasterRDDtime + "/{z}/{x}/{y}.png")
-//      tol_urljson.append(urlObject)
-//
-//
-//      //      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
-//      //      val jedis: Jedis = new JedisUtil().getJedis
-//      //      jedis.select(1)
-//      //      zIndexStrArray.foreach(zIndexStr => {
-//      //        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
-//      //        jedis.sadd(key, "cached")
-//      //        jedis.expire(key, REDIS_CACHE_TTL)
-//      //      })
-//      //      jedis.close()
-//
-//      if (sc.master.contains("local")) {
-//        whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube" + styledRasterRDDtime)
-//      }
-//    }
-//
-//    // 回调服务
-//
-//    val cl_Extent: Array[String] = tol_Extent.distinct.toArray
-//    val cl_Time: Array[Instant] = tol_Time.distinct.toArray
-//    val jsonObject: JSONObject = new JSONObject
-//    val dim: ArrayBuffer[JSONObject] = ArrayBuffer()
-//
-//    val dimObject1: JSONObject = new JSONObject
-//    dimObject1.put("name", "extent")
-//    dimObject1.put("values", cl_Extent)
-//    dim.append(dimObject1)
-//
-//    val dimObject2: JSONObject = new JSONObject
-//    dimObject2.put("name", "dateTime")
-//    dimObject2.put("values", cl_Time)
-//    dim.append(dimObject2)
-//
-//    val dimObject3: JSONObject = new JSONObject
-//    dimObject3.put("name", "bands")
-//    dimObject3.put("values", bands)
-//    dim.append(dimObject3)
-//
-//    jsonObject.put("raster", tol_urljson.toArray)
-//    jsonObject.put("extent", tol_Extent.toArray)
-//    jsonObject.put("dateTime", tol_Time.toArray)
-//    jsonObject.put("bands", bands)
-//    jsonObject.put("dimension", dim.toArray)
-//
-//
-//    PostSender.shelvePost("cube",jsonObject)
-//
-//
-//
-//    // 清空list
-//    Trigger.optimizedDagMap.clear()
-//    Trigger.coverageCollectionMetadata.clear()
-//    Trigger.lazyFunc.clear()
-//    Trigger.coverageCollectionRddList.clear()
-//    Trigger.coverageRddList.clear()
-//    Trigger.zIndexStrArray.clear()
-//    JsonToArg.dagMap.clear()
-//    //    // TODO lrx: 以下为未检验
-//    Trigger.tableRddList.clear()
-//    Trigger.kernelRddList.clear()
-//    Trigger.featureRddList.clear()
-//    Trigger.cubeRDDList.clear()
-//    Trigger.cubeLoad.clear()
+    //    val styledRasterRDD: ArrayBuffer[(RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Cube.addStyles(rasterTileLayerRdd, visualizationParam)
+    //
+    //    val bands: Array[String] = visualizationParam.getBands.toArray
+    //    val tol_bands: ArrayBuffer[String] = ArrayBuffer()
+    //    val tol_Extent: ArrayBuffer[String] = ArrayBuffer()
+    //    val tol_Time: ArrayBuffer[Instant] = ArrayBuffer()
+    //    val tol_urljson: ArrayBuffer[JSONObject] = ArrayBuffer()
+    //
+    //    for (i <- styledRasterRDD.indices) {
+    //
+    //      val tileRdd: (RDD[(SpaceTimeKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = styledRasterRDD(i)
+    //      val styledRasterRDDtime = (tileRdd.map (_._1.time.toInstant.toEpochMilli)).collect().distinct(0)
+    //
+    //      val spatialMetadata = TileLayerMetadata(
+    //        tileRdd._2.cellType,
+    //        tileRdd._2.layout,
+    //        tileRdd._2.extent,
+    //        tileRdd._2.crs,
+    //        tileRdd._2.bounds.get.toSpatial)
+    //      var tileLayerRdd: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRdd._1.map { x => (x._1.spatialKey, x._2) }, spatialMetadata)
+    //
+    //      if (BosCOGUtil.tileDifference > 0) {
+    //        // 首先对其进行上采样
+    //        // 上采样必须考虑范围缩小，不然非常占用内存
+    //        val levelUp: Int = BosCOGUtil.tileDifference
+    //        val layoutOrigin: LayoutDefinition = tileLayerRdd.metadata.layout
+    //        val extentOrigin: Extent = tileLayerRdd.metadata.layout.extent
+    //        val extentIntersect: Extent = extentOrigin.intersection(BosCOGUtil.extent).orNull
+    //        val layoutCols: Int = math.max(math.ceil((extentIntersect.xmax - extentIntersect.xmin) / 256.0 / layoutOrigin.cellSize.width * (1 << levelUp)).toInt, 1)
+    //        val layoutRows: Int = math.max(math.ceil((extentIntersect.ymax - extentIntersect.ymin) / 256.0 / layoutOrigin.cellSize.height * (1 << levelUp)).toInt, 1)
+    //        val extentNew: Extent = Extent(extentIntersect.xmin, extentIntersect.ymin, extentIntersect.xmin + layoutCols * 256.0 * layoutOrigin.cellSize.width / (1 << levelUp), extentIntersect.ymin + layoutRows * 256.0 * layoutOrigin.cellSize.height / (1 << levelUp))
+    //
+    //        val tileLayout: TileLayout = TileLayout(layoutCols, layoutRows, 256, 256)
+    //        val layoutNew: LayoutDefinition = LayoutDefinition(extentNew, tileLayout)
+    //        tileLayerRdd = tileLayerRdd.reproject(tileLayerRdd.metadata.crs, layoutNew)._2
+    //      }
+    //
+    //      val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    //      val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
+    //      val (zoom, reprojected): (Int, RDD[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]]) =
+    //        tileLayerRdd.reproject(tmsCrs, layoutScheme)
+    //
+    //      val outputPath: String = "/mnt/storage/on-the-fly"
+    //      // Create the attributes store that will tell us information about our catalog.
+    //      val attributeStore: FileAttributeStore = FileAttributeStore(outputPath)
+    //      // Create the writer that we will use to store the tiles in the local catalog.
+    //      val writer: FileLayerWriter = FileLayerWriter(attributeStore)
+    //
+    //      if (zoom < Trigger.level) {
+    //        throw new InternalError("内部错误，切分瓦片层级没有前端TMS层级高")
+    //      }
+    //
+    //      Pyramid.upLevels(reprojected, layoutScheme, zoom, Bilinear) { (rdd, z) =>
+    //        if (z == Trigger.level) {
+    //          val layerId: LayerId = LayerId(Trigger.dagId + styledRasterRDDtime, z)
+    //          // If the layer exists already, delete it out before writing
+    //          if (attributeStore.layerExists(layerId)) {
+    //            //        new FileLayerManager(attributeStore).delete(layerId)
+    //            try {
+    //              writer.overwrite(layerId, rdd)
+    //            } catch {
+    //              case e: Exception =>
+    //                e.printStackTrace()
+    //            }
+    //          }
+    //          else {
+    //            writer.write(layerId, rdd, ZCurveKeyIndexMethod)
+    //          }
+    //        }
+    //      }
+    //
+    //      tol_bands.append(bands(0))
+    //      val Time: Instant = tileRdd.map(_._1.time.toInstant).collect().distinct(0)
+    //      //    val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+    //      //    val TimeUtcString: String = dateTimeFormatter.format(Time)
+    //      tol_Time.append(Time)
+    //      val extent: String = tileRdd._2.extent.toString()
+    //      val subExtent: String = extent.substring(6, extent.length).replace("(", "[").replace(")", "]")
+    //      tol_Extent.append(subExtent)
+    //
+    //      val urlObject: JSONObject = new JSONObject
+    //      urlObject.put(Trigger.layerName, "http://oge.whu.edu.cn/api/oge-tms-png/" + Trigger.dagId  + styledRasterRDDtime + "/{z}/{x}/{y}.png")
+    //      tol_urljson.append(urlObject)
+    //
+    //
+    //      //      val zIndexStrArray: mutable.ArrayBuffer[String] = Trigger.zIndexStrArray
+    //      //      val jedis: Jedis = new JedisUtil().getJedis
+    //      //      jedis.select(1)
+    //      //      zIndexStrArray.foreach(zIndexStr => {
+    //      //        val key: String = Trigger.dagId + ":solvedTile:" + Trigger.level + zIndexStr
+    //      //        jedis.sadd(key, "cached")
+    //      //        jedis.expire(key, REDIS_CACHE_TTL)
+    //      //      })
+    //      //      jedis.close()
+    //
+    //      if (sc.master.contains("local")) {
+    //        whu.edu.cn.debug.CoverageDubug.makeTIFF(reprojected, "cube" + styledRasterRDDtime)
+    //      }
+    //    }
+    //
+    //    // 回调服务
+    //
+    //    val cl_Extent: Array[String] = tol_Extent.distinct.toArray
+    //    val cl_Time: Array[Instant] = tol_Time.distinct.toArray
+    //    val jsonObject: JSONObject = new JSONObject
+    //    val dim: ArrayBuffer[JSONObject] = ArrayBuffer()
+    //
+    //    val dimObject1: JSONObject = new JSONObject
+    //    dimObject1.put("name", "extent")
+    //    dimObject1.put("values", cl_Extent)
+    //    dim.append(dimObject1)
+    //
+    //    val dimObject2: JSONObject = new JSONObject
+    //    dimObject2.put("name", "dateTime")
+    //    dimObject2.put("values", cl_Time)
+    //    dim.append(dimObject2)
+    //
+    //    val dimObject3: JSONObject = new JSONObject
+    //    dimObject3.put("name", "bands")
+    //    dimObject3.put("values", bands)
+    //    dim.append(dimObject3)
+    //
+    //    jsonObject.put("raster", tol_urljson.toArray)
+    //    jsonObject.put("extent", tol_Extent.toArray)
+    //    jsonObject.put("dateTime", tol_Time.toArray)
+    //    jsonObject.put("bands", bands)
+    //    jsonObject.put("dimension", dim.toArray)
+    //
+    //
+    //    PostSender.shelvePost("cube",jsonObject)
+    //
+    //
+    //
+    //    // 清空list
+    //    Trigger.optimizedDagMap.clear()
+    //    Trigger.coverageCollectionMetadata.clear()
+    //    Trigger.lazyFunc.clear()
+    //    Trigger.coverageCollectionRddList.clear()
+    //    Trigger.coverageRddList.clear()
+    //    Trigger.zIndexStrArray.clear()
+    //    JsonToArg.dagMap.clear()
+    //    //    // TODO lrx: 以下为未检验
+    //    Trigger.tableRddList.clear()
+    //    Trigger.kernelRddList.clear()
+    //    Trigger.featureRddList.clear()
+    //    Trigger.cubeRDDList.clear()
+    //    Trigger.cubeLoad.clear()
 
   }
 
-//  def selectProducts(implicit sc: SparkContext, productList: String = null, dateTime: String = null, geom: String = null, bands: String = null): Unit = {
-//    // 将对应的参数赋值并得到应有的格式
-//    // cube的特性如何体现在将将productList中的产品统一至该维度geom, bandList等规定的维度下，但是格网如何统一的？
-//    val products = if (productList != null) productList.replace("[", "").replace("]", "").split(",") else null
-//    val geomList = if (geom != null) geom.replace("[", "").replace("]", "").split(",").map(t => {
-//      t.toDouble
-//    }) else null
-//    val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
-//    val startTime = if (dateTimeArray.length == 2) dateTimeArray(0) else null
-//    val endTime = if (dateTimeArray.length == 2) dateTimeArray(1) else null
-//    val bandList = if (bands != null) bands.replace("[", "").replace("]", "").split(",") else null
-//    for (i <- 0 until products.length) {
-//      if (products(i).contains("EO")) { // EO:栅格数据
-//        val queryParams = new QueryParams
-//        // 有很多参数还没有设定，如何得到，如：cityCodes，cityNames
-//        queryParams.setCubeId("27") // 后期需要修改成可改变的。
-//        queryParams.setLevel("4000") // 瓦片分辨率，为什么这两个值是确定的？
-//        queryParams.setRasterProductName(products(i)) // 产品名
-//        queryParams.setExtent(geomList(0), geomList(1), geomList(2), geomList(3)) // 空间维度，矩形四点
-//        queryParams.setTime(startTime, endTime)
-//        queryParams.setMeasurements(bandList)
-//        val rasterRdd: RasterRDD = getData(sc, queryParams)
-////        result += (products(i) -> rasterRdd) // products(i)
-//      }
-//      else if (products(i).contains("Vector")) { // EO:矢量数据
-//        val queryParams = new QueryParams
-//        queryParams.setCubeId("27")
-//        queryParams.setCRS("WGS84")
-//        queryParams.setVectorProductName(products(i))
-//        queryParams.setExtent(geomList(0), geomList(1), geomList(2), geomList(3))
-//        queryParams.setTime(startTime, endTime)
-//        val featureRdd: FeatureRDD = getData(sc, queryParams)
-////        result += (products(i) -> featureRdd)
-//      }
-//      else if (products(i).contains("Tabular")) {
-//        val tabularRdd: RDD[(LocationTimeGenderKey, Int)] = getBITabulars(sc, new BiQueryParams)
-////        result += (products(i) -> tabularRdd)
-//      }
-//    }
-//  }
+  //  def selectProducts(implicit sc: SparkContext, productList: String = null, dateTime: String = null, geom: String = null, bands: String = null): Unit = {
+  //    // 将对应的参数赋值并得到应有的格式
+  //    // cube的特性如何体现在将将productList中的产品统一至该维度geom, bandList等规定的维度下，但是格网如何统一的？
+  //    val products = if (productList != null) productList.replace("[", "").replace("]", "").split(",") else null
+  //    val geomList = if (geom != null) geom.replace("[", "").replace("]", "").split(",").map(t => {
+  //      t.toDouble
+  //    }) else null
+  //    val dateTimeArray = if (dateTime != null) dateTime.replace("[", "").replace("]", "").split(",") else null
+  //    val startTime = if (dateTimeArray.length == 2) dateTimeArray(0) else null
+  //    val endTime = if (dateTimeArray.length == 2) dateTimeArray(1) else null
+  //    val bandList = if (bands != null) bands.replace("[", "").replace("]", "").split(",") else null
+  //    for (i <- 0 until products.length) {
+  //      if (products(i).contains("EO")) { // EO:栅格数据
+  //        val queryParams = new QueryParams
+  //        // 有很多参数还没有设定，如何得到，如：cityCodes，cityNames
+  //        queryParams.setCubeId("27") // 后期需要修改成可改变的。
+  //        queryParams.setLevel("4000") // 瓦片分辨率，为什么这两个值是确定的？
+  //        queryParams.setRasterProductName(products(i)) // 产品名
+  //        queryParams.setExtent(geomList(0), geomList(1), geomList(2), geomList(3)) // 空间维度，矩形四点
+  //        queryParams.setTime(startTime, endTime)
+  //        queryParams.setMeasurements(bandList)
+  //        val rasterRdd: RasterRDD = getData(sc, queryParams)
+  ////        result += (products(i) -> rasterRdd) // products(i)
+  //      }
+  //      else if (products(i).contains("Vector")) { // EO:矢量数据
+  //        val queryParams = new QueryParams
+  //        queryParams.setCubeId("27")
+  //        queryParams.setCRS("WGS84")
+  //        queryParams.setVectorProductName(products(i))
+  //        queryParams.setExtent(geomList(0), geomList(1), geomList(2), geomList(3))
+  //        queryParams.setTime(startTime, endTime)
+  //        val featureRdd: FeatureRDD = getData(sc, queryParams)
+  ////        result += (products(i) -> featureRdd)
+  //      }
+  //      else if (products(i).contains("Tabular")) {
+  //        val tabularRdd: RDD[(LocationTimeGenderKey, Int)] = getBITabulars(sc, new BiQueryParams)
+  ////        result += (products(i) -> tabularRdd)
+  //      }
+  //    }
+  //  }
 
   // 为cube划分网格
   def meshing(gridDimX: Int, gridDimY: Int, startTime: String, endTime: String, extents: Extent):
@@ -1114,48 +1114,48 @@ object Cube {
 
   def getRawTileRDDBos(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
     throw new Exception("所请求的数据在Bos中不存在！")
-//    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
-//    if (metaList.isEmpty) {
-//      throw new Exception("No such coverage in database!")
-//    }
-//
-//    var union: Extent = Trigger.windowExtent
-//    if(union == null){
-//      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
-//    }
-//    val queryGeometry: Geometry = metaList.head.getGeom
-//
-//    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
-//    val tileRDDFlat: RDD[RawTile] = tileMetadata
-//      .mapPartitions(par => {
-//        val minIOUtil = MinIOUtil
-//        val client: BosClient = BosClientUtil_scala.getClient
-//        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
-//          val time1: Long = System.currentTimeMillis()
-//          val rawTiles: mutable.ArrayBuffer[RawTile] = {
-//            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
-//            tiles
-//          }
-//          val time2: Long = System.currentTimeMillis()
-//          println("Get Tiles Meta Time is " + (time2 - time1))
-//          // 根据元数据和范围查询后端瓦片
-//          if (rawTiles.nonEmpty) rawTiles
-//          else mutable.Buffer.empty[RawTile]
-//        })
-//        result
-//      }).flatMap(t => t).persist()
-//
-//    val tileNum: Int = tileRDDFlat.count().toInt
-//    println("tileNum = " + tileNum)
-//    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
-//    tileRDDFlat.unpersist()
-//    val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
-//      val client: BosClient = BosClientUtil_scala.getClient
-//      par.map(t => {
-//        BosCOGUtil.getTileBuf(client, t)
-//      })
-//    })
-//    rawTileRdd
+    //    val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
+    //    if (metaList.isEmpty) {
+    //      throw new Exception("No such coverage in database!")
+    //    }
+    //
+    //    var union: Extent = Trigger.windowExtent
+    //    if(union == null){
+    //      union = Extent(metaList.head.getGeom.getEnvelopeInternal)
+    //    }
+    //    val queryGeometry: Geometry = metaList.head.getGeom
+    //
+    //    val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
+    //    val tileRDDFlat: RDD[RawTile] = tileMetadata
+    //      .mapPartitions(par => {
+    //        val minIOUtil = MinIOUtil
+    //        val client: BosClient = BosClientUtil_scala.getClient
+    //        val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
+    //          val time1: Long = System.currentTimeMillis()
+    //          val rawTiles: mutable.ArrayBuffer[RawTile] = {
+    //            val tiles: mutable.ArrayBuffer[RawTile] = BosCOGUtil.tileQuery(client, level, t, union,queryGeometry)
+    //            tiles
+    //          }
+    //          val time2: Long = System.currentTimeMillis()
+    //          println("Get Tiles Meta Time is " + (time2 - time1))
+    //          // 根据元数据和范围查询后端瓦片
+    //          if (rawTiles.nonEmpty) rawTiles
+    //          else mutable.Buffer.empty[RawTile]
+    //        })
+    //        result
+    //      }).flatMap(t => t).persist()
+    //
+    //    val tileNum: Int = tileRDDFlat.count().toInt
+    //    println("tileNum = " + tileNum)
+    //    val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
+    //    tileRDDFlat.unpersist()
+    //    val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
+    //      val client: BosClient = BosClientUtil_scala.getClient
+    //      par.map(t => {
+    //        BosCOGUtil.getTileBuf(client, t)
+    //      })
+    //    })
+    //    rawTileRdd
   }
 
   def getRawTileRDD(implicit sc: SparkContext,coverageId: String, productKey: String, level: Int): RDD[RawTile] = {
@@ -1171,14 +1171,15 @@ object Cube {
     val queryGeometry: Geometry = metaList.head.getGeom
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
+    val cogUtil: COGUtil = COGUtil.createCOGUtil(CLIENT_NAME)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val minIOUtil = MinIOUtil
-        val client: MinioClient = minIOUtil.getMinioClient
+        val client = clientUtil.getClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, union, queryGeometry)
+            val tiles: mutable.ArrayBuffer[RawTile] = cogUtil.tileQuery(client, level, t, union, queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -1195,9 +1196,9 @@ object Cube {
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
-      val client: MinioClient = MinIOUtil.getMinioClient
+      val client = clientUtil.getClient
       par.map(t => {
-        getTileBuf(client, t)
+        cogUtil.getTileBuf(client, t)
       })
     })
     rawTileRdd
@@ -1232,17 +1233,17 @@ object Cube {
     val _ymax: Int = (math.ceil((mbr._4 - extent.ymin) / gridSizeY) min gridDimY).toInt
 
     val result: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
-//    var measurement: String = ""
-//    var timeKey: Long = 0L
-//    val tileArray: ArrayBuffer[(SpatialKey, Tile)] = reprojectRdd.map { tile =>
-//      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
-//      measurement = tile.getCoverageId
-//      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
-//      (tile.getSpatialKey, Tile)
-//    }.collect().to[ArrayBuffer]
-//    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
+    //    var measurement: String = ""
+    //    var timeKey: Long = 0L
+    //    val tileArray: ArrayBuffer[(SpatialKey, Tile)] = reprojectRdd.map { tile =>
+    //      val Tile = deserializeTileData("", tile.getTileBuf, 256, tile.getDataType.toString)
+    //      measurement = tile.getCoverageId
+    //      timeKey = tile.getTime.toEpochSecond(ZoneOffset.ofHours(0))
+    //      (tile.getSpatialKey, Tile)
+    //    }.collect().to[ArrayBuffer]
+    //    val (totalTile, (_, _), (_, _)) = TileLayoutStitcher.stitch(tileArray)
     val ld = meta.layout
-//    val totalTileArray: ArrayBuffer[(String, Tile, Extent, Long)] = ArrayBuffer[(String, Tile, Extent, Long)]()
+    //    val totalTileArray: ArrayBuffer[(String, Tile, Extent, Long)] = ArrayBuffer[(String, Tile, Extent, Long)]()
     val groupedRdd = reprojectRdd.groupBy(t => t.getMeasurement)
     val totalTileArray: Array[(String, Tile, Extent, Long)] = groupedRdd.aggregate[Array[(String, Tile, Extent, Long)]](Array.empty[(String, Tile, Extent, Long)])(
       (acc, group) => {
@@ -1286,23 +1287,23 @@ object Cube {
   // coverage visualize
   def visualizeBatch(implicit sc: SparkContext, exportedRasterRdd: (RDD[(SpaceTimeBandKey, Tile)], RasterTileLayerMetadata[SpaceTimeKey]), batchParam: BatchParam, dagId: String) : Unit = {
     throw new Exception("所请求的数据在Bos中不存在！")
-//    val rasterArray: Array[(SpatialKey, Tile)] = exportedRasterRdd._1.map(t => {
-//      (t._1.spaceTimeKey.spatialKey, t._2)
-//    }).collect()
-//    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(rasterArray)
-//    val stitchedTile: Raster[Tile] = Raster(tile, exportedRasterRdd._2.tileLayerMetadata.extent)
-//    var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
-//    val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
-//    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
-//
-//    // 上传文件
-//    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
-//    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-//    val file :File = new File(saveFilePath)
-//
-//    val client: BosClient = BosClientUtil_scala.getClient2
-//    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-//    client.putObject("oge-user", path, file)
+    //    val rasterArray: Array[(SpatialKey, Tile)] = exportedRasterRdd._1.map(t => {
+    //      (t._1.spaceTimeKey.spatialKey, t._2)
+    //    }).collect()
+    //    val (tile, (_, _), (_, _)) = TileLayoutStitcher.stitch(rasterArray)
+    //    val stitchedTile: Raster[Tile] = Raster(tile, exportedRasterRdd._2.tileLayerMetadata.extent)
+    //    var reprojectTile: Raster[Tile] = stitchedTile.reproject(exportedRasterRdd._2.tileLayerMetadata.crs, CRS.fromName("EPSG:3857"))
+    //    val resample: Raster[Tile] = reprojectTile.resample(math.max((reprojectTile.cellSize.width * reprojectTile.cols / batchParam.getScale).toInt, 1), math.max((reprojectTile.cellSize.height * reprojectTile.rows / batchParam.getScale).toInt, 1))
+    //    reprojectTile = resample.reproject(CRS.fromName("EPSG:3857"), batchParam.getCrs)
+    //
+    //    // 上传文件
+    //    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
+    //    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
+    //    val file :File = new File(saveFilePath)
+    //
+    //    val client: BosClient = BosClientUtil_scala.getClient2
+    //    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
+    //    client.putObject("oge-user", path, file)
   }
 
 
@@ -1319,8 +1320,8 @@ object Cube {
       str
     }.toSeq
 
-    val minIOUtil = MinIOUtil
-    val client: MinioClient = minIOUtil.getMinioClient
+
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
 
     val geoJSONFeatureCollection = geoJSONStrings.mkString(",")
@@ -1333,7 +1334,7 @@ object Cube {
     } else if (batchParam.getFormat == "shp") {
       val saveShpFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.shp"
       geoJson2Shape(geoJSON, saveShpFilePath)
-      client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveShpFilePath).build())
+      clientUtil.Upload(path,saveShpFilePath)
     }
   }
 
@@ -1352,7 +1353,7 @@ object Cube {
     val cubeArray: ArrayBuffer[(SpaceTimeBandKey, Tile)] = ArrayBuffer[(SpaceTimeBandKey, Tile)]()
     coverageIdList.zipWithIndex.foreach { case (coverageId, index) =>
       val productKey = productKeyList(index)
-//      val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
+      //      val rawTileRdd = getRawTileRDD(sc, coverageId, productKey, level)
       val rawTileRdd = getRawTileRDDBos(sc, coverageId, productKey, level)
 
       val tic = System.nanoTime()
@@ -1429,7 +1430,7 @@ object Cube {
   // feature的cube构建
   def cubeBuild(implicit sc: SparkContext, gridDimX: Int, gridDimY: Int,
                 extents: String, startTime: String, endTime: String, featureIdList: List[String]):
-                    (RDD[(SpaceTimeKey, Iterable[GeoObject])], VectorGridLayerMetadata[SpaceTimeKey]) = {
+  (RDD[(SpaceTimeKey, Iterable[GeoObject])], VectorGridLayerMetadata[SpaceTimeKey]) = {
     val extentArray: Array[String] = extents.replace("[", "").replace("]", "").split(",")
     val data: List[RDD[(String, (Geometry, Map[String, Any]))]] = featureIdList.map {
       feature =>
@@ -1584,103 +1585,103 @@ object Cube {
 
   }
 
-    def geoJson2Shape(jsonSting: String, shpPath: String): Unit = {
-      val map: mutable.Map[String, String] = mutable.Map[String, String]()
-      val gjson: GeometryJSON = new GeometryJSON()
-      try {
-        val json: JSONObject = JSON.parseObject(jsonSting)
-        val features: JSONArray = json.get("features").asInstanceOf[JSONArray]
-        val feature0: JSONObject = JSON.parseObject(features.get(0).toString)
-        val properties: util.Set[String] = JSON.parseObject(feature0.getString("properties")).keySet()
-        val strType: String = feature0.get("geometry").asInstanceOf[JSONObject].getString("type").toString
-        var geoType: Class[_] = null
+  def geoJson2Shape(jsonSting: String, shpPath: String): Unit = {
+    val map: mutable.Map[String, String] = mutable.Map[String, String]()
+    val gjson: GeometryJSON = new GeometryJSON()
+    try {
+      val json: JSONObject = JSON.parseObject(jsonSting)
+      val features: JSONArray = json.get("features").asInstanceOf[JSONArray]
+      val feature0: JSONObject = JSON.parseObject(features.get(0).toString)
+      val properties: util.Set[String] = JSON.parseObject(feature0.getString("properties")).keySet()
+      val strType: String = feature0.get("geometry").asInstanceOf[JSONObject].getString("type").toString
+      var geoType: Class[_] = null
+      strType match {
+        case "Point" =>
+          geoType = classOf[Point]
+        case "MultiPoint" =>
+          geoType = classOf[MultiPoint]
+        case "LineString" =>
+          geoType = classOf[LineString]
+        case "MultiLineString" =>
+          geoType = classOf[MultiLineString]
+        case "Polygon" =>
+          geoType = classOf[Polygon]
+        case "MultiPolygon" =>
+          geoType = classOf[MultiPolygon]
+      }
+      val file: File = new File(shpPath)
+      val params: util.Map[String, java.io.Serializable] = new util.HashMap[String, java.io.Serializable]()
+      params.put(ShapefileDataStoreFactory.URLP.key, file.toURI.toURL)
+      val ds: ShapefileDataStore = new ShapefileDataStoreFactory().createNewDataStore(params).asInstanceOf[ShapefileDataStore]
+      val tb: SimpleFeatureTypeBuilder = new SimpleFeatureTypeBuilder()
+      tb.setCRS(DefaultGeographicCRS.WGS84)
+      tb.setName("shapefile")
+      tb.add("the_geom", geoType)
+      val propertiesIter: util.Iterator[String] = properties.iterator()
+      while (propertiesIter.hasNext) {
+        var str: String = propertiesIter.next
+        if (str == "省") str = "Province"
+        if (str == "省代码")  str = "PCode"
+        if (str == "市代码")  str = "CCode"
+        if (str == "市") str = "City"
+        if (str == "类型") str = "Type"
+        tb.add(str, classOf[String])
+      }
+      val charset: Charset = Charset.forName("utf-8")
+      ds.setCharset(charset)
+      ds.createSchema(tb.buildFeatureType)
+      val writer: FeatureWriter[SimpleFeatureType, SimpleFeature] = ds.getFeatureWriter(ds.getTypeNames()(0), Transaction.AUTO_COMMIT)
+      println(writer.getFeatureType)
+      for (i <- 0 until features.size) {
+        val strFeature: String = features.get(i).toString
+        val reader: Reader = new StringReader(strFeature)
+        val feature: SimpleFeature = writer.next
         strType match {
           case "Point" =>
-            geoType = classOf[Point]
+            feature.setAttribute("the_geom", gjson.readPoint(reader))
           case "MultiPoint" =>
-            geoType = classOf[MultiPoint]
+            feature.setAttribute("the_geom", gjson.readMultiPoint(reader))
           case "LineString" =>
-            geoType = classOf[LineString]
+            feature.setAttribute("the_geom", gjson.readLine(reader))
           case "MultiLineString" =>
-            geoType = classOf[MultiLineString]
+            feature.setAttribute("the_geom", gjson.readMultiLine(reader))
           case "Polygon" =>
-            geoType = classOf[Polygon]
+            feature.setAttribute("the_geom", gjson.readPolygon(reader))
           case "MultiPolygon" =>
-            geoType = classOf[MultiPolygon]
+            feature.setAttribute("the_geom", gjson.readMultiPolygon(reader))
         }
-        val file: File = new File(shpPath)
-        val params: util.Map[String, java.io.Serializable] = new util.HashMap[String, java.io.Serializable]()
-        params.put(ShapefileDataStoreFactory.URLP.key, file.toURI.toURL)
-        val ds: ShapefileDataStore = new ShapefileDataStoreFactory().createNewDataStore(params).asInstanceOf[ShapefileDataStore]
-        val tb: SimpleFeatureTypeBuilder = new SimpleFeatureTypeBuilder()
-        tb.setCRS(DefaultGeographicCRS.WGS84)
-        tb.setName("shapefile")
-        tb.add("the_geom", geoType)
-        val propertiesIter: util.Iterator[String] = properties.iterator()
-        while (propertiesIter.hasNext) {
-          var str: String = propertiesIter.next
+        val propertiesset: util.Iterator[String] = properties.iterator()
+        while (propertiesset.hasNext) {
+          var str: String = propertiesset.next
+          val featurei: JSONObject = JSON.parseObject(features.get(i).toString)
+          val propValue = JSON.parseObject(featurei.getString("properties")).get(str)
           if (str == "省") str = "Province"
           if (str == "省代码")  str = "PCode"
           if (str == "市代码")  str = "CCode"
           if (str == "市") str = "City"
           if (str == "类型") str = "Type"
-          tb.add(str, classOf[String])
-        }
-        val charset: Charset = Charset.forName("utf-8")
-        ds.setCharset(charset)
-        ds.createSchema(tb.buildFeatureType)
-        val writer: FeatureWriter[SimpleFeatureType, SimpleFeature] = ds.getFeatureWriter(ds.getTypeNames()(0), Transaction.AUTO_COMMIT)
-        println(writer.getFeatureType)
-        for (i <- 0 until features.size) {
-          val strFeature: String = features.get(i).toString
-          val reader: Reader = new StringReader(strFeature)
-          val feature: SimpleFeature = writer.next
-          strType match {
-            case "Point" =>
-              feature.setAttribute("the_geom", gjson.readPoint(reader))
-            case "MultiPoint" =>
-              feature.setAttribute("the_geom", gjson.readMultiPoint(reader))
-            case "LineString" =>
-              feature.setAttribute("the_geom", gjson.readLine(reader))
-            case "MultiLineString" =>
-              feature.setAttribute("the_geom", gjson.readMultiLine(reader))
-            case "Polygon" =>
-              feature.setAttribute("the_geom", gjson.readPolygon(reader))
-            case "MultiPolygon" =>
-              feature.setAttribute("the_geom", gjson.readMultiPolygon(reader))
+          try {
+            feature.setAttribute(str, propValue.toString)
+          } catch {
+            case e: Exception =>
+              //              feature.setAttribute(str, "")
+              println(e)
           }
-          val propertiesset: util.Iterator[String] = properties.iterator()
-          while (propertiesset.hasNext) {
-            var str: String = propertiesset.next
-            val featurei: JSONObject = JSON.parseObject(features.get(i).toString)
-            val propValue = JSON.parseObject(featurei.getString("properties")).get(str)
-            if (str == "省") str = "Province"
-            if (str == "省代码")  str = "PCode"
-            if (str == "市代码")  str = "CCode"
-            if (str == "市") str = "City"
-            if (str == "类型") str = "Type"
-            try {
-              feature.setAttribute(str, propValue.toString)
-            } catch {
-              case e: Exception =>
-                //              feature.setAttribute(str, "")
-                println(e)
-            }
-          }
-          writer.write()
         }
-        writer.close()
-        ds.dispose()
-        map.put("status", "success")
-        map.put("message", shpPath)
-      } catch {
-        case e: Exception =>
-          map.put("status", "failure")
-          map.put("message", e.getMessage)
-          e.printStackTrace()
+        writer.write()
       }
-      println(map)
+      writer.close()
+      ds.dispose()
+      map.put("status", "success")
+      map.put("message", shpPath)
+    } catch {
+      case e: Exception =>
+        map.put("status", "failure")
+        map.put("message", e.getMessage)
+        e.printStackTrace()
     }
+    println(map)
+  }
 
   def floodServices(implicit sc: SparkContext, cubeId: String, rasterProductNames: ArrayBuffer[String], vectorProductNames: ArrayBuffer[String], extentString: String, startTime: String, endTime: String): Unit = {
     //query and access

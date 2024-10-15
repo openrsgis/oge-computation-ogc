@@ -21,13 +21,14 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import spire.math.Polynomial.x
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.Coverage.{addStyles, makeTIFF, reproject, resolutionTMSArray}
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.trigger.Trigger.{dagId, userId}
 import whu.edu.cn.util.CoverageCollectionUtil.makeCoverageCollectionRDD
-import whu.edu.cn.util.{COGUtil, MinIOUtil, PostSender}
+import whu.edu.cn.util.{COGUtil, ClientUtil, PostSender}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
 
 import java.io.File
@@ -50,14 +51,14 @@ object CoverageArray {
 
   }
 
-//  def addCoverage()
+  //  def addCoverage()
 
   private class CoverageArray {
     def load(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       Coverage.load(sc, coverageId, productKey, level)
     }
 
-      def add(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+    def add(coverage1: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
             coverage2: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       Coverage.add(coverage1, coverage2)
     }
@@ -164,13 +165,13 @@ object CoverageArray {
       // 教育版额外的判断,保存结果,调用回调接口
       if(Trigger.dagType.equals("edu")){
         makeTIFF(coverage,dagId)
-        val client: MinioClient = MinIOUtil.getMinioClient
+        val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
 
         val saveFilePath = s"$tempFilePath$dagId.tif"
 
         val path = s"$userId/result/${Trigger.outputFile}"
         //上传
-        client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+        clientUtil.Upload(path, saveFilePath)
       }
 
 
@@ -255,7 +256,7 @@ object CoverageArray {
         }
       }
 
-          // 回调服务
+      // 回调服务
       val jsonObject: JSONObject = new JSONObject
       val rasterJsonObject: JSONObject = new JSONObject
       if (visParam.getFormat == "png") {
@@ -287,14 +288,13 @@ object CoverageArray {
       GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
 
 
-      val client: MinioClient = MinIOUtil.getMinioClient
+      val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
       val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
       val obj: JSONObject = new JSONObject
       obj.put("path",path.toString)
       PostSender.shelvePost("info",obj)
       //    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
-
-      client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+      clientUtil.Upload(path, saveFilePath)
 
       //    client.putObject(PutObjectArgs)
       //    minIOUtil.releaseMinioClient(client)
@@ -344,43 +344,43 @@ object CoverageArray {
     }
   }
 
-//  def main(args: Array[String]): Unit = {
-//    val conf: SparkConf = new SparkConf().setAppName("New Coverage").setMaster("local[*]")
-//    val sc = new SparkContext(conf)
-//
-//    val metadata = Service.getCoverageCollection(productName = "GF1_L1_PMS1_EO", dateTime = "[2000-01-01 00:00:00,2023-12-31 00:00:00]", extent = "[114.3, 30, 114.5, 31]")
-//    val coverageArray1: Array[(String, String)] = CoverageArray.getLoadParams(productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = Trigger.level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax())
-//    val coverageArray = coverageArray1.slice(0, 5)
-//    coverageArray.foreach(t => println(t._1))
-//
-//    //    coverageArray.foreach(t => TriggerEdu.makeTIFF(t, "/D:/TMS/coverageArray/" + System.currentTimeMillis() + ".tif"))
-//    funcNameList += "CoverageArray.toDouble"
-//    funcNameList += "CoverageArray.normalizedDifference"
-//    funcNameList += "CoverageArray.visualizeBatch"
-//    funcArgs += List()
-//    funcArgs += List(List("MSS1_band2", "MSS1_band4"))
-//
-//    coverageArray.zipWithIndex.foreach {case (element, index) =>
-//      val coverage = Coverage.load(sc, element._1, element._2, 8)
-//      val firstCoverage: (Int, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = (0 -> coverage)
-//      CoverageList += firstCoverage
-//      println(CoverageList.toString())
-////      val visParam: VisualizationParam = new VisualizationParam
-//      val batchParam = new BatchParam
-//      batchParam.setCrs("EPSG:4326")
-//      batchParam.setScale("100")
-//      funcArgs += List(batchParam, Trigger.dagId + index)
-//      println(funcArgs.toString())
-//      for (i <- funcNameList.indices) {
-//        println(i)
-//        println(funcNameList(i))
-//        println(funcArgs(i).toString)
-//        process(funcNameList(i), funcArgs(i), i)
-//      }
-//      //      TriggerEdu.makeTIFF(CoverageList(funcNameList.length), "/D:/Intermediate_results/TMS/" + System.currentTimeMillis() + ".tif")
-//      funcArgs.remove(funcArgs.length - 1)
-//      CoverageList.clear()
-//    }
+  //  def main(args: Array[String]): Unit = {
+  //    val conf: SparkConf = new SparkConf().setAppName("New Coverage").setMaster("local[*]")
+  //    val sc = new SparkContext(conf)
+  //
+  //    val metadata = Service.getCoverageCollection(productName = "GF1_L1_PMS1_EO", dateTime = "[2000-01-01 00:00:00,2023-12-31 00:00:00]", extent = "[114.3, 30, 114.5, 31]")
+  //    val coverageArray1: Array[(String, String)] = CoverageArray.getLoadParams(productName = metadata.productName, sensorName = metadata.sensorName, measurementName = metadata.measurementName, startTime = metadata.startTime.toString, endTime = metadata.endTime.toString, extent = metadata.extent, crs = metadata.crs, level = Trigger.level, cloudCoverMin = metadata.getCloudCoverMin(), cloudCoverMax = metadata.getCloudCoverMax())
+  //    val coverageArray = coverageArray1.slice(0, 5)
+  //    coverageArray.foreach(t => println(t._1))
+  //
+  //    //    coverageArray.foreach(t => TriggerEdu.makeTIFF(t, "/D:/TMS/coverageArray/" + System.currentTimeMillis() + ".tif"))
+  //    funcNameList += "CoverageArray.toDouble"
+  //    funcNameList += "CoverageArray.normalizedDifference"
+  //    funcNameList += "CoverageArray.visualizeBatch"
+  //    funcArgs += List()
+  //    funcArgs += List(List("MSS1_band2", "MSS1_band4"))
+  //
+  //    coverageArray.zipWithIndex.foreach {case (element, index) =>
+  //      val coverage = Coverage.load(sc, element._1, element._2, 8)
+  //      val firstCoverage: (Int, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = (0 -> coverage)
+  //      CoverageList += firstCoverage
+  //      println(CoverageList.toString())
+  ////      val visParam: VisualizationParam = new VisualizationParam
+  //      val batchParam = new BatchParam
+  //      batchParam.setCrs("EPSG:4326")
+  //      batchParam.setScale("100")
+  //      funcArgs += List(batchParam, Trigger.dagId + index)
+  //      println(funcArgs.toString())
+  //      for (i <- funcNameList.indices) {
+  //        println(i)
+  //        println(funcNameList(i))
+  //        println(funcArgs(i).toString)
+  //        process(funcNameList(i), funcArgs(i), i)
+  //      }
+  //      //      TriggerEdu.makeTIFF(CoverageList(funcNameList.length), "/D:/Intermediate_results/TMS/" + System.currentTimeMillis() + ".tif")
+  //      funcArgs.remove(funcArgs.length - 1)
+  //      CoverageList.clear()
+  //    }
 
-//  }
+  //  }
 }

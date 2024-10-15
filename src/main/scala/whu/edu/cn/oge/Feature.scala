@@ -39,10 +39,11 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
-import whu.edu.cn.util.{MinIOUtil, PostSender, PostgresqlUtil}
+import whu.edu.cn.util.{ClientUtil, PostSender, PostgresqlUtil}
 
 import java.nio.file.Paths
 import com.baidubce.services.bos.model.GetObjectRequest
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.collection.mutable
@@ -64,9 +65,9 @@ object Feature {
     val metaData = queryRes._3
     val hbaseTableName = queryRes._2
     val productKey = queryRes._1
-//    println(metaData)
-//    println(hbaseTableName)
-//    println(productKey)
+    //    println(metaData)
+    //    println(hbaseTableName)
+    //    println(productKey)
     //    if(dataTime==null){
     //      val geometryRdd = sc.makeRDD(metaData).map(t=>t.replace("List(", "").replace(")", "").split(","))
     //        .flatMap(t=>t)
@@ -557,7 +558,7 @@ object Feature {
     val password = GlobalConfig.QGISConf.QGIS_PASSWORD
     val port = GlobalConfig.QGISConf.QGIS_PORT
 
-   val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
+    val outputVectorPath = s"${GlobalConfig.Others.jsonSavePath}vector_${time}.json"
 
 
     // 创建PrintWriter对象
@@ -574,15 +575,15 @@ object Feature {
     val st = s"scp  $outputVectorPath root@${GlobalConfig.Others.tomcatHost}:/home/oge/tomcat/apache-tomcat-8.5.57/webapps/oge_vector/vector_${time}.json"
 
     //本地测试使用代码
-//      val exitCode: Int = st.!
-//      if (exitCode == 0) {
-//        println("SCP command executed successfully.")
-//      } else {
-//        println(s"SCP command failed with exit code $exitCode.")
-//      }
+    //      val exitCode: Int = st.!
+    //      if (exitCode == 0) {
+    //        println("SCP command executed successfully.")
+    //      } else {
+    //        println(s"SCP command failed with exit code $exitCode.")
+    //      }
 
-      runCmd(st, "UTF-8")
-      println(s"st = $st")
+    runCmd(st, "UTF-8")
+    println(s"st = $st")
 
     val storageURL = s"http://${GlobalConfig.Others.tomcatHost_public}/tomcat-vector/vector_" + time + ".json"
 
@@ -1139,8 +1140,8 @@ object Feature {
 
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}_${Trigger.file_id}.geojson"
-
-    MinIOUtil.MinIODownload("oge-user", path, filePath)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    clientUtil.Download(path, filePath)
     println(s"Download $filePath")
     val temp = Source.fromFile(filePath).mkString
     val feature = geometry(sc, temp,crs)

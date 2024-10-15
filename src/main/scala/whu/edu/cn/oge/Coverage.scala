@@ -27,6 +27,7 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import redis.clients.jedis.Jedis
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
@@ -34,7 +35,6 @@ import whu.edu.cn.entity._
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.trigger.Trigger.{batchParam, dagId, layerName, tempFileList, userId, windowExtent}
-import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
@@ -49,7 +49,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.control.Breaks
-import whu.edu.cn.util.{COGUtil, Cbrt, CoverageOverloadUtil, Entropy, MinIOUtil, Mod, PostSender, RDDTransformerUtil, RemapWithDefaultValue, RemapWithoutDefaultValue}
+import whu.edu.cn.util.{COGUtil, Cbrt, ClientUtil, CoverageOverloadUtil, Entropy, Mod, PostSender, RDDTransformerUtil, RemapWithDefaultValue, RemapWithoutDefaultValue}
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
@@ -63,7 +63,7 @@ object Coverage {
 
   def load(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val time1 = System.currentTimeMillis()
-//    println("WindowExtent",windowExtent.xmin,windowExtent.ymin,windowExtent.xmax,windowExtent.ymax)
+    //    println("WindowExtent",windowExtent.xmin,windowExtent.ymin,windowExtent.xmax,windowExtent.ymax)
 
 
     val metaList: mutable.ListBuffer[CoverageMetadata] = queryCoverage(coverageId, productKey)
@@ -81,15 +81,16 @@ object Coverage {
     //    val union: Geometry = unionTileExtent.intersection(queryGeometry)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
-
+    val cogUtil: COGUtil = COGUtil.createCOGUtil(CLIENT_NAME)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
 
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .mapPartitions(par => {
-        val client: MinioClient = MinIOUtil.getMinioClient
+        val client = clientUtil.getClient
         val result: Iterator[mutable.Buffer[RawTile]] = par.map(t => { // 合并所有的元数据（追加了范围）
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-            val tiles: mutable.ArrayBuffer[RawTile] = COGUtil.tileQuery(client, level, t, union,queryGeometry)
+            val tiles: mutable.ArrayBuffer[RawTile] = cogUtil.tileQuery(client, level, t, union,queryGeometry)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -110,9 +111,9 @@ object Coverage {
     tileRDDFlat.unpersist()
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.mapPartitions(par => {
 
-      val client: MinioClient = MinIOUtil.getMinioClient
+      val client = clientUtil.getClient
       par.map(t => {
-        COGUtil.getTileBuf(client, t)
+        cogUtil.getTileBuf(client, t)
       })
     })
     println("Loading data Time: " + (System.currentTimeMillis() - time1))
@@ -128,7 +129,7 @@ object Coverage {
                   norExtent_sta:Double,norExtent_end:Double,NaN_value:Double) = {
     //将栅格数据中值在范围之外的像素赋值为指定的异常值
     def clamp_NodataV(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), low: Double, high: Double,
-              NodataV: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                      NodataV: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
       val coverageRddClamped = coverage._1.map(t =>
         (t._1, t._2.mapBands((t1, t2) => t2.mapDouble(t3 => {
           if (t3 > high | t3 < low) {
@@ -187,32 +188,32 @@ object Coverage {
     //定义一个可变的Map，用于存储每个影响因子的类别数量和对应的均值
     val facVar_claMean = mutable.Map.empty[String, mutable.Map[Double, Double]]
 
-      //遍历每一个影响因子获取影响因子类别数量
-      for (fac <- facVar.indices) {
-        //定义一个可变的Map，用于动态存储每一类的像素值和栅格数量
-        var fac_class_tmp = mutable.ListBuffer.empty[Double]
-        //首先遍历每个rdd
-        val fac_class_Sum = facVar(fac)._1.map{ t =>
-          val factile: Tile = t._2.band(0)
-          //然后再foreach遍历rdd中tile的每个像素,累计类别存入fac_class
-          factile.foreachDouble { pix =>
-            //如果是非有效值，就不统计为类别
-            if (pix != NaN_value & !fac_class_tmp.contains(pix)) {
-              fac_class_tmp.append(pix)
-            }
+    //遍历每一个影响因子获取影响因子类别数量
+    for (fac <- facVar.indices) {
+      //定义一个可变的Map，用于动态存储每一类的像素值和栅格数量
+      var fac_class_tmp = mutable.ListBuffer.empty[Double]
+      //首先遍历每个rdd
+      val fac_class_Sum = facVar(fac)._1.map{ t =>
+        val factile: Tile = t._2.band(0)
+        //然后再foreach遍历rdd中tile的每个像素,累计类别存入fac_class
+        factile.foreachDouble { pix =>
+          //如果是非有效值，就不统计为类别
+          if (pix != NaN_value & !fac_class_tmp.contains(pix)) {
+            fac_class_tmp.append(pix)
           }
-          fac_class_tmp
-        }.reduce { (a,b) =>a union b}
-
-        val fac_class_Union = fac_class_Sum.distinct
-        val claNum_tmp2 = mutable.Map.empty[Double, Double]
-        //根据fac_class_Union初始化facVar_claNum
-        for(fac_class <- fac_class_Union){
-          val tmp2 = fac_class -> 1d
-          claNum_tmp2 += tmp2
         }
+        fac_class_tmp
+      }.reduce { (a,b) =>a union b}
 
-        facVar_claNum(facVar_name(fac)) = claNum_tmp2
+      val fac_class_Union = fac_class_Sum.distinct
+      val claNum_tmp2 = mutable.Map.empty[Double, Double]
+      //根据fac_class_Union初始化facVar_claNum
+      for(fac_class <- fac_class_Union){
+        val tmp2 = fac_class -> 1d
+        claNum_tmp2 += tmp2
+      }
+
+      facVar_claNum(facVar_name(fac)) = claNum_tmp2
     }
 
     //基于coverageTemplate进行双栅格数据处理
@@ -260,11 +261,11 @@ object Coverage {
 
         //更新facVar_claNum
         val tmp2_5 = target_class -> class_num
-          //这里已有当前因子，也就是有当前的key
-          //就要先获取当前类别（如‘dem’）下的map，然后再进行+=，否则由于都是同key会被覆盖
-          val Num_value: mutable.Map[Double, Double] = facVar_claNum(facType)
-          Num_value += tmp2_5
-          facVar_claNum(facType) = Num_value
+        //这里已有当前因子，也就是有当前的key
+        //就要先获取当前类别（如‘dem’）下的map，然后再进行+=，否则由于都是同key会被覆盖
+        val Num_value: mutable.Map[Double, Double] = facVar_claNum(facType)
+        Num_value += tmp2_5
+        facVar_claNum(facType) = Num_value
 
         val varSumRDD: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])
         = coverageTemplate(depVar, facRDD, (tile1, tile2) => varSum_Function(tile1, tile2, target_class,class_mean))
@@ -365,7 +366,7 @@ object Coverage {
 
     val depVar_mean_format = f"%%.4f".format(depVar_mean)
     val depVar_Var_format = f"%%.4f".format(depVar_Var)
-//    var result_mes = "地理探测器的计算结果如下：\n因变量因子的全局平均值为"+depVar_mean_format+",全局方差为"+depVar_Var_format+"\n"
+    //    var result_mes = "地理探测器的计算结果如下：\n因变量因子的全局平均值为"+depVar_mean_format+",全局方差为"+depVar_Var_format+"\n"
     var result_mes = "因变量因子的全局平均值为"+depVar_mean_format+",全局方差为"+depVar_Var_format+"\n"
 
     for(index <- facVar_name.indices){
@@ -2645,9 +2646,9 @@ object Coverage {
    */
   def toInt8(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])): (RDD[
     (SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-      (coverage._1.map(t => {
-        (t._1, t._2.convert(ByteConstantNoDataCellType))
-      }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
+    (coverage._1.map(t => {
+      (t._1, t._2.convert(ByteConstantNoDataCellType))
+    }), TileLayerMetadata(ByteConstantNoDataCellType, coverage._2.layout, coverage._2.extent, coverage._2.crs, coverage._2.bounds))
   }
 
   /**
@@ -2947,7 +2948,7 @@ object Coverage {
           }))), coverageOneBand._2)
         }
         // 设置默认的调色盘
-//        var paletteVis: List[String] = List[String]("#808080", "#949494", "#a9a9a9", "#bdbebd", "#d3d3d3", "#e9e9e9")
+        //        var paletteVis: List[String] = List[String]("#808080", "#949494", "#a9a9a9", "#bdbebd", "#d3d3d3", "#e9e9e9")
         // 计算最大最小值
         val minMaxBand: (Double, Double) = coverageOneBand._1.map(t => {
           val noNaNArray: Array[Double] = t._2.bands(0).toArrayDouble().filter(!_.isNaN)
@@ -3022,7 +3023,7 @@ object Coverage {
         }
       }
     }
-//    makeTIFF(coverageOneBand,"coverage")
+    //    makeTIFF(coverageOneBand,"coverage")
     coverageOneBand
 
   }
@@ -3419,13 +3420,13 @@ object Coverage {
     // 教育版额外的判断,保存结果,调用回调接口
     if(Trigger.dagType.equals("edu")){
       makeTIFF(coverage,dagId)
-      val client: MinioClient = MinIOUtil.getMinioClient
+      val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
 
       val saveFilePath = s"$tempFilePath$dagId.tif"
 
       val path = s"$userId/result/${Trigger.outputFile}"
       //上传
-      client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+      clientUtil.Upload(path, saveFilePath)
     }
 
 
@@ -3541,18 +3542,14 @@ object Coverage {
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}.tiff"
     GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
 
-
-    val client: MinioClient = MinIOUtil.getMinioClient
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     val obj: JSONObject = new JSONObject
     obj.put("path",path.toString)
     PostSender.shelvePost("info",obj)
-//    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
-
-    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
-
-//    client.putObject(PutObjectArgs)
-    //    minIOUtil.releaseMinioClient(client)
+    //    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
+    clientUtil.Upload(path, saveFilePath)
+    //    client.putObject(PutObjectArgs)
 
   }
 
@@ -3562,7 +3559,8 @@ object Coverage {
     saveRasterRDDToTif(coverage,saveFilePath)
     val file: File = new File(saveFilePath)
     val path = Trigger.userId + "/result/" + Trigger.ProcessName
-    MinIOUtil.MinIOUpload("oge-user",path,saveFilePath)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    clientUtil.Upload(path, saveFilePath)
 
     val rasterJsonObject: JSONObject = new JSONObject
     rasterJsonObject.put("coverage",path)
@@ -3579,12 +3577,10 @@ object Coverage {
     } else {
       path = s"$userID/$coverageId.tiff"
     }
-
-    val client = MinIOUtil.getMinioClient
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("oge-user").`object`(path).build())
-
+    val inputStream = clientUtil.getObject(path)
     val outputPath = Paths.get(filePath)
 
     tempFileList.append(filePath)
@@ -3601,8 +3597,8 @@ object Coverage {
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
 
-    val client = MinIOUtil.getMinioClient
-    val inputStream = client.getObject(GetObjectArgs.builder.bucket("ogebos").`object`(path).build())
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val inputStream = clientUtil.getObject(path)
     val outputPath = Paths.get(filePath)
     tempFileList.append(filePath)
     Trigger.file_id += 1
@@ -3616,7 +3612,7 @@ object Coverage {
   var file_idx:Long = 0
   def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
     var path: String = s"${userID}/$txt"
-
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
 
     val tempPath = loadtype match {
       case "saga" => GlobalConfig.Others.sagatempFilePath
@@ -3634,8 +3630,7 @@ object Coverage {
 
     val tempfile = new File(filePath)
     try {
-
-      MinIOUtil.MinIODownload("oge-user",path,filePath)
+      clientUtil.Download(path, filePath)
     }
     catch {
       case e: Throwable =>

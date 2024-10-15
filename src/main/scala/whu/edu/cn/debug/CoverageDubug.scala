@@ -22,13 +22,13 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.entity.{CoverageMetadata, RawTile, SpaceTimeBandKey, VisualizationParam}
 import whu.edu.cn.oge.{Coverage, CoverageCollection}
 import whu.edu.cn.oge.CoverageCollection.{mosaic, visualizeOnTheFly}
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.COGUtil.{getTileBuf, tileQuery}
 import whu.edu.cn.util.CoverageUtil.{checkProjResoExtent, makeCoverageRDD}
-import whu.edu.cn.util.{ CoverageCollectionUtil, MinIOUtil, RDDTransformerUtil}
+import whu.edu.cn.util.{COGUtil, ClientUtil, CoverageCollectionUtil, RDDTransformerUtil}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
@@ -135,14 +135,15 @@ object CoverageDubug {
     println("bandNum is " + metaList.length)
 
     val tileMetadata: RDD[CoverageMetadata] = sc.makeRDD(metaList)
-
+    val cogUtil: COGUtil = COGUtil.createCOGUtil(CLIENT_NAME)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val tileRDDFlat: RDD[RawTile] = tileMetadata
       .map(t => { // 合并所有的元数据（追加了范围）
         val time1: Long = System.currentTimeMillis()
         val rawTiles: mutable.ArrayBuffer[RawTile] = {
-          val client: MinioClient = MinIOUtil.getMinioClient
-          val tiles: mutable.ArrayBuffer[RawTile] = tileQuery(client, level, t, queryGeometry.getEnvelopeInternal,queryGeometry)
-//          MinIOUtil.releaseMinioClient(client)
+          val client = clientUtil.getClient
+          val tiles: mutable.ArrayBuffer[RawTile] = cogUtil.tileQuery(client, level, t, queryGeometry.getEnvelopeInternal,queryGeometry)
+          //          MinIOUtil.releaseMinioClient(client)
           tiles
         }
         val time2: Long = System.currentTimeMillis()
@@ -158,9 +159,9 @@ object CoverageDubug {
     val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 90))
     val rawTileRdd: RDD[RawTile] = tileRDDRePar.map(t => {
       val time1: Long = System.currentTimeMillis()
-      val client: MinioClient = MinIOUtil.getMinioClient
-      val tile: RawTile = getTileBuf(client, t)
-//      MinIOUtil.releaseMinioClient(client)
+      val client = clientUtil.getClient
+      val tile: RawTile = cogUtil.getTileBuf(client, t)
+      //      MinIOUtil.releaseMinioClient(client)
       val time2: Long = System.currentTimeMillis()
       println("Get Tile Time2 is " + (time2 - time1))
       tile

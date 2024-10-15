@@ -7,12 +7,13 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.geotools.feature.FeatureCollection
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.SAGA.{host, password, port, userName}
 import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.util.ClientUtil
 import whu.edu.cn.util.CoverageUtil.{getnoDataAccordingtoCellType, removeZeroFromCoverage}
-import whu.edu.cn.util.MinIOUtil.MinIODownload
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
@@ -50,7 +51,7 @@ object ML {
     val userFolder = s"$tempFilePath${Trigger.userId}"
     val folder = new File(userFolder)
     folder.mkdir()
-
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     //下载文件
     sampleFiles.foreach(f =>{
       val fileName = f.split('/')(1)
@@ -58,7 +59,7 @@ object ML {
       val path = s"${Trigger.userId}/$f"
       println(path)
 
-      MinIODownload("oge-user",path,filePath)
+      clientUtil.Download(path, filePath)
     })
 
     // 给每个文件加路径前缀
@@ -79,7 +80,7 @@ object ML {
     println(s"st = $st")
     runCmd(st, "UTF-8")
     println("Success")
-//    Thread.sleep(200)
+    //    Thread.sleep(200)
     val result = removeZeroFromCoverage(makeChangedRasterRDDFromTif(sc,resultPath))
 
 
@@ -98,6 +99,7 @@ object ML {
     val userFolder = s"$tempFilePath${Trigger.userId}"
     val folder = new File(userFolder)
     folder.mkdir()
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     //下载文件
     sampleFiles.foreach(f => {
       val fileName = f.split('/')(1)
@@ -105,7 +107,7 @@ object ML {
       val path = s"${Trigger.userId}/$f"
       println(path)
 
-      MinIODownload("oge-user", path, filePath)
+      clientUtil.Download(path, filePath)
     })
 
     // 给每个文件加路径前缀

@@ -25,7 +25,7 @@ import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, 
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{JedisUtil, MinIOUtil, PostSender, ZCurveUtil}
+import whu.edu.cn.util.{JedisUtil, PostSender, ZCurveUtil}
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, RandomForestTrainAndRegress, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramBin, histogramEqualization, kMeans, linearTransformation, panSharp, reduceRegion, reduction, standardDeviationCalculation, standardDeviationStretching}
 
 import java.io.ByteArrayInputStream
@@ -275,10 +275,10 @@ object Trigger {
           isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> CoverageCollection.cat(coverageCollectionRddList(args("coverageCollection"))))
         case "CoverageCollection.map" =>
-//          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
-//            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
-//            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
-//          }
+        //          if (lazyFunc(args("collection"))._1 == "Service.getCoverageCollection") {
+        //            isActioned(sc, args("collection"), OGEClassType.CoverageCollection)
+        //            coverageCollectionRddList += (UUID -> CoverageCollection.map(sc, coverageCollection = coverageCollectionRddList(args("collection")), baseAlgorithm = args("baseAlgorithm")))
+        //          }
         case "CoverageCollection.addStyles" =>
           if (isBatch == 0) {
             isActioned(sc, args("coverageCollection"), OGEClassType.CoverageCollection)
@@ -335,9 +335,9 @@ object Trigger {
         case "CoverageArray.toDouble" =>
           funcNameList += "CoverageArray.toDouble"
           funcArgs += List.empty
-//        case "CoverageArray.clipRasterByMaskLayerByGDAL" =>
-//          funcNameList += "CoverageArray.clipRasterByMaskLayerByGDAL"
-//          funcArgs += List(sc, )
+        //        case "CoverageArray.clipRasterByMaskLayerByGDAL" =>
+        //          funcNameList += "CoverageArray.clipRasterByMaskLayerByGDAL"
+        //          funcArgs += List(sc, )
         case "CoverageArray.addStyles" =>
           val visParam: VisualizationParam = new VisualizationParam
           visParam.setAllParam(bands = isOptionalArg(args, "bands"), gain = isOptionalArg(args, "gain"), bias = isOptionalArg(args, "bias"), min = isOptionalArg(args, "min"), max = isOptionalArg(args, "max"), gamma = isOptionalArg(args, "gamma"), opacity = isOptionalArg(args, "opacity"), palette = isOptionalArg(args, "palette"), format = isOptionalArg(args, "format"))
@@ -807,8 +807,8 @@ object Trigger {
           coverageRddList += (UUID -> OTB.otbOpticalAtmospheric(sc, coverageRddList(args("input")), acquiGainbias = args("acquiGainbias"), acquiSolarilluminations = args("acquiSolarilluminations"), atmoAerosol = args("atmoAerosol"), atmoOz = args("atmoOz").toFloat, atmoWa = args("atmoWa").toFloat, atmoPressure = args("atmoPressure").toFloat, atmoOpt = args("atmoOpt").toFloat, atmoAeronet = args("atmoAeronet"), atmoRsr = args("atmoRsr"), atmoRadius = args("atmoRadius").toInt, atmoPixsize = args("atmoPixsize").toFloat, level = args("level"), ram = args("ram").toInt, userId, dagId))
         case "Coverage.OrthoRectificationByOTB" =>
           coverageRddList += (UUID -> OTB.otbOrthoRectification(sc, ioIn = coverageRddList(args("ioIn")), map = args("map"), mapUtmZone = args("mapUtmZone").toInt, mapUtmNorthhem = args("mapUtmNorthhem").toBoolean, mapEpsgCode = args("mapEpsgCode").toInt, outputsMode = args("outputsMode"), outputsUlx = args("outputsUlx").toDouble, outputsUly = args("outputsUly").toDouble, outputsSizex = args("outputsSizex").toInt, outputsSizey = args("outputsSizey").toInt, outputsSpacingx = args("outputsSpacingx").toDouble, outputsSpacingy = args("outputsSpacingy").toDouble, outputsLrx = args("outputsLrx").toDouble, outputsLry = args("outputsLry").toDouble, outputsOrtho = args("outputsOrtho"), outputsIsotropic = args("outputsIsotropic").toBoolean, outputsDefault = args("outputsDefault").toDouble, elevDem = args("elevDem"), elevGeoid = args("elevGeoid"), elevDefault = args("elevDefault").toFloat, interpolator = args("interpolator"), interpolatorBcoRadius = args("interpolatorBcoRadius").toInt, optRpc = args("optRpc").toInt, optRam = args("optRam").toInt, optGridspacing = args("optGridspacing").toDouble))
-//        case "Coverage.PansharpeningByOTB" =>
-//          coverageRddList += (UUID -> OTB.otbPansharpening(sc, inp = coverageRddList(args("inp")), inxs = coverageRddList(args("inxs")), method = args("method"), methodRcsRadiusx = args("method.rcs.radiusx").toInt, methodRcsRadiusy = args("method.rcs.radiusy").toInt, methodLmvmRadiusx = args("method.lmvm.radiusx").toInt, methodLmvmRadiusy = args("method.lmvm.radiusy").toInt, methodBayesLambda = args("method.bayes.lambda").toFloat, methodBayesS = args("method.bayes.s").toFloat, ram = args("ram").toInt))
+        //        case "Coverage.PansharpeningByOTB" =>
+        //          coverageRddList += (UUID -> OTB.otbPansharpening(sc, inp = coverageRddList(args("inp")), inxs = coverageRddList(args("inxs")), method = args("method"), methodRcsRadiusx = args("method.rcs.radiusx").toInt, methodRcsRadiusy = args("method.rcs.radiusy").toInt, methodLmvmRadiusx = args("method.lmvm.radiusx").toInt, methodLmvmRadiusy = args("method.lmvm.radiusy").toInt, methodBayesLambda = args("method.bayes.lambda").toFloat, methodBayesS = args("method.bayes.s").toFloat, ram = args("ram").toInt))
         case "Coverage.BundleToPerfectSensorByOTB" =>
           coverageRddList += (UUID -> OTB.otbBundleToPerfectSensor(sc, inp = coverageRddList(args("inp")), inxs = coverageRddList(args("inxs")), elevDem = args("elevDem"), elevGeoid = args("elevGeoid"), elevDefault = args("elevDefault").toFloat, mode = args("mode"), method = args("method"), methodRcsRadiusx = args("methodRcsRadiusx").toInt, methodRcsRadiusy = args("methodRcsRadiusy").toInt, methodLmvmRadiusx = args("methodLmvmRadiusx").toInt, methodLmvmRadiusy = args("methodLmvmRadiusy").toInt, methodBayesLambda = args("methodBayesLambda").toFloat, methodBayesS = args("methodBayesS").toFloat, lms = args("lms").toFloat, interpolator = args("interpolator"), interpolatorBcoRadius = args("interpolatorBcoRadius").toInt, fv = args("fv").toFloat, ram = args("ram").toInt))
 
@@ -1625,13 +1625,13 @@ object Trigger {
         dagType = ""
         outputFile = ""
     }
-//    if(jsonObject.getString("dagType").equals("edu")){
-//      dagType = "edu"
-//      outputFile = jsonObject.getString("outputFile")
-//    }else{
-//      dagType = ""
-//      outputFile = ""
-//    }
+    //    if(jsonObject.getString("dagType").equals("edu")){
+    //      dagType = "edu"
+    //      outputFile = jsonObject.getString("outputFile")
+    //    }else{
+    //      dagType = ""
+    //      outputFile = ""
+    //    }
 
     layerName = jsonObject.getString("layerName")
     try{
@@ -1766,8 +1766,8 @@ object Trigger {
 
   // ProcessName:保存结果的文件名称
   def runMain_edu(implicit sc: SparkContext,
-              curWorkTaskJson: String,
-              curDagID: String, userID: String, processName:String): Unit = {
+                  curWorkTaskJson: String,
+                  curDagID: String, userID: String, processName:String): Unit = {
 
     // Check if the SparkContext is active
     if (sc.isStopped) {
@@ -1910,7 +1910,7 @@ object Trigger {
 
 
     if (sc.master.contains("local")) {
-//      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
+      //      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
       JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
@@ -1966,9 +1966,9 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-            val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test2.json")
-//      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
-//      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/oge_meanfilter.json")
+      //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
+      //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
       fileSource.close()
       line
@@ -1983,7 +1983,7 @@ object Trigger {
       .setMaster("local[8]")
       .setAppName("query")
     val sc = new SparkContext(conf)
-//    runBatch(sc,workTaskJson,dagId,"zy","EPSG:4326","100","","","tif")
+    //    runBatch(sc,workTaskJson,dagId,"zy","EPSG:4326","100","","","tif")
     runMain(sc, workTaskJson, dagId, userId)
 
     println("Finish")
