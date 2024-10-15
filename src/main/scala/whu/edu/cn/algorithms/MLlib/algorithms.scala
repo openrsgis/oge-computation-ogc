@@ -1,8 +1,8 @@
 package whu.edu.cn.algorithms.MLlib
 
 import java.io.File
-
 import com.alibaba.fastjson.JSONObject
+import com.baidubce.services.bos.BosClient
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
 import geotrellis.raster.MultibandTile
 import io.minio.{MinioClient, UploadObjectArgs}
@@ -13,9 +13,10 @@ import org.apache.spark.sql.SparkSession
 import org.jpmml.sparkml.PipelineModelUtil
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey}
 import whu.edu.cn.oge.TriggerEdu.makeTIFF
-import whu.edu.cn.util.{MinIOUtil, PostSender}
+import whu.edu.cn.util.{ClientUtil, PostSender}
 import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
 import scala.util.Random
@@ -27,14 +28,14 @@ object algorithms {
     val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}" //这里没有后缀，先走通文件夹，因为压缩也需要用原路径放文件夹
     //    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
     model.write.overwrite().save(saveFilePath)
-    val client: MinioClient = MinIOUtil.getMinioClient
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
     val obj: JSONObject = new JSONObject
     obj.put("path",path.toString)
     PostSender.shelvePost("info",obj)
     //    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
 
-    client.uploadObject(UploadObjectArgs.builder.bucket("oge-user").`object`(path).filename(saveFilePath).build())
+    clientUtil.Upload(path, saveFilePath)
 
     //    client.putObject(PutObjectArgs)
     //    minIOUtil.releaseMinioClient(client)
@@ -45,7 +46,7 @@ object algorithms {
   def randomForestClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, featuresCoverage, labelCoverage)
-//    val model: PipelineModel = Classifier.randomForest(checkpointInterval, "auto", 32, 5, 0.0, 1, 0.0, 20, 123L, 1.0).train(spark, featuresCoverage, labelCoverage)
+    //    val model: PipelineModel = Classifier.randomForest(checkpointInterval, "auto", 32, 5, 0.0, 1, 0.0, 20, 123L, 1.0).train(spark, featuresCoverage, labelCoverage)
     model
   }
   def logisticRegressionClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, family: String = "auto", fitIntercept: Boolean = true, standardization: Boolean = true, threshold: Double = 0.5, tol: Double = 1E-6): PipelineModel = {

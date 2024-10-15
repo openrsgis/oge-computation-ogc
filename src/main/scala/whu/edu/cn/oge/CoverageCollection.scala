@@ -9,11 +9,12 @@ import io.minio.MinioClient
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Envelope, Geometry, GeometryFactory}
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 import whu.edu.cn.entity._
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.CoverageCollectionUtil.{checkMapping, coverageCollectionMosaicTemplate, makeCoverageCollectionRDD}
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverageCollection
-import whu.edu.cn.util.{COGUtil, MinIOUtil, ZCurveUtil}
+import whu.edu.cn.util.{COGUtil, ClientUtil, ZCurveUtil}
 
 import java.time.LocalDateTime
 import scala.collection.mutable
@@ -33,31 +34,33 @@ object CoverageCollection {
    * @return ((RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), RDD[RawTile])
    */
   def load(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, extent: Extent = null, crs: CRS = null, level: Int = 0,cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = {
-//    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
-//
-//    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
-//    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
-//      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
-//      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
-//      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
-//      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
-//      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
-//
-//      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
-//      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
-//      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
-//      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
-//      geometry
-//    }).reduce((a, b) => {
-//      a.union(b)
-//    })
-//    var union: Geometry = unionTileExtent
-//    if (extent != null) {
-//      union = unionTileExtent.intersection(extent)
-//    }
+    //    val zIndexStrArray: ArrayBuffer[String] = Trigger.zIndexStrArray
+    //
+    //    // TODO lrx: 改造前端瓦片转换坐标、行列号的方式
+    //    val unionTileExtent: Geometry = zIndexStrArray.map(zIndexStr => {
+    //      val xy: Array[Int] = ZCurveUtil.zCurveToXY(zIndexStr, level)
+    //      val lonMinOfTile: Double = ZCurveUtil.tile2Lon(xy(0), level)
+    //      val latMinOfTile: Double = ZCurveUtil.tile2Lat(xy(1) + 1, level)
+    //      val lonMaxOfTile: Double = ZCurveUtil.tile2Lon(xy(0) + 1, level)
+    //      val latMaxOfTile: Double = ZCurveUtil.tile2Lat(xy(1), level)
+    //
+    //      val minCoordinate = new Coordinate(lonMinOfTile, latMinOfTile)
+    //      val maxCoordinate = new Coordinate(lonMaxOfTile, latMaxOfTile)
+    //      val envelope: Envelope = new Envelope(minCoordinate, maxCoordinate)
+    //      val geometry: Geometry = new GeometryFactory().toGeometry(envelope)
+    //      geometry
+    //    }).reduce((a, b) => {
+    //      a.union(b)
+    //    })
+    //    var union: Geometry = unionTileExtent
+    //    if (extent != null) {
+    //      union = unionTileExtent.intersection(extent)
+    //    }
     val union = extent
     val metaList: ListBuffer[CoverageMetadata] = queryCoverageCollection(productName, sensorName, measurementName, startTime, endTime, union, crs,cloudCoverMin, cloudCoverMax)
     val metaListGrouped: Map[String, ListBuffer[CoverageMetadata]] = metaList.groupBy(t => t.getCoverageID)
+    val cogUtil: COGUtil = COGUtil.createCOGUtil(CLIENT_NAME)
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val rawTileRdd: Map[String, RDD[RawTile]] = metaListGrouped.map(t => {
       val metaListCoverage: ListBuffer[CoverageMetadata] = t._2
       val tileDataTuple: RDD[CoverageMetadata] = sc.makeRDD(metaListCoverage)
@@ -65,10 +68,8 @@ object CoverageCollection {
         .map(t => {
           val time1: Long = System.currentTimeMillis()
           val rawTiles: mutable.ArrayBuffer[RawTile] = {
-
-            val client: MinioClient = MinIOUtil.getMinioClient
-
-            val tiles: mutable.ArrayBuffer[RawTile] = COGUtil.tileQuery(client, level, t, Extent(union.getEnvelopeInternal),t.getGeom)
+            val client = clientUtil.getClient
+            val tiles: mutable.ArrayBuffer[RawTile] = cogUtil.tileQuery(client, level, t, Extent(union.getEnvelopeInternal),t.getGeom)
             tiles
           }
           val time2: Long = System.currentTimeMillis()
@@ -83,11 +84,9 @@ object CoverageCollection {
       tileRDDFlat.unpersist()
       val tileRDDRePar: RDD[RawTile] = tileRDDFlat.repartition(math.min(tileNum, 16))
       (t._1, tileRDDRePar.mapPartitions(par => {
-
-
-        val client: MinioClient = MinIOUtil.getMinioClient
+        val client = clientUtil.getClient
         par.map(t=>{
-          COGUtil.getTileBuf(client,t)
+          cogUtil.getTileBuf(client,t)
         })
       }))
     })
@@ -153,30 +152,30 @@ object CoverageCollection {
     coverageCollection.map(t =>{
       (t._1,Relection.reflectCall(baseAlgorithm,t._2,params))
     })
-//    coverageCollection.foreach(coverage => {
-//      val coverageId: String = coverage._1
-//      val coverageRdd: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage._2
-//      Trigger.coverageRddList += (coverageId -> coverageRdd)
-//    })
-//
-//    val coverageIds: Iterable[String] = coverageCollection.keys
-//
-//    val coverageAfterComputation: mutable.ArrayBuffer[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))] = mutable.ArrayBuffer.empty[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))]
-//
-//    for (coverageId <- coverageIds) {
-//      val dagChildren: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
-//      Trigger.optimizedDagMap(baseAlgorithm).foreach(t => {
-//        dagChildren += ((t._1, t._2, t._3.clone()))
-//      })
-//      dagChildren.foreach(algorithm => {
-//        checkMapping(coverageId, algorithm)
-//        Trigger.coverageRddList.remove(algorithm._1)
-//        Trigger.func(sc, algorithm._1, algorithm._2, algorithm._3)
-//      })
-//      coverageAfterComputation.append(coverageId -> Trigger.coverageRddList(baseAlgorithm))
-//    }
-//
-//    coverageAfterComputation.toMap
+    //    coverageCollection.foreach(coverage => {
+    //      val coverageId: String = coverage._1
+    //      val coverageRdd: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = coverage._2
+    //      Trigger.coverageRddList += (coverageId -> coverageRdd)
+    //    })
+    //
+    //    val coverageIds: Iterable[String] = coverageCollection.keys
+    //
+    //    val coverageAfterComputation: mutable.ArrayBuffer[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))] = mutable.ArrayBuffer.empty[(String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]))]
+    //
+    //    for (coverageId <- coverageIds) {
+    //      val dagChildren: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
+    //      Trigger.optimizedDagMap(baseAlgorithm).foreach(t => {
+    //        dagChildren += ((t._1, t._2, t._3.clone()))
+    //      })
+    //      dagChildren.foreach(algorithm => {
+    //        checkMapping(coverageId, algorithm)
+    //        Trigger.coverageRddList.remove(algorithm._1)
+    //        Trigger.func(sc, algorithm._1, algorithm._2, algorithm._3)
+    //      })
+    //      coverageAfterComputation.append(coverageId -> Trigger.coverageRddList(baseAlgorithm))
+    //    }
+    //
+    //    coverageAfterComputation.toMap
   }
 
   def filter(filter: String, collection: CoverageCollectionMetadata): CoverageCollectionMetadata = {

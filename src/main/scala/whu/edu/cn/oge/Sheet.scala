@@ -9,6 +9,7 @@ import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
+import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_BUCKET_NAME
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.objectStorage.ObjectStorageFactory
 import whu.edu.cn.oge.Feature.geometry
@@ -44,7 +45,7 @@ object Sheet{
     val client = ObjectStorageFactory.getClient(platform,endpoint)
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}.csv"
-    val bosObject = client.DownloadObject(path, filePath,"oge-user")
+    val bosObject = client.DownloadObject(path, filePath, MINIO_BUCKET_NAME)
     println(filePath)
 
     val csvdata = readCsv(filePath)
@@ -239,31 +240,31 @@ object Sheet{
     CsvData(fieldNames,extractedData)
   }
 
-def pointToGeojson(feature: RDD[(String, (Geometry, Map[String, Any]))]): String = {
-  val jsonArray = new JSONArray()
+  def pointToGeojson(feature: RDD[(String, (Geometry, Map[String, Any]))]): String = {
+    val jsonArray = new JSONArray()
 
-  feature.collect().foreach { case (_, (geometry, properties)) =>
-    // 提取几何对象的坐标和其他属性
-    val coordinates: Array[Double] = Array(geometry.getCoordinate.x, geometry.getCoordinate.y)
-    // 创建 JSON 对象
-    val featureJson = new JSONObject()
-    featureJson.put("type", "Feature")
-    featureJson.put("geometry", new JSONObject().fluentPut("type", "Point").fluentPut("coordinates", coordinates))
+    feature.collect().foreach { case (_, (geometry, properties)) =>
+      // 提取几何对象的坐标和其他属性
+      val coordinates: Array[Double] = Array(geometry.getCoordinate.x, geometry.getCoordinate.y)
+      // 创建 JSON 对象
+      val featureJson = new JSONObject()
+      featureJson.put("type", "Feature")
+      featureJson.put("geometry", new JSONObject().fluentPut("type", "Point").fluentPut("coordinates", coordinates))
 
-    // 处理 properties 中的键值对
-    val propertiesJson = new JSONObject()
-    properties.foreach { case (key, value) =>
-      // 将属性值根据类型进行处理
-      value match {
-        case boolValue: Boolean => propertiesJson.put(key, boolValue)
-        case _ => propertiesJson.put(key, value.toString)
+      // 处理 properties 中的键值对
+      val propertiesJson = new JSONObject()
+      properties.foreach { case (key, value) =>
+        // 将属性值根据类型进行处理
+        value match {
+          case boolValue: Boolean => propertiesJson.put(key, boolValue)
+          case _ => propertiesJson.put(key, value.toString)
+        }
       }
+      featureJson.put("properties", propertiesJson)
+      jsonArray.add(featureJson)
     }
-    featureJson.put("properties", propertiesJson)
-    jsonArray.add(featureJson)
+    new JSONObject().fluentPut("type", "FeatureCollection").fluentPut("features", jsonArray).toString
   }
-  new JSONObject().fluentPut("type", "FeatureCollection").fluentPut("features", jsonArray).toString
-}
 
   def main(args: Array[String]): Unit = {
     val filePath = "C:\\Users\\17510\\Desktop\\ICESat_test.csv"
@@ -274,16 +275,16 @@ def pointToGeojson(feature: RDD[(String, (Geometry, Map[String, Any]))]): String
     val sc = new SparkContext(conf)
 
     // 获取第二行第三列的值
-//    val value = getcellValue(csvData, row = 2, col = 3)
-//
-//    val filteredData = filterByHeader(csvData, condition = "sig", value = "3")
-//    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", filteredData)
+    //    val value = getcellValue(csvData, row = 2, col = 3)
+    //
+    //    val filteredData = filterByHeader(csvData, condition = "sig", value = "3")
+    //    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", filteredData)
     val geometry_rdd = sheetToPoint(sc,csvData,"lat","lon")
-//    val geojson = "{\"features\":[{\"geometry\":{\"coordinates\":[114.2,39.25400195],\"type\":\"Point\"},\"type\":\"Feature\",\"properties\":{\"sig\":\"1\",\"h\":\"850.4276848\"}},{\"geometry\":{\"coordinates\":[104.2,39.25400228],\"type\":\"Point\"},\"type\":\"Feature\",\"properties\":{\"sig\":\"3\",\"h\":\"858.6771965\"}},{\"geometry\":{\"coordinates\":[94.2,39.2540023],\"type\":\"Point\"},\"type\":\"Feature\",\"properties\":{\"sig\":\"3\",\"h\":\"859.198925\"}}],\"type\":\"FeatureCollection\"}"
-//    val sheet = GeoJsonToSheet(geojson)
+    //    val geojson = "{\"features\":[{\"geometry\":{\"coordinates\":[114.2,39.25400195],\"type\":\"Point\"},\"type\":\"Feature\",\"properties\":{\"sig\":\"1\",\"h\":\"850.4276848\"}},{\"geometry\":{\"coordinates\":[104.2,39.25400228],\"type\":\"Point\"},\"type\":\"Feature\",\"properties\":{\"sig\":\"3\",\"h\":\"858.6771965\"}},{\"geometry\":{\"coordinates\":[94.2,39.2540023],\"type\":\"Point\"},\"type\":\"Feature\",\"properties\":{\"sig\":\"3\",\"h\":\"859.198925\"}}],\"type\":\"FeatureCollection\"}"
+    //    val sheet = GeoJsonToSheet(geojson)
     val sheet1 = pointToSheet(geometry_rdd)
     val formattedTable = formatCsvData(sheet1)
-//    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", sheet1)
+    //    writeCsv("C:\\Users\\17510\\Desktop\\test2.csv", sheet1)
 
     println(formattedTable)
   }

@@ -75,6 +75,10 @@ object GlobalConfig {
     final val REDIS_CACHE_TTL: Long = 2 * 60L
   }
 
+  object ClientConf {
+    final val CLIENT_NAME: String = "minio" // "bos"
+  }
+
   object MinioConf {
     // MinIO 基础配置
     final val MINIO_ENDPOINT: String = "http://172.22.1.28:9006"
@@ -87,7 +91,10 @@ object GlobalConfig {
 
   object BosConf{
     //Bos基础配置
-    final val BOS_ENDPOINT: String = "https://s3.bj.bcebos.com"
+    final val BOS_ACCESS_KEY: String = "1c7ce53fe2ce44ef9071db42ec01fdc1"
+    final val BOS_SECRET_ACCESS: String = "5b1663881aed4423a56cb8b6c784acb1"
+    final val BOS_ENDPOINT: String = "https://s3.bcebos.sdhy.omspcloud.com:8443"
+    final val BOS_BUCKET_NAME: String = "ogebos"
   }
 
   object PostgreSqlConf {
@@ -140,7 +147,7 @@ object GlobalConfig {
     var SAGA_PASSWORD: String = "Ypfamily608!"
     var SAGA_PORT: Int = 22
   }
-//定量遥感算法
+  //定量遥感算法
   object QuantConf {
     var Quant_DataPath:String = "/mnt/storage/htTeam/data/"
     var Quant_HOST: String = "172.22.1.20"
