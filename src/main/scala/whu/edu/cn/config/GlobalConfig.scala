@@ -77,6 +77,7 @@ object GlobalConfig {
 
   object ClientConf {
     final val CLIENT_NAME: String = "minio" // "bos"
+    final val USER_BUCKET_NAME: String = "oge-user"
   }
 
   object MinioConf {
