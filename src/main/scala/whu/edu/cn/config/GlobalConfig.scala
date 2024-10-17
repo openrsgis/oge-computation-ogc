@@ -76,7 +76,7 @@ object GlobalConfig {
   }
 
   object ClientConf {
-    final val CLIENT_NAME: String = "minio" // "bos"
+    final val CLIENT_NAME: String = "bos" // "minio"
     final val USER_BUCKET_NAME: String = "oge-user"
   }
 
@@ -94,7 +94,7 @@ object GlobalConfig {
     //Bos基础配置
     final val BOS_ACCESS_KEY: String = "1c7ce53fe2ce44ef9071db42ec01fdc1"
     final val BOS_SECRET_ACCESS: String = "5b1663881aed4423a56cb8b6c784acb1"
-    final val BOS_ENDPOINT: String = "https://s3.bcebos.sdhy.omspcloud.com:8443"
+    final val BOS_ENDPOINT: String = "http://bcebos.sdhy.omspcloud.com:8080"
     final val BOS_BUCKET_NAME: String = "ogebos"
   }
 
