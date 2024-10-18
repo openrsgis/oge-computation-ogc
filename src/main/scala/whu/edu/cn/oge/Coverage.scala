@@ -3581,7 +3581,7 @@ object Coverage {
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
-    val inputStream = clientUtil.getObject(MINIO_BUCKET_NAME ,path)
+    val inputStream = clientUtil.getObject(USER_BUCKET_NAME ,path)
     val outputPath = Paths.get(filePath)
 
     tempFileList.append(filePath)
