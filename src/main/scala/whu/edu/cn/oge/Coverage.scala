@@ -3599,7 +3599,7 @@ object Coverage {
     val filePath = s"$tempPath${dagId}_${Trigger.file_id}.tiff"
 
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
-    val inputStream = clientUtil.getObject(USER_BUCKET_NAME, path)
+    val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
     val outputPath = Paths.get(filePath)
     tempFileList.append(filePath)
     Trigger.file_id += 1
