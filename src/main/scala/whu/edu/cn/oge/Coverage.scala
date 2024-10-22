@@ -30,6 +30,7 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.ClientConf.{CLIENT_NAME, USER_BUCKET_NAME}
 import whu.edu.cn.config.GlobalConfig.DagBootConf._
 import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_BUCKET_NAME
+import whu.edu.cn.config.GlobalConfig.BosConf.BOS_BUCKET_NAME
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
