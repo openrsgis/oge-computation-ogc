@@ -5,7 +5,7 @@ import breeze.linalg.{DenseMatrix, InjectNumericOps}
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.{CellType, DoubleArrayTile, DoubleConstantNoDataCellType, Histogram, IntArrayTile, IntCellType, IntConstantNoDataCellType, MultibandTile, Tile, UShortConstantNoDataCellType, isNoData}
 import geotrellis.spark.ContextRDD.tupleToContextRDD
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.ml.feature.{PCA, VectorAssembler}
 import org.apache.spark.ml.linalg.DenseVector
@@ -16,6 +16,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools._
 import whu.edu.cn.algorithms.ImageProcess.core.RDDTransformerUtil.paddingRDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
+import whu.edu.cn.algorithms.terrain.core.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.util.CoverageUtil.checkProjResoExtent
 
@@ -1748,7 +1749,6 @@ def catTwoCoverage(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
   val cellType = cellType1.union(cellType2) //获得更通用的那种类型
   //时间戳、波段列表暂时以coverage1为准
   val time: Long = newCoverage1._1.first()._1.spaceTimeKey.instant
-  val band: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //先创建一个空波段列表，后面再填充
   //计算新影像波段数，便于后面新建一个空的类型为Tile的Array
   val bandCount1: Int = newCoverage1._1.first()._2.bandCount
   val bandCount2: Int = newCoverage2._1.first()._2.bandCount
@@ -1762,13 +1762,14 @@ def catTwoCoverage(coverage1: RDDImage, coverage2: RDDImage): RDDImage = {
   val rdd: RDD[(SpatialKey, (MultibandTile, MultibandTile))] = coverage1tileRDD.join(coverage2tileRDD)
   val newCoverageRdd: RDD[(SpaceTimeBandKey, MultibandTile)] = rdd.map { case (spatialKey, (multibandTile1, multibandTile2)) =>
     val bandArray = Array.ofDim[Tile](bandCount)
+    val band: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //先创建一个空波段列表，后面再填充
     for (index1 <- 0 until bandCount1) {
       bandArray(index1) = multibandTile1.band(index1).convert(cellType)
-      band.append("B" + index1.toString())
+      band.append("B" + (index1+1).toString())
     }
     for (index2 <- 0 until bandCount2) {
       bandArray(bandCount1 + index2) = multibandTile2.band(index2).convert(cellType)
-      band.append("B" + (bandCount1 + index2).toString())
+      band.append("B" + (bandCount1 + index2 + 1).toString())
     }
     (SpaceTimeBandKey(SpaceTimeKey(spatialKey.col, spatialKey.row, time), band), MultibandTile(bandArray))
   }
@@ -1849,5 +1850,19 @@ def RandomForestTrainAndRegress(featuresCoverage: RDDImage, labelCoverage: RDDIm
   val regressCoverage: RDDImage = Regressor.regress(spark, predictCoverage, model)("prediction")
   regressCoverage
 }
+
+  def main(args: Array[String]): Unit = {
+    val conf: SparkConf = new SparkConf().setAppName("HE").setMaster("local")
+    val sc = new SparkContext(conf)
+    val spark = SparkSession.builder().appName("SparkStatCleanJob").getOrCreate() //能不能和SparkContext同时创建？放到自己的函数里创建结束时调用.stop把它停掉
+
+    val coverage1: RDDImage = makeChangedRasterRDDFromTif(sc: SparkContext,"C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\features4label.tif")
+    val coverage2: RDDImage = makeChangedRasterRDDFromTif(sc: SparkContext,"C:\\Users\\HUAWEI\\Desktop\\oge\\OGE竞赛\\out\\features4label_clip1.tif")
+    val coverage = catTwoCoverage(coverage1, coverage2)
+    val result = whu.edu.cn.oge.Coverage.selectBands(coverage, List("B1", "B2"))
+    saveRasterRDDToTif(result,"C:\\Users\\HUAWEI\\Desktop\\oge\\coverage_resources1\\cat1021.tiff")
+
+
+  }
 
 }
