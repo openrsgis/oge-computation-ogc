@@ -653,6 +653,16 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.toFloat(coverage = coverageRddList(args("coverage"))))
         case "Coverage.toDouble" =>
           coverageRddList += (UUID -> Coverage.toDouble(coverage = coverageRddList(args("coverage"))))
+        case "Coverage.gteByGEE" =>
+          coverageRddList += (UUID -> Coverage.gteByGEE(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toDouble))
+        case "Coverage.lteByGEE" =>
+          coverageRddList += (UUID -> Coverage.lteByGEE(coverage = coverageRddList(args("coverage")), threshold = args("threshold").toDouble))
+        case "Coverage.updateMask" =>
+          coverageRddList += (UUID -> Coverage.updateMask(coverageRddList(args("coverage1")), coverageRddList(args("coverage2"))))
+        case "Coverage.unmask" =>
+          coverageRddList += (UUID -> Coverage.unmask(coverageRddList(args("coverage1")), coverageRddList(args("coverage2"))))
+        case "Coverage.setValidDataRange" =>
+          coverageRddList += (UUID -> Coverage.setValidDataRange(coverage = coverageRddList(args("coverage")), args("range").slice(1, args("to").length - 1).split(',').toList.map(_.toDouble)))
         //   QGIS
         case "Coverage.warpGeoreByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalWarpGeore(sc, coverageRddList(args("input")), GCPs = args("GCPs"), resampleMethod = args("resampleMethod"), userId, dagId))
