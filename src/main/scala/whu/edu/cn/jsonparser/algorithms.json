@@ -10249,6 +10249,86 @@
       }
     ]
   },
+  "Coverage.gteByGEE": {
+    "description": "Set the values greater than or equal to the threshold in the impact to 1, and set the rest to 0.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "threshold",
+        "type": "Double",
+        "description": "The value set as a boundary value."
+      }
+    ]
+  },
+  "Coverage.lteByGEE": {
+    "description": "Set the values less than or equal to the threshold in the impact to 1, and set the rest to 0.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "threshold",
+        "type": "Double",
+        "description": "The value set as a boundary value."
+      }
+    ]
+  },
+  "Coverage.updateMask": {
+    "description": "Update image information based on mask.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image to be updated"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "mask"
+      }
+    ]
+  },
+  "Coverage.unmask": {
+    "description": "Fill the data free area in the image with the value of another image.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage1",
+        "type": "Coverage",
+        "description": "The image to be filled"
+      },
+      {
+        "name": "coverage2",
+        "type": "Coverage",
+        "description": "mask"
+      }
+    ]
+  },
+  "Coverage.setValidDataRange": {
+    "description": "Set the effective range of image values.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "range",
+        "type": "List[Double]",
+        "description": "The valid data range."
+      }
+    ]
+  },
   "Terrain.slope": {
     "description": "Calculates slope in degrees from a terrain DEM.",
     "returns": "Coverage",
