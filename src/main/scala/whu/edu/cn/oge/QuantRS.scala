@@ -172,7 +172,7 @@ object QuantRS {
                               timeStamp: String,
                               localnoonCoefs: String,
                               parameters: String,
-                              bands: Int,userId, dagId)
+                              bands: Int,userId: String, dagId: String)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
