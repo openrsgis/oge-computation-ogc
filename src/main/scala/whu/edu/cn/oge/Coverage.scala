@@ -3770,7 +3770,7 @@ object Coverage {
     Trigger.file_id += 1
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     inputStream.close()
-    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTifNew(sc, filePath)
 
     coverage
   }

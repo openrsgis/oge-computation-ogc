@@ -64,7 +64,7 @@ object QuantRS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath $outputTiffPath""".stripMargin
+        raw"""cd /mnt/storage/htTeam/ref_rec_30;bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath $outputTiffPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -134,7 +134,7 @@ object QuantRS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""bash /mnt/storage/htTeam/ref_rec_500/ref_rec_500_v1.sh   $MOD09A1Path $LAIPath $FAPARPath $NDVIPath $EVIPath  $FVCPath $GPPPath $NPPPath $ALBEDOPath $COPYPath  $outputTiffPath""".stripMargin
+        raw"""cd /mnt/storage/htTeam/ref_rec_500;bash /mnt/storage/htTeam/ref_rec_500/ref_rec_500_v1.sh   $MOD09A1Path $LAIPath $FAPARPath $NDVIPath $EVIPath  $FVCPath $GPPPath $NPPPath $ALBEDOPath $COPYPath  $outputTiffPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -172,7 +172,7 @@ object QuantRS {
                               timeStamp: String,
                               localnoonCoefs: String,
                               parameters: String,
-                              bands: Int)
+                              bands: Int,userId, dagId)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
@@ -190,11 +190,13 @@ object QuantRS {
     saveRasterRDDToTif(sensorAzimuth, sensorAzimuthPath)
     saveRasterRDDToTif(cloudMask,cloudMaskPath)
 
+    val localnoonCoefsPath = loadTxtFromUpload(localnoonCoefs, userId, dagId, "otb")
+    val parametersPath = loadTxtFromUpload(parameters, userId, dagId, "otb")
     val writeName = "surfaceAlbedoLocalNoon_" + time + "_out.tif"
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw""""/mnt/storage/htTeam/albedo_MERSI/Surface_Albedo_LocalNoon_Cal" $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefs $parameters $bands $algorithmData $writeName """.stripMargin
+        raw""""cd /mnt/storage/htTeam/albedo_MERSI;./Surface_Albedo_LocalNoon_Cal" $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefsPath $parametersPath $bands  $writeName """.stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
