@@ -210,6 +210,14 @@ object QuantRS {
     makeChangedRasterRDDFromTif(sc, algorithmData + writeName)
   }
 
+  /**
+   *  HI-GLASS反照率
+   * @param sc
+   * @param InputTiffs
+   * @param Metadata
+   * @param BinaryData
+   * @return
+   */
   def HiGlassAlbedo(implicit sc: SparkContext,
                     InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                     Metadata:String,

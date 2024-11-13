@@ -14289,6 +14289,27 @@
     }
   ]
 },
+  "Coverage.Coverage.HiGlassAlbedo": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "InputTiffs",
+        "type": "CoverageCollection",
+        "description": "Coverages"
+      },
+      {
+        "name": "Metadata",
+        "type": "String",
+        "description": "Metadata file"
+      },
+      {
+        "name": "BinaryData",
+        "type": "String",
+        "description": "BinaryData file"
+      }
+    ]
+  },
   "Coverage.RandomForestTrainAndRegress": {
     "description": "",
     "returns": "Coverage",
