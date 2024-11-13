@@ -190,13 +190,14 @@ object QuantRS {
     saveRasterRDDToTif(sensorAzimuth, sensorAzimuthPath)
     saveRasterRDDToTif(cloudMask,cloudMaskPath)
 
-    val localnoonCoefsPath = loadTxtFromUpload(localnoonCoefs, userId, dagId, "otb")
-    val parametersPath = loadTxtFromUpload(parameters, userId, dagId, "otb")
+    val localnoonCoefsPath = loadTxtFromUpload(localnoonCoefs, userId, dagId, "others")
+    val parametersPath = loadTxtFromUpload(parameters, userId, dagId, "others")
+    val writePath = "/mnt/storage/htTeam/data"
     val writeName = "surfaceAlbedoLocalNoon_" + time + "_out.tif"
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw""""cd /mnt/storage/htTeam/albedo_MERSI;./Surface_Albedo_LocalNoon_Cal" $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefsPath $parametersPath $bands  $writeName """.stripMargin
+        raw"""cd /mnt/storage/htTeam/albedo_MERSI;./Surface_Albedo_LocalNoon_Cal $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefsPath $parametersPath $bands $writePath  $writeName""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")

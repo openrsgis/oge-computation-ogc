@@ -3813,15 +3813,16 @@ object Coverage {
 
     val tempfile = new File(filePath)
     try {
+      println(path, filePath)
       clientUtil.Download(path, filePath)
     }
     catch {
       case e: Throwable =>
         println(e)
     }
-    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
+//    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
     file_idx = file_idx + 1
-    println(filePath, dockerFilePath)
+//    println(filePath, dockerFilePath)
     dockerFilePath
   }
 
