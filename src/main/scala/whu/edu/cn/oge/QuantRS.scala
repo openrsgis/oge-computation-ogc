@@ -10,6 +10,7 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.Coverage.loadTxtFromUpload
+import whu.edu.cn.oge.Coverage.loadTxtFromCase
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
@@ -190,8 +191,21 @@ object QuantRS {
     saveRasterRDDToTif(sensorAzimuth, sensorAzimuthPath)
     saveRasterRDDToTif(cloudMask,cloudMaskPath)
 
-    val localnoonCoefsPath = loadTxtFromUpload(localnoonCoefs, userId, dagId, "others")
-    val parametersPath = loadTxtFromUpload(parameters, userId, dagId, "others")
+    def loadPath(filePath: String, userId: String, dagId: String): String = {
+      if (filePath.startsWith("myData/")) {
+        loadTxtFromUpload(filePath, userId, dagId, "others")
+      } else if (filePath.startsWith("OGE_Case_Data/")) {
+        loadTxtFromCase(filePath, dagId)
+      } else {
+        "" // 返回空字符串或其他默认值
+      }
+    }
+
+    val localnoonCoefsPath = loadPath(localnoonCoefs, userId, dagId)
+    val parametersPath = loadPath(parameters, userId, dagId)
+
+//    val localnoonCoefsPath = loadTxtFromUpload(localnoonCoefs, userId, dagId, "others")
+//    val parametersPath = loadTxtFromUpload(parameters, userId, dagId, "others")
     val writePath = "/mnt/storage/htTeam/data"
     val writeName = "surfaceAlbedoLocalNoon_" + time + "_out.tif"
     try {
