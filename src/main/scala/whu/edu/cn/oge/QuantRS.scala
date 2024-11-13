@@ -23,6 +23,7 @@ import scala.collection.{immutable, mutable}
 import java.io.File
 import java.time.LocalDate
 import org.apache.hadoop.fs.{FileSystem, Path => hPath}
+import org.apache.hadoop.conf.Configuration
 object QuantRS {
   val algorithmData=GlobalConfig.QuantConf.Quant_DataPath
   val host = GlobalConfig.QuantConf.Quant_HOST
@@ -230,12 +231,10 @@ object QuantRS {
     // 指定创建目录
     val time = System.currentTimeMillis()
     val currentDate1 = LocalDate.now()
-    val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
-    val formattedDate1 = currentDate1.format(formatter)
 
     val folderPath = new hPath(algorithmData + "LC09_L1TP_" + time)
     val outputPath = new hPath(algorithmData + "HI-GLASS_result_" + time)
-    val baseName = folderPath.getFileName.toString
+    val baseName = folderPath.getName
 
     // 创建文件夹存放影像
     if (!fs.exists(folderPath) && !fs.exists(outputPath)) {
@@ -250,8 +249,6 @@ object QuantRS {
     // 影像落地
     var i = 1
     for (tiff <- InputTiffs) {
-      val currentDate2 = LocalDate.now()
-      val formattedDate2 = currentDate2.format(formatter)
       // 影像落地为tif
       val tiffPath = folderPath.toString + "/" + baseName + s"_B$i.TIF"
       saveRasterRDDToTif(tiff._2, tiffPath)
@@ -260,7 +257,7 @@ object QuantRS {
     val utilsAC = new Utils
     // 元数据落地
     val targetPath1 = folderPath.toString + "/" + baseName + "_MTL.txt"
-    utilsAC.saveTXT(Metadata, targetPath)
+    utilsAC.saveTXT(Metadata, targetPath1)
     // bin文件落地
     val targetPath2 = folderPath. toString + "/" +"sw_bsa_coefs.bin"
     utilsAC.saveTXT(BinaryData, targetPath2)
@@ -271,7 +268,7 @@ object QuantRS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate cv && /mnt/storage/htTeam/albedo_HIGLASS/task_albedo.py --input_data $folderPath --output_file $resultPath""".stripMargin
+        raw"""conda activate cv && python /mnt/storage/htTeam/albedo_HIGLASS/task_albedo.py --input_data $folderPath --output_file $resultPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -280,6 +277,8 @@ object QuantRS {
       case e: Exception =>
         e.printStackTrace()
     }
+
+    makeChangedRasterRDDFromTif(sc, resultPath)
 
   }
 
