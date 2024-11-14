@@ -6,8 +6,9 @@ import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.algorithms.RS.Utils
 import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
+import whu.edu.cn.config.GlobalConfig.Others.{hbaseHost, tempFilePath}
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 import whu.edu.cn.oge.Coverage.loadTxtFromCase
@@ -21,6 +22,9 @@ import scala.collection.immutable.Map
 import scala.collection.mutable.Map
 import scala.collection.{immutable, mutable}
 import java.io.File
+import java.time.LocalDate
+import org.apache.hadoop.fs.{FileSystem, Path => hPath}
+import org.apache.hadoop.conf.Configuration
 object QuantRS {
   val algorithmData=GlobalConfig.QuantConf.Quant_DataPath
   val host = GlobalConfig.QuantConf.Quant_HOST
@@ -223,6 +227,79 @@ object QuantRS {
 
     makeChangedRasterRDDFromTif(sc, algorithmData + writeName)
   }
+
+  /**
+   *  HI-GLASS反照率
+   * @param sc
+   * @param InputTiffs
+   * @param Metadata
+   * @param BinaryData
+   * @return
+   */
+  def HiGlassAlbedo(implicit sc: SparkContext,
+                    InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                    Metadata:String,
+                    BinaryData: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+    // 配置本地文件系统
+    val conf = new Configuration()
+    conf.set("fs.defaultFS", "file:///")
+    val fs = FileSystem.get(conf)
+
+    // 指定创建目录
+    val time = System.currentTimeMillis()
+    val currentDate1 = LocalDate.now()
+
+    val folderPath = new hPath(algorithmData + "LC09_L1TP_" + time)
+    val outputPath = new hPath(algorithmData + "HI-GLASS_result_" + time)
+    val baseName = folderPath.getName
+
+    // 创建文件夹存放影像
+    if (!fs.exists(folderPath) && !fs.exists(outputPath)) {
+      fs.mkdirs(folderPath)
+      fs.mkdirs(outputPath)
+      println(s"影像文件夹创建成功：$folderPath")
+      println(s"结果文件夹创建成功：$outputPath")
+    } else {
+      println(s"文件夹已存在")
+    }
+
+    // 影像落地
+    var i = 1
+    for (tiff <- InputTiffs) {
+      // 影像落地为tif
+      val tiffPath = folderPath.toString + "/" + baseName + s"_B$i.TIF"
+      saveRasterRDDToTif(tiff._2, tiffPath)
+      i = i + 1
+    }
+    val utilsAC = new Utils
+    // 元数据落地
+    val targetPath1 = folderPath.toString + "/" + baseName + "_MTL.txt"
+    utilsAC.saveTXT(Metadata, targetPath1)
+    // bin文件落地
+    val targetPath2 = folderPath. toString + "/" +"sw_bsa_coefs.bin"
+    utilsAC.saveTXT(BinaryData, targetPath2)
+
+    // 启动反照率程序
+    val writeName = "albedo" + time + "_out.tif"
+    val resultPath = outputPath.toString +"/"+writeName
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate cv && python /mnt/storage/htTeam/albedo_HIGLASS/task_albedo.py --input_data $folderPath --output_file $resultPath""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, resultPath)
+
+  }
+
+
 
 
 }

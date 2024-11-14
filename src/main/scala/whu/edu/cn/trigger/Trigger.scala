@@ -1127,6 +1127,8 @@ object Trigger {
           coverageRddList += (UUID -> QuantRS.surfaceAlbedoLocalNoon(sc, coverageRddList(args("TOAReflectance")), coverageRddList(args("solarZenith")), coverageRddList(args("solarAzimuth")), coverageRddList(args("sensorZenith")), coverageRddList(args("sensorAzimuth")), coverageRddList(args("cloudMask")), args("timeStamp"), args("localnoonCoefs"), args("parameters"), args("bands").toInt,userId, dagId))
         case "Coverage.imaginaryConstellations" =>
           coverageRddList += (UUID -> QuantRS.imaginaryConstellations(sc, coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("FVC")), coverageRddList(args("ALBEDO"))))
+        case "Coverage.HiGlassAlbedo" =>
+          coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData")))
 
         //Feature
         case "Feature.load" =>
