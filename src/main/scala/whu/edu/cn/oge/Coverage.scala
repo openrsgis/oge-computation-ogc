@@ -3770,7 +3770,7 @@ object Coverage {
     Trigger.file_id += 1
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     inputStream.close()
-    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTif(sc, filePath)
+    val coverage = RDDTransformerUtil.makeChangedRasterRDDFromTifNew(sc, filePath)
 
     coverage
   }
@@ -3792,6 +3792,19 @@ object Coverage {
     coverage
   }
 
+  def loadTxtFromCase(coverageId: String, dagId: String): String = {
+    val path = "/" + coverageId
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.txt"
+
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
+    val outputPath = Paths.get(filePath)
+    tempFileList.append(filePath)
+    Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    filePath
+  }
   var file_idx:Long = 0
   def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
     var path: String = s"${userID}/$txt"
@@ -3813,15 +3826,16 @@ object Coverage {
 
     val tempfile = new File(filePath)
     try {
+      println(path, filePath)
       clientUtil.Download(path, filePath)
     }
     catch {
       case e: Throwable =>
         println(e)
     }
-    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
+//    Trigger.tempFileList.append(filePath) //加入待删除的临时文件路径下
     file_idx = file_idx + 1
-    println(filePath, dockerFilePath)
+//    println(filePath, dockerFilePath)
     dockerFilePath
   }
 
