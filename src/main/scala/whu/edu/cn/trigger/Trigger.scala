@@ -662,7 +662,7 @@ object Trigger {
         case "Coverage.unmask" =>
           coverageRddList += (UUID -> Coverage.unmask(coverageRddList(args("coverage1")), coverageRddList(args("coverage2"))))
         case "Coverage.setValidDataRange" =>
-          coverageRddList += (UUID -> Coverage.setValidDataRange(coverage = coverageRddList(args("coverage")), args("range").slice(1, args("to").length - 1).split(',').toList.map(_.toDouble)))
+          coverageRddList += (UUID -> Coverage.setValidDataRange(coverage = coverageRddList(args("coverage")), args("range").slice(1, args("range").length - 1).split(',').toList.map(_.toDouble)))
         //   QGIS
         case "Coverage.warpGeoreByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalWarpGeore(sc, coverageRddList(args("input")), GCPs = args("GCPs"), resampleMethod = args("resampleMethod"), userId, dagId))
