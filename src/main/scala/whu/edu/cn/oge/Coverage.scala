@@ -57,6 +57,8 @@ import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
 import java.io.File
 import sys.process._
+import scala.util.Random
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -3030,6 +3032,46 @@ object Coverage {
         })
       }))
     }), coverage._2)
+  }
+
+  def randomSample(
+                    coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                    sampleRate: Double,
+                    seed: Long = 0,
+                    useSampleRatePart: Boolean = true
+                  ): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+
+    // 检查样本率是否在有效范围内
+    if (sampleRate <= 0.0 || sampleRate > 1.0) {
+      throw new IllegalArgumentException("Sample rate must be between 0.0 and 1.0!")
+    }
+    // 获取元数据
+    val metadata = coverage._2
+    val colNum = findSpatialKeyMinMax(coverage)._2
+    // 对每个瓦片进行随机采样
+    val sampledCoverage: RDD[(SpaceTimeBandKey, MultibandTile)] = coverage._1.map { case (key, multibandTile) =>
+      // 为每个分区定义唯一随机数生成器
+      val partitionSeed = seed + key.spaceTimeKey.spatialKey.row * colNum + key.spaceTimeKey.spatialKey.col
+      val random = new Random(partitionSeed)
+      val bandCount = multibandTile.bandCount
+      val doubleArray = Array.ofDim[Double](bandCount, 256, 256)
+      for (i <- 0 until 256; j <- 0 until 256) { // (i, j)是像素在该瓦片中的定位
+        val randomValue = random.nextDouble() //生成随机数
+        for (bandIndex <- 0 until bandCount) {
+          if (useSampleRatePart && randomValue < sampleRate || !useSampleRatePart && randomValue >= sampleRate){
+            doubleArray(bandIndex)(i)(j)=(multibandTile.band(bandIndex).getDouble(j, i))
+          }
+          else doubleArray(bandIndex)(i)(j) = Double.NaN
+        }
+      }
+      val tileArray = Array.ofDim[Tile](bandCount)
+      for (bandIndex <- 0 until bandCount){
+        tileArray(bandIndex) = DoubleArrayTile(doubleArray(bandIndex).flatten, 256, 256)
+      }
+      (key, MultibandTile(tileArray))
+    }
+    // 返回新的 Coverage
+    (sampledCoverage, metadata)
   }
 
   def addStyles(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), visParam: VisualizationParam): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {

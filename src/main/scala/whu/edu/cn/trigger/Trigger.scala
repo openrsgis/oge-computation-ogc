@@ -1507,7 +1507,8 @@ object Trigger {
           stringList += (UUID -> regressionEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
         case "MLmodel.rankingEvaluator" =>
           stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-
+        case "Coverage.randomSample" =>
+          coverageRddList += (UUID ->Coverage.randomSample(coverage = coverageRddList(args("coverage")), args("sampleRate").toDouble, args("seed").toLong, args("useSampleRatePart").toBoolean))
       }
     } catch {
       case e: Throwable =>

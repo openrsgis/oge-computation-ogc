@@ -15949,6 +15949,36 @@
         "default": "['meanAveragePrecision']"
       }
     ]
+  },
+  "Coverage.randomSample": {
+    "description": "This function is used to randomly sample images.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be randomly sampled."
+      },
+      {
+        "name": "sampleRate",
+        "type": "Double",
+        "description": "The proportion of the sample."
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "The random seed to ensure reproducibility of the sampling process.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "useSampleRatePart",
+        "type": "Boolean",
+        "description": "Whether to take the first half of the samples.",
+        "optional": "True",
+        "default": "True"
+      }
+    ]
   }
 
 }
