@@ -14757,68 +14757,70 @@
       {
         "name": "checkpointInterval",
         "type": "Integer",
-        "description": "One of the parameters."
+        "description": "Specifies the number of iterations between each checkpoint during the training process. A checkpoint allows saving the current state of the model at intervals, which is useful for long-running training processes to resume from a certain point in case of interruptions.",
+        "optional": "True",
+        "default": 10
       },
       {
         "name":"featureSubsetStrategy",
         "type": "String",
-        "description": "One of the parameters.",
+        "description": "Controls the strategy for selecting a subset of features to be used at each node split in the decision trees. Common options include 'auto' (default), 'sqrt', and 'log2'. Using a subset of features helps to decorrelate the trees and improve model robustness.",
         "optional": "True",
         "default": "auto"
       },
       {
         "name": "maxBins",
         "type": "Int",
-        "description": "One of the parameters.",
+        "description": "Defines the maximum number of bins used for discretizing continuous feature values. This parameter influences the splitting of decision nodes in each tree. A higher value results in more precise splits, but may increase computational complexity. The default value is 32.",
         "optional": "True",
         "default": "32"
       },
       {
         "name": "maxDepth",
         "type": "Int",
-        "description": "One of the parameters.",
+        "description": "Sets the maximum depth of each decision tree in the random forest. Deeper trees can capture more complex relationships in the data, but are also more likely to overfit. Shallow trees may underfit the data. The default value is 5, which balances complexity and overfitting risk.",
         "optional": "True",
         "default": "5"
       },
       {
         "name": "minInfoGain",
         "type": "Double",
-        "description": "One of the parameters.",
+        "description": "Specifies the minimum information gain required to split a node. If the information gain from a split is below this threshold, the split is not made, and the node becomes a leaf. This helps to avoid creating overly specific splits that may not generalize well.",
         "optional": "True",
         "default": "0.0"
       },
       {
         "name": "minInstancesPerNode",
         "type": "Int",
-        "description": "One of the parameters.",
+        "description": "Sets the minimum number of instances (data points) that must be present in a node for it to be split. Increasing this value prevents the model from creating very deep trees with many small, overfitted branches. A small value leads to more granular splits, while a larger value prevents overly fine splits.",
         "optional": "True",
         "default": "1"
       },
       {
         "name": "minWeightFractionPerNode",
         "type": "Double",
-        "description": "One of the parameters.",
+        "description": "Defines the minimum fraction of the total weight that must be present in a node for it to be split. This is used when the training data has weighted samples. Setting a non-zero value ensures that the model does not make splits in nodes with very low weight, thus improving generalization.",
         "optional": "True",
         "default": "0.0"
       },
       {
         "name": "numTrees",
         "type": "Int",
-        "description": "One of the parameters.",
+        "description": "Specifies the number of trees in the random forest. More trees generally improve model accuracy by reducing variance, though it also increases computational cost. The default value is 20 trees, which is often sufficient for many applications, but can be adjusted based on the dataset and performance needs.",
         "optional": "True",
         "default": "20"
       },
       {
         "name": "seed",
         "type": "Long",
-        "description": "One of the parameters.",
+        "description": "Sets the random seed for initialization. This ensures reproducibility of the model training process. Using the same seed will allow the model to be trained in the same way across different runs, which is useful for debugging and comparing results.",
         "optional": "True",
         "default": 0
       },
       {
         "name": "subsamplingRate",
         "type": "Double",
-        "description": "One of the parameters.",
+        "description": "Defines the fraction of the training data to be used for building each tree. A value of 1.0 means that each tree is trained on the full dataset, while lower values (e.g., 0.8) use random subsampling, which can improve model generalization by reducing overfitting.",
         "optional": "True",
         "default": "1.0"
       }
@@ -16200,6 +16202,36 @@
         "description": "List of metric names to evaluate.",
         "optional": "True",
         "default": "['meanAveragePrecision']"
+      }
+    ]
+  },
+  "Coverage.randomSample": {
+    "description": "This function is used to randomly sample images.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to be randomly sampled."
+      },
+      {
+        "name": "sampleRate",
+        "type": "Double",
+        "description": "The proportion of the sample."
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "The random seed to ensure reproducibility of the sampling process.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "useSampleRatePart",
+        "type": "Boolean",
+        "description": "Whether to take the first half of the samples.",
+        "optional": "True",
+        "default": "True"
       }
     ]
   }

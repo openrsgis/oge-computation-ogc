@@ -20,6 +20,7 @@ import whu.edu.cn.entity.SpaceTimeBandKey
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
+import whu.edu.cn.util.CoverageUtil.checkProjResoExtent
 
 
 object util {
@@ -267,14 +268,15 @@ object util {
   }
 
   def joinTwoCoverage(coverage1: RDDImage, coverage2: RDDImage, col1: List[Int], col2: List[Int]): RDD[Row] = {
-    val numRows1: Int = findSpatialKeyMinMax(coverage1)._1 //瓦片行数
-    val numCols1: Int = findSpatialKeyMinMax(coverage1)._2 //瓦片列数
-    val numRows2: Int = findSpatialKeyMinMax(coverage2)._1 //瓦片行数
-    val numCols2: Int = findSpatialKeyMinMax(coverage2)._2 //瓦片列数
-    if(numRows1 != numRows2 || numCols1 != numCols2) throw new IllegalArgumentException("传入两影像尺寸不同！")
-    val bandCount1: Int = coverage1._1.first()._2.bandCount
-    val bandCount2: Int = coverage2._1.first()._2.bandCount
-    val rdd1: RDD[((Int, Int, Int, Int), List[Double])] = coverage1._1.flatMap(t=>{
+//    val numRows1: Int = findSpatialKeyMinMax(coverage1)._1 //瓦片行数
+//    val numCols1: Int = findSpatialKeyMinMax(coverage1)._2 //瓦片列数
+//    val numRows2: Int = findSpatialKeyMinMax(coverage2)._1 //瓦片行数
+//    val numCols2: Int = findSpatialKeyMinMax(coverage2)._2 //瓦片列数
+//    if(numRows1 != numRows2 || numCols1 != numCols2) throw new IllegalArgumentException("传入两影像尺寸不同！")
+    val (newCoverage1, newCoverage2) = checkProjResoExtent(coverage1, coverage2)
+    val bandCount1: Int = newCoverage1._1.first()._2.bandCount
+    val bandCount2: Int = newCoverage2._1.first()._2.bandCount
+    val rdd1: RDD[((Int, Int, Int, Int), List[Double])] = newCoverage1._1.flatMap(t=>{
       val list: ListBuffer[((Int, Int, Int, Int), List[Double])] = ListBuffer.empty[((Int, Int, Int, Int), List[Double])]
       //定位瓦片
       val row = t._1.spaceTimeKey.spatialKey.row
@@ -290,7 +292,7 @@ object util {
       }
       list.toList
     })
-    val rdd2: RDD[((Int, Int, Int, Int), List[Double])] = coverage2._1.flatMap(t=>{
+    val rdd2: RDD[((Int, Int, Int, Int), List[Double])] = newCoverage2._1.flatMap(t=>{
       val list: ListBuffer[((Int, Int, Int, Int), List[Double])] = ListBuffer.empty[((Int, Int, Int, Int), List[Double])]
       //定位瓦片
       val row = t._1.spaceTimeKey.spatialKey.row
@@ -307,7 +309,10 @@ object util {
       list.toList
     })
 
-    val joinRdd: RDD[((Int, Int, Int, Int), (List[Double], List[Double]))] = rdd1.join(rdd2)
+    val joinRdd: RDD[((Int, Int, Int, Int), (List[Double], List[Double]))] = rdd1.join(rdd2).filter(t=>{
+      val newList = t._2._1 ++ t._2._2
+      !(newList.exists(_.isNaN))
+    })
     val rowRdd: RDD[Row] = joinRdd.map(t => {
       val list = List(t._1._1.toDouble, t._1._2.toDouble, t._1._3.toDouble, t._1._4.toDouble) ::: t._2._1 ::: t._2._2
       Row(list:_*)
