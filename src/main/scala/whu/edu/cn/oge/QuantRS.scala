@@ -17,6 +17,7 @@ import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
 import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTif, makeFeatureRDDFromShp, saveFeatureRDDToShp, saveRasterRDDToTif}
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
+import whu.edu.cn.util.ClientUtil
 
 import scala.collection.immutable.Map
 import scala.collection.mutable.Map
@@ -25,6 +26,7 @@ import java.io.File
 import java.time.LocalDate
 import org.apache.hadoop.fs.{FileSystem, Path => hPath}
 import org.apache.hadoop.conf.Configuration
+import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
 object QuantRS {
   val algorithmData=GlobalConfig.QuantConf.Quant_DataPath
   val host = GlobalConfig.QuantConf.Quant_HOST
@@ -239,7 +241,8 @@ object QuantRS {
   def HiGlassAlbedo(implicit sc: SparkContext,
                     InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                     Metadata:String,
-                    BinaryData: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+                    BinaryData: String,
+                    userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
     // 配置本地文件系统
     val conf = new Configuration()
     conf.set("fs.defaultFS", "file:///")
@@ -249,7 +252,9 @@ object QuantRS {
     val time = System.currentTimeMillis()
     val currentDate1 = LocalDate.now()
 
+          // 输入文件路径
     val folderPath = new hPath(algorithmData + "LC09_L1TP_" + time)
+    // 输出结果路径
     val outputPath = new hPath(algorithmData + "HI-GLASS_result_" + time)
     val baseName = folderPath.getName
 
@@ -272,12 +277,15 @@ object QuantRS {
       i = i + 1
     }
     val utilsAC = new Utils
-    // 元数据落地
-    val targetPath1 = folderPath.toString + "/" + baseName + "_MTL.txt"
-    utilsAC.saveTXT(Metadata, targetPath1)
-    // bin文件落地
-    val targetPath2 = folderPath. toString + "/" +"sw_bsa_coefs.bin"
-    utilsAC.saveTXT(BinaryData, targetPath2)
+    // 元数据&bin文件落地
+    val txtPath = folderPath.toString + "/" + baseName + "_MTL.txt"
+    val binPath = folderPath. toString + "/" +"sw_bsa_coefs.bin"
+// bos
+var txtBosPath: String = s"${userID}/$Metadata"
+var binBosPath: String = s"${userID}/$BinaryData"
+val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    clientUtil.Download(txtBosPath, txtPath)
+    clientUtil.Download(binBosPath, binPath)
 
     // 启动反照率程序
     val writeName = "albedo" + time + "_out.tif"
@@ -285,7 +293,7 @@ object QuantRS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate cv && python /mnt/storage/htTeam/albedo_HIGLASS/task_albedo.py --input_data $folderPath --output_file $resultPath""".stripMargin
+        raw"""conda activate cv && python /mnt/storage/htTeam/albedo_HIGLASS/task_albedo.py --input_data_dir $folderPath --output_file $resultPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -295,8 +303,9 @@ object QuantRS {
         e.printStackTrace()
     }
 
-    makeChangedRasterRDDFromTif(sc, resultPath)
-
+    val result = makeChangedRasterRDDFromTif(sc, resultPath)
+    // 解决黑边值为255影响渲染的问题
+    removeZeroFromCoverage(Coverage.addNum(result, 1))
   }
 
 
