@@ -3725,7 +3725,7 @@ object QGIS {
     val array:JSONObject = carbonJson.getJSONObject("prefectureCarbons")
     val entries = array.entrySet().iterator()
 
-    val cityExent = Source.fromFile(algorithmCode + "data/boundary.geojson").mkString
+    val cityExent = Source.fromFile(algorithmCode.replace(";", "").replace("cd","").trim + "data/boundary.geojson").mkString
     val cityJsonObject: JSONObject = JSON.parseObject(cityExent)
     val city = cityJsonObject.getJSONArray("features")
 
