@@ -14289,7 +14289,7 @@
     }
   ]
 },
-  "Coverage.Coverage.HiGlassAlbedo": {
+  "Coverage.HiGlassAlbedo": {
     "description": "",
     "returns": "Coverage",
     "args": [
