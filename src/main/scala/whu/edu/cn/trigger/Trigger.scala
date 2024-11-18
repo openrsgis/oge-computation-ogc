@@ -662,7 +662,7 @@ object Trigger {
         case "Coverage.unmask" =>
           coverageRddList += (UUID -> Coverage.unmask(coverageRddList(args("coverage1")), coverageRddList(args("coverage2"))))
         case "Coverage.setValidDataRange" =>
-          coverageRddList += (UUID -> Coverage.setValidDataRange(coverage = coverageRddList(args("coverage")), args("range").slice(1, args("to").length - 1).split(',').toList.map(_.toDouble)))
+          coverageRddList += (UUID -> Coverage.setValidDataRange(coverage = coverageRddList(args("coverage")), args("range").slice(1, args("range").length - 1).split(',').toList.map(_.toDouble)))
         //   QGIS
         case "Coverage.warpGeoreByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalWarpGeore(sc, coverageRddList(args("input")), GCPs = args("GCPs"), resampleMethod = args("resampleMethod"), userId, dagId))
@@ -1124,7 +1124,7 @@ object Trigger {
         case "Coverage.demRender" =>
           coverageRddList += (UUID -> QGIS.demRender(sc, coverage = coverageRddList(args("coverage"))))
         case "Coverage.surfaceAlbedoLocalNoon" =>
-          coverageRddList += (UUID -> QuantRS.surfaceAlbedoLocalNoon(sc, coverageRddList(args("TOAReflectance")), coverageRddList(args("solarZenith")), coverageRddList(args("solarAzimuth")), coverageRddList(args("sensorZenith")), coverageRddList(args("sensorAzimuth")), coverageRddList(args("cloudMask")), args("timeStamp"), args("localnoonCoefs"), args("parameters"), args("bands").toInt))
+          coverageRddList += (UUID -> QuantRS.surfaceAlbedoLocalNoon(sc, coverageRddList(args("TOAReflectance")), coverageRddList(args("solarZenith")), coverageRddList(args("solarAzimuth")), coverageRddList(args("sensorZenith")), coverageRddList(args("sensorAzimuth")), coverageRddList(args("cloudMask")), args("timeStamp"), args("localnoonCoefs"), args("parameters"), args("bands").toInt,userId, dagId))
         case "Coverage.imaginaryConstellations" =>
           coverageRddList += (UUID -> QuantRS.imaginaryConstellations(sc, coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("FVC")), coverageRddList(args("ALBEDO"))))
         case "Coverage.HiGlassAlbedo" =>
@@ -1507,7 +1507,8 @@ object Trigger {
           stringList += (UUID -> regressionEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
         case "MLmodel.rankingEvaluator" =>
           stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-
+        case "Coverage.randomSample" =>
+          coverageRddList += (UUID ->Coverage.randomSample(coverage = coverageRddList(args("coverage")), args("sampleRate").toDouble, args("seed").toLong, args("useSampleRatePart").toBoolean))
       }
     } catch {
       case e: Throwable =>

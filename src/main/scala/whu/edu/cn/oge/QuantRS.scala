@@ -11,6 +11,7 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.{hbaseHost, tempFilePath}
 import whu.edu.cn.entity.SpaceTimeBandKey
 import whu.edu.cn.oge.Coverage.loadTxtFromUpload
+import whu.edu.cn.oge.Coverage.loadTxtFromCase
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
@@ -70,7 +71,7 @@ object QuantRS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath $outputTiffPath""".stripMargin
+        raw"""cd /mnt/storage/htTeam/ref_rec_30;bash /mnt/storage/htTeam/ref_rec_30/ref_rec_30_v1.sh   $LAIPath $FAPARPath $NDVIPath  $FVCPath $ALBEDOPath $outputTiffPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -140,7 +141,7 @@ object QuantRS {
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""bash /mnt/storage/htTeam/ref_rec_500/ref_rec_500_v1.sh   $MOD09A1Path $LAIPath $FAPARPath $NDVIPath $EVIPath  $FVCPath $GPPPath $NPPPath $ALBEDOPath $COPYPath  $outputTiffPath""".stripMargin
+        raw"""cd /mnt/storage/htTeam/ref_rec_500;bash /mnt/storage/htTeam/ref_rec_500/ref_rec_500_v1.sh   $MOD09A1Path $LAIPath $FAPARPath $NDVIPath $EVIPath  $FVCPath $GPPPath $NPPPath $ALBEDOPath $COPYPath  $outputTiffPath""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
@@ -178,7 +179,7 @@ object QuantRS {
                               timeStamp: String,
                               localnoonCoefs: String,
                               parameters: String,
-                              bands: Int)
+                              bands: Int,userId: String, dagId: String)
   : (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
     val time = System.currentTimeMillis()
@@ -196,11 +197,27 @@ object QuantRS {
     saveRasterRDDToTif(sensorAzimuth, sensorAzimuthPath)
     saveRasterRDDToTif(cloudMask,cloudMaskPath)
 
+    def loadPath(filePath: String, userId: String, dagId: String): String = {
+      if (filePath.startsWith("myData/")) {
+        loadTxtFromUpload(filePath, userId, dagId, "others")
+      } else if (filePath.startsWith("OGE_Case_Data/")) {
+        loadTxtFromCase(filePath, dagId)
+      } else {
+        "" // 返回空字符串或其他默认值
+      }
+    }
+
+    val localnoonCoefsPath = loadPath(localnoonCoefs, userId, dagId)
+    val parametersPath = loadPath(parameters, userId, dagId)
+
+//    val localnoonCoefsPath = loadTxtFromUpload(localnoonCoefs, userId, dagId, "others")
+//    val parametersPath = loadTxtFromUpload(parameters, userId, dagId, "others")
+    val writePath = "/mnt/storage/htTeam/data"
     val writeName = "surfaceAlbedoLocalNoon_" + time + "_out.tif"
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw""""/mnt/storage/htTeam/albedo_MERSI/Surface_Albedo_LocalNoon_Cal" $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefs $parameters $bands $algorithmData $writeName """.stripMargin
+        raw"""cd /mnt/storage/htTeam/albedo_MERSI;./Surface_Albedo_LocalNoon_Cal $TOAReflectancePath $solarZenithPath $solarAzimuthPath $sensorZenithPath $sensorAzimuthPath $cloudMaskPath $timeStamp $localnoonCoefsPath $parametersPath $bands $writePath  $writeName""".stripMargin
 
       println(s"st = $st")
       runCmd(st, "UTF-8")
