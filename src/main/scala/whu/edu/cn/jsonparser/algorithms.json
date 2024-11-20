@@ -14544,7 +14544,7 @@
       }
     ]
   },
-  "Coverage.HiGlassAlbedo": {
+  "Coverage.HiGlassAlbedoHiGlassAlbedo": {
     "description": "",
     "returns": "Coverage",
     "args": [
@@ -14562,6 +14562,17 @@
         "name": "BinaryData",
         "type": "String",
         "description": "BinaryData file"
+      }
+    ]
+  },
+  "Coverage.geometricCorrection": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverages",
+        "type": "CoverageCollection",
+        "description": "Coverages"
       }
     ]
   },

@@ -27,6 +27,7 @@ import whu.edu.cn.oge._
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.{JedisUtil, PostSender, ZCurveUtil}
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, RandomForestTrainAndRegress, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramBin, histogramEqualization, kMeans, linearTransformation, panSharp, reduceRegion, reduction, standardDeviationCalculation, standardDeviationStretching}
+import whu.edu.cn.algorithms.gmrc.geocorrection
 
 import java.io.ByteArrayInputStream
 import scala.collection.{immutable, mutable}
@@ -1129,6 +1130,8 @@ object Trigger {
           coverageRddList += (UUID -> QuantRS.imaginaryConstellations(sc, coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("FVC")), coverageRddList(args("ALBEDO"))))
         case "Coverage.HiGlassAlbedo" =>
           coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData"), userId))
+        case "Coverage.geometricCorrection" =>
+          coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageCollectionRddList(args("coverages"))))
 
         //Feature
         case "Feature.load" =>
