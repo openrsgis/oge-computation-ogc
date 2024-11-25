@@ -14565,6 +14565,28 @@
       }
     ]
   },
+  "Coverage.geometricCorrection": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverages",
+        "type": "CoverageCollection",
+        "description": "Coverages"
+      }
+    ]
+  },
+  "Coverage.splitMosaic": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverages",
+        "type": "CoverageCollection",
+        "description": "Coverages"
+      }
+    ]
+  },
   "Coverage.RandomForestTrainAndRegress": {
     "description": "",
     "returns": "Coverage",

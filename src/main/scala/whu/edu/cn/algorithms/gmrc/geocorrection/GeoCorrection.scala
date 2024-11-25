@@ -53,7 +53,7 @@ object GeoCorrection {
    * @param sc spark 上下文环境
    * @param coverage 图像存在该内存中
    */
-  def geometricCorrection(sc: SparkContext, coverageCollection: CoverageMap): RDDImage = {
+  def geometricCorrection(sc: SparkContext, coverages: CoverageMap): RDDImage = {
     val isTest = false  // 此变量为 true 时，本算子在本地可以正常正确运行
 
     if (isTest) {
@@ -78,7 +78,7 @@ object GeoCorrection {
     } else {
       val inputFileArr: ArrayBuffer[String] = new ArrayBuffer[String]()
 
-      coverageCollection.foreach(file_coverage => {
+      coverages.foreach(file_coverage => {
         val inputSaveFile = s"/mnt/storage/algorithmData/${dagId}_geo_correc_by_dem_or_rpc.tiff"
         saveRasterRDDToTif(file_coverage._2, inputSaveFile)
         inputFileArr.append(inputSaveFile)
