@@ -1132,6 +1132,9 @@ object Trigger {
           coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData"), userId))
         case "Coverage.geometricCorrection" =>
           coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageCollectionRddList(args("coverages"))))
+        case "Coverage.splitMosaic" =>
+          coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverages"))))
+
 
         //Feature
         case "Feature.load" =>

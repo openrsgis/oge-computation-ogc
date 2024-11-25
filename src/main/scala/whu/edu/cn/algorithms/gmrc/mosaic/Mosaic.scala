@@ -75,7 +75,7 @@ object Mosaic {
    * @param
    * @return 图像的RDD
    */
-  def splitMosaic(sc: SparkContext, coverageCollection: CoverageMap): RDDImage = {
+  def splitMosaic(sc: SparkContext, coverages: CoverageMap): RDDImage = {
     val isTest: Boolean = false  // 此变量为 true 时，本算子在本地可以正常正确的运行
 
     if (isTest) {
@@ -99,7 +99,7 @@ object Mosaic {
     } else {
       val inputFileArr: ArrayBuffer[String] = new ArrayBuffer[String]()
 
-      coverageCollection.foreach(file_coverage => {
+      coverages.foreach(file_coverage => {
         val inputSaveFile = s"/mnt/storage/algorithmData/${dagId}_mosaic.tiff"
         saveRasterRDDToTif(file_coverage._2, inputSaveFile)
         inputFileArr.append(inputSaveFile)
