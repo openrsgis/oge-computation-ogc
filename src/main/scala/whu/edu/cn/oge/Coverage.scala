@@ -64,6 +64,11 @@ import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
 object Coverage {
   val resolutionTMSArray: Array[Double] = Array(156543.033928, 78271.516964, 39135.758482, 19567.879241, 9783.939621, 4891.969810, 2445.984905, 1222.992453, 611.496226, 305.748113, 152.874057, 76.437028, 38.218514, 19.109257, 9.554629, 4.777314, 2.388657, 1.194329, 0.597164, 0.298582, 0.149291)
+  val resolutionEPSG4326: Array[Double] = (0 until 20).map { zoom =>
+    // 计算分辨率，地球的经度范围为360度，瓦片大小为256像素
+    val resolution = 360.0 / (256 * Math.pow(2, zoom))
+    resolution
+  }.toArray
 
   def load(implicit sc: SparkContext, coverageId: String, productKey: String, level: Int): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val time1 = System.currentTimeMillis()
@@ -3656,12 +3661,12 @@ object Coverage {
 
 
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
-      reproject(coverage, CRS.fromEpsgCode(3857), resolutionTMSArray(Trigger.level))
+      reproject(coverage, CRS.fromEpsgCode(4326), resolutionTMSArray(Trigger.level))
     } else {
       coverage
     }, visParam)
 
-    val tmsCrs: CRS = CRS.fromEpsgCode(3857)
+    val tmsCrs: CRS = CRS.fromEpsgCode(4326)
     val layoutScheme: ZoomedLayoutScheme = ZoomedLayoutScheme(tmsCrs, tileSize = 256)
     val newBounds: Bounds[SpatialKey] = Bounds(coverageVis._2.bounds.get.minKey.spatialKey, coverageVis._2.bounds.get.maxKey.spatialKey)
     val rasterMetaData: TileLayerMetadata[SpatialKey] = TileLayerMetadata(coverageVis._2.cellType, coverageVis._2.layout, coverageVis._2.extent, coverageVis._2.crs, newBounds)
