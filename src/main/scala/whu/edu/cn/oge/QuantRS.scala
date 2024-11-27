@@ -33,6 +33,7 @@ object QuantRS {
   val userName = GlobalConfig.QuantConf.Quant_USERNAME
   val password = GlobalConfig.QuantConf.Quant_PASSWORD
   val port = GlobalConfig.QuantConf.Quant_PORT
+  val acPath = GlobalConfig.QuantConf.Quant_ACpath
 
   /**
    * 虚拟星座30米
@@ -307,6 +308,73 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     // 解决黑边值为255影响渲染的问题
     removeZeroFromCoverage(Coverage.addNum(result, 1))
   }
+
+
+  /**
+   *  大气校正算子
+   * @param sc
+   * @param tgtTiff
+   * @param LstTiff
+   * @param GMTED2Tiff
+   * @param sensorType
+   * @param xlsPath
+   * @param userID
+   * @return
+   */
+  def AtmoCorrection(implicit sc: SparkContext,
+                     tgtTiff: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                     LstTiff: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                     GMTED2Tiff: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                     sensorType: String = "GF1",
+                     xlsPath: String,
+                     userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val sensorTypeInput: String = Map(
+      "GF1" -> "GF1",
+      "GF6" -> "GF6"
+    ).getOrElse(sensorType, "GF1")
+    val time = System.currentTimeMillis()
+    // RDD落地
+    val tgtTiffPath = algorithmData + "targetFile_" + time + ".tif"
+    val lstTiffPath  = algorithmData + "landsatSurfaceReflection_" + time + ".tif"
+    val GMTED2TiffPath =  algorithmData +  "GMTED2km" + time + ".tif"
+    saveRasterRDDToTif(tgtTiff, tgtTiffPath)
+    saveRasterRDDToTif(LstTiff, lstTiffPath)
+    saveRasterRDDToTif(GMTED2Tiff, GMTED2TiffPath)
+    // xlx落地
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    if (sensorTypeInput.equals("GF1")){
+      var LocalPath = algorithmData + "GF1_WFV_SRF.xls"
+      var xlsBosPath: String = s"${userID}/$xlsPath"
+      clientUtil.Download(xlsBosPath, LocalPath)
+    }
+    if (sensorTypeInput.equals("GF6")){
+      var LocalPath = algorithmData + "GF6_WFV_SRF.xlsx"
+      var xlsxBosPath: String = s"${userID}/$xlsPath"
+      clientUtil.Download(xlsxBosPath, LocalPath)
+    }
+
+    // 启动大气校正程序
+    val writeName = algorithmData + "atmoCorrection" + time + "_out.tif"
+    val auxPath = algorithmData.substring(0, algorithmData.length() -1)
+    try {
+      versouSshUtil(host, userName, password, port)
+      val st =
+        raw"""conda activate produce_GF_ref && $acPath/dist/produce_GF_ref_with_dst $tgtTiffPath $writeName $lstTiffPath $auxPath""".stripMargin
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    makeChangedRasterRDDFromTif(sc, writeName)
+  }
+
+
+
+
 
 
 

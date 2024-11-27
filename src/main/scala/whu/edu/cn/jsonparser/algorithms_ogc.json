@@ -14310,6 +14310,37 @@
       }
     ]
   },
+  "Coverage.atmoCorrection": {
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "tgtTiff",
+        "type": "Coverage",
+        "description": "target file path"
+      },
+      {
+        "name": "LstTiff",
+        "type": "Coverage",
+        "description": "Landsat surface reflection file path"
+      },
+      {
+        "name": "GMTED2Tiff",
+        "type": "Coverage",
+        "description": "GMTED2Tiff"
+      },
+      {
+        "name": "sensorType",
+        "type": "String",
+        "description": "choose between GF1 and GF6"
+      },
+      {
+        "name": "xlsPath",
+        "type": "String",
+        "description": "xls path"
+      }
+    ]
+  },
   "Coverage.geometricCorrection": {
     "description": "",
     "returns": "Coverage",

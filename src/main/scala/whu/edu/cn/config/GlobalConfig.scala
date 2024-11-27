@@ -151,6 +151,7 @@ object GlobalConfig {
   //定量遥感算法
   object QuantConf {
     var Quant_DataPath:String = "/mnt/storage/htTeam/data/"
+    var Quant_ACpath: String="/mnt/storage/htTeam/AtmoCorrection"
     var Quant_HOST: String = "172.22.1.20"
     var Quant_USERNAME: String = "root"
     var Quant_PASSWORD: String = "Ypfamily608!"
