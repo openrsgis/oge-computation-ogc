@@ -20,7 +20,7 @@ import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 import whu.edu.cn.util.ClientUtil
 
 import scala.collection.immutable.Map
-import scala.collection.mutable.Map
+import scala.collection.mutable.{Map => UMap}
 import scala.collection.{immutable, mutable}
 import java.io.File
 import java.time.LocalDate
@@ -328,7 +328,7 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
                      sensorType: String = "GF1",
                      xlsPath: String,
                      userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-    val sensorTypeInput: String = Map(
+    val sensorTypeInput: String = UMap(
       "GF1" -> "GF1",
       "GF6" -> "GF6"
     ).getOrElse(sensorType, "GF1")
