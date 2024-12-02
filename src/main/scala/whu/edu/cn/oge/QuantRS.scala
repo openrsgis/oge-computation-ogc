@@ -342,17 +342,24 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     saveRasterRDDToTif(GMTED2Tiff, GMTED2TiffPath)
     // xlx落地
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    var xlsBosPath1: String = s"${userID}/$xlsPath"
+    var xlsBosPath2: String = "/mnt/oge/oge_mount/ogebos/" + s"$xlsPath"
+
     if (sensorTypeInput.equals("GF1")){
       var LocalPath = algorithmData + "GF1_WFV_SRF.xls"
-      var xlsBosPath: String = s"${userID}/$xlsPath"
-      clientUtil.Download(xlsBosPath, LocalPath)
-    }
-    if (sensorTypeInput.equals("GF6")){
+      if (xlsPath.startsWith("myData/")){
+        clientUtil.Download(xlsBosPath1, LocalPath)
+      } else if (xlsPath.startsWith("OGE_Case_Data/")){
+        clientUtil.Download(xlsBosPath2, LocalPath)
+      }
+    } else if (sensorTypeInput.equals("GF6")){
       var LocalPath = algorithmData + "GF6_WFV_SRF.xlsx"
-      var xlsxBosPath: String = s"${userID}/$xlsPath"
-      clientUtil.Download(xlsxBosPath, LocalPath)
+      if (xlsPath.startsWith("myData/")) {
+        clientUtil.Download(xlsBosPath1, LocalPath)
+      } else if (xlsPath.startsWith("OGE_Case_Data/")) {
+        clientUtil.Download(xlsBosPath2, LocalPath)
+      }
     }
-
     // 启动大气校正程序
     val writeName = algorithmData + "atmoCorrection" + time + "_out.tif"
     val auxPath = algorithmData.substring(0, algorithmData.length() -1)
@@ -368,7 +375,6 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
       case e: Exception =>
         e.printStackTrace()
     }
-
     makeChangedRasterRDDFromTif(sc, writeName)
   }
 
