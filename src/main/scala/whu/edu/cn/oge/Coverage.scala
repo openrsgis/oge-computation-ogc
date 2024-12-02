@@ -3661,7 +3661,7 @@ object Coverage {
 
 
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
-      reproject(coverage, CRS.fromEpsgCode(4326), resolutionTMSArray(Trigger.level))
+      reproject(coverage, CRS.fromEpsgCode(4326), resolutionEPSG4326(Trigger.level))
     } else {
       coverage
     }, visParam)
