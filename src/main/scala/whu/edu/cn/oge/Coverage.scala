@@ -3861,10 +3861,10 @@ object Coverage {
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
     val outputPath = Paths.get(filePath)
-    tempFileList.append(downloadPath)
+    tempFileList.append(filePath)
     Trigger.file_id += 1
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
-    downloadPath
+    filePath
   }
   var file_idx:Long = 0
   def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
