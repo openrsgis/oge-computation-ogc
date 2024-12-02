@@ -10,8 +10,7 @@ import whu.edu.cn.algorithms.RS.Utils
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.{hbaseHost, tempFilePath}
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.oge.Coverage.loadTxtFromUpload
-import whu.edu.cn.oge.Coverage.loadTxtFromCase
+import whu.edu.cn.oge.Coverage.{loadFileFromCase, loadTxtFromCase, loadTxtFromUpload}
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
@@ -34,6 +33,7 @@ object QuantRS {
   val password = GlobalConfig.QuantConf.Quant_PASSWORD
   val port = GlobalConfig.QuantConf.Quant_PORT
   val acPath = GlobalConfig.QuantConf.Quant_ACpath
+  val tmpPath = GlobalConfig.Others.tempFilePath
 
   /**
    * 虚拟星座30米
@@ -327,47 +327,46 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
                      GMTED2Tiff: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                      sensorType: String = "GF1",
                      xlsPath: String,
-                     userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                     userID: String,
+                     dagId:String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val sensorTypeInput: String = UMap(
       "GF1" -> "GF1",
       "GF6" -> "GF6"
     ).getOrElse(sensorType, "GF1")
     val time = System.currentTimeMillis()
     // RDD落地
-    val tgtTiffPath = algorithmData + "targetFile_" + time + ".tif"
-    val lstTiffPath  = algorithmData + "landsatSurfaceReflection_" + time + ".tif"
-    val GMTED2TiffPath =  algorithmData +  "GMTED2km" + time + ".tif"
+    val tgtTiffPath = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_" + time + ".tif"
+    val lstTiffPath  = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_dst_" + time + ".tif"
+    val GMTED2TiffPath =  tmpPath +  "GMTED2km.tif"
     saveRasterRDDToTif(tgtTiff, tgtTiffPath)
     saveRasterRDDToTif(LstTiff, lstTiffPath)
     saveRasterRDDToTif(GMTED2Tiff, GMTED2TiffPath)
     // xlx落地
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
-    var xlsBosPath1: String = s"${userID}/$xlsPath"
-    var xlsBosPath2: String = "/mnt/oge/oge_mount/ogebos/" + s"$xlsPath"
+    var xlsBosPath: String = s"${userID}/$xlsPath"
 
     if (sensorTypeInput.equals("GF1")){
       var LocalPath = algorithmData + "GF1_WFV_SRF.xls"
       if (xlsPath.startsWith("myData/")){
-        clientUtil.Download(xlsBosPath1, LocalPath)
+        clientUtil.Download(xlsBosPath, LocalPath)
       } else if (xlsPath.startsWith("OGE_Case_Data/")){
-        clientUtil.Download(xlsBosPath2, LocalPath)
+        loadFileFromCase(xlsPath,"GF1_WFV_SRF" , "xls",  dagId)
       }
     } else if (sensorTypeInput.equals("GF6")){
       var LocalPath = algorithmData + "GF6_WFV_SRF.xlsx"
       if (xlsPath.startsWith("myData/")) {
-        clientUtil.Download(xlsBosPath1, LocalPath)
+        clientUtil.Download(xlsBosPath, LocalPath)
       } else if (xlsPath.startsWith("OGE_Case_Data/")) {
-        clientUtil.Download(xlsBosPath2, LocalPath)
+        loadFileFromCase(xlsPath, "GF6_WFV_SRF","xlsx",dagId)
       }
     }
     // 启动大气校正程序
     val writeName = algorithmData + "atmoCorrection" + time + "_out.tif"
-    val auxPath = algorithmData.substring(0, algorithmData.length() -1)
+    val auxPath = tmpPath.substring(0, algorithmData.length() -1)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
         raw"""conda activate produce_GF_ref && $acPath/dist/produce_GF_ref_with_dst $tgtTiffPath $writeName $lstTiffPath $auxPath""".stripMargin
-
       println(s"st = $st")
       runCmd(st, "UTF-8")
 

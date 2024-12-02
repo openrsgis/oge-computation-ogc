@@ -1135,7 +1135,7 @@ object Trigger {
         case "Coverage.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverages"))))
         case "Coverage.atmoCorrection" =>
-          coverageRddList += (UUID -> QuantRS.AtmoCorrection(sc, coverageRddList(args("tgtTiff")), coverageRddList(args("LstTiff")), coverageRddList(args("GMTED2Tiff")), args("sensorType"), args("xlsPath"), userId))
+          coverageRddList += (UUID -> QuantRS.AtmoCorrection(sc, coverageRddList(args("tgtTiff")), coverageRddList(args("LstTiff")), coverageRddList(args("GMTED2Tiff")), args("sensorType"), args("xlsPath"), userId, dagId))
 
 
         //Feature

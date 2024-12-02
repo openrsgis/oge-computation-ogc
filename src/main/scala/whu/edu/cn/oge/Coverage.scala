@@ -3852,6 +3852,20 @@ object Coverage {
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     filePath
   }
+
+  def loadFileFromCase(filePath: String, fileName: String, fileType: String, dagId: String): String = {
+    val path = "/" + filePath
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath$fileName" + "." + s"$fileType"
+
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
+    val outputPath = Paths.get(filePath)
+    tempFileList.append(downloadPath)
+    Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    downloadPath
+  }
   var file_idx:Long = 0
   def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
     var path: String = s"${userID}/$txt"
