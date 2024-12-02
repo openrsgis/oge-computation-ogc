@@ -3853,8 +3853,8 @@ object Coverage {
     filePath
   }
 
-  def loadFileFromCase(filePath: String, fileName: String, fileType: String, dagId: String): String = {
-    val path = "/" + filePath
+  def loadFileFromCase(fileId: String, fileName: String, fileType: String, dagId: String): String = {
+    val path = "/" + fileId
     val tempPath = GlobalConfig.Others.tempFilePath
     val filePath = s"$tempPath$fileName" + "." + s"$fileType"
 
