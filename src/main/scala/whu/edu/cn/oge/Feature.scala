@@ -91,6 +91,7 @@ object Feature {
     })
     val t4 = System.currentTimeMillis()
     println("从hbase加载数据的时间：" + (t4 - t3))
+    println("矢量数据总量:" + geometryRdd.count())
     geometryRdd
   }
 
