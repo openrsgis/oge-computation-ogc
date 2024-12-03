@@ -1129,7 +1129,7 @@ object Trigger {
         case "Coverage.imaginaryConstellations" =>
           coverageRddList += (UUID -> QuantRS.imaginaryConstellations(sc, coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("FVC")), coverageRddList(args("ALBEDO"))))
         case "Coverage.HiGlassAlbedo" =>
-          coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData"), userId))
+          coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData"), userId, dagId))
         case "Coverage.geometricCorrection" =>
           coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageCollectionRddList(args("coverages"))))
         case "Coverage.splitMosaic" =>

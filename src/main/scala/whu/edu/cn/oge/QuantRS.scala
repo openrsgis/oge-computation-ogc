@@ -243,7 +243,8 @@ object QuantRS {
                     InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                     Metadata:String,
                     BinaryData: String,
-                    userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+                    userID: String,
+                    dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
     // 配置本地文件系统
     val conf = new Configuration()
     conf.set("fs.defaultFS", "file:///")
@@ -254,9 +255,9 @@ object QuantRS {
     val currentDate1 = LocalDate.now()
 
           // 输入文件路径
-    val folderPath = new hPath(algorithmData + "LC09_L1TP_" + time)
+    val folderPath = new hPath(tmpPath+ "LC09_L1TP_" + time)
     // 输出结果路径
-    val outputPath = new hPath(algorithmData + "HI-GLASS_result_" + time)
+    val outputPath = new hPath(tmpPath + "HI-GLASS_result_" + time)
     val baseName = folderPath.getName
 
     // 创建文件夹存放影像
@@ -277,16 +278,26 @@ object QuantRS {
       saveRasterRDDToTif(tiff._2, tiffPath)
       i = i + 1
     }
-    val utilsAC = new Utils
-    // 元数据&bin文件落地
-    val txtPath = folderPath.toString + "/" + baseName + "_MTL.txt"
-    val binPath = folderPath. toString + "/" +"sw_bsa_coefs.bin"
-// bos
-var txtBosPath: String = s"${userID}/$Metadata"
-var binBosPath: String = s"${userID}/$BinaryData"
-val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
-    clientUtil.Download(txtBosPath, txtPath)
-    clientUtil.Download(binBosPath, binPath)
+
+    if (Metadata.startsWith("myData/")){
+      // 元数据txt文件落地
+      val txtPath = folderPath.toString + "/" + baseName + "_MTL.txt"
+      // bos
+      var txtBosPath: String = s"${userID}/$Metadata"
+      val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+      clientUtil.Download(txtBosPath, txtPath)
+    }else if (Metadata.startsWith("OGE_Case_Data/")){
+      loadFileFromCase(Metadata,baseName+"_MTL" , "txt",  dagId)
+    }
+
+    if(BinaryData.startsWith("myData/")){
+      val binPath = folderPath. toString + "/" +"sw_bsa_coefs.bin"
+      var binBosPath: String = s"${userID}/$BinaryData"
+      val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+      clientUtil.Download(binBosPath, binPath)
+    }else if(BinaryData.startsWith("OGE_Case_Data/")){
+      loadFileFromCase(BinaryData ,"sw_bsa_coefs" , "bin",  dagId)
+    }
 
     // 启动反照率程序
     val writeName = "albedo" + time + "_out.tif"
