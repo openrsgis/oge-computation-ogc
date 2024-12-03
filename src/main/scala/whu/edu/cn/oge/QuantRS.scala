@@ -335,8 +335,8 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     ).getOrElse(sensorType, "GF1")
     val time = System.currentTimeMillis()
     // RDD落地，目前使用的测试数据命名固定，不可修改，不可加时间戳
-    val tgtTiffPath = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR" + ".tif"
-    val lstTiffPath  = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_dst"  + ".tif"
+    val tgtTiffPath = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR.tif"
+    val lstTiffPath  = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_dst.tif"
     val GMTED2TiffPath =  tmpPath +  "GMTED2km.tif"
     saveRasterRDDToTif(tgtTiff, tgtTiffPath)
     saveRasterRDDToTif(LstTiff, lstTiffPath)
@@ -366,10 +366,9 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate produce_GF_ref && $acPath/dist/produce_GF_ref_with_dst $tgtTiffPath $writeName $lstTiffPath $auxPath""".stripMargin
+        raw"""conda activate produce_GF_ref;cd /mnt/storage/htTeam/AtmoCorrection;./dist/produce_GF_ref_with_dst $tgtTiffPath $writeName $lstTiffPath $auxPath""".stripMargin
       println(s"st = $st")
       runCmd(st, "UTF-8")
-
     } catch {
       case e: Exception =>
         e.printStackTrace()
@@ -377,12 +376,4 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     makeChangedRasterRDDFromTif(sc, writeName)
   }
 
-
-
-
-
-
-
-
 }
-

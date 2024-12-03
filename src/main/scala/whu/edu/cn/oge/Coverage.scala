@@ -3863,8 +3863,8 @@ object Coverage {
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
     val outputPath = Paths.get(filePath)
-    tempFileList.append(filePath)
-    Trigger.file_id += 1
+//    tempFileList.append(filePath)
+//    Trigger.file_id += 1
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     filePath
   }
