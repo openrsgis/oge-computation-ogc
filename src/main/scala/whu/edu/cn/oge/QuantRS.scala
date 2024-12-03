@@ -334,9 +334,9 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
       "GF6" -> "GF6"
     ).getOrElse(sensorType, "GF1")
     val time = System.currentTimeMillis()
-    // RDD落地
-    val tgtTiffPath = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_" + time + ".tif"
-    val lstTiffPath  = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_dst_" + time + ".tif"
+    // RDD落地，目前使用的测试数据命名固定，不可修改，不可加时间戳
+    val tgtTiffPath = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR" + ".tif"
+    val lstTiffPath  = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_dst"  + ".tif"
     val GMTED2TiffPath =  tmpPath +  "GMTED2km.tif"
     saveRasterRDDToTif(tgtTiff, tgtTiffPath)
     saveRasterRDDToTif(LstTiff, lstTiffPath)
@@ -362,7 +362,7 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
     }
     // 启动大气校正程序
     val writeName = algorithmData + "atmoCorrection" + time + "_out.tif"
-    val auxPath = tmpPath.substring(0, algorithmData.length() -1)
+    val auxPath = tmpPath.substring(0, tmpPath.length() -1)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
