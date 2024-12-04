@@ -62,8 +62,8 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://172.22.1.13:8085/oge-dag-22"
-    var EDU_ROOT_URL: String = "http://172.22.1.13:8085/oge-dag-22"
+    var DAG_ROOT_URL: String = "http://10.101.240.21:8085/oge-dag-22"
+    var EDU_ROOT_URL: String = "http://10.101.240.21:8085/oge-dag-22"
   }
 
   object RedisConf {
@@ -76,13 +76,13 @@ object GlobalConfig {
   }
 
   object ClientConf {
-    final val CLIENT_NAME: String = "bos" // "minio"
+    final val CLIENT_NAME: String = "minio" // "minio"
     final val USER_BUCKET_NAME: String = "oge-user"
   }
 
   object MinioConf {
     // MinIO 基础配置
-    final val MINIO_ENDPOINT: String = "http://172.22.1.28:9006"
+    final val MINIO_ENDPOINT: String = "http://10.101.240.23:9006"
     final val MINIO_ACCESS_KEY: String = "oge"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "ogebos"
@@ -100,7 +100,7 @@ object GlobalConfig {
 
   object PostgreSqlConf {
     // PostgreSQL 基础配置
-    var POSTGRESQL_URL: String = "jdbc:postgresql://172.22.1.13:30865/oge" // "jdbc:postgresql://10.101.240.21:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
+    var POSTGRESQL_URL: String = "jdbc:postgresql://10.101.240.21:30865/oge" // "jdbc:postgresql://172.22.1.13:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
     var POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
     var POSTGRESQL_USER: String = "oge"
     var POSTGRESQL_PWD: String = "ypfamily608"
@@ -124,9 +124,9 @@ object GlobalConfig {
     // PostgreSQL 基础配置
     var QGIS_DATA: String = "/mnt/storage/algorithmData/"
     var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
-    var QGIS_HOST: String = "172.22.1.19"
+    var QGIS_HOST: String = "10.101.240.10"
     var QGIS_USERNAME: String = "root"
-    var QGIS_PASSWORD: String = "Ypfamily608!"
+    var QGIS_PASSWORD: String = "ypfamily"
     var QGIS_PORT: Int = 22
   }
   object OTBConf{
@@ -175,14 +175,14 @@ object GlobalConfig {
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var sagatempFilePath = "/mnt/storage/SAGA/sagaData/" //SAGA各类临时文件的地址/mnt/storage/SAGA/sagaData
     final var otbtempFilePath = "/mnt/storage/otbData/algorithmData/" //OTB各类临时文件的地址/mnt/storage/otbData/algorithmData/
-    final var tmsPath = "http://111.37.195.68:8888/api/oge-tms-png/" //tms服务url
-    final var tmsHost = "172.22.1.19" //tms服务ip
-    final var tomcatHost = "172.22.1.12"
-    final var tomcatHost_public = "111.37.195.68"
+    final var tmsPath = "http://10.101.240.20/api/oge-tms-png/" //tms服务url
+    final var tmsHost = "10.101.240.10" //tms服务ip
+    final var tomcatHost = "10.101.240.20"
+    final var tomcatHost_public = "10.101.240.20"
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "cc"
-    final var hbaseHost = "172.22.1.8:2181"
+    final var hbaseHost = "10.101.240.10:2181"
   }
 }
