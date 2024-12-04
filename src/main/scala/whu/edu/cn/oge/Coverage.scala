@@ -3852,6 +3852,22 @@ object Coverage {
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     filePath
   }
+
+  // 读取算子所需的各种格式的文件
+  def loadFileFromCase(fileId: String, fileName: String, fileType: String, dagId: String): String = {
+    val path = "/" + fileId
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath$fileName.$fileType"
+    println(filePath)
+
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
+    val outputPath = Paths.get(filePath)
+//    tempFileList.append(filePath)
+//    Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    filePath
+  }
   var file_idx:Long = 0
   def loadTxtFromUpload(txt: String, userID: String, dagId: String, loadtype: String) = {
     var path: String = s"${userID}/$txt"

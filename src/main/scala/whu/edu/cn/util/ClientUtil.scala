@@ -4,7 +4,7 @@ import com.baidubce.auth.DefaultBceCredentials
 import com.baidubce.services.bos.model.{BosObject, GetObjectRequest}
 import com.baidubce.services.bos.{BosClient, BosClientConfiguration}
 import io.minio.{GetObjectArgs, MinioClient, UploadObjectArgs}
-import whu.edu.cn.config.GlobalConfig.BosConf.{BOS_ACCESS_KEY, BOS_ENDPOINT, BOS_SECRET_ACCESS}
+import whu.edu.cn.config.GlobalConfig.BosConf.{BOS_ACCESS_KEY, BOS_ENDPOINT, BOS_SECRET_ACCESS, BOS_BUCKET_NAME}
 import whu.edu.cn.config.GlobalConfig.ClientConf.USER_BUCKET_NAME
 import whu.edu.cn.config.GlobalConfig.MinioConf.{MINIO_ACCESS_KEY, MINIO_ENDPOINT, MINIO_HEAD_SIZE, MINIO_SECRET_KEY}
 import whu.edu.cn.trigger.Trigger
@@ -79,7 +79,6 @@ class BosClientUtil extends ClientUtil  {
     val tempfile = new File(downloadPath)
     tempfile.createNewFile()
     val bosObject = bosClient.getObject(getObjectRequest,tempfile)
-
   }
 
   override def Upload(objectName: String, filePath: String): Unit = {
