@@ -922,6 +922,37 @@
       }
     ]
   },
+  "Feature.queryFromRdd": {
+    "description": "test",
+    "returns": "String",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature as the input data"
+      },
+      {
+        "name": "left",
+        "type": "Double",
+        "default": 1.0
+      },
+      {
+        "name": "up",
+        "type": "Double",
+        "default": 1.0
+      },
+      {
+        "name": "right",
+        "type": "Double",
+        "default": 1.0
+      },
+      {
+        "name": "down",
+        "type": "Double",
+        "default": 1.0
+      }
+    ]
+  },
   "Feature.getItemType": {
     "description": "Get type of item.",
     "returns": "String",

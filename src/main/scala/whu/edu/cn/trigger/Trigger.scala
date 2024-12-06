@@ -1152,6 +1152,8 @@ object Trigger {
           }
           else
             featureRddList += (UUID -> Feature.load(sc, args("productName")))
+        case "Feature.queryFromRdd" =>
+          stringList += (UUID -> Feature.queryFromRdd(featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]],args("left").toDouble,args("up").toDouble,args("right").toDouble,args("down").toDouble))
         case "Feature.point" =>
           if (isOptionalArg(args, "crs") != null)
             featureRddList += (UUID -> Feature.point(sc, args("coors"), args("properties"), args("crs")))

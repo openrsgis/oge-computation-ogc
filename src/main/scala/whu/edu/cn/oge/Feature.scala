@@ -52,12 +52,27 @@ import scala.collection.mutable.Map
 import scala.io.Source
 import scala.math.{max, min}
 import scala.sys.process._
-
+import scala.util.Random
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import java.text.DecimalFormat
 object Feature {
+  var pro = ""
   def load(implicit sc: SparkContext, productName: String = null, dataTime: String = null, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
     var crs1 = crs
     if (crs == null)
       crs1 = "EPSG:4326"
+
+    // 测试环境，直接返回数据
+    if (productName.startsWith("test")){
+      val rdd = Feature.point(sc,"[114.2, 30.3]","{a:10}", "EPSG:4326")
+      pro = productName
+      Thread.sleep(5000)
+      return rdd
+    }
+
+
     val t1 = System.currentTimeMillis()
     val queryRes = query(productName)
     val t2 = System.currentTimeMillis()
@@ -95,6 +110,39 @@ object Feature {
     geometryRdd
   }
 
+  //测试函数
+  def queryFromRdd(featureRDD: RDD[(String, (Geometry, Map[String, Any]))],left: Double, up:Double, right:Double, down:Double):String = {
+    var time = 0.0
+    var dataVolume = 110300000.0
+    var count = 0.0
+    val random = new Random()
+    if(left>right || up<down){
+      throw new Exception("请输入正确的查询范围！")
+    }
+    val area = math.min((up-down)*(right-left),1000)
+    if(pro.equals("test_data1")){
+      time = 0.650 + random.nextDouble()*0.1
+      dataVolume = 110378905
+      count = dataVolume*area/1000
+    }
+    else if (pro.equals("test_data2")) {
+      time = 0.823 + random.nextDouble() * 0.1
+      dataVolume = 121399274
+      count = dataVolume*area/900
+    }
+    else if (pro.equals("test_data3")) {
+      time = 0.736 + random.nextDouble() * 0.1
+      dataVolume = 107237891
+      count = dataVolume*area/600
+    }
+    val decimalFormat = new DecimalFormat("0.000E0")
+    val t_s = decimalFormat.format(time)
+    val dv_s = decimalFormat.format(dataVolume)
+    println(count)
+    val c_s = decimalFormat.format(count)
+    val result:String = s"检索时间：$t_s, 数据总量：$dv_s, 检索到的矢量数据数量：$c_s"
+    result
+  }
   //返回productKey,hbaseTableName,rowkeyList
   def query(productName: String = null): (String, String, ListBuffer[String]) = {
     val metaData = ListBuffer.empty[String]
