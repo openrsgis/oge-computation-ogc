@@ -124,8 +124,8 @@ object GrassUtil {
 
   def createStartSh_docker(filePath:String,startSh_path:String): String={
     var command:List[String] =List.empty
-    command = command:+ "docker start c1c0a9548fe1 "
-    command = command:+ "docker exec c1c0a9548fe1  /bin/bash /grass/"+startSh_path
+    command = command:+ "docker start grass_container"
+    command = command:+ "docker exec grass_container  /bin/bash /grass/"+startSh_path
     val name="enterdocker"+System.currentTimeMillis()+".sh"
     val out:BufferedWriter=new BufferedWriter(new FileWriter(filePath+name))
     out.write("#!/bin/bash"+"\n")
