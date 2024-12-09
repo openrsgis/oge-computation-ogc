@@ -3058,7 +3058,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, inputRaster, outputTiffPath)
+    makeChangedRasterRDDFromTif(sc, outputTiffPath)
   }
 
   /**
