@@ -942,7 +942,7 @@ object Trigger {
           isActioned(sc, args("input"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> GrassUtil.r_patch(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.latlongByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_latlong(sc, input = coverageRddList(args("input"))))
+          coverageRddList += (UUID -> GrassUtil.r_latlong(sc, input = coverageRddList(args("input")), long = args("long").toBoolean))
         case "Coverage.blendByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_blend(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), percent = args("percent")))
         case "Coverage.compositeByGrass" =>

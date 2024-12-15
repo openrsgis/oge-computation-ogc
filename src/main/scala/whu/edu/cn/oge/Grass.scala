@@ -462,7 +462,7 @@ object GrassUtil {
     tif
   }
 
-  def r_latlong(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) )={
+  def r_latlong(sc: SparkContext, input: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), long: Boolean = false)={
     val time_1=System.currentTimeMillis()
     val outputTiffPath_1_out=tifFilePath_out+"grassinput_"+time_1+".tif"
     val outputTiffPath_1=tifFilePath+"grassinput_"+time_1+".tif"
@@ -477,7 +477,9 @@ object GrassUtil {
     val grassInputDataName_1="javainput"+System.currentTimeMillis()
     commandList=commandList:+"r.in.gdal input="+outputTiffPath_1 +" output="+grassInputDataName_1
     val grassOutPutDataName="grassoutput"+System.currentTimeMillis()
-    commandList=commandList:+"r.latlong"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName
+    //r.latlong creates a latitude (degree decimal) map, or longitude if the -l flag is used
+    if(long==false) commandList=commandList:+"r.latlong"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName
+    else commandList=commandList:+"r.latlong"+" -l"+" input="+grassInputDataName_1+"@"+mapset+" output="+grassOutPutDataName
     commandList=commandList:+"g.region raster="+grassOutPutDataName+" -p"
     commandList=commandList:+"r.out.gdal input="+grassOutPutDataName+"@"+mapset+" output="+sourceTiffpath
     val execShFile=createExecSh2(commandList,shFilePath_out,shFilePath)
