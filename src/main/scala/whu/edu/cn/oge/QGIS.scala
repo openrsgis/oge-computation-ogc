@@ -20,7 +20,9 @@ import whu.edu.cn.util.{BashUtil, RDDTransformerUtil}
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
+import scala.collection.immutable.{Map => iMap}
 import scala.io.Source
+import whu.edu.cn.oge.DockerCommand._
 
 object QGIS {
   def main(args: Array[String]): Unit = {
@@ -29,11 +31,13 @@ object QGIS {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val tifPath = "/C:\\Users\\BBL\\Desktop\\algorithm\\clip.tiff"
-    val RDD = makeChangedRasterRDDFromTif(sc, tifPath)
-
-    val outRDD = demRender(sc, RDD)
-    saveRasterRDDToTif(outRDD, "C:\\Users\\BBL\\Desktop\\algorithm\\111.tif")
+//    val grid = "/D:\\mnt\\storage\\grid.tif"
+//    val referencce = "/D:\\mnt\\storage\\reference.tif"
+//    val gridRDD = makeChangedRasterRDDFromTif(sc, tifPath)
+//    val referenceRDD = makeChangedRasterRDDFromTif(sc, referencce)
+//
+//    val outRDD = sagaISODockerSwarm(sc, gridRDD, referenceRDD)
+//    saveRasterRDDToTif(outRDD, "D:\\mnt\\storage\\result.tif")
 
   }
   val algorithmData = GlobalConfig.QGISConf.QGIS_DATA
@@ -3049,7 +3053,7 @@ object QGIS {
       versouSshUtil(host, userName, password, port)
       val st =
         raw"""conda activate qgis;${algorithmCode}python algorithmCodeByQGIS/gdal_rasterize_over.py --input "$outputShpPath" --input-raster "$outputTiffPath" --extra "$extra" --field "$field" --add "$add"""".stripMargin
-
+                    
       println(s"st = $st")
       runCmd(st, "UTF-8")
 
@@ -3940,7 +3944,40 @@ object QGIS {
 //    makeChangedRasterRDDFromTif(sc, outputTiffPath)
 //  }
 
+  def sagaISODockerSwarm(implicit sc: SparkContext,
+                         grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                         reference: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = {
+    val time = System.currentTimeMillis()
+// 数据落地
+    val outputTiffPath_grid = algorithmData + "sagaISO_grid_" + time + ".tif"
+    val outputTiffPath_reference = algorithmData + "sagaISO_reference_" + time + ".tif"
+    val writePath = algorithmData + "sagaISO_result_" + time + "_out.tif"
+    saveRasterRDDToTif(grid, outputTiffPath_grid)
+    saveRasterRDDToTif(reference, outputTiffPath_reference)
 
+    // 更新算子参数
+    val parameters = iMap(("GRID", outputTiffPath_grid), ("REFERENCE", outputTiffPath_reference) , ("MATCHED", writePath))
+    val algorithmJsonPath = "../jsonparser/JsonConfig.json"
+    updateJsonParameters(algorithmJsonPath, parameters)
+
+    // 生成docker swarm命令
+    val dockerCommand = buildDockerCommand(algorithmJsonPath)
+
+    try {
+      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      val st = dockerCommand
+
+      println(s"st = $st")
+      runCmd(st, "UTF-8")
+
+    } catch {
+      case e: Exception =>
+        throw new Exception(e)
+    }
+
+    makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
 
 }
 

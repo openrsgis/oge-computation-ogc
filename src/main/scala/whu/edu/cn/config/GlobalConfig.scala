@@ -167,6 +167,17 @@ object GlobalConfig {
     final var THIRD_PORT: Int = 22
   }
 
+  // Docker Swarm
+  object DockerSwarmConf{
+    final var MASTER_HOST: String = "10.101.240.10"
+    final var REGISTRY_PORT: Int = 5001
+    final var CONSTRAINT: String = "node.role==worker"  // node.role==master
+    final var MODE: String = "replicated-job"
+    final var MOUNT_TYPE: String = "bind"
+    final var MOUNT_SOURCE: String = "bind"
+    final var MOUNT_TARGET: String = "bind"
+  }
+
   object Others {
     //    final var thirdJson = "src/main/scala/whu/edu/cn/jsonparser/third-algorithm-infos.json" //存储第三方算子解析文件地址
     final var thirdJson = "/mnt/storage/data/third-algorithm-infos.json"

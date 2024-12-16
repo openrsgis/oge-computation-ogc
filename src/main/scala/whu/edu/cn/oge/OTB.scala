@@ -21,7 +21,6 @@ import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 import scala.collection.mutable
 import scala.collection.mutable.{ListBuffer, Map}
 import scala.io.Source
-
 object OTB {
   def main(args: Array[String]): Unit = {
     val conf: SparkConf = new SparkConf()
