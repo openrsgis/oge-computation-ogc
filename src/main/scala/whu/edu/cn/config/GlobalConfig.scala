@@ -174,8 +174,8 @@ object GlobalConfig {
     final var CONSTRAINT: String = "node.role==worker"  // node.role==master
     final var MODE: String = "replicated-job"
     final var MOUNT_TYPE: String = "bind"
-    final var MOUNT_SOURCE: String = "bind"
-    final var MOUNT_TARGET: String = "bind"
+    final var MOUNT_SOURCE: String = "/mnt/storage/SAGA/sagaData"
+    final var MOUNT_TARGET: String = "/mnt/storage/SAGA/sagaData"
   }
 
   object Others {
