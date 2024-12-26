@@ -78,7 +78,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
@@ -116,7 +116,7 @@ object QGIS {
       case e: Exception =>
         e.printStackTrace()
     }
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 
   /**
@@ -193,7 +193,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
@@ -1920,7 +1920,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
   /**
    * Extracts contour lines from any GDAL-supported elevation raster.
@@ -2556,7 +2556,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 
   /**
@@ -2598,7 +2598,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 
   /**
@@ -2670,7 +2670,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 
   /**
@@ -2714,7 +2714,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
@@ -2765,7 +2765,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
@@ -2808,7 +2808,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
@@ -3058,7 +3058,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, inputRaster, outputTiffPath)
+    makeChangedRasterRDDFromTif(sc, outputTiffPath)
   }
 
   /**
@@ -3102,7 +3102,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, inputRaster, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
   }
 
   /**
@@ -3140,7 +3140,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 
@@ -3202,7 +3202,7 @@ object QGIS {
         e.printStackTrace()
     }
 
-    makeRasterRDDFromTif(sc, input, writePath)
+    makeChangedRasterRDDFromTif(sc, writePath)
 
   }
 

@@ -942,7 +942,7 @@ object Trigger {
           isActioned(sc, args("input"), OGEClassType.CoverageCollection)
           coverageRddList += (UUID -> GrassUtil.r_patch(sc, input = coverageCollectionRddList(args("input"))))
         case "Coverage.latlongByGrass" =>
-          coverageRddList += (UUID -> GrassUtil.r_latlong(sc, input = coverageRddList(args("input"))))
+          coverageRddList += (UUID -> GrassUtil.r_latlong(sc, input = coverageRddList(args("input")), long = args("long").toBoolean))
         case "Coverage.blendByGrass" =>
           coverageRddList += (UUID -> GrassUtil.r_blend(sc, first = coverageRddList(args("first")), second = coverageRddList(args("second")), percent = args("percent")))
         case "Coverage.compositeByGrass" =>
@@ -1129,13 +1129,13 @@ object Trigger {
         case "Coverage.imaginaryConstellations" =>
           coverageRddList += (UUID -> QuantRS.imaginaryConstellations(sc, coverageRddList(args("LAI")), coverageRddList(args("FAPAR")), coverageRddList(args("NDVI")), coverageRddList(args("FVC")), coverageRddList(args("ALBEDO"))))
         case "Coverage.HiGlassAlbedo" =>
-          coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData"), userId))
+          coverageRddList += (UUID -> QuantRS.HiGlassAlbedo(sc, coverageCollectionRddList(args("InputTiffs")), args("Metadata"), args("BinaryData"), userId, dagId))
         case "Coverage.geometricCorrection" =>
           coverageRddList += (UUID -> GeoCorrection.geometricCorrection(sc, coverageCollectionRddList(args("coverages"))))
         case "Coverage.splitMosaic" =>
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverages"))))
         case "Coverage.atmoCorrection" =>
-          coverageRddList += (UUID -> QuantRS.AtmoCorrection(sc, coverageRddList(args("tgtTiff")), coverageRddList("LstTiff"), coverageRddList("GMTED2Tiff"), args("sensorType"), args("xlsPath"), userId))
+          coverageRddList += (UUID -> QuantRS.AtmoCorrection(sc, coverageRddList(args("tgtTiff")), coverageRddList(args("LstTiff")), coverageRddList(args("GMTED2Tiff")), args("sensorType"), args("xlsPath"), userId, dagId))
 
 
         //Feature

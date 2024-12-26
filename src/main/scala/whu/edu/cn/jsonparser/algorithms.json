@@ -8470,6 +8470,14 @@
         "name": "input",
         "type": "Coverage",
         "description": "Name of input raster map"
+      },
+      {
+        "name": "long",
+        "type": "Boolean",
+        "description": "Creates a latitude (degree decimal) map, or longitude if the parameter is true (default: false).",
+        "optional": "True",
+        "default": false
+
       }
     ]
   },

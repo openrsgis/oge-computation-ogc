@@ -10,8 +10,7 @@ import whu.edu.cn.algorithms.RS.Utils
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.Others.{hbaseHost, tempFilePath}
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.oge.Coverage.loadTxtFromUpload
-import whu.edu.cn.oge.Coverage.loadTxtFromCase
+import whu.edu.cn.oge.Coverage.{loadFileFromCase, loadTxtFromCase, loadTxtFromUpload}
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.CoverageUtil.removeZeroFromCoverage
 import whu.edu.cn.util.PostSender.{sendShelvedPost, shelvePost}
@@ -34,6 +33,7 @@ object QuantRS {
   val password = GlobalConfig.QuantConf.Quant_PASSWORD
   val port = GlobalConfig.QuantConf.Quant_PORT
   val acPath = GlobalConfig.QuantConf.Quant_ACpath
+  val tmpPath = GlobalConfig.Others.tempFilePath
 
   /**
    * 虚拟星座30米
@@ -243,7 +243,8 @@ object QuantRS {
                     InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
                     Metadata:String,
                     BinaryData: String,
-                    userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
+                    userID: String,
+                    dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) ={
     // 配置本地文件系统
     val conf = new Configuration()
     conf.set("fs.defaultFS", "file:///")
@@ -254,9 +255,9 @@ object QuantRS {
     val currentDate1 = LocalDate.now()
 
           // 输入文件路径
-    val folderPath = new hPath(algorithmData + "LC09_L1TP_" + time)
+    val folderPath = new hPath(tmpPath+ "LC09_L1TP_" + time)
     // 输出结果路径
-    val outputPath = new hPath(algorithmData + "HI-GLASS_result_" + time)
+    val outputPath = new hPath(tmpPath + "HI-GLASS_result_" + time)
     val baseName = folderPath.getName
 
     // 创建文件夹存放影像
@@ -277,16 +278,26 @@ object QuantRS {
       saveRasterRDDToTif(tiff._2, tiffPath)
       i = i + 1
     }
-    val utilsAC = new Utils
-    // 元数据&bin文件落地
-    val txtPath = folderPath.toString + "/" + baseName + "_MTL.txt"
-    val binPath = folderPath. toString + "/" +"sw_bsa_coefs.bin"
-// bos
-var txtBosPath: String = s"${userID}/$Metadata"
-var binBosPath: String = s"${userID}/$BinaryData"
-val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
-    clientUtil.Download(txtBosPath, txtPath)
-    clientUtil.Download(binBosPath, binPath)
+
+    if (Metadata.startsWith("myData/")){
+      // 元数据txt文件落地
+      val txtPath = folderPath.toString + "/" + baseName + "_MTL.txt"
+      // bos
+      var txtBosPath: String = s"${userID}/$Metadata"
+      val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+      clientUtil.Download(txtBosPath, txtPath)
+    }else if (Metadata.startsWith("OGE_Case_Data/")){
+      loadFileFromCase(Metadata,baseName+"_MTL" , "txt",  dagId)
+    }
+
+    if(BinaryData.startsWith("myData/")){
+      val binPath = folderPath. toString + "/" +"sw_bsa_coefs.bin"
+      var binBosPath: String = s"${userID}/$BinaryData"
+      val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+      clientUtil.Download(binBosPath, binPath)
+    }else if(BinaryData.startsWith("OGE_Case_Data/")){
+      loadFileFromCase(BinaryData ,"sw_bsa_coefs" , "bin",  dagId)
+    }
 
     // 启动反照率程序
     val writeName = "albedo" + time + "_out.tif"
@@ -327,57 +338,53 @@ val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
                      GMTED2Tiff: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                      sensorType: String = "GF1",
                      xlsPath: String,
-                     userID: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+                     userID: String,
+                     dagId:String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
     val sensorTypeInput: String = UMap(
       "GF1" -> "GF1",
       "GF6" -> "GF6"
     ).getOrElse(sensorType, "GF1")
     val time = System.currentTimeMillis()
-    // RDD落地
-    val tgtTiffPath = algorithmData + "targetFile_" + time + ".tif"
-    val lstTiffPath  = algorithmData + "landsatSurfaceReflection_" + time + ".tif"
-    val GMTED2TiffPath =  algorithmData +  "GMTED2km" + time + ".tif"
+    // RDD落地，目前使用的测试数据命名固定，不可修改，不可加时间戳
+    val tgtTiffPath = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR.tif"
+    val lstTiffPath  = algorithmData + "GF1_WFV3_E107.1_N28.9_20230524_L1A0007296754_Addmetadata_ORT_106E_29N_CR_dst.tif"
+    val GMTED2TiffPath =  tmpPath +  "GMTED2km.tif"
     saveRasterRDDToTif(tgtTiff, tgtTiffPath)
     saveRasterRDDToTif(LstTiff, lstTiffPath)
     saveRasterRDDToTif(GMTED2Tiff, GMTED2TiffPath)
     // xlx落地
     val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    var xlsBosPath: String = s"${userID}/$xlsPath"
+
     if (sensorTypeInput.equals("GF1")){
       var LocalPath = algorithmData + "GF1_WFV_SRF.xls"
-      var xlsBosPath: String = s"${userID}/$xlsPath"
-      clientUtil.Download(xlsBosPath, LocalPath)
-    }
-    if (sensorTypeInput.equals("GF6")){
+      if (xlsPath.startsWith("myData/")){
+        clientUtil.Download(xlsBosPath, LocalPath)
+      } else if (xlsPath.startsWith("OGE_Case_Data/")){
+        loadFileFromCase(xlsPath,"GF1_WFV_SRF" , "xls",  dagId)
+      }
+    } else if (sensorTypeInput.equals("GF6")){
       var LocalPath = algorithmData + "GF6_WFV_SRF.xlsx"
-      var xlsxBosPath: String = s"${userID}/$xlsPath"
-      clientUtil.Download(xlsxBosPath, LocalPath)
+      if (xlsPath.startsWith("myData/")) {
+        clientUtil.Download(xlsBosPath, LocalPath)
+      } else if (xlsPath.startsWith("OGE_Case_Data/")) {
+        loadFileFromCase(xlsPath, "GF6_WFV_SRF","xlsx",dagId)
+      }
     }
-
     // 启动大气校正程序
     val writeName = algorithmData + "atmoCorrection" + time + "_out.tif"
-    val auxPath = algorithmData.substring(0, algorithmData.length() -1)
+    val auxPath = tmpPath.substring(0, tmpPath.length() -1)
     try {
       versouSshUtil(host, userName, password, port)
       val st =
-        raw"""conda activate produce_GF_ref && $acPath/dist/produce_GF_ref_with_dst $tgtTiffPath $writeName $lstTiffPath $auxPath""".stripMargin
-
+        raw"""conda activate produce_GF_ref;cd /mnt/storage/htTeam/AtmoCorrection;./dist/produce_GF_ref_with_dst $tgtTiffPath $writeName $lstTiffPath $auxPath""".stripMargin
       println(s"st = $st")
       runCmd(st, "UTF-8")
-
     } catch {
       case e: Exception =>
         e.printStackTrace()
     }
-
     makeChangedRasterRDDFromTif(sc, writeName)
   }
 
-
-
-
-
-
-
-
 }
-

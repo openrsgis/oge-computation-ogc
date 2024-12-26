@@ -3661,7 +3661,7 @@ object Coverage {
 
 
     val coverageVis: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = addStyles(if (Trigger.coverageReadFromUploadFile) {
-      reproject(coverage, CRS.fromEpsgCode(4326), resolutionTMSArray(Trigger.level))
+      reproject(coverage, CRS.fromEpsgCode(4326), resolutionEPSG4326(Trigger.level))
     } else {
       coverage
     }, visParam)
@@ -3849,6 +3849,22 @@ object Coverage {
     val outputPath = Paths.get(filePath)
     tempFileList.append(filePath)
     Trigger.file_id += 1
+    java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
+    filePath
+  }
+
+  // 读取算子所需的各种格式的文件
+  def loadFileFromCase(fileId: String, fileName: String, fileType: String, dagId: String): String = {
+    val path = "/" + fileId
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath$fileName.$fileType"
+    println(filePath)
+
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val inputStream = clientUtil.getObject(BOS_BUCKET_NAME, path)
+    val outputPath = Paths.get(filePath)
+//    tempFileList.append(filePath)
+//    Trigger.file_id += 1
     java.nio.file.Files.copy(inputStream, outputPath, REPLACE_EXISTING)
     filePath
   }
