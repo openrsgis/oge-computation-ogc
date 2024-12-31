@@ -169,13 +169,14 @@ object GlobalConfig {
 
   // Docker Swarm
   object DockerSwarmConf{
-    final var MASTER_HOST: String = "10.101.240.10"
+    final var MASTER_HOST: String = "172.22.1.19"
     final var REGISTRY_PORT: Int = 5001
     final var CONSTRAINT: String = "node.role==worker"  // node.role==master
     final var MODE: String = "replicated-job"
     final var MOUNT_TYPE: String = "bind"
-    final var MOUNT_SOURCE: String = "/mnt/storage/SAGA/sagaData"
-    final var MOUNT_TARGET: String = "/mnt/storage/SAGA/sagaData"
+    final var MOUNT_SOURCE: String = "/mnt/storage"
+    final var MOUNT_TARGET: String = "/mnt/storage"
+    final var ALGORITHM_JSON: String = "/mnt/storage/algorithmJson"
   }
 
   object Others {

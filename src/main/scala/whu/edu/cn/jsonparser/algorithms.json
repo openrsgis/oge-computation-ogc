@@ -16298,7 +16298,7 @@
   },
   "Coverage.sagaISODockerSwarm": {
     "description": "Ranking evaluator method.",
-    "returns": "String",
+    "returns": "Coverage",
     "args": [
       {
         "name": "grid",

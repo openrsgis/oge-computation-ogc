@@ -1,6 +1,7 @@
 package whu.edu.cn.oge
 
 import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
+import java.nio.file.{Files, Paths}
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
@@ -18,7 +19,7 @@ import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.oge.Coverage.{loadTxtFromUpload, makeTIFF}
 import whu.edu.cn.util.{BashUtil, RDDTransformerUtil}
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.collection.mutable.Map
 import scala.collection.immutable.{Map => iMap}
 import scala.io.Source
@@ -46,6 +47,7 @@ object QGIS {
   val userName = GlobalConfig.QGISConf.QGIS_USERNAME
   val password = GlobalConfig.QGISConf.QGIS_PASSWORD
   val port = GlobalConfig.QGISConf.QGIS_PORT
+  val algorithmJsonPath = GlobalConfig.DockerSwarmConf.ALGORITHM_JSON
 //  val pythonPath = GlobalConfig.QGISConf.QGIS_PYTHON
 //  val rsAlgorithm = GlobalConfig.QGISConf.QGIS_RS
   /**
@@ -3944,6 +3946,14 @@ object QGIS {
 //    makeChangedRasterRDDFromTif(sc, outputTiffPath)
 //  }
 
+
+  /**
+   *   2024/12/24 Docker Swarm集群测试算子-saga ISOData Clustering
+   * @param sc
+   * @param grid
+   * @param reference
+   * @return
+   */
   def sagaISODockerSwarm(implicit sc: SparkContext,
                          grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                          reference: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = {
@@ -3957,14 +3967,14 @@ object QGIS {
 
     // 更新算子参数
     val parameters = iMap(("GRID", outputTiffPath_grid), ("REFERENCE", outputTiffPath_reference) , ("MATCHED", writePath))
-    val algorithmJsonPath = "../jsonparser/JsonConfig.json"
-    updateJsonParameters(algorithmJsonPath, parameters)
+    val JsonPath = algorithmJsonPath + "/" + "JsonConfig.json"
+    updateJsonParameters(JsonPath, parameters)
 
-    // 生成docker swarm命令
-    val dockerCommand = buildDockerCommand(algorithmJsonPath)
+    // 自动生成docker swarm命令
+    val dockerCommand = buildDockerCommand(JsonPath, "-")
 
     try {
-      versouSshUtil("10.101.240.10", "root", "ypfamily", 22)
+      versouSshUtil(host, userName, password, port)
       val st = dockerCommand
 
       println(s"st = $st")
@@ -3976,6 +3986,25 @@ object QGIS {
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
+
+  }
+
+  /**
+   *  2024/12/25 Docker Swarm集群测试算子——Hi-GLASS反照率
+   * @param sc
+   * @param InputTiffs
+   * @param Metadata
+   * @param BinaryData
+   * @param userID
+   * @param dagId
+   * @return
+   */
+  def HiGLASSDockerSwarm(implicit sc: SparkContext,
+                         InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
+                         Metadata: String,
+                         BinaryData: String,
+                         userID: String,
+                         dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
   }
 

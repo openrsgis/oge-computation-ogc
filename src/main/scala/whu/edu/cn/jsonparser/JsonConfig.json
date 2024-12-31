@@ -1,0 +1,14 @@
+{
+    "operator": {
+      "description": "ISODATA Clustering algorithm of SAGA",
+      "name": "ISO",
+      "image": "saga-gis",
+      "version": "v2.0",
+      "script": "saga_cmd grid_calculus 21",
+      "parameters": {
+        "GRID": "/mnt/storage/algorithmData/sagaISO_grid_1735109430179.tif",
+        "REFERENCE": "/mnt/storage/algorithmData/sagaISO_reference_1735109430179.tif",
+        "MATCHED": "/mnt/storage/algorithmData/sagaISO_result_1735109430179.tif"
+      }
+    }
+  }
