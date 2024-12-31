@@ -16070,6 +16070,22 @@
         "default": "True"
       }
     ]
+  },
+  "Coverage.sagaISODockerSwarm": {
+    "description": "Ranking evaluator method.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "grid",
+        "type": "Coverage",
+        "description": "The ground truth label coverage data."
+      },
+      {
+        "name": "reference",
+        "type": "Coverage",
+        "description": "The prediction coverage data."
+      }
+    ]
   }
 
 }
