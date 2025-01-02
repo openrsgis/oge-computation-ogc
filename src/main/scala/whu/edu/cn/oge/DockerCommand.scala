@@ -107,7 +107,7 @@ object DockerCommand {
 
   // 提取算子信息
     val operator = jsonObject.getJSONObject("operator")
-    val name = operator.getString("name")
+    val name = operator.getString("name").replace(" ", "")
     val image = operator.getString("image")
     val version = operator.getString("version")
     val script = operator.getString("script")
