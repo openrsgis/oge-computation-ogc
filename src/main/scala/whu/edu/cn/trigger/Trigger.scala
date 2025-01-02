@@ -1136,8 +1136,8 @@ object Trigger {
           coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverages"))))
         case "Coverage.atmoCorrection" =>
           coverageRddList += (UUID -> QuantRS.AtmoCorrection(sc, coverageRddList(args("tgtTiff")), coverageRddList(args("LstTiff")), coverageRddList(args("GMTED2Tiff")), args("sensorType"), args("xlsPath"), userId, dagId))
-        case "Coverage.sagaISODockerSwarm" =>
-          coverageRddList += (UUID -> QGIS.sagaISODockerSwarm(sc, coverageRddList(args("grid")), coverageRddList(args("reference"))))
+        case "Coverage.sagaHistogramMathcingDocker" =>
+          coverageRddList += (UUID -> QGIS.sagaHistogramMathcingDocker(sc, coverageRddList(args("grid")), coverageRddList(args("reference")), args("method").toInt, args("nclasses").toInt, args("maxSamples").toInt))
 
         //Feature
         case "Feature.load" =>

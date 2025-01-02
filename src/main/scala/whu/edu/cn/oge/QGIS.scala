@@ -3954,9 +3954,12 @@ object QGIS {
    * @param reference
    * @return
    */
-  def sagaISODockerSwarm(implicit sc: SparkContext,
+  def sagaHistogramMathcingDocker(implicit sc: SparkContext,
                          grid: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
-                         reference: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])) = {
+                         reference: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
+                         method: Int = 1,
+                         nclasses: Int = 100,
+                         maxSamples: Int = 1000000) = {
     val time = System.currentTimeMillis()
 // 数据落地
     val outputTiffPath_grid = algorithmData + "sagaISO_grid_" + time + ".tif"
@@ -3966,8 +3969,8 @@ object QGIS {
     saveRasterRDDToTif(reference, outputTiffPath_reference)
 
     // 更新算子参数
-    val parameters = iMap(("GRID", outputTiffPath_grid), ("REFERENCE", outputTiffPath_reference) , ("MATCHED", writePath))
-    val JsonPath = algorithmJsonPath + "/" + "JsonConfig.json"
+    val parameters = iMap(("GRID", outputTiffPath_grid), ("REFERENCE", outputTiffPath_reference) , ("MATCHED", writePath),("METHOD", method), ("NCLASSES", nclasses), ("MAXSAMPLES",maxSamples))
+    val JsonPath = algorithmJsonPath + "/" + "sagaHistogramMathcing.json"
     updateJsonParameters(JsonPath, parameters)
 
     // 自动生成docker swarm命令
@@ -3989,24 +3992,7 @@ object QGIS {
 
   }
 
-  /**
-   *  2024/12/25 Docker Swarm集群测试算子——Hi-GLASS反照率
-   * @param sc
-   * @param InputTiffs
-   * @param Metadata
-   * @param BinaryData
-   * @param userID
-   * @param dagId
-   * @return
-   */
-  def HiGLASSDockerSwarm(implicit sc: SparkContext,
-                         InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                         Metadata: String,
-                         BinaryData: String,
-                         userID: String,
-                         dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
-  }
 
 }
 

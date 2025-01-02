@@ -15,6 +15,11 @@ object DockerCommand {
   val masterHost = GlobalConfig.DockerSwarmConf.MASTER_HOST
   val registryPort = GlobalConfig.DockerSwarmConf.REGISTRY_PORT
 
+  /**
+   *  用于更新用户提供的算子JSON描述文件
+   * @param jsonFilePath
+   * @param parameters
+   */
     def updateJsonParameters(jsonFilePath: String, parameters: Map[String, Any]):Unit = {
 
       // 解析文件路径
@@ -40,17 +45,24 @@ object DockerCommand {
         case e: Exception =>
           throw new RuntimeException(s"Failed to parse JSON content from file: $fileName", e)
       }
-      // 更新参数值
+
       val operator = jsonObject.getJSONObject("operator")
       if (operator == null) {
         throw new RuntimeException(s"Missing 'operator' key in JSON file: $fileName")
       }
-      val paramsObject = operator.getJSONObject("parameters")
-      if (paramsObject == null){
+      val paramsArray = operator.getJSONArray("parameters").toArray.map(_.asInstanceOf[JSONObject])
+      if (paramsArray == null){
         throw new RuntimeException(s"Missing 'parameters' key in 'operator' section of JSON file: $fileName")
       }
-      parameters.foreach{ case(key, value) =>
-        paramsObject.put(key, value)
+      // 更新参数值
+      paramsArray.zipWithIndex.foreach{ case (param, idx) =>
+        val paramName = param.getString("name")
+        // 检查传入参数数组中是否包含该参数
+        if (parameters.contains(paramName)) {
+          param.put("default", parameters(paramName))
+        }else{
+          param.put("default", param.getOrDefault("default", ""))
+        }
       }
 
       // 更新json
@@ -65,7 +77,12 @@ object DockerCommand {
 
     }
 
-
+  /**
+   * 自动生成Docker Swarm命令行
+   * @param jsonFilePath
+   * @param sep
+   * @return 算子命令行
+   */
   def buildDockerCommand(jsonFilePath: String, sep: String): String = {
 // 读取json配置文件
     val absolutePath = Paths.get(jsonFilePath).toAbsolutePath.toString
@@ -94,12 +111,14 @@ object DockerCommand {
     val image = operator.getString("image")
     val version = operator.getString("version")
     val script = operator.getString("script")
-    val parameters = operator.getJSONObject("parameters")
+    // 获取参数列表
+    val paramsArray = operator.getJSONArray("parameters").toArray.map(_.asInstanceOf[JSONObject])
 
     // 构建参数字符串
-    val parameterString = parameters.entrySet().toArray.map{ entry =>
-      val param = entry.asInstanceOf[java.util.Map.Entry[String, Any]]
-      s"$sep${param.getKey} ${param.getValue}"
+    val parameterString = paramsArray.map{ param =>
+      val paramName = param.getString("name")
+      val paramDefault = param.getString("default")
+      s"${sep}${paramName} ${paramDefault}"
     }.mkString(" ")
     // 构建镜像名
     val imageName = s"$image:$version"

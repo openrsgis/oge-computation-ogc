@@ -1,0 +1,53 @@
+{
+    "operator": {
+      "description": "Histogram matching algorithm of SAGA",
+      "name": "Histogram matching",
+      "image": "saga-gis",
+      "version": "v2.0",
+      "script": "saga_cmd grid_calculus 21",
+      "parameters": [
+        {
+          "name": "GRID",
+          "type": "Coverage",
+          "description": "The ground truth label coverage data.",
+          "optional": "False",
+          "default": ""
+        },
+        {
+          "name": "REFERENCE",
+          "type": "Coverage",
+          "description": "The prediction coverage data.",
+          "optional": "False",
+          "default": ""
+        },
+        {
+          "name": "METHOD",
+          "type": "Int",
+          "description": "Available Choices: [0] standard deviation [1] histogram Default: 1",
+          "optional": "True",
+          "default": 1
+        },
+        {
+          "name": "NCLASSES",
+          "type": "Int",
+          "description": "Number of histogram classes for internal use.",
+          "optional": "True",
+          "default": 100
+        },
+        {
+          "name": "MAXSAMPLES",
+          "type": "Int",
+          "description": "If set to zero all data will be used to build the histograms.",
+          "optional": "True",
+          "default": 1000000
+        },
+        {
+          "name": "MATCHED",
+          "type": "Coverage",
+          "description": "Result.",
+          "optional": "False",
+          "default": ""
+        }
+      ]
+    }
+  }
