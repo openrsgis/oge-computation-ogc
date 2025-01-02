@@ -3989,25 +3989,6 @@ object QGIS {
 
   }
 
-  /**
-   *  2024/12/25 Docker Swarm集群测试算子——Hi-GLASS反照率
-   * @param sc
-   * @param InputTiffs
-   * @param Metadata
-   * @param BinaryData
-   * @param userID
-   * @param dagId
-   * @return
-   */
-  def HiGLASSDockerSwarm(implicit sc: SparkContext,
-                         InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                         Metadata: String,
-                         BinaryData: String,
-                         userID: String,
-                         dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
-
-  }
-
 }
 
 
