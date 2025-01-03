@@ -1,29 +1,26 @@
 package whu.edu.cn.oge
 
-import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
-import java.nio.file.{Files, Paths}
 import com.alibaba.fastjson.serializer.SerializerFeature
-import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
+import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.mapalgebra.focal.ZFactor
-import geotrellis.raster.{MultibandTile, Tile}
-import org.apache.spark.{SparkConf, SparkContext}
+import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.{Geometry, _}
+import org.apache.spark.{SparkConf, SparkContext}
+import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.trigger.Trigger.{dagId, runMain, workTaskJson}
+import whu.edu.cn.oge.Coverage.loadTxtFromUpload
+import whu.edu.cn.oge.DockerCommand._
+import whu.edu.cn.oge.Feature._
+import whu.edu.cn.util.RDDTransformerUtil
 import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
-import whu.edu.cn.oge.Feature._
-import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.oge.Coverage.{loadTxtFromUpload, makeTIFF}
-import whu.edu.cn.util.{BashUtil, RDDTransformerUtil}
 
-import scala.collection.{immutable, mutable}
-import scala.collection.mutable.Map
+import java.io.{BufferedWriter, FileWriter}
 import scala.collection.immutable.{Map => iMap}
+import scala.collection.mutable
+import scala.collection.mutable.Map
 import scala.io.Source
-import whu.edu.cn.oge.DockerCommand._
 
 object QGIS {
   def main(args: Array[String]): Unit = {
@@ -3986,25 +3983,6 @@ object QGIS {
     }
 
     makeChangedRasterRDDFromTif(sc, writePath)
-
-  }
-
-  /**
-   *  2024/12/25 Docker Swarm集群测试算子——Hi-GLASS反照率
-   * @param sc
-   * @param InputTiffs
-   * @param Metadata
-   * @param BinaryData
-   * @param userID
-   * @param dagId
-   * @return
-   */
-  def HiGLASSDockerSwarm(implicit sc: SparkContext,
-                         InputTiffs: immutable.Map[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])],
-                         Metadata: String,
-                         BinaryData: String,
-                         userID: String,
-                         dagId: String): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
 
   }
 

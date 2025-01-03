@@ -1,53 +1,41 @@
 package whu.edu.cn.trigger
 
-import whu.edu.cn.oge.ThirdSource
-import whu.edu.cn.algorithms.SpatialStats.GWModels
-import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
-import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
-import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
-import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
-import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import com.alibaba.fastjson.{JSON, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{MultibandTile, Tile}
 import geotrellis.vector.Extent
-import io.minio.{MinioClient, PutObjectArgs}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
-import redis.clients.jedis.Jedis
 import whu.edu.cn.algorithms.AI.ML
-import whu.edu.cn.algorithms.terrain.calculator
-import whu.edu.cn.entity.OGEClassType.OGEClassType
-import whu.edu.cn.entity.{BatchParam, CoverageCollectionMetadata, OGEClassType, RawTile, SpaceTimeBandKey, VisualizationParam}
-import whu.edu.cn.jsonparser.JsonToArg
-import whu.edu.cn.oge._
-import whu.edu.cn.util.HttpRequestUtil.sendPost
-import whu.edu.cn.util.{JedisUtil, PostSender, ZCurveUtil}
-import whu.edu.cn.algorithms.ImageProcess.algorithms_Image.{GLCM, IHSFusion, PCA, RandomForestTrainAndRegress, bilateralFilter, broveyFusion, cannyEdgeDetection, catTwoCoverage, dilate, erosion, falseColorComposite, gaussianBlur, histogramBin, histogramEqualization, kMeans, linearTransformation, panSharp, reduceRegion, reduction, standardDeviationCalculation, standardDeviationStretching}
-import whu.edu.cn.algorithms.gmrc.geocorrection
-
-import java.io.ByteArrayInputStream
-import scala.collection.{immutable, mutable}
-import scala.io.{BufferedSource, Source}
-import scala.util.Random
+import whu.edu.cn.algorithms.ImageProcess.algorithms_Image._
+import whu.edu.cn.algorithms.MLlib.algorithms.{binaryClassificationEvaluator, bisectingKMeans, clusteringEvaluator, decisionTreeClassifierModel, decisionTreeRegressionModel, fmClassifierModel, fmRegressionModel, gaussianMixture, gbtClassifierClassifierModel, gbtRegressionModel, generalizedLinearRegressionModel, isotonicRegressionModel, latentDirichletAllocation, linearRegressionModel, linearSVCClassifierModel, logisticRegressionClassifierModel, modelClassify, modelRegress, multiclassClassificationEvaluator, multilabelClassificationEvaluator, multilayerPerceptronClassifierModel, naiveBayesClassifierModel, oneVsRestClassifierModel, randomForestClassifierModel, randomForestRegressionModel, rankingEvaluator, regressionEvaluator, kMeans => mlKMeans}
+import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
+import whu.edu.cn.algorithms.SpatialStats.GWModels
+import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
 import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
-import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
-import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
-import whu.edu.cn.oge.Sheet.CsvData
+import whu.edu.cn.algorithms.SpatialStats.SpatialRegression.{LinearRegression, SpatialDurbinModel, SpatialErrorModel, SpatialLagModel}
 import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
+import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
+import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
+import whu.edu.cn.algorithms.terrain.calculator
+import whu.edu.cn.config.GlobalConfig
+import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
+import whu.edu.cn.entity.OGEClassType.OGEClassType
 import whu.edu.cn.entity.cube.CubeTileKey
+import whu.edu.cn.entity._
+import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
-import whu.edu.cn.algorithms.MLlib.algorithms.{randomForestClassifierModel,logisticRegressionClassifierModel,decisionTreeClassifierModel,gbtClassifierClassifierModel,multilayerPerceptronClassifierModel,linearSVCClassifierModel,naiveBayesClassifierModel,fmClassifierModel,oneVsRestClassifierModel,modelClassify,
-  randomForestRegressionModel,linearRegressionModel,generalizedLinearRegressionModel,decisionTreeRegressionModel,gbtRegressionModel,isotonicRegressionModel,fmRegressionModel,modelRegress,
-  kMeans => mlKMeans, latentDirichletAllocation, bisectingKMeans, gaussianMixture,
-  multiclassClassificationEvaluator,clusteringEvaluator,multilabelClassificationEvaluator,binaryClassificationEvaluator,regressionEvaluator,rankingEvaluator}
+import whu.edu.cn.oge.Sheet.CsvData
+import whu.edu.cn.oge._
+import whu.edu.cn.oge.extension.ThirdSource
+import whu.edu.cn.util.HttpRequestUtil.sendPost
+import whu.edu.cn.util.PostSender
 
-
-import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
+import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.{immutable, mutable}
 
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
@@ -161,15 +149,12 @@ object Trigger {
   @throws(classOf[Throwable])
   def func(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
     try {
-      val tempNoticeJson = new JSONObject
       println("args:", funcName + args)
       /* TODO: 添加第三方算子匹配逻辑，流程包括 匹配算子->查询数据库获取算子输入输出元信息 -> 根据输入元信息检查和匹配输入参数 -> 调用算子 -> 根据算子输出元信息匹配和解析输出数据 -> 输出数据转RddList -> 完成
                建议第三方算子统一命名为Source.{来源名称}.{算子名称}，如Source.QGIS.Aspect
       * */
       if (funcName.startsWith("Source")){
-        val thirdSource = new ThirdSource
-        thirdSource.execute("{functionName}")
-        // 把调用结果加入到RddList中
+        ThirdSource.execute(sc, UUID, funcName, args)
       }
       else {
         funcName match {
@@ -1466,7 +1451,6 @@ object Trigger {
 
   def func1(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
     try {
-      val tempNoticeJson = new JSONObject
       println("args:", funcName + args)
       funcName match {
         // MLlib 分类
@@ -1563,15 +1547,11 @@ object Trigger {
         func(sc, list(i)._1, list(i)._2, list(i)._3)
       } catch {
         case e: Throwable =>
-          //          throw new Exception("Error occur in lambda: " +
-          //            "UUID = " + list(i)._1 + "\t" +
-          //            "funcName = " + list(i)._2 + "\n" +
-          //            "innerErrorType = " + e.getClass + "\n" +
-          //            "innerErrorInfo = " + e.getMessage + "\n" +
-          //            e.getStackTrace.mkString("StackTrace:(\n", "\n", "\n)"))
           throw new Exception(e)
       }
     }
+
+
   }
 
   def optimizedDAG(list: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]): mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = {
@@ -2000,8 +1980,8 @@ object Trigger {
 
   def main(args: Array[String]): Unit = {
 
-    workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/oge_meanfilter.json")
+    /*workTaskJson = {
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/test2.json")
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
       //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
@@ -2019,7 +1999,16 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
     //    runBatch(sc,workTaskJson,dagId,"zy","EPSG:4326","100","","","tif")
-    runMain(sc, workTaskJson, dagId, userId)
+    runMain(sc, workTaskJson, dagId, userId)*/
+
+    val conf: SparkConf = new SparkConf()
+      .setMaster("local[8]")
+      .setAppName("query")
+    val sc = new SparkContext(conf)
+
+    val json = " { \"0\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.export\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.addStyles\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.add\",\"arguments\": { \"coverage2\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC08_L1TP_159024_20190101_20200830_02_T2\" } ,\"baseUrl\": { \"valueReference\":\"2\" } ,\"productID\": { \"constantValue\":\"LC08_L1TP_C02_T2\" }  }  }  } ,\"bands\": { \"valueReference\":\"1\" }  }  }  } ,\"coverage1\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC08_L1TP_171084_20190105_20200830_02_T1\" } ,\"baseUrl\": { \"valueReference\":\"2\" } ,\"productID\": { \"constantValue\":\"LC08_L1TP_C02_T1\" }  }  }  } ,\"bands\": { \"valueReference\":\"1\" }  }  }  }  }  }  } ,\"palette\": { \"constantValue\":[\"gold\",\"yellow\",\"brown\",\"lightblue\",\"blue\"] }  }  }  }  }  }  } ,\"1\": { \"constantValue\":[\"B1\"] } ,\"2\": { \"constantValue\":\"http://localhost\" } ,\"isBatch\":1 } "
+
+    Trigger.runBatch(sc, json, "null_1735631230759_0", "1", "EPSG:4326", "1000", "result", "file_2024_12_31_15_47_14", "tif")
 
     println("Finish")
     sc.stop()
