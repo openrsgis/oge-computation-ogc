@@ -44,7 +44,8 @@ import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, proce
 import whu.edu.cn.algorithms.MLlib.algorithms.{randomForestClassifierModel,logisticRegressionClassifierModel,decisionTreeClassifierModel,gbtClassifierClassifierModel,multilayerPerceptronClassifierModel,linearSVCClassifierModel,naiveBayesClassifierModel,fmClassifierModel,oneVsRestClassifierModel,modelClassify,
   randomForestRegressionModel,linearRegressionModel,generalizedLinearRegressionModel,decisionTreeRegressionModel,gbtRegressionModel,isotonicRegressionModel,fmRegressionModel,modelRegress,
   kMeans => mlKMeans, latentDirichletAllocation, bisectingKMeans, gaussianMixture,
-  multiclassClassificationEvaluator,clusteringEvaluator,multilabelClassificationEvaluator,binaryClassificationEvaluator,regressionEvaluator,rankingEvaluator}
+  multiclassClassificationEvaluator,clusteringEvaluator,multilabelClassificationEvaluator,binaryClassificationEvaluator,regressionEvaluator,rankingEvaluator,
+  saveModelBatch, loadModelFromUpload}
 
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
@@ -221,6 +222,10 @@ object Trigger {
         case "Service.getSheet" =>
           if (args("sheetID").startsWith("myData/")) {
             SheetList += (UUID -> Sheet.loadCSVFromUpload(sc, args("sheetID"), userId, dagId))
+          }
+        case "Service.getModel" =>
+          if (args("modelID").startsWith("myData/") || args("modelID").startsWith("result/")) {
+            mlmodelRddList += (UUID -> loadModelFromUpload(sc, args("modelID"), userId, dagId))
           }
         // Filter // TODO lrx: 待完善Filter类的函数
         case "Filter.equals" =>
@@ -1515,6 +1520,8 @@ object Trigger {
           stringList += (UUID -> regressionEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
         case "MLmodel.rankingEvaluator" =>
           stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "MLmodel.export" =>
+          saveModelBatch(sc, model = mlmodelRddList(args("model")), batchParam = batchParam, dagId)
         case "Coverage.randomSample" =>
           coverageRddList += (UUID ->Coverage.randomSample(coverage = coverageRddList(args("coverage")), args("sampleRate").toDouble, args("seed").toLong, args("useSampleRatePart").toBoolean))
       }
