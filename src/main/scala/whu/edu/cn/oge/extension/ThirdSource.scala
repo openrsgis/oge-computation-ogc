@@ -35,7 +35,7 @@ object ThirdSource {
     val inputParams = config.getJSONArray("args")
     val outParam = config.getJSONObject("output")
 
-    // 构造入参
+    // 构造命令
     val inputs = makeInputParam(inputParams, args, funcName, sc)
     val output = makeOutputParam(outParam, funcName)
 
