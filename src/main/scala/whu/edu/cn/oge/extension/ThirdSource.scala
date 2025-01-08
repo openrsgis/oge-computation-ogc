@@ -32,16 +32,16 @@ object ThirdSource {
 
     // 获取算子配置信息
     val config = dockerExecutor.getConfig(funcName)
-    val inputParamsArray = config.getJSONArray("args")
+    val inputParams = config.getJSONArray("args")
     val outParam = config.getJSONObject("output")
 
     // 构造入参
-    val inputParameters = makeInputParam(inputParamsArray, args, funcName, sc)
-    val outputParameter = makeOutputParam(outParam, funcName)
+    val inputs = makeInputParam(inputParams, args, funcName, sc)
+    val output = makeOutputParam(outParam, funcName)
 
-    inputParameters += (outputParameter._1 -> outputParameter._2)
+    inputs += (output._1 -> output._2)
 
-    val command = dockerExecutor.makeCommand(config, inputParameters)
+    val command = dockerExecutor.makeCommand(config, inputs)
 
     // 执行命令
     try {
@@ -58,7 +58,7 @@ object ThirdSource {
 
     // 文件转换为RDD
     try {
-      makeResult(outParamsArray, outputParameters, sc, UUID)
+      makeResult(outParam, output._2, sc, UUID)
     } catch {
       case e: Exception => {
         println(s"make result exception: ${e}")
@@ -137,57 +137,52 @@ object ThirdSource {
   /**
    * 输出文件转回RDD
    *
-   * @param paramsArray 出参列表
-   * @param outFiles    输出文件
+   * @param param   出参
+   * @param outFile 输出文件
    * @param sc          spark上下文
    * @param UUID        参数UUID
    * @return
    */
-  private def makeResult(paramsArray: JSONArray, outFiles: mutable.Map[String, String], sc: SparkContext, UUID: String): Any = {
+  private def makeResult(param: JSONObject, outFile: String, sc: SparkContext, UUID: String): Any = {
 
-    for (i <- 0 until paramsArray.size) {
-      val param: JSONObject = paramsArray.getJSONObject(i)
-      val name: String = param.getString("name")
-      val format: ThirdOperationDataType = ThirdOperationDataType.withName(param.getString("format"))
+    val format: ThirdOperationDataType = ThirdOperationDataType.withName(param.getString("format"))
 
-      format match {
-        case ThirdOperationDataType.TIF => {
+    format match {
+      case ThirdOperationDataType.TIF => {
 
-          Trigger.coverageRddList += (
-            UUID ->
-              Converter.convert[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])](
-                outFiles(name),
-                ThirdOperationDataType.TIF,
-                sc
-              )
+        Trigger.coverageRddList += (
+          UUID ->
+            Converter.convert[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])](
+              outFile,
+              ThirdOperationDataType.TIF,
+              sc
             )
+          )
 
-        }
-        case ThirdOperationDataType.SHP => {
-          Trigger.featureRddList += (
-            UUID ->
-              Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
-                outFiles(name),
-                ThirdOperationDataType.SHP,
-                sc
-              )
-            )
-        }
-        case ThirdOperationDataType.GEOJSON => {
-          Trigger.featureRddList += (
-            UUID ->
-              Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
-                outFiles(name),
-                ThirdOperationDataType.GEOJSON,
-                sc
-              )
-            )
-        }
-        case _ => {
-          throw new IllegalArgumentException("不支持的文件类型")
-        }
       }
-
+      case ThirdOperationDataType.SHP => {
+        Trigger.featureRddList += (
+          UUID ->
+            Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
+              outFile,
+              ThirdOperationDataType.SHP,
+              sc
+            )
+          )
+      }
+      case ThirdOperationDataType.GEOJSON => {
+        Trigger.featureRddList += (
+          UUID ->
+            Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
+              outFile,
+              ThirdOperationDataType.GEOJSON,
+              sc
+            )
+          )
+      }
+      case _ => {
+        throw new IllegalArgumentException("不支持的文件类型")
+      }
     }
 
   }
