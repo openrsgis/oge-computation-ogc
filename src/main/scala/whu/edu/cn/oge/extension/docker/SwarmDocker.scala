@@ -12,13 +12,11 @@ import scala.collection.mutable
  */
 object SwarmDocker extends Docker {
 
-  val mountType = GlobalConfig.DockerSwarmConf.MOUNT_TYPE
-  val mountSource = GlobalConfig.DockerSwarmConf.MOUNT_SOURCE
-  val mountTarget = GlobalConfig.DockerSwarmConf.MOUNT_TARGET
-  val constraint = GlobalConfig.DockerSwarmConf.CONSTRAINT
-  val mode = GlobalConfig.DockerSwarmConf.MODE
-  val masterHost = GlobalConfig.DockerSwarmConf.MASTER_HOST
-  val registryPort = GlobalConfig.DockerSwarmConf.REGISTRY_PORT
+  val mountType: String = GlobalConfig.DockerSwarmConf.MOUNT_TYPE
+  val mountSource: String = GlobalConfig.DockerSwarmConf.MOUNT_SOURCE
+  val mountTarget: String = GlobalConfig.DockerSwarmConf.MOUNT_TARGET
+  val constraint: String = GlobalConfig.DockerSwarmConf.CONSTRAINT
+  val mode: String = GlobalConfig.DockerSwarmConf.MODE
 
   val username: String = GlobalConfig.ThirdApplication.THIRD_USERNAME
   val host: String = GlobalConfig.ThirdApplication.THIRD_HOST
@@ -28,14 +26,14 @@ object SwarmDocker extends Docker {
   /**
    * 执行第三方算子
    *
-   * @param jsonFilePath
+   * @param command 命令
    * @return
    */
-  override def execute(dockerCommand: String): Unit = {
+  override def execute(command: String): Unit = {
 
     val client = new SSHClient()
     client.versouSshUtil(host, username, password, port)
-    client.runCmd(dockerCommand, "UTF-8")
+    client.runCmd(command, "UTF-8")
   }
 
   /**
@@ -48,27 +46,23 @@ object SwarmDocker extends Docker {
   }
 
   /**
+   * 构造docker 命令
    *
-   * @param config
-   * @param parameters
+   * @param configObject 算子配置JSON对象
+   * @param parameters   参数信息
+   * @return (服务名称， 执行命令)
    */
-  def makeCommand(configObject: JSONObject, parameters: mutable.Map[String, Any]): String = {
+  def makeCommand(configObject: JSONObject, parameters: mutable.Map[String, String]): (String, String) = {
 
     // 提取算子信息
     val name = configObject.getString("name")
     val image = configObject.getString("image")
     val version = configObject.getString("version")
     val script = configObject.getString("script")
-    val paramsObject = configObject.getJSONObject("parameters")
-
-    parameters.foreach { case (key, value) =>
-      paramsObject.put(key, value)
-    }
 
     // 构建参数字符串
-    val parameterString = paramsObject.entrySet().toArray.map { entry =>
-      val param = entry.asInstanceOf[java.util.Map.Entry[String, Any]]
-      s"-${param.getKey} ${param.getValue}"
+    val parameterString = parameters.map { entry =>
+      s"-${entry._1} ${entry._2}"
     }.mkString(" ")
 
     // 构建镜像名
@@ -76,11 +70,23 @@ object SwarmDocker extends Docker {
 
     // 完整Docker命令
     val time = System.currentTimeMillis()
+    val serviceName = s"${name}_$time".replace(".", "")
     val dockerCommand =
-      s"""docker service create --name ${name}_$time --mount type=$mountType,source=$mountSource,target=$mountTarget
-         |--constraint $constraint --mode $mode
-         |$masterHost:$registryPort/$imageName sh -c "$script $parameterString"""".stripMargin
+      s"docker service create --name ${serviceName} --mount type=$mountType,source=$mountSource,target=$mountTarget " +
+        s"--constraint $constraint --mode $mode ${GlobalConfig.DockerSwarmConf.HUB_SERVER}/${imageName} " +
+        s"sh -c '${script} ${parameterString} 2>&1 | tee /mnt/storage/${serviceName}.log'"
 
-    dockerCommand
+    (serviceName, dockerCommand)
+  }
+
+
+  /**
+   * 清理Service
+   *
+   * @param name 服务名称
+   */
+  override def clean(name: String): Unit = {
+
+    execute(s"docker rm ${name}")
   }
 }

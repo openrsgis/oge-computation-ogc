@@ -7,9 +7,10 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig.DockerSwarmConf
+import whu.edu.cn.entity.ThirdOperationDataType.ThirdOperationDataType
 import whu.edu.cn.entity.{SpaceTimeBandKey, ThirdOperationDataType}
 import whu.edu.cn.oge.extension.convert.Converter
-import whu.edu.cn.oge.extension.convert.Converter.{coverage2TifConverter, feature2FileConverter, file2FeatureConverter, tif2CoverageConverter}
+import whu.edu.cn.oge.extension.convert.Converter._
 import whu.edu.cn.oge.extension.docker.DockerExecutor
 import whu.edu.cn.trigger.Trigger
 
@@ -17,50 +18,69 @@ import scala.collection.mutable
 
 object ThirdSource {
 
-  def execute(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]) = {
-    // 查数据库,检查算子是否存在,将输入输出数据元信息存本地
-    // 检查算子输入是否合法
-    // （参数转换后），通过docker swarm调用算子
-    // 检查算子输出是否合法
-    // （输出参数转换后）返回结果
+  /**
+   * 执行第三方算子
+   *
+   * @param sc       spark上下文
+   * @param UUID     算子UUID
+   * @param funcName 算子名称
+   * @param args     参数值
+   */
+  def execute(implicit sc: SparkContext, UUID: String, funcName: String, args: mutable.Map[String, String]): Unit = {
 
-
-    val dockerExecutor = DockerExecutor.getExecutor()
+    val dockerExecutor = DockerExecutor.getExecutor
 
     // 获取算子配置信息
     val config = dockerExecutor.getConfig(funcName)
-    val inputParamsArray = config.getJSONArray("inputs")
-    val outParamsArray = config.getJSONArray("outputs")
+    val inputParamsArray = config.getJSONArray("args")
+    val outParam = config.getJSONObject("output")
 
     // 构造入参
     val inputParameters = makeInputParam(inputParamsArray, args, funcName, sc)
-    val outputParameters = makeOutputParam(outParamsArray, funcName)
+    val outputParameter = makeOutputParam(outParam, funcName)
 
-    inputParameters ++= outputParameters
+    inputParameters += (outputParameter._1 -> outputParameter._2)
 
     val command = dockerExecutor.makeCommand(config, inputParameters)
 
     // 执行命令
-    dockerExecutor.execute(command)
+    try {
+      println(s"command: ${command._2}")
+      dockerExecutor.execute(command._2)
+    } catch {
+      case e: Exception => {
+        println(s"docker command exception: ${e}")
+        dockerExecutor.clean(command._1)
+      }
+    } finally {
+      dockerExecutor.clean(command._1)
+    }
 
     // 文件转换为RDD
-    makeResult(outParamsArray, outputParameters, sc, UUID)
+    try {
+      makeResult(outParamsArray, outputParameters, sc, UUID)
+    } catch {
+      case e: Exception => {
+        println(s"make result exception: ${e}")
+      }
+    }
 
   }
 
   /**
    * 构造入参
    *
-   * @param paramsObject
-   * @param args
-   * @param sc
+   * @param paramsArray 入参列表
+   * @param args        参数
+   * @param funcName    算子名称
+   * @param sc          spark 上下文
    * @return
    */
   private def makeInputParam
   (paramsArray: JSONArray, args: mutable.Map[String, String], funcName: String, sc: SparkContext)
-  : mutable.Map[String, Any] = {
+  : mutable.Map[String, String] = {
 
-    var parameters: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+    var parameters: mutable.Map[String, String] = mutable.Map.empty[String, String]
 
     for (i <- 0 until paramsArray.size) {
       val param: JSONObject = paramsArray.getJSONObject(i)
@@ -71,30 +91,29 @@ object ThirdSource {
         // 栅格落盘
         val fileName = makeFileName(format, funcName, name)
         Converter.convert(Trigger.coverageRddList(args(name)), ThirdOperationDataType.TIF, sc, fileName)
-        parameters += (name, fileName)
+        parameters += (name -> fileName)
 
       } else if (Trigger.featureRddList.contains(args(name))) {
         // 矢量落盘
         val value = Trigger.featureRddList(args(name))
         value match {
-          case rdd: RDD[(String, (Geometry, mutable.Map[String, Any]))] => {
+          case rdd: RDD[(String, (Geometry, mutable.Map[String, Any]))] =>
             val fileName = makeFileName(format, funcName, name)
             Converter.convert(rdd, ThirdOperationDataType.SHP, sc, fileName)
-            parameters += (name, fileName)
-          }
-          case _ => {
+            parameters += (name -> fileName)
+          case _ =>
             throw new IllegalArgumentException("不支持的数据类型")
-          }
+
         }
 
       } else if (Trigger.stringList.contains(args(name))) {
-        parameters += (name, Trigger.stringList(args(name)))
+        parameters += (name -> Trigger.stringList(args(name)))
       } else if (Trigger.doubleList.contains(args(name))) {
-        parameters += (name, Trigger.stringList(args(name)))
+        parameters += (name -> Trigger.stringList(args(name)))
       } else if (Trigger.intList.contains(args(name))) {
-        parameters += (name, Trigger.stringList(args(name)))
+        parameters += (name -> Trigger.stringList(args(name)))
       } else {
-        parameters += (name, args(name))
+        parameters += (name -> args(name))
       }
     }
 
@@ -105,29 +124,23 @@ object ThirdSource {
    * 构造出参
    * 当前版本只支持输出文件路径
    *
-   * @param paramsArray
+   * @param param    出参
+   * @param funcName 算子名称
    * @return
    */
-  private def makeOutputParam(paramsArray: JSONArray, funcName: String): mutable.Map[String, String] = {
-
-    var parameters: mutable.Map[String, String] = mutable.Map.empty[String, String]
-
-    for (i <- 0 until paramsArray.size) {
-      val param: JSONObject = paramsArray.getJSONObject(i)
-      val name: String = param.getString("name")
-      val format: String = param.getString("format")
-      parameters += (name, makeFileName(format, funcName, name))
-    }
-    parameters
+  private def makeOutputParam(param: JSONObject, funcName: String): (String, String) = {
+    val name: String = param.getString("name")
+    val format: String = param.getString("format")
+    (name, makeFileName(format, funcName, name))
   }
 
   /**
    * 输出文件转回RDD
    *
-   * @param paramsArray
-   * @param outFiles
-   * @param sc
-   * @param UUID
+   * @param paramsArray 出参列表
+   * @param outFiles    输出文件
+   * @param sc          spark上下文
+   * @param UUID        参数UUID
    * @return
    */
   private def makeResult(paramsArray: JSONArray, outFiles: mutable.Map[String, String], sc: SparkContext, UUID: String): Any = {
@@ -135,7 +148,7 @@ object ThirdSource {
     for (i <- 0 until paramsArray.size) {
       val param: JSONObject = paramsArray.getJSONObject(i)
       val name: String = param.getString("name")
-      val format: String = param.getString("format")
+      val format: ThirdOperationDataType = ThirdOperationDataType.withName(param.getString("format"))
 
       format match {
         case ThirdOperationDataType.TIF => {
@@ -150,12 +163,22 @@ object ThirdSource {
             )
 
         }
-        case ThirdOperationDataType.SHP | ThirdOperationDataType.GEOJSON => {
+        case ThirdOperationDataType.SHP => {
           Trigger.featureRddList += (
             UUID ->
               Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
                 outFiles(name),
                 ThirdOperationDataType.SHP,
+                sc
+              )
+            )
+        }
+        case ThirdOperationDataType.GEOJSON => {
+          Trigger.featureRddList += (
+            UUID ->
+              Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
+                outFiles(name),
+                ThirdOperationDataType.GEOJSON,
                 sc
               )
             )
@@ -172,14 +195,14 @@ object ThirdSource {
   /**
    * 构造落盘文件名称
    *
-   * @param format
-   * @param funcName
-   * @param paramName
+   * @param format    落盘文件格式
+   * @param funcName  算子名称
+   * @param paramName 参数名称
    * @return
    */
   private def makeFileName(format: String, funcName: String, paramName: String): String = {
-
-    val formatStr = format match {
+    val dataType: ThirdOperationDataType = ThirdOperationDataType.withName(format)
+    val formatStr = dataType match {
       case ThirdOperationDataType.TIF => {
         "tif"
       }

@@ -1,25 +1,18 @@
 package whu.edu.cn.oge
 
-import java.io.{BufferedReader, BufferedWriter, FileWriter, InputStreamReader, OutputStreamWriter, PrintWriter}
-import com.alibaba.fastjson.serializer.SerializerFeature
-import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import geotrellis.layer.{SpaceTimeKey, TileLayerMetadata}
-import geotrellis.raster.mapalgebra.focal.ZFactor
-import geotrellis.raster.{MultibandTile, Tile}
-import org.apache.spark.{SparkConf, SparkContext}
+import geotrellis.raster.MultibandTile
 import org.apache.spark.rdd.RDD
-import org.bouncycastle.util.StringList
-import org.locationtech.jts.geom.{Geometry, _}
+import org.apache.spark.{SparkConf, SparkContext}
+import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.SpaceTimeBandKey
-import whu.edu.cn.trigger.Trigger.{dagId, runMain, userId, workTaskJson}
+import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 import whu.edu.cn.util.RDDTransformerUtil._
 import whu.edu.cn.util.SSHClientUtil._
-import whu.edu.cn.oge.Feature._
-import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.oge.Coverage.loadTxtFromUpload
 
 import scala.collection.mutable
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 object OTB {
   def main(args: Array[String]): Unit = {

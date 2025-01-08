@@ -24,8 +24,8 @@ import whu.edu.cn.algorithms.terrain.calculator
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.entity.OGEClassType.OGEClassType
-import whu.edu.cn.entity.cube.CubeTileKey
 import whu.edu.cn.entity._
+import whu.edu.cn.entity.cube.CubeTileKey
 import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
 import whu.edu.cn.oge.Sheet.CsvData
@@ -225,14 +225,6 @@ object Trigger {
             lazyFunc += (UUID -> (funcName, args))
           case "Filter.bounds" =>
             lazyFunc += (UUID -> (funcName, args))
-
-          // Sheet
-          case "Sheet.getcellValue" =>
-            stringList += (UUID -> Sheet.getcellValue(SheetList(args("sheet")), args("row").toInt, args("col").toInt))
-          case "Sheet.slice" =>
-            SheetList += (UUID -> Sheet.slice(SheetList(args("sheet")), args("sliceRows").toBoolean, args("start").toInt, args("end").toInt))
-          case "Sheet.filterByHeader" =>
-            SheetList += (UUID -> Sheet.filterByHeader(SheetList(args("sheet")), args("condition"), args("value")))
 
           // CoverageCollection
           case "CoverageCollection.filter" =>
@@ -1045,9 +1037,6 @@ object Trigger {
           case "Kernel.laplacian8" =>
             val kernel = Kernel.laplacian8()
             kernelRddList += (UUID -> kernel)
-          case "Kernel.laplacian8" =>
-            val kernel = Kernel.laplacian8()
-            kernelRddList += (UUID -> kernel)
             print(kernel.tile.asciiDraw())
           case "Kernel.add" =>
             val kernel = Kernel.add(kernel1 = kernelRddList(args("kernel1")), kernel2 = kernelRddList(args("kernel2")))
@@ -1130,8 +1119,8 @@ object Trigger {
             coverageRddList += (UUID -> Mosaic.splitMosaic(sc, coverageCollectionRddList(args("coverages"))))
           case "Coverage.atmoCorrection" =>
             coverageRddList += (UUID -> QuantRS.AtmoCorrection(sc, coverageRddList(args("tgtTiff")), coverageRddList(args("LstTiff")), coverageRddList(args("GMTED2Tiff")), args("sensorType"), args("xlsPath"), userId, dagId))
-        case "Coverage.sagaISODockerSwarm" =>
-          coverageRddList += (UUID -> QGIS.sagaISODockerSwarm(sc, coverageRddList(args("grid")), coverageRddList(args("reference"))))
+          case "Coverage.sagaISODockerSwarm" =>
+            coverageRddList += (UUID -> QGIS.sagaISODockerSwarm(sc, coverageRddList(args("grid")), coverageRddList(args("reference"))))
 
           //Feature
           case "Feature.load" =>
@@ -1435,7 +1424,6 @@ object Trigger {
         Trigger.coverageCollectionRddList.clear()
         Trigger.coverageRddList.clear()
         Trigger.zIndexStrArray.clear()
-        JsonToArg.dagMap.clear()
         // TODO forDece: 以下为未检验
         Trigger.tableRddList.clear()
         Trigger.kernelRddList.clear()
@@ -1525,7 +1513,6 @@ object Trigger {
         Trigger.coverageCollectionRddList.clear()
         Trigger.coverageRddList.clear()
         Trigger.zIndexStrArray.clear()
-        JsonToArg.dagMap.clear()
         // TODO forDece: 以下为未检验
         Trigger.tableRddList.clear()
         Trigger.kernelRddList.clear()
@@ -1703,8 +1690,8 @@ object Trigger {
 
     println("***********************************************************")
 
-
-    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
+    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */
+    if (sc.master.contains("local")) {
       JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
@@ -1754,7 +1741,7 @@ object Trigger {
       Trigger.coverageCollectionRddList.clear()
       Trigger.coverageRddList.clear()
       Trigger.zIndexStrArray.clear()
-      JsonToArg.dagMap.clear()
+      JsonToArg.clear()
       //    // TODO lrx: 以下为未检验
       Trigger.tableRddList.clear()
       Trigger.kernelRddList.clear()
@@ -1821,7 +1808,9 @@ object Trigger {
     println("***********************************************************")
 
 
-    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */ if (sc.master.contains("local")) {
+    /*val DAGList: List[(String, String, mutable.Map[String, String])] = */
+
+    if (sc.master.contains("local")) {
       JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
@@ -1873,7 +1862,7 @@ object Trigger {
       Trigger.coverageCollectionRddList.clear()
       Trigger.coverageRddList.clear()
       Trigger.zIndexStrArray.clear()
-      JsonToArg.dagMap.clear()
+      JsonToArg.clear()
       //    // TODO lrx: 以下为未检验
       Trigger.tableRddList.clear()
       Trigger.kernelRddList.clear()
@@ -1925,7 +1914,6 @@ object Trigger {
 
 
     if (sc.master.contains("local")) {
-      //      JsonToArg.jsonAlgorithms = GlobalConfig.Others.jsonAlgorithms
       JsonToArg.jsonAlgorithms = "src/main/scala/whu/edu/cn/jsonparser/algorithms_ogc.json"
       JsonToArg.trans(jsonObject, "0")
     }
@@ -1968,6 +1956,7 @@ object Trigger {
       val tempFilePath = GlobalConfig.Others.tempFilePath
       val filePath = s"${tempFilePath}${dagId}.tiff"
 
+      JsonToArg.clear()
       tempFileList.foreach(file =>{
         if(scala.reflect.io.File(file).exists)
           scala.reflect.io.File(file).delete()
@@ -2006,9 +1995,12 @@ object Trigger {
       .setAppName("query")
     val sc = new SparkContext(conf)
 
-    val json = " { \"0\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.export\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.addStyles\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.add\",\"arguments\": { \"coverage2\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC08_L1TP_159024_20190101_20200830_02_T2\" } ,\"baseUrl\": { \"valueReference\":\"2\" } ,\"productID\": { \"constantValue\":\"LC08_L1TP_C02_T2\" }  }  }  } ,\"bands\": { \"valueReference\":\"1\" }  }  }  } ,\"coverage1\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC08_L1TP_171084_20190105_20200830_02_T1\" } ,\"baseUrl\": { \"valueReference\":\"2\" } ,\"productID\": { \"constantValue\":\"LC08_L1TP_C02_T1\" }  }  }  } ,\"bands\": { \"valueReference\":\"1\" }  }  }  }  }  }  } ,\"palette\": { \"constantValue\":[\"gold\",\"yellow\",\"brown\",\"lightblue\",\"blue\"] }  }  }  }  }  }  } ,\"1\": { \"constantValue\":[\"B1\"] } ,\"2\": { \"constantValue\":\"http://localhost\" } ,\"isBatch\":1 } "
+    // val json = " { \"0\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.export\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.addStyles\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.add\",\"arguments\": { \"coverage2\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC08_L1TP_159024_20190101_20200830_02_T2\" } ,\"baseUrl\": { \"valueReference\":\"2\" } ,\"productID\": { \"constantValue\":\"LC08_L1TP_C02_T2\" }  }  }  } ,\"bands\": { \"valueReference\":\"1\" }  }  }  } ,\"coverage1\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC08_L1TP_171084_20190105_20200830_02_T1\" } ,\"baseUrl\": { \"valueReference\":\"2\" } ,\"productID\": { \"constantValue\":\"LC08_L1TP_C02_T1\" }  }  }  } ,\"bands\": { \"valueReference\":\"1\" }  }  }  }  }  }  } ,\"palette\": { \"constantValue\":[\"gold\",\"yellow\",\"brown\",\"lightblue\",\"blue\"] }  }  }  }  }  }  } ,\"1\": { \"constantValue\":[\"B1\"] } ,\"2\": { \"constantValue\":\"http://localhost\" } ,\"isBatch\":1 } "
+    /*val json = "{\"1\": {\"functionInvocationValue\": {\"functionName\": \"Service.getCoverage\", \"arguments\": {\"baseUrl\": {\"constantValue\": \"http://localhost\"}, \"coverageID\": {\"constantValue\": \"LC81220392015275LGN00\"}, \"productID\": {\"constantValue\": \"LC08_L1T\"}}}}, \"0\": {\"functionInvocationValue\": {\"functionName\": \"Coverage.addStyles\", \"arguments\": {\"coverage\": {\"functionInvocationValue\": {\"functionName\": \"Coverage.add\", \"arguments\": {\"coverage1\": {\"functionInvocationValue\": {\"functionName\": \"Coverage.selectBands\", \"arguments\": {\"bands\": {\"constantValue\": [\"B3\"]}, \"coverage\": {\"valueReference\": \"1\"}}}}, \"coverage2\": {\"functionInvocationValue\": {\"functionName\": \"Coverage.selectBands\", \"arguments\": {\"bands\": {\"constantValue\": [\"B2\"]}, \"coverage\": {\"valueReference\": \"1\"}}}}}}}, \"palette\": {\"constantValue\": [\"gold\", \"yellow\", \"brown\", \"lightblue\", \"blue\"]}}}}, \"isBatch\":1}"*/
 
-    Trigger.runBatch(sc, json, "null_1735631230759_0", "1", "EPSG:4326", "1000", "result", "file_2024_12_31_15_47_14", "tif")
+    val json = "{ \"0\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.export\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.addStyles\",\"arguments\": { \"coverage\": { \"functionInvocationValue\": { \"functionName\":\"Source.ISO\",\"arguments\": { \"reference\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"valueReference\":\"1\" } ,\"bands\": { \"constantValue\":[\"B2\"] }  }  }  } ,\"grid\": { \"functionInvocationValue\": { \"functionName\":\"Coverage.selectBands\",\"arguments\": { \"coverage\": { \"valueReference\":\"1\" } ,\"bands\": { \"constantValue\":[\"B3\"] }  }  }  }  }  }  } ,\"palette\": { \"constantValue\":[\"gold\",\"yellow\",\"brown\",\"lightblue\",\"blue\"] }  }  }  }  }  }  } ,\"1\": { \"functionInvocationValue\": { \"functionName\":\"Service.getCoverage\",\"arguments\": { \"coverageID\": { \"constantValue\":\"LC81220392015275LGN00\" } ,\"baseUrl\": { \"constantValue\":\"http://localhost\" } ,\"productID\": { \"constantValue\":\"LC08_L1T\" }  }  }  } ,\"isBatch\":1 } "
+
+    Trigger.runBatch(sc, json, "null_1736215845355_0", "1", "EPSG:4326", "1000", "result", "file_2021_01_06_14_09_15", "tif")
 
     println("Finish")
     sc.stop()

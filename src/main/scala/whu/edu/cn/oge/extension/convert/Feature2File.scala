@@ -3,6 +3,7 @@ package whu.edu.cn.oge.extension.convert
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.entity.ThirdOperationDataType
 import whu.edu.cn.entity.ThirdOperationDataType.ThirdOperationDataType
 import whu.edu.cn.util.RDDTransformerUtil
 
@@ -23,8 +24,19 @@ object Feature2File extends ParamConverter[RDD[(String, (Geometry, mutable.Map[S
   convert(source: RDD[(String, (Geometry, mutable.Map[String, Any]))],
           dataType: ThirdOperationDataType, sc: SparkContext, target: String = ""): String = {
 
-    RDDTransformerUtil.saveFeatureRDDToShp(source, target)
-    target
+    dataType match {
+      case ThirdOperationDataType.SHP => {
+        RDDTransformerUtil.saveFeatureRDDToShp(source, target)
+        target
+      }
+      case ThirdOperationDataType.GEOJSON => {
+        RDDTransformerUtil.saveFeatureRDDToShp(source, target)
+        target
+      }
+      case _ => {
+        throw new IllegalArgumentException("类型不支持")
+      }
+    }
 
   }
 }

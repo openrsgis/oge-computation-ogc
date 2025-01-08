@@ -1,10 +1,9 @@
 package whu.edu.cn.jsonparser
 
-import com.alibaba.fastjson.JSON
-import com.alibaba.fastjson.JSONObject
-import com.alibaba.fastjson.JSONArray
+import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.entity.Node
+import whu.edu.cn.util.HttpRequestUtil
 
 import scala.collection.mutable
 import scala.io.{BufferedSource, Source}
@@ -12,24 +11,57 @@ import scala.util.control.Breaks
 
 // TODO lrx: 解析的时候加上数据类型？
 object JsonToArg {
-  var jsonAlgorithms: String = GlobalConfig.Others.jsonAlgorithms
-  var thirdJson: String = GlobalConfig.Others.thirdJson
+
+  var jsonAlgorithms: String = ""
+
   var dagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
 
+  var functions: mutable.Map[String, JSONObject] = mutable.Map.empty[String, JSONObject]
+
+  /**
+   * 根据算子名称获取算子配置
+   *
+   * @param functionName 算子名称
+   * @return
+   */
+  def getAlgorithmJson(functionName: String): JSONObject = {
+
+    // 兼容本地local模式调试
+    if (jsonAlgorithms.nonEmpty) {
+      val source: BufferedSource = Source.fromFile(jsonAlgorithms)
+      val line: String = source.mkString
+      val jsonObject: JSONObject = JSON.parseObject(line)
+      return jsonObject.getJSONObject(functionName)
+    }
+
+    if (functions.contains(functionName)) {
+      return functions(functionName)
+    }
+
+    val url = s"${GlobalConfig.ServiceConf.BASE_URL}model-resource/getModelParamJson?functionName=${functionName}"
+    val response = HttpRequestUtil.sendGet(url)
+    val jsonObject = JSON.parseObject(response)
+    if (!jsonObject.getString("code").equals("20000")) {
+      throw new RuntimeException("web API failed!")
+    }
+    // 解析算子配置
+    val configObject = try {
+      JSON.parseObject(jsonObject.getString("data"))
+    } catch {
+      case e: Exception =>
+        throw new RuntimeException(s"Failed to parse JSON content", e)
+    }
+
+    functions += (functionName -> configObject)
+    configObject
+  }
+
   def numberOfArgs(functionName: String): Int = {
-    val source: BufferedSource = Source.fromFile(jsonAlgorithms)
-    val line: String = source.mkString
-    val jsonObject: JSONObject = JSON.parseObject(line)
-    val num: Int = jsonObject.getJSONObject(functionName).getJSONArray("args").size
-    num
+    getAlgorithmJson(functionName).getJSONArray("args").size
   }
 
   def getArgNameByIndex(functionName: String, index: Int): String = {
-    val source: BufferedSource = Source.fromFile(jsonAlgorithms)
-    val line: String = source.mkString
-    val jsonObject: JSONObject = JSON.parseObject(line)
-    val argName: String = jsonObject.getJSONObject(functionName).getJSONArray("args").getJSONObject(index).getString("name")
-    argName
+    getAlgorithmJson(functionName).getJSONArray("args").getJSONObject(index).getString("name")
   }
 
   def getValueReference(valueReference: String, jsonObject: JSONObject): JSONObject = {
@@ -235,7 +267,6 @@ object JsonToArg {
     }
   }
 
-
   def trans(jsonObject: JSONObject, UUID: String): Unit = {
     val node: Node = new Node
     node.setFunctionName(jsonObject.getJSONObject(UUID).getJSONObject("functionInvocationValue").getString("functionName"))
@@ -245,8 +276,14 @@ object JsonToArg {
     node.setUUID(UUID)
 
     BackAndOn(node, 0, jsonObject)
-    val arg: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])] = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
+    val arg: mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]
+    = mutable.ArrayBuffer.empty[(String, String, mutable.Map[String, String])]
     DFS(List(node), arg)
     dagMap += (UUID -> arg)
+  }
+
+  def clear(): Unit = {
+    dagMap.clear()
+    functions.clear()
   }
 }

@@ -1,6 +1,7 @@
 package whu.edu.cn.oge.extension.docker
 
-import com.alibaba.fastjson.{JSON, JSONObject}
+import com.alibaba.fastjson.JSONObject
+import whu.edu.cn.jsonparser.JsonToArg
 
 import scala.collection.mutable
 
@@ -12,55 +13,12 @@ trait Docker {
   /**
    * 获取算子配置信息
    *
-   * @param functionName
+   * @param functionName 算子名称
    * @return
    */
   def getConfig(functionName: String): JSONObject = {
 
-    //todo 从接口拿算子配置信息
-
-    val config =
-      """{
-        "name": "Source.ISO",
-        "image": "saga-gis",
-        "version": "v2.0",
-        "script": "saga_cmd grid_calculus 21",
-
-        "inputs": [
-          {
-            "name": "GRID",
-            "type": "Coverage",
-            "format": "TIF",
-            "description": "",
-            "default": "None",
-            "optional": "False"
-          },
-          {
-            "name": "REFERENCE",
-            "type": "Coverage",
-            "format": "TIF",
-            "description": "",
-            "default": "None",
-            "optional": "False"
-          }
-        ],
-        "outputs": [
-          {
-            "name": "MATCHED",
-            "type": "Coverage",
-            "format": "TIF",
-            "description": ""
-          }
-        ]
-      }"""
-
-    // 解析算子配置
-    val configObject = try {
-      JSON.parseObject(config)
-    } catch {
-      case e: Exception =>
-        throw new RuntimeException(s"Failed to parse JSON content", e)
-    }
+    val configObject: JSONObject = JsonToArg.getAlgorithmJson(functionName)
 
     // 提取算子信息
     if (!configObject.containsKey("image")) {
@@ -75,12 +33,12 @@ trait Docker {
       throw new RuntimeException(s"Missing 'script' key in 'operator' section of JSON")
     }
 
-    if (!configObject.containsKey("inputs")) {
-      throw new RuntimeException(s"Missing 'parameters' key in 'operator' section of JSON")
+    if (!configObject.containsKey("args")) {
+      throw new RuntimeException(s"Missing 'args' key in 'operator' section of JSON")
     }
 
-    if (!configObject.containsKey("outputs")) {
-      throw new RuntimeException(s"Missing 'parameters' key in 'operator' section of JSON")
+    if (!configObject.containsKey("output")) {
+      throw new RuntimeException(s"Missing 'output' key in 'operator' section of JSON")
     }
 
     configObject
@@ -95,20 +53,27 @@ trait Docker {
   def available(): Boolean
 
   /**
-   * 构造命令
+   * 构造docker 命令
    *
-   * @param configObject
-   * @param parameters
-   * @return
+   * @param configObject 算子配置JSON对象
+   * @param parameters   参数信息
+   * @return (服务名称， 执行命令)
    */
-  def makeCommand(configObject: JSONObject, parameters: mutable.Map[String, Any]): String
+  def makeCommand(configObject: JSONObject, parameters: mutable.Map[String, String]): (String, String)
 
   /**
    * 执行第三方算子
    *
-   * @param command
+   * @param command 命令
    * @return
    */
   def execute(command: String): Unit
+
+  /**
+   * 清理Service
+   *
+   * @param name 服务名称
+   */
+  def clean(name: String): Unit
 
 }

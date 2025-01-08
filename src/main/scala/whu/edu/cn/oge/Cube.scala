@@ -1,70 +1,55 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.{JSON, JSONArray, JSONObject}
-import com.baidubce.services.bos.BosClient
 import geotrellis.layer
 import geotrellis.layer.stitch.TileLayoutStitcher
-import geotrellis.layer.{Bounds, LayoutDefinition, Metadata, SpaceTimeKey, SpatialKey, TileLayerMetadata, ZoomedLayoutScheme}
+import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.proj4.CRS
-import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.mapalgebra.local._
-import geotrellis.raster.resample.Bilinear
-import geotrellis.raster.{ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleConstantNoDataCellType, MultibandTile, Raster, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
+import geotrellis.raster.{ByteConstantNoDataCellType, CellType, DoubleArrayTile, DoubleConstantNoDataCellType, MultibandTile, ShortConstantNoDataCellType, Tile, TileLayout, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
 import geotrellis.spark._
-import geotrellis.spark.pyramid.Pyramid
-import geotrellis.spark.store.file.FileLayerWriter
-import geotrellis.store.LayerId
-import geotrellis.store.file.FileAttributeStore
-import geotrellis.store.index.ZCurveKeyIndexMethod
 import geotrellis.vector.{Extent, Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon}
-import io.minio.{MinioClient, UploadObjectArgs}
 import javafx.scene.paint.Color
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-import org.geotools.data.{FeatureWriter, Transaction}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.geotools.data.shapefile.{ShapefileDataStore, ShapefileDataStoreFactory}
+import org.geotools.data.{FeatureWriter, Transaction}
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder
 import org.geotools.geojson.feature.FeatureJSON
 import org.geotools.geojson.geom.GeometryJSON
 import org.geotools.referencing.crs.DefaultGeographicCRS
-import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}
+import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import redis.clients.jedis.Jedis
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
-import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
-import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity.{BatchParam, CoverageMetadata, RawTile, VisualizationParam}
 import whu.edu.cn.geocube.application.conjoint.Flood.impactedFeaturesService
 import whu.edu.cn.geocube.application.gdc.RasterCubeFun.{writeResultJson, zonedDateTime2String}
 import whu.edu.cn.geocube.application.gdc.gdcCoverage._
 import whu.edu.cn.geocube.core.cube.raster.RasterRDD
-import whu.edu.cn.geocube.core.cube.vector.{FeatureRDD, GeoObject}
-import whu.edu.cn.geocube.core.entity.{GcDimension, GcMeasurement, GcProduct, QueryParams, RasterTile, RasterTileLayerMetadata, SpaceTimeBandKey, VectorGridLayerMetadata}
+import whu.edu.cn.geocube.core.cube.vector.GeoObject
+import whu.edu.cn.geocube.core.entity._
 import whu.edu.cn.geocube.core.raster.query.DistributedQueryRasterTiles.getRasterTileRDD
 import whu.edu.cn.geocube.core.raster.query.QueryRasterTiles
 import whu.edu.cn.geocube.core.vector.grid.GridConf
 import whu.edu.cn.geocube.core.vector.query.QueryVectorObjects
 import whu.edu.cn.geocube.util.NetcdfUtil.{isAddDimensionSame, rasterRDD2Netcdf}
 import whu.edu.cn.geocube.util.PostgresqlService
-import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.oge.Coverage.removeZeroFromTile
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
 import whu.edu.cn.util.TileSerializerCoverageUtil.deserializeTileData
-import whu.edu.cn.util.{COGUtil, ClientUtil, JedisUtil, PostSender}
+import whu.edu.cn.util.{COGUtil, ClientUtil}
 
 import java.io.{File, FileWriter, Reader, StringReader}
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.time.{ZoneOffset, ZonedDateTime}
-import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, Map}
-import java.time.Instant
 import java.util
 import java.util.Date
 import scala.Console.println
+import scala.collection.mutable
+import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.math.{max, min}
 
 object Cube {

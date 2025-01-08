@@ -3,7 +3,6 @@ package whu.edu.cn.util
 import com.alibaba.fastjson.{JSON, JSONObject}
 import com.jcraft.jsch.{ChannelShell, JSch, Session}
 import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.jsonparser.JsonToArg.thirdJson
 import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
 
 import java.io._
@@ -19,7 +18,7 @@ import scala.language.postfixOps
 object BashUtil {
 
   val algorithmInfos: JSONObject = {
-    val source: BufferedSource = Source.fromFile(thirdJson)
+    val source: BufferedSource = Source.fromFile(GlobalConfig.Others.thirdJson)
     val line: String = source.mkString
     JSON.parseObject(line)
   }

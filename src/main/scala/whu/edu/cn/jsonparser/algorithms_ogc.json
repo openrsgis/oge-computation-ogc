@@ -5642,38 +5642,6 @@
       }
     ]
   },
-  "Coverage.simpleFilterBySAGA": {
-    "description": "Simple standard filters for grids.",
-    "returns": "Coverage",
-    "args": [
-      {
-        "name": "input",
-        "type": "Coverage",
-        "description": "Grid"
-      },
-      {
-        "name": "method",
-        "type": "Int",
-        "optional": "True",
-        "description": "choice Available Choices: [0] Smooth [1] Sharpen [2] Edge Default: 0",
-        "default": 0
-      },
-      {
-        "name": "kernelType",
-        "type": "Int",
-        "description": "choice Available Choices: [0] Square [1] Circle Default: 1",
-        "optional": "True",
-        "default": 1
-      },
-      {
-        "name": "kernelRadius",
-        "type": "Int",
-        "description": "integer number Minimum: 0 Default: 2",
-        "optional": "True",
-        "default": 2
-      }
-    ]
-  },
   "Coverage.minimumdistanceClassificationBySAGA": {
     "description": "Standard methods for supervised image classification, including minimum distance, maximum likelihood, spectral angle mapping. Classifiers can be trained by areas defined through shapes, samples supplied as table records, or statistics previously stored to file.",
     "returns": "Coverage",
@@ -12268,28 +12236,18 @@
     ]
   },
   "Cube.subtract": {
-    "description": "Compute binarization of the Cube.",
+    "description": "Subtracts the second value from the first for each matched pair of bands in cube1 and cube2.",
     "returns": "Cube",
     "args": [
       {
-        "name": "input",
+        "name": "cube1",
         "type": "Cube",
-        "description": "The cube to compute NDWI."
+        "description": "The cube from which the left operand bands are taken."
       },
       {
-        "name": "product",
-        "type": "String",
-        "description": "The product to compute binarization."
-      },
-      {
-        "name": "timeList",
-        "type": "List<String>",
-        "description": "The list of time."
-      },
-      {
-        "name": "name",
-        "type": "String",
-        "description": "The name of result of binary"
+        "name": "cube2",
+        "type": "Cube",
+        "description": "The cube from which the right operand bands are taken."
       }
     ]
   },
@@ -14297,36 +14255,36 @@
     ]
   },
   "Coverage.imaginaryConstellations": {
-  "description": "",
-  "returns": "Coverage",
-  "args": [
-    {
-      "name": "LAI",
-      "type": "Coverage",
-      "description": "Coverage2"
-    },
-    {
-      "name": "FAPAR",
-      "type": "Coverage",
-      "description": "Coverage3"
-    },
-    {
-      "name": "NDVI",
-      "type": "Coverage",
-      "description": "Coverage4"
-    },
-    {
-      "name": "FVC",
-      "type": "Coverage",
-      "description": "Coverage6"
-    },
-    {
-      "name": "ALBEDO",
-      "type": "Coverage",
-      "description": "Coverage7"
-    }
-  ]
-},
+    "description": "",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "LAI",
+        "type": "Coverage",
+        "description": "Coverage2"
+      },
+      {
+        "name": "FAPAR",
+        "type": "Coverage",
+        "description": "Coverage3"
+      },
+      {
+        "name": "NDVI",
+        "type": "Coverage",
+        "description": "Coverage4"
+      },
+      {
+        "name": "FVC",
+        "type": "Coverage",
+        "description": "Coverage6"
+      },
+      {
+        "name": "ALBEDO",
+        "type": "Coverage",
+        "description": "Coverage7"
+      }
+    ]
+  },
   "Coverage.HiGlassAlbedo": {
     "description": "",
     "returns": "Coverage",

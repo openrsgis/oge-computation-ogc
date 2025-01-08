@@ -1,7 +1,7 @@
 package whu.edu.cn.oge.extension.docker
 
 object DockerExecutor {
-  def getExecutor(): Docker = {
+  def getExecutor: Docker = {
     if (SwarmDocker.available()) {
       SwarmDocker
     } else if (K8SDocker.available()) {

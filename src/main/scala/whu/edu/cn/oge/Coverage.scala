@@ -1,8 +1,6 @@
 package whu.edu.cn.oge
 
 import com.alibaba.fastjson.JSONObject
-import com.baidubce.services.bos.BosClient
-import com.baidubce.services.bos.model.GetObjectRequest
 import geotrellis.layer._
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.proj4.CRS
@@ -11,7 +9,6 @@ import geotrellis.raster.mapalgebra.focal
 import geotrellis.raster.mapalgebra.focal.TargetCell
 import geotrellis.raster.mapalgebra.local._
 import geotrellis.raster.resample.{Bilinear, PointResampleMethod}
-import io.minio.{GetObjectArgs, MinioClient, PutObjectArgs, UploadObjectArgs}
 import geotrellis.raster.{reproject => _, _}
 import geotrellis.spark._
 import geotrellis.spark.pyramid.Pyramid
@@ -25,40 +22,30 @@ import org.apache.commons.math3.distribution.FDistribution
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
-import redis.clients.jedis.Jedis
+import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.config.GlobalConfig.ClientConf.{CLIENT_NAME, USER_BUCKET_NAME}
-import whu.edu.cn.config.GlobalConfig.DagBootConf._
-import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_BUCKET_NAME
 import whu.edu.cn.config.GlobalConfig.BosConf.BOS_BUCKET_NAME
+import whu.edu.cn.config.GlobalConfig.ClientConf.{CLIENT_NAME, USER_BUCKET_NAME}
 import whu.edu.cn.config.GlobalConfig.Others.tempFilePath
-import whu.edu.cn.config.GlobalConfig.RedisConf.REDIS_CACHE_TTL
 import whu.edu.cn.entity._
-import whu.edu.cn.jsonparser.JsonToArg
 import whu.edu.cn.trigger.Trigger
-import whu.edu.cn.trigger.Trigger.{batchParam, dagId, layerName, tempFileList, userId, windowExtent}
+import whu.edu.cn.trigger.Trigger.{dagId, tempFileList, userId}
 import whu.edu.cn.util.CoverageUtil._
-import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostgresqlServiceUtil.queryCoverage
-import whu.edu.cn.util.RDDTransformerUtil.{makeChangedRasterRDDFromTifNew, saveRasterRDDToTif}
-import whu.edu.cn.util.SSHClientUtil.{runCmd, versouSshUtil}
+import whu.edu.cn.util.RDDTransformerUtil.saveRasterRDDToTif
+import whu.edu.cn.util._
 
-import java.io.{File, FileInputStream}
-import java.nio.file.{Files, Paths}
+import java.io.File
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.mutable
 import scala.language.postfixOps
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import scala.util.control.Breaks
-import whu.edu.cn.util.{COGUtil, Cbrt, ClientUtil, CoverageOverloadUtil, Entropy, Mod, PostSender, RDDTransformerUtil, RemapWithDefaultValue, RemapWithoutDefaultValue}
-
 import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe._
-import java.io.File
-import sys.process._
+import scala.sys.process._
 import scala.util.Random
-import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
+import scala.util.control.Breaks
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
