@@ -157,7 +157,7 @@ object GlobalConfig {
     var Quant_PORT: Int = 22
   }
 
-  // 第三方算子
+  // 第三方算子 ssh配置
   object ThirdApplication {
     final var THIRD_HOST: String = "172.22.1.19"
     final var THIRD_USERNAME: String = "root"
@@ -167,7 +167,7 @@ object GlobalConfig {
     final var THIRD_PORT: Int = 22
   }
 
-  // Docker Swarm
+  // Docker Swarm 镜像配置信息
   object DockerSwarmConf {
     final var MASTER_HOST: String = "172.22.1.19"
     final var REGISTRY_PORT: Int = 5001
@@ -177,6 +177,12 @@ object GlobalConfig {
     final var MOUNT_SOURCE: String = "/mnt/storage"
     final var MOUNT_TARGET: String = "/mnt/storage"
     final var ALGORITHM_JSON: String = "/mnt/storage/algorithmJson"
+    final var HUB_SERVER: String = "172.30.1.110:5000"
+  }
+
+  // 基础服务配置信息
+  object ServiceConf {
+    val BASE_URL: String = "http://172.30.1.79:16082/"
   }
 
   object Others {
