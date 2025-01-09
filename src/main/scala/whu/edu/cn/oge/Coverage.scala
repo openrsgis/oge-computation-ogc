@@ -59,6 +59,7 @@ import java.io.File
 import sys.process._
 import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
+import scala.collection.mutable.ArrayBuffer
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -131,6 +132,26 @@ object Coverage {
     println("Make RDD Time: " + (System.currentTimeMillis() - time2))
     coverage
   }
+
+
+  def loadByFeature(implicit sc: SparkContext, productName: String, sensorName: String = null, measurementName: ArrayBuffer[String] = ArrayBuffer.empty[String], startTime: String = null, endTime: String = null, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], crs: CRS = null, level: Int = 0,cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val coordinateString: String = Feature.coordinates(Feature.bounds(feature))
+    val coordinatePairs = coordinateString.split(", ").map(_.replace("(", "").replace(")", ""))
+    coordinatePairs.foreach(println)
+    var x: ArrayBuffer[Double] = ArrayBuffer()
+    var y: ArrayBuffer[Double] = ArrayBuffer()
+
+    for (i <- coordinatePairs.indices by 2) {
+      x += coordinatePairs(i).toDouble
+      y += coordinatePairs(i + 1).toDouble
+    }
+
+    val extent = new Extent(x.min, y.min, x.max, y.max)
+    val coverageMosaic = CoverageCollection.mosaic(CoverageCollection.load(sc, productName, sensorName, measurementName, startTime, endTime, extent, crs, level, cloudCoverMin, cloudCoverMax))
+    QGIS.gdalClipRasterByMaskLayer(sc, coverageMosaic, feature, "True", "", "False", "", "","False","False","","False","0","")
+
+  }
+
 
   def geoDetector(implicit depVar_In: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
                   facVar_name_In:String,
@@ -3038,6 +3059,36 @@ object Coverage {
       }))
     }), coverage._2)
   }
+
+
+  def setValueRangeByPercentage(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), minimum: Double, maximum: Double): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val value: Array[Double] = coverage._1.flatMap(t =>
+      t._2.bands.flatMap(tile =>
+        tile.toArrayDouble().filter(!_.isNaN)
+      )
+    ).collect()
+
+    val sortedValue = value.distinct.sorted
+    val indexMax = (sortedValue.length * maximum).toInt
+    val indexMin = (sortedValue.length * minimum).toInt
+
+    val valueAtMaxPercentile = sortedValue(indexMax)
+    val valueAtMinPercentile = sortedValue(indexMin)
+
+    (coverage._1.map(t => {
+      (t._1, t._2.mapBands((_, tile) => {
+        tile.mapDouble(pixel => {
+          if (pixel >= valueAtMinPercentile && pixel <= valueAtMaxPercentile) {
+            pixel
+          }
+          else {
+            Double.NaN
+          }
+        })
+      }))
+    }), coverage._2)
+  }
+
 
   def randomSample(
                     coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]),
