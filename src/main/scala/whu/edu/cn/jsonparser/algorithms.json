@@ -16342,5 +16342,56 @@
         "description": "The prediction coverage data."
       }
     ]
+  },
+  "MLmodel.export": {
+    "description": "Export a MLmodel.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "model",
+        "type": "MLmodel",
+        "description": "The mlmodel to be exported"
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "description": "The description of the mlmodel",
+        "optional": "True"
+      },
+      {
+        "name": "folder",
+        "type": "String",
+        "description": "The folder path of the exported mlmodel",
+        "optional": "True"
+      },
+      {
+        "name": "fileName",
+        "type": "String",
+        "description": "The file name of the exported mlmodel",
+        "optional": "True"
+      },
+      {
+        "name": "fileFormat",
+        "type": "String",
+        "description": "The format of the exported mlmodel",
+        "optional": "True"
+      }
+    ]
+  },
+  "Service.getModel": {
+    "description": "Load a mlmodel.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "modelID",
+        "type": "String",
+        "description": "The id of mlmodel product."
+      }
+    ]
   }
 }

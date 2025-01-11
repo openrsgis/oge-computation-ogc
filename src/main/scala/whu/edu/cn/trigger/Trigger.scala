@@ -36,6 +36,24 @@ import whu.edu.cn.util.PostSender
 
 import scala.collection.mutable.{ListBuffer, Map}
 import scala.collection.{immutable, mutable}
+import scala.io.{BufferedSource, Source}
+import scala.util.Random
+import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
+import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
+import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
+import whu.edu.cn.oge.Sheet.CsvData
+import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
+import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
+import whu.edu.cn.entity.cube.CubeTileKey
+import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
+import whu.edu.cn.algorithms.MLlib.algorithms.{randomForestClassifierModel,logisticRegressionClassifierModel,decisionTreeClassifierModel,gbtClassifierClassifierModel,multilayerPerceptronClassifierModel,linearSVCClassifierModel,naiveBayesClassifierModel,fmClassifierModel,oneVsRestClassifierModel,modelClassify,
+  randomForestRegressionModel,linearRegressionModel,generalizedLinearRegressionModel,decisionTreeRegressionModel,gbtRegressionModel,isotonicRegressionModel,fmRegressionModel,modelRegress,
+  kMeans => mlKMeans, latentDirichletAllocation, bisectingKMeans, gaussianMixture,
+  multiclassClassificationEvaluator,clusteringEvaluator,multilabelClassificationEvaluator,binaryClassificationEvaluator,regressionEvaluator,rankingEvaluator,
+  saveModelBatch, loadModelFromUpload}
+
+
+import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
@@ -159,72 +177,76 @@ object Trigger {
       else {
         funcName match {
 
-          //Others
-          case "Service.printString" =>
-            val temp = getValue(args("object"))
-            val res = temp._1
-            val valueType = temp._2
-            Service.print(res, args("name"), valueType)
-          case "Service.printNumber" =>
-            val temp = getValue(args("object"))
-            val res = temp._1
-            val valueType = temp._2
-            Service.print(res, args("name"), valueType)
-          case "Service.printList" =>
-            val temp = getValue(args("object"))
-            val res = temp._1
-            val valueType = temp._2
-            Service.print(res, args("name"), valueType)
-          case "Service.printSheet" =>
-            val sheet = SheetList(args("object"))
-            Sheet.printSheet(sheet, args("name"))
-          // Service
-          case "Service.getCoverageCollection" =>
-            lazyFunc += (UUID -> (funcName, args))
-            coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if (isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if (isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
-          case "Service.getCoverageArray" =>
-            lazyFunc += (UUID -> (funcName, args))
-            coverageArrayMetadata += Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if (isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if (isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat)
-          case "Service.getCoverage" =>
-            if (args("coverageID").startsWith("myData/") || args("coverageID").startsWith("result/")) {
-              coverageReadFromUploadFile = true
-              coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
-            } else if (args("coverageID").startsWith("OGE_Case_Data/")) {
-              coverageReadFromUploadFile = true
-              coverageRddList += (UUID -> Coverage.loadCoverageFromCaseData(sc, args("coverageID"), dagId))
-            }
-            else {
-              coverageReadFromUploadFile = false
-              coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
-            }
-          case "Service.getCube" =>
-            cubeRDDList += (UUID -> Service.getCube(sc, args("cubeId"), args("products"), args("bands"), args("time"), args("extent"), args("tms"), args("resolution")))
-          case "Service.getTable" =>
-            tableRddList += (UUID -> isOptionalArg(args, "productID"))
-          case "Service.getFeatureCollection" =>
-            featureRddList += (UUID -> isOptionalArg(args, "productID"))
-          case "Service.getFeature" =>
-            if (args("featureId").startsWith("myData/")) {
-              if (args.contains("crs"))
-                featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, isOptionalArg(args, "crs")))
-              else
-                featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, "EPSG:4326"))
-            } else {
-              featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
-            }
-          case "Service.getSheet" =>
-            if (args("sheetID").startsWith("myData/")) {
-              SheetList += (UUID -> Sheet.loadCSVFromUpload(sc, args("sheetID"), userId, dagId))
-            }
-          // Filter // TODO lrx: 待完善Filter类的函数
-          case "Filter.equals" =>
-            lazyFunc += (UUID -> (funcName, args))
-          case "Filter.and" =>
-            lazyFunc += (UUID -> (funcName, args))
-          case "Filter.date" =>
-            lazyFunc += (UUID -> (funcName, args))
-          case "Filter.bounds" =>
-            lazyFunc += (UUID -> (funcName, args))
+        //Others
+        case "Service.printString" =>
+          val temp = getValue(args("object"))
+          val res =temp._1
+          val valueType=temp._2
+          Service.print(res,args("name"),valueType)
+        case "Service.printNumber" =>
+          val temp = getValue(args("object"))
+          val res = temp._1
+          val valueType = temp._2
+          Service.print(res, args("name"), valueType)
+        case "Service.printList" =>
+          val temp = getValue(args("object"))
+          val res = temp._1
+          val valueType = temp._2
+          Service.print(res, args("name"), valueType)
+        case "Service.printSheet" =>
+          val sheet = SheetList(args("object"))
+          Sheet.printSheet(sheet, args("name"))
+        // Service
+        case "Service.getCoverageCollection" =>
+          lazyFunc += (UUID -> (funcName, args))
+          coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
+        case "Service.getCoverageArray" =>
+          lazyFunc += (UUID -> (funcName, args))
+          coverageArrayMetadata += Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat)
+        case "Service.getCoverage" =>
+          if(args("coverageID").startsWith("myData/") || args("coverageID").startsWith("result/")){
+            coverageReadFromUploadFile = true
+            coverageRddList += (UUID -> Coverage.loadCoverageFromUpload(sc, args("coverageID"), userId, dagId))
+          } else if(args("coverageID").startsWith("OGE_Case_Data/")){
+            coverageReadFromUploadFile = true
+            coverageRddList += (UUID -> Coverage.loadCoverageFromCaseData(sc, args("coverageID"),  dagId))
+          }
+          else {
+            coverageReadFromUploadFile = false
+            coverageRddList += (UUID -> Service.getCoverage(sc, args("coverageID"), args("productID"), level = level))
+          }
+        case "Service.getCube" =>
+          cubeRDDList += (UUID -> Service.getCube(sc, args("cubeId"), args("products"), args("bands"), args("time"), args("extent"), args("tms"), args("resolution")))
+        case "Service.getTable" =>
+          tableRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeatureCollection" =>
+          featureRddList += (UUID -> isOptionalArg(args, "productID"))
+        case "Service.getFeature" =>
+          if(args("featureId").startsWith("myData/")){
+            if(args.contains("crs"))
+              featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, isOptionalArg(args, "crs")))
+            else
+              featureRddList += (UUID -> Feature.loadFeatureFromUpload(sc, args("featureId"), userId, dagId, "EPSG:4326"))
+          } else {
+            featureRddList += (UUID -> Service.getFeature(sc, args("featureId"), isOptionalArg(args, "dataTime"), isOptionalArg(args, "crs")))
+          }
+        case "Service.getSheet" =>
+          if (args("sheetID").startsWith("myData/")) {
+            SheetList += (UUID -> Sheet.loadCSVFromUpload(sc, args("sheetID"), userId, dagId))
+          }
+        case "Service.getModel" =>
+          if (args("modelID").startsWith("myData/") || args("modelID").startsWith("result/")) {
+            mlmodelRddList += (UUID -> loadModelFromUpload(sc, args("modelID"), userId, dagId))
+          }
+        // Filter // TODO lrx: 待完善Filter类的函数
+        case "Filter.equals" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.and" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.date" =>
+          lazyFunc += (UUID -> (funcName, args))
+        case "Filter.bounds" =>
+          lazyFunc += (UUID -> (funcName, args))
 
           // CoverageCollection
           case "CoverageCollection.filter" =>
@@ -1501,6 +1523,8 @@ object Trigger {
           stringList += (UUID -> regressionEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
         case "MLmodel.rankingEvaluator" =>
           stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "MLmodel.export" =>
+          saveModelBatch(sc, model = mlmodelRddList(args("model")), batchParam = batchParam, dagId)
         case "Coverage.randomSample" =>
           coverageRddList += (UUID ->Coverage.randomSample(coverage = coverageRddList(args("coverage")), args("sampleRate").toDouble, args("seed").toLong, args("useSampleRatePart").toBoolean))
       }

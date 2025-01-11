@@ -13,35 +13,21 @@ import org.apache.spark.sql.SparkSession
 import org.jpmml.sparkml.PipelineModelUtil
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.config.GlobalConfig
-import whu.edu.cn.config.GlobalConfig.ClientConf.CLIENT_NAME
+import whu.edu.cn.config.GlobalConfig.ClientConf.{CLIENT_NAME, USER_BUCKET_NAME}
+import whu.edu.cn.config.GlobalConfig.MinioConf.MINIO_BUCKET_NAME
 import whu.edu.cn.entity.{BatchParam, SpaceTimeBandKey}
 import whu.edu.cn.oge.TriggerEdu.makeTIFF
-import whu.edu.cn.util.{ClientUtil, PostSender}
+import whu.edu.cn.trigger.Trigger
+import whu.edu.cn.trigger.Trigger.tempFileList
+import whu.edu.cn.util.{ClientUtil, PostSender, RDDTransformerUtil}
 import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.Random
 
 object algorithms {
-  //以下是在OGE主版模型中保存算子
-  def visualizeBatch(implicit sc: SparkContext, model: PipelineModel, batchParam: BatchParam, dagId: String): Unit = {
-    // 上传文件
-    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}" //这里没有后缀，先走通文件夹，因为压缩也需要用原路径放文件夹
-    //    GeoTiff(reprojectTile, batchParam.getCrs).write(saveFilePath)
-    model.write.overwrite().save(saveFilePath)
-    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
-    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + "." + batchParam.getFormat
-    val obj: JSONObject = new JSONObject
-    obj.put("path",path.toString)
-    PostSender.shelvePost("info",obj)
-    //    client.putObject(PutObjectArgs.builder().bucket("oge-user").`object`(batchParam.getFileName + "." + batchParam.getFormat).stream(inputStream,inputStream.available(),-1).build)
-
-    clientUtil.Upload(path, saveFilePath)
-
-    //    client.putObject(PutObjectArgs)
-    //    minIOUtil.releaseMinioClient(client)
-  }
-
-  //暂时不提供筛选波段，前端可以使用Coverage.selectBands选
+    //暂时不提供筛选波段，前端可以使用Coverage.selectBands选
   //分类
   def randomForestClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
@@ -206,4 +192,39 @@ object algorithms {
     Evaluator.rankingEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
   }
 
+  //以下是在OGE主版中保存模型
+  def saveModelBatch(implicit sc: SparkContext, model: PipelineModel, batchParam: BatchParam, dagId: String): Unit = {
+    // 上传文件
+    val saveFilePath = s"${GlobalConfig.Others.tempFilePath}${dagId}" //这里没有后缀，先走通文件夹，因为压缩也需要用原路径放文件夹
+    model.write.overwrite().save("file://" + saveFilePath)
+    //TODO 目前仅支持.zip
+    val saveFilePathWithZip = saveFilePath + ".zip"
+    PipelineModelUtil.compress(new File(saveFilePath), new File(saveFilePathWithZip))
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val path = batchParam.getUserId + "/result/" + batchParam.getFileName + ".zip"   // TODO 后面前端对话框允许修改“文件类型”后，将这句改为+ "." + batchParam.getFormat
+//    val path = "d2cec4be-13a0-4989-aaf6-d0372d4cbd71" + "/result/" + "model0107" + ".zip" //楼下集群调试 使用这句
+    val obj: JSONObject = new JSONObject
+    obj.put("path",path)
+    PostSender.shelvePost("info",obj)
+    clientUtil.Upload(path, saveFilePathWithZip)
+  }
+  //在OGE主版中加载模型
+  def loadModelFromUpload(implicit sc: SparkContext, modelID: String, userID: String, dagId: String): PipelineModel = {
+    var path: String = new String()
+    if (modelID.endsWith(".zip")) {
+      path = s"${userID}/$modelID"
+    } else {
+      path = s"$userID/$modelID.zip"
+    }
+    val clientUtil = ClientUtil.createClientUtil(CLIENT_NAME)
+    val tempPath = GlobalConfig.Others.tempFilePath
+    val filePath = s"$tempPath${dagId}_${Trigger.file_id}.zip" //从数据库下载下来后临时文件存放路径
+    clientUtil.Download(path, filePath) //临时文件有了
+    val modelPath = filePath
+//    val modelPathWithZip = if (modelPath.endsWith(".zip")) modelPath else modelPath + ".zip"
+//    PipelineModelUtil.uncompress(new File(modelPathWithZip), new File(modelPathWithZip.stripSuffix(".zip")))
+    util.unCompressFile(modelPath)
+    val model: PipelineModel = PipelineModel.load("file://" + modelPath.stripSuffix(".zip"))
+    model
+  }
 }

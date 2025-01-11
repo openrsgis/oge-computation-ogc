@@ -395,8 +395,14 @@ object util {
     // 遍历压缩包中的文件
     while ({ entry = zipInput.getNextEntry(); entry } != null) { // 得到一个压缩实体
       //      println(s"解压缩 ${entry.getName} 文件")
+      val entry_correct = entry.getName().replace("\\", "/")
       println(entry.getName)
-      outFile = new File(Paths.get(srcZipPath).getParent().toString() + s"/${entry.getName}") // 定义输出的文件路径
+//      outFile = new File(Paths.get(srcZipPath).getParent().toString() + s"/${entry.getName}") // 定义输出的文件路径
+      val baseDir = new File(Paths.get(srcZipPath).getParent().toString(), file.getName.stripSuffix(".zip")) // 创建与 ZIP 同名的文件夹
+      if (!baseDir.exists()) {
+        baseDir.mkdirs() // 确保同名文件夹存在
+      }
+      outFile = new File(baseDir, entry_correct) // 在该文件夹中解压
       if (!outFile.getParentFile.exists()) { // 如果输出文件夹不存在
         outFile.getParentFile.mkdirs() // 创建文件夹
       }
