@@ -5,6 +5,7 @@ import geotrellis.raster.{MultibandTile, Tile}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import com.alibaba.fastjson.JSONObject
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.DagBootConf.DAG_ROOT_URL
 import whu.edu.cn.entity.cube.CubeTileKey
@@ -13,6 +14,9 @@ import whu.edu.cn.geocube.core.entity.RasterTileLayerMetadata
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.HttpRequestUtil.sendPost
 import whu.edu.cn.util.PostSender
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 object Service {
 
@@ -37,6 +41,16 @@ object Service {
 
     val time1: Long = System.currentTimeMillis()
     val coverage = Coverage.load(sc, coverageId, productKey,level)
+    println("Loading data Time: "+ (System.currentTimeMillis()-time1))
+    coverage
+  }
+
+  def getCoverageByFeature(implicit sc: SparkContext, productName: String, dateTime: String = null, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))] = null, level: Int = 0, cloudCoverMin: Float = 0, cloudCoverMax: Float = 100): (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = {
+    val time1: Long = System.currentTimeMillis()
+    val timeArray: Array[String] = dateTime.split(",")
+    val startTime = timeArray.head
+    val endTime = timeArray(1)
+    val coverage = Coverage.loadByFeature(sc, productName, null, ArrayBuffer.empty[String], startTime, endTime, feature, null, level, cloudCoverMin, cloudCoverMax)
     println("Loading data Time: "+ (System.currentTimeMillis()-time1))
     coverage
   }

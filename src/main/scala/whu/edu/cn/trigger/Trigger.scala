@@ -189,6 +189,9 @@ object Trigger {
         case "Service.getCoverageCollection" =>
           lazyFunc += (UUID -> (funcName, args))
           coverageCollectionMetadata += (UUID -> Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
+        case "Service.getCoverageByFeature" =>
+          lazyFunc += (UUID -> (funcName, args))
+          coverageRddList += (UUID -> Service.getCoverageByFeature(sc, args("productID"), dateTime = isOptionalArg(args, "datetime"), feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], level = level, cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat))
         case "Service.getCoverageArray" =>
           lazyFunc += (UUID -> (funcName, args))
           coverageArrayMetadata += Service.getCoverageCollection(args("productID"), dateTime = isOptionalArg(args, "datetime"), extent = isOptionalArg(args, "bbox"), cloudCoverMin = if(isOptionalArg(args, "cloudCoverMin") == null) 0 else isOptionalArg(args, "cloudCoverMin").toFloat, cloudCoverMax = if(isOptionalArg(args, "cloudCoverMax") == null) 100 else isOptionalArg(args, "cloudCoverMax").toFloat)
@@ -669,6 +672,8 @@ object Trigger {
           coverageRddList += (UUID -> Coverage.unmask(coverageRddList(args("coverage1")), coverageRddList(args("coverage2"))))
         case "Coverage.setValidDataRange" =>
           coverageRddList += (UUID -> Coverage.setValidDataRange(coverage = coverageRddList(args("coverage")), args("range").slice(1, args("range").length - 1).split(',').toList.map(_.toDouble)))
+        case "Coverage.setValueRangeByPercentage" =>
+          coverageRddList += (UUID -> Coverage.setValueRangeByPercentage(coverage = coverageRddList(args("coverage")), args("minimum").toDouble, args("maximum").toDouble))
         //   QGIS
         case "Coverage.warpGeoreByGDAL" =>
           coverageRddList += (UUID -> QGIS.gdalWarpGeore(sc, coverageRddList(args("input")), GCPs = args("GCPs"), resampleMethod = args("resampleMethod"), userId, dagId))

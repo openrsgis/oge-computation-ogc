@@ -3,7 +3,7 @@ package whu.edu.cn.algorithms.ImageProcess.core
 import geotrellis.layer.stitch.TileLayoutStitcher
 import geotrellis.layer.{Bounds, FloatingLayoutScheme, LayoutDefinition, SpaceTimeKey, SpatialKey, TileLayerMetadata}
 import geotrellis.raster.io.geotiff.GeoTiff
-import geotrellis.raster.{ArrayTile, MultibandTile, Raster, Tile}
+import geotrellis.raster.{ArrayTile, MultibandTile, Raster, Tile, UByteCellType, UByteConstantNoDataCellType, UShortCellType, UShortConstantNoDataCellType}
 import geotrellis.spark.store.hadoop.HadoopGeoTiffRDD
 import geotrellis.spark.{withCollectMetadataMethods, withTilerMethods}
 import geotrellis.vector.{Extent, ProjectedExtent}
@@ -12,6 +12,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
+import whu.edu.cn.util.CoverageUtil.{removeZeroFromCoverage, toInt16, toInt8}
 
 import java.text.SimpleDateFormat
 import scala.collection.mutable
@@ -95,8 +96,15 @@ object RDDTransformerUtil {
     val tiledOut = tiled.map(t => {
       (SpaceTimeBandKey(SpaceTimeKey(t._1._1, t._1._2, date), measurementName), t._2)
     })
+    var coverage = (tiledOut, newMetaData)
     println("成功读取tif")
-    (tiledOut, newMetaData)
+    //去黑边
+    if (coverage._2.cellType.equalDataType(UByteConstantNoDataCellType) || coverage._2.cellType.equalDataType(UByteCellType))
+      coverage = toInt8(coverage)
+    else if (coverage._2.cellType.equalDataType(UShortConstantNoDataCellType) || coverage._2.cellType.equalDataType(UShortCellType))
+      coverage = toInt16(coverage)
+
+    removeZeroFromCoverage(coverage)
   }
 
 

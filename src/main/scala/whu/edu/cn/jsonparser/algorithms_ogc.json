@@ -481,6 +481,50 @@
       }
     ]
   },
+  "Service.getCoverageByFeature": {
+    "description": "Getting resource coverage of certain feature",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "baseUrl",
+        "type": "String",
+        "description": "The base url of service."
+      },
+      {
+        "name": "productID",
+        "type": "String",
+        "description": "The id of target collection."
+      },
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "datetime",
+        "type": "List<String>",
+        "description": "The range of time used for deleting.",
+        "default": "null",
+        "optional": "True"
+      },
+      {
+        "name": "cloudCoverMin",
+        "type": "Float",
+        "description": "The minimum value of cloud cover.",
+        "default": "0",
+        "optional": "True"
+      },
+      {
+        "name": "cloudCoverMax",
+        "type": "Float",
+        "description": "The maximum value of cloud cover.",
+        "default": "100",
+        "optional": "True"
+      }
+    ]
+  },
   "Service.getCoverageArray": {
     "description": "Getting resource coverageArray of certain id",
     "returns": "CoverageArray",
@@ -9767,6 +9811,27 @@
         "name": "range",
         "type": "List[Double]",
         "description": "The valid data range."
+      }
+    ]
+  },
+  "Coverage.setValueRangeByPercentage": {
+    "description": "Set the effective range of image values by percentage.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to which the operation is applied."
+      },
+      {
+        "name": "minimum",
+        "type": "Double",
+        "description": "Minimum percentage."
+      },
+      {
+        "name": "maximum",
+        "type": "Double",
+        "description": "Maximum percentage."
       }
     ]
   },
