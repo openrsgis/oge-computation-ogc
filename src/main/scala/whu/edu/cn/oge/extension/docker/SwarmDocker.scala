@@ -59,10 +59,11 @@ object SwarmDocker extends Docker {
     val image = configObject.getString("image")
     val version = configObject.getString("version")
     val script = configObject.getString("script")
+    val separators = if (configObject.containsKey("separators")) configObject.getString("separators") else "-"
 
     // 构建参数字符串
     val parameterString = parameters.map { entry =>
-      s"-${entry._1} ${entry._2}"
+      s"${separators}${entry._1} ${entry._2}"
     }.mkString(" ")
 
     // 构建镜像名

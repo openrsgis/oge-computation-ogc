@@ -61,13 +61,13 @@ object GlobalConfig {
 
   object DagBootConf {
     // dag-boot 服务根路径
-    var DAG_ROOT_URL: String = "http://172.30.1.117:8085/oge-dag-22"
-    var EDU_ROOT_URL: String = "http://172.30.1.117:8085/oge-dag-22"
+    var DAG_ROOT_URL: String = "http://10.101.240.21:8085/oge-dag-22"
+    var EDU_ROOT_URL: String = "http://10.101.240.21:8085/oge-dag-22"
   }
 
   object RedisConf {
     // Redis 基础配置
-    final val JEDIS_HOST: String = "172.30.1.117"
+    final val JEDIS_HOST: String = "125.220.153.26"
     final val JEDIS_PORT: Int = 6379
     final val JEDIS_PWD: String = "ypfamily608"
     // Redis 超时时间
@@ -81,7 +81,7 @@ object GlobalConfig {
 
   object MinioConf {
     // MinIO 基础配置
-    final val MINIO_ENDPOINT: String = "http://172.30.1.113:9006"
+    final val MINIO_ENDPOINT: String = "http://10.101.240.23:9006"
     final val MINIO_ACCESS_KEY: String = "oge"
     final val MINIO_SECRET_KEY: String = "ypfamily608"
     final val MINIO_BUCKET_NAME: String = "ogebos"
@@ -99,7 +99,7 @@ object GlobalConfig {
 
   object PostgreSqlConf {
     // PostgreSQL 基础配置
-    var POSTGRESQL_URL: String = "jdbc:postgresql://172.30.1.117:30865/oge" // "jdbc:postgresql://192.168.0.5:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
+    var POSTGRESQL_URL: String = "jdbc:postgresql://10.101.240.21:30865/oge" // "jdbc:postgresql://192.168.0.5:30865/oge""jdbc:postgresql://125.220.153.23:30865/oge"
     var POSTGRESQL_DRIVER: String = "org.postgresql.Driver"
     var POSTGRESQL_USER: String = "oge"
     var POSTGRESQL_PWD: String = "ypfamily608"
@@ -123,18 +123,18 @@ object GlobalConfig {
     // PostgreSQL 基础配置
     var QGIS_DATA: String = "/mnt/storage/algorithmData/"
     var QGIS_ALGORITHMCODE: String = "cd /mnt/storage/qgis/;"
-    var QGIS_HOST: String = "172.30.1.110"
+    var QGIS_HOST: String = "10.101.240.10"
     var QGIS_USERNAME: String = "root"
-    var QGIS_PASSWORD: String = "ypfamily608"
+    var QGIS_PASSWORD: String = "ypfamily"
     var QGIS_PORT: Int = 22
   }
   object OTBConf{
     var OTB_DATA: String = "/mnt/storage/otbData/algorithmData/"
     var OTB_ALGORITHMCODE: String = "cd /mnt/storage/otbData/algorithmCodeByOTB/;"
     var OTB_DOCKERDATA : String = "/tmp/otb/"   // docker的临时目录
-    var OTB_HOST: String = "192.168.120.31"
+    var OTB_HOST: String = "172.22.1.19"
     var OTB_USERNAME: String = "oge"
-    var OTB_PASSWORD: String = "ypfamily608"
+    var OTB_PASSWORD: String = "Ypfamily608!"
     var OTB_PORT: Int = 22
   }
 
@@ -142,26 +142,26 @@ object GlobalConfig {
   object SAGAConf {
     var SAGA_DATA: String = "/mnt/storage/SAGA/sagaData/"  // docker挂载目录
     var SAGA_DOCKERDATA: String = "/tmp/saga/"   // docker的临时目录
-    var SAGA_HOST: String = "192.168.120.31"
-    var SAGA_USERNAME: String = "oge"
-    var SAGA_PASSWORD: String = "ypfamily608"
+    var SAGA_HOST: String = "172.22.1.19"
+    var SAGA_USERNAME: String = "root"
+    var SAGA_PASSWORD: String = "Ypfamily608!"
     var SAGA_PORT: Int = 22
   }
   //定量遥感算法
   object QuantConf {
     var Quant_DataPath:String = "/mnt/storage/htTeam/data/"
     var Quant_ACpath: String="/mnt/storage/htTeam/AtmoCorrection"
-    var Quant_HOST: String = "192.168.120.31"
-    var Quant_USERNAME: String = "oge"
-    var Quant_PASSWORD: String = "ypfamily608"
+    var Quant_HOST: String = "172.22.1.20"
+    var Quant_USERNAME: String = "root"
+    var Quant_PASSWORD: String = "Ypfamily608!"
     var Quant_PORT: Int = 22
   }
 
-  // 第三方算子 ssh配置
+  // 第三方算子
   object ThirdApplication {
-    final var THIRD_HOST: String = "172.22.1.19"
+    final var THIRD_HOST: String = "10.101.240.10"
     final var THIRD_USERNAME: String = "root"
-    final var THIRD_PASSWORD: String = "Ypfamily608!"
+    final var THIRD_PASSWORD: String = "ypfamily"
     final var DOCKER_DATA: String = "/home/dell/cppGDAL/"
     final var SERVER_DATA: String = "/mnt/storage/dem/"
     final var THIRD_PORT: Int = 22
@@ -169,7 +169,7 @@ object GlobalConfig {
 
   // Docker Swarm 镜像配置信息
   object DockerSwarmConf {
-    final var MASTER_HOST: String = "172.22.1.19"
+    final var MASTER_HOST: String = "10.101.240.10"
     final var REGISTRY_PORT: Int = 5001
     final var CONSTRAINT: String = "node.role==worker"  // node.role==master
     final var MODE: String = "replicated-job"
@@ -177,12 +177,12 @@ object GlobalConfig {
     final var MOUNT_SOURCE: String = "/mnt/storage"
     final var MOUNT_TARGET: String = "/mnt/storage"
     final var ALGORITHM_JSON: String = "/mnt/storage/algorithmJson"
-    final var HUB_SERVER: String = "172.30.1.110:5000"
+    final var HUB_SERVER: String = "10.101.240.10:5000"
   }
 
   // 基础服务配置信息
   object ServiceConf {
-    val BASE_URL: String = "http://172.30.1.79:16082/"
+    val BASE_URL: String = "http://10.101.240.21:16082/"
   }
 
   object Others {
@@ -194,14 +194,14 @@ object GlobalConfig {
     final var tempFilePath = "/mnt/storage/temp/" //各类临时文件的地址
     final var sagatempFilePath = "/mnt/storage/SAGA/sagaData/" //SAGA各类临时文件的地址/mnt/storage/SAGA/sagaData
     final var otbtempFilePath = "/mnt/storage/otbData/algorithmData/" //OTB各类临时文件的地址/mnt/storage/otbData/algorithmData/
-    final var tmsPath = "http://172.30.1.117/api/oge-tms-png/" //tms服务url
-    final var tmsHost = "172.30.1.110" //tms服务ip
-    final var tomcatHost = "172.30.1.117"
-    final var tomcatHost_public = "172.30.1.117"
+    final var tmsPath = "http://10.101.240.20/api/oge-tms-png/" //tms服务url
+    final var tmsHost = "10.101.240.10" //tms服务ip
+    final var tomcatHost = "10.101.240.20"
+    final var tomcatHost_public = "10.101.240.20"
     final var ontheFlyStorage = "/mnt/storage/on-the-fly/" //tms瓦片存储地址
     final var jsonSavePath = "/mnt/storage/algorithmData/" //geojson临时存储地址
     final var bucketName = "ogebos"
     var platform = "cc"
-    final var hbaseHost = "172.30.1.113:2181"
+    final var hbaseHost = "10.101.240.10:2181,10.101.240.11:2181,10.101.240.12:2181"
   }
 }
