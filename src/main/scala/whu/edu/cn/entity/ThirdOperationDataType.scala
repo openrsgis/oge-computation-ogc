@@ -5,5 +5,10 @@ package whu.edu.cn.entity
  */
 object ThirdOperationDataType extends Enumeration {
   type ThirdOperationDataType = Value
-  val SHP, GEOJSON, GEOPKG, TIF, RDD, OTHER = Value
+  val SHP, GEOJSON, GEOPKG, TIF, RDD, STRING, INT, DOUBLE, JSONOBJECT, OTHER = Value
+
+  // 大小写不敏感的withName方法
+  def withNameInsensitive(name: String): ThirdOperationDataType = {
+    values.find(_.toString.equalsIgnoreCase(name)).getOrElse(throw new NoSuchElementException)
+  }
 }

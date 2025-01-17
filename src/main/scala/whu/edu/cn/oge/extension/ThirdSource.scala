@@ -145,7 +145,7 @@ object ThirdSource {
    */
   private def makeResult(param: JSONObject, outFile: String, sc: SparkContext, UUID: String): Any = {
 
-    val format: ThirdOperationDataType = ThirdOperationDataType.withName(param.getString("format"))
+    val format: ThirdOperationDataType = ThirdOperationDataType.withNameInsensitive(param.getString("format"))
 
     format match {
       case ThirdOperationDataType.TIF => {

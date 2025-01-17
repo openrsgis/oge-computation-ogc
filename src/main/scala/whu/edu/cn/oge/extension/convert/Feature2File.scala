@@ -25,18 +25,10 @@ object Feature2File extends ParamConverter[RDD[(String, (Geometry, mutable.Map[S
           dataType: ThirdOperationDataType, sc: SparkContext, target: String = ""): String = {
 
     dataType match {
-      case ThirdOperationDataType.SHP => {
-        RDDTransformerUtil.saveFeatureRDDToShp(source, target)
-        target
-      }
-      case ThirdOperationDataType.GEOJSON => {
-        RDDTransformerUtil.saveFeatureRDDToShp(source, target)
-        target
-      }
-      case _ => {
-        throw new IllegalArgumentException("类型不支持")
-      }
+      case ThirdOperationDataType.SHP => RDDTransformerUtil.saveFeatureRDDToShp(source, target)
+      case ThirdOperationDataType.GEOJSON => RDDTransformerUtil.saveFeatureRDDToShp(source, target)
+      case _ => throw new IllegalArgumentException("类型不支持")
     }
-
+    target
   }
 }

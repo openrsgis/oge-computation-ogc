@@ -88,6 +88,6 @@ object SwarmDocker extends Docker {
    */
   override def clean(name: String): Unit = {
 
-    execute(s"docker rm ${name}")
+    execute(s"docker service rm ${name}")
   }
 }

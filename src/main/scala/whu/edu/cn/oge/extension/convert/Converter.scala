@@ -10,12 +10,21 @@ import whu.edu.cn.entity.ThirdOperationDataType.ThirdOperationDataType
 
 import scala.collection.mutable
 
+object File2String extends FileToSimpleType[String](identity)
+
+object File2Int extends FileToSimpleType[Int](_.toInt)
+
+object File2Double extends FileToSimpleType[Double](_.toDouble)
+
 object Converter {
 
   implicit val tif2CoverageConverter: ParamConverter[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])] = Tif2Coverage
   implicit val coverage2TifConverter: ParamConverter[(RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), String] = Coverage2Tif
   implicit val file2FeatureConverter: ParamConverter[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]] = File2Feature
   implicit val feature2FileConverter: ParamConverter[RDD[(String, (Geometry, mutable.Map[String, Any]))], String] = Feature2File
+  implicit val file2StringConverter: ParamConverter[String, String] = File2String
+  implicit val file2IntConverter: ParamConverter[String, Int] = File2Int
+  implicit val file2DoubleConverter: ParamConverter[String, Double] = File2Double
 
   /**
    *

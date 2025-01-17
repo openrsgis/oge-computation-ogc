@@ -10,7 +10,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.algorithms.AI.ML
 import whu.edu.cn.algorithms.ImageProcess.algorithms_Image._
-import whu.edu.cn.algorithms.MLlib.algorithms.{binaryClassificationEvaluator, bisectingKMeans, clusteringEvaluator, decisionTreeClassifierModel, decisionTreeRegressionModel, fmClassifierModel, fmRegressionModel, gaussianMixture, gbtClassifierClassifierModel, gbtRegressionModel, generalizedLinearRegressionModel, isotonicRegressionModel, latentDirichletAllocation, linearRegressionModel, linearSVCClassifierModel, logisticRegressionClassifierModel, modelClassify, modelRegress, multiclassClassificationEvaluator, multilabelClassificationEvaluator, multilayerPerceptronClassifierModel, naiveBayesClassifierModel, oneVsRestClassifierModel, randomForestClassifierModel, randomForestRegressionModel, rankingEvaluator, regressionEvaluator, kMeans => mlKMeans}
+import whu.edu.cn.algorithms.MLlib.algorithms.{binaryClassificationEvaluator, bisectingKMeans, clusteringEvaluator, decisionTreeClassifierModel, decisionTreeRegressionModel, fmClassifierModel, fmRegressionModel, gaussianMixture, gbtClassifierClassifierModel, gbtRegressionModel, generalizedLinearRegressionModel, isotonicRegressionModel, latentDirichletAllocation, linearRegressionModel, linearSVCClassifierModel, loadModelFromUpload, logisticRegressionClassifierModel, modelClassify, modelRegress, multiclassClassificationEvaluator, multilabelClassificationEvaluator, multilayerPerceptronClassifierModel, naiveBayesClassifierModel, oneVsRestClassifierModel, randomForestClassifierModel, randomForestRegressionModel, rankingEvaluator, regressionEvaluator, saveModelBatch, kMeans => mlKMeans}
 import whu.edu.cn.algorithms.SpatialStats.BasicStatistics.{AverageNearestNeighbor, DescriptiveStatistics}
 import whu.edu.cn.algorithms.SpatialStats.GWModels
 import whu.edu.cn.algorithms.SpatialStats.STCorrelations.{CorrelationAnalysis, SpatialAutoCorrelation, TemporalAutoCorrelation}
@@ -36,24 +36,6 @@ import whu.edu.cn.util.PostSender
 
 import scala.collection.mutable.{ListBuffer, Map}
 import scala.collection.{immutable, mutable}
-import scala.io.{BufferedSource, Source}
-import scala.util.Random
-import whu.edu.cn.algorithms.SpatialStats.SpatialHeterogeneity.Geodetector
-import whu.edu.cn.algorithms.gmrc.geocorrection.GeoCorrection
-import whu.edu.cn.algorithms.gmrc.mosaic.Mosaic
-import whu.edu.cn.oge.Sheet.CsvData
-import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
-import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
-import whu.edu.cn.entity.cube.CubeTileKey
-import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
-import whu.edu.cn.algorithms.MLlib.algorithms.{randomForestClassifierModel,logisticRegressionClassifierModel,decisionTreeClassifierModel,gbtClassifierClassifierModel,multilayerPerceptronClassifierModel,linearSVCClassifierModel,naiveBayesClassifierModel,fmClassifierModel,oneVsRestClassifierModel,modelClassify,
-  randomForestRegressionModel,linearRegressionModel,generalizedLinearRegressionModel,decisionTreeRegressionModel,gbtRegressionModel,isotonicRegressionModel,fmRegressionModel,modelRegress,
-  kMeans => mlKMeans, latentDirichletAllocation, bisectingKMeans, gaussianMixture,
-  multiclassClassificationEvaluator,clusteringEvaluator,multilabelClassificationEvaluator,binaryClassificationEvaluator,regressionEvaluator,rankingEvaluator,
-  saveModelBatch, loadModelFromUpload}
-
-
-import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
 
 object Trigger {
   var optimizedDagMap: mutable.Map[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]] = mutable.Map.empty[String, mutable.ArrayBuffer[(String, String, mutable.Map[String, String])]]
