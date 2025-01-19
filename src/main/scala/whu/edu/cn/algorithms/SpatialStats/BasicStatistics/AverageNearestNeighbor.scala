@@ -34,7 +34,7 @@ object AverageNearestNeighbor {
    * @return String形式存储计算结果
    */
   //平均最近邻指数算子
-  def  result(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]): String={
+  def result(featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]): String={
     val DisArray = getDist(featureRDD)
     val DisSum = DisArray.map(t => t.sorted.apply(1)).sum //t指每一行，取出RDD矩阵每行最小距离，求和 欧式距离矩阵
     val RDDsize =  DisArray.length //RDD要素个数，同length
@@ -46,8 +46,9 @@ object AverageNearestNeighbor {
     val Z = (Do - De)/SE
     val gaussian = breeze.stats.distributions.Gaussian(0, 1)
     val Pvalue = 2 * (gaussian.cdf(Z))
-    var str="平均最近邻汇总\n"
-    str += f"最近邻比率:$ANN%.4f\n平均观测距离:$Do%.4f\n预期平均距离:$De%.4f\nZ-Score:$Z%.4f\nP值：$Pvalue%.6f\n要素最小外接矩阵面积:$A\n"
+    var str = "Average Nearest Neighbor Summary\n"
+    str += f"Average Nearest Neighbor Ratio: $ANN%.4f\nAverage Observed Distance: $Do%.4f\nExpected Average Distance: $De%.4f\n"+
+           f"Z-Score: $Z%.4f\nP-value: $Pvalue%.6f\nMinimum Bounding Area of Features: $A\n"
     println(str)
     str
   }
