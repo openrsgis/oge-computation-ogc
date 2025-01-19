@@ -1,6 +1,6 @@
 package whu.edu.cn.algorithms.SpatialStats.Utils
 
-import breeze.linalg.DenseVector
+import breeze.linalg.{DenseVector, sum}
 import breeze.numerics._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Geometry, TopologyException}
@@ -15,7 +15,7 @@ object FeatureSpatialWeight {
   //  }
 
   /**
-   * 对距离RDD进行权重向量求解，尤其是通过getRDDDistRDD函数得到的距离
+   * 对距离RDD进行权重向量求解，尤其是通过getDistRDD函数得到的距离
    *
    * @param distRDD    Distance RDD
    * @param bw       Bandwidth size
@@ -44,10 +44,11 @@ object FeatureSpatialWeight {
     val geomRDD = getGeometry(polyRDD)
     val nb_bool = getNeighborBool(geomRDD)
     val nb_weight = boolNeighborWeight(nb_bool)
-    val sum_nb: Double = nb_weight.collect().map(t => t.toArray.sum).sum
-    val avg_nb: Double = nb_weight.collect().length.toDouble
+    val nb_collect = nb_weight.collect()
+    val sum_nb: Double = nb_collect.map(t => t.toArray.sum).sum
+    val avg_nb: Double = nb_collect.length.toDouble
     style match {
-      case "W" => nb_weight.map(t => t * (t / t.sum))
+      case "W" => nb_weight.map(t => t * (t / sum(t)))
       case "B" => nb_weight.map(t => t)
       case "C" => nb_weight.map(t => (t * (1.0 * avg_nb / sum_nb)))
       case "U" => nb_weight.map(t => (t * (1.0 / sum_nb)))
@@ -166,39 +167,57 @@ object FeatureSpatialWeight {
   }
 
   def getNeighborBool(polyrdd: RDD[(Geometry)]): RDD[Array[Boolean]] = {
+    val polyidx=polyrdd.zipWithIndex()
     val arr_geom = polyrdd.collect()
-    val rdd_isnb = polyrdd.map(t => testNeighborBool(t, arr_geom))
+    val rdd_isnb = polyidx.map(t => testNeighborBool(t._1, arr_geom,t._2.toInt))
     rdd_isnb
   }
 
-  def testNeighborBool(poly1: Geometry, poly2: Array[Geometry]): Array[Boolean] = {
+  def testNeighborBool(poly1: Geometry, poly2: Array[Geometry],id:Int): Array[Boolean] = {
     val arr_isnb = new Array[Boolean](poly2.length)
-    for (i <- 0 until poly2.length) {
+    val poly2idx=poly2.zipWithIndex
+    poly2idx.foreach(t=> {
       try {
-        arr_isnb(i) = poly1.touches(poly2(i))
+        if (t._2 != id) {
+          arr_isnb(t._2) = poly1.touches(t._1)
+        }
       } catch {
         case e: TopologyException => {
-          arr_isnb(i) = true//这里是有问题的，需要改
+          arr_isnb(t._2) = true //这里可能有问题的，不确定。相当于将touch出错的全部认为是由于矢量精度问题导致的
         }
       }
-    }
+      arr_isnb(id) = false
+    })
+//    for (i <- poly2.indices) {
+//      try {
+//        if(i!=id) {
+//          arr_isnb(i) = poly1.touches(poly2(i))
+//        }
+//      } catch {
+//        case e: TopologyException => {
+//          arr_isnb(i) = true//这里可能有问题的，不确定。相当于将touch出错的全部认为是由于矢量精度问题导致的
+//        }
+//      }
+//      arr_isnb(id)=false
+//    }
     arr_isnb
   }
 
   def boolNeighborWeight(rdd_isnb: RDD[Array[Boolean]]): RDD[DenseVector[Double]] = {
-    //    var nb_weight: DenseVector[Double] = DenseVector.zeros(rdd_isnb.take(0).length)
+//    var nb_weight: DenseVector[Double] = DenseVector.zeros(rdd_isnb.take(0).length)
     val nb_w = rdd_isnb.map(t => {
       val arr_t=new Array[Double](t.length)
-      for (i <- 0 until t.length) {
-        if (t(i) == true) {
+      for (i <- t.indices) {
+        if (t(i)) {
           arr_t(i)=1
         }
       }
       val dvec_t=DenseVector(arr_t)
       dvec_t
     })
+//    nb_w.foreach(println)
     nb_w
-    //    nb_weight
+//    nb_weight
   }
 
   def boolNeighborIndex(rdd_isnb: RDD[Array[Boolean]]): RDD[Array[String]] = {
@@ -211,8 +230,8 @@ object FeatureSpatialWeight {
 
   def arrIndextrue(arr: Array[Boolean]): Array[String] = {
     var arrbufidx: ArrayBuffer[String] = ArrayBuffer()
-    for (i <- 0 until arr.length) {
-      if (arr(i) == true) {
+    for (i <- arr.indices) {
+      if (arr(i)) {
         arrbufidx += i.toString
       }
     }

@@ -34,6 +34,13 @@ object FeatureDistance {
     })
   }
 
+  def getDistRDD(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]): RDD[Array[Double]] = {
+    val rddcoor = inputRDD.map(t => t._2._1.getCentroid.getCoordinate).collect()
+    inputRDD.map(t => t._2._1.getCentroid.getCoordinate).map(t1 => {
+      rddcoor.map(t2 => t2.distance(t1))
+    })
+  }
+
   /**
    * 输入两个Array[(Double, Double)]，输出他们之间的距离，结果为Array
    *

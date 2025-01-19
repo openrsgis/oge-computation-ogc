@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.{Coordinate, Geometry, LineString, MultiPolygon, Point}
+import org.locationtech.proj4j.UnknownAuthorityCodeException
 import whu.edu.cn.trigger.Trigger
 import whu.edu.cn.util.GlobalConstantUtil.DAG_ROOT_URL
 import whu.edu.cn.util.HttpRequestUtil.sendPost
@@ -56,7 +57,7 @@ object OtherUtils {
         preRDD += mapdata
       })
     }
-    //    preRDD.foreach(println)
+//    preRDD.foreach(println)
     sc.makeRDD(preRDD)
   }
 
@@ -74,6 +75,20 @@ object OtherUtils {
       reader.readNext()
     })
     csvdata.map(t => t.zipWithIndex)
+  }
+
+  /**
+   * 获取RDD矢量的坐标系
+   *
+   * @param geomRDD Input RDD
+   * @return crs
+   */
+  def getCrs(geomRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))])={
+    try {
+      geotrellis.proj4.CRS.fromEpsgCode(geomRDD.first()._2._1.getSRID)
+    } catch {
+      case e: UnknownAuthorityCodeException => geotrellis.proj4.CRS.fromEpsgCode(4326)
+    }
   }
 
   /**
