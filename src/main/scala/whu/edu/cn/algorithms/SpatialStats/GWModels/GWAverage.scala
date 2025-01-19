@@ -10,7 +10,7 @@ import whu.edu.cn.oge.Service
 import scala.math._
 import scala.collection.mutable
 
-class GWAverage extends GWRbase {
+class GWAverage(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]) extends GWRbase(inputRDD) {
 
   private var shpRDDidx: Array[((String, (Geometry, mutable.Map[String, Any])), Int)] = _
 
@@ -47,8 +47,8 @@ class GWAverage extends GWRbase {
   }
 
   def calAverage(bw: Double = 0, kernel: String = "gaussian", adaptive: Boolean = true, quantile: Boolean = false): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
-    setweight(bw = bw, kernel = kernel, adaptive = adaptive)
-    shpRDDidx = shpRDD.collect().zipWithIndex
+    setWeight(bw = bw, kernel = kernel, adaptive = adaptive)
+    shpRDDidx = _shpRDD.collect().zipWithIndex
     shpRDDidx.foreach(t => t._1._2._2.clear())
     var bw_type = "Fixed"
     if (adaptive) {
@@ -60,7 +60,7 @@ class GWAverage extends GWRbase {
       "**************************Model calibration information**************************\n" +
       s"Kernel function: $kernel\n$bw_type bandwidth: " + f"$bw%.2f\n" +
       "******************************Summary  information*******************************\n"
-    val Xidx = _X.zipWithIndex
+    val Xidx = _rawX.zipWithIndex
     val reStr = Xidx.map(t => {
       calAverageSerial(t._1, t._2, quantile)
     })
@@ -71,13 +71,13 @@ class GWAverage extends GWRbase {
       }
     })
     str += "*********************************************************************************\n"
-        print(str)
+//    print(str)
     (shpRDDidx.map(t => t._1), str)
   }
 
   private def calAverageSerial(x: DenseVector[Double], num: Int, quantile: Boolean = false): Array[(String, Double, Double, Double)] = {
     val name = _nameX(num)
-    val w_i = spweight_dvec.map(t => {
+    val w_i = _spWeight.collect().map(t => {
       val tmp = 1 / sum(t)
       t * tmp
     })
@@ -166,8 +166,7 @@ object GWAverage {
   def cal(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String,
           bandwidth: Double = 10, kernel: String = "gaussian", adaptive: Boolean = true, quantile: Boolean = false)
   : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
-    val model = new GWAverage
-    model.init(featureRDD)
+    val model = new GWAverage(featureRDD)
     model.setX(propertiesX)
     model.setY(propertyY)
     val r = model.calAverage(bandwidth, kernel, adaptive, quantile)

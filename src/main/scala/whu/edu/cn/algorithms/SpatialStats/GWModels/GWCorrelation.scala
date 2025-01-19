@@ -14,12 +14,12 @@ import whu.edu.cn.oge.Service
 
 import scala.collection.mutable
 
-class GWCorrelation extends GWRbase {
+class GWCorrelation(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]) extends GWRbase(inputRDD) {
 
   private var shpRDDidx: Array[((String, (Geometry, mutable.Map[String, Any])), Int)] = _
 
   def calCorrelation(bw: Double = 100, kernel: String = "gaussian", adaptive: Boolean = true): (Array[(String, (Geometry, mutable.Map[String, Any]))], String) = {
-    setweight(bw = bw, kernel = kernel, adaptive = adaptive)
+    setWeight(bw = bw, kernel = kernel, adaptive = adaptive)
     var bw_type = "Fixed"
     if (adaptive) {
       bw_type = "Adaptive"
@@ -30,11 +30,11 @@ class GWCorrelation extends GWRbase {
       "**************************Model calibration information**************************\n" +
       s"Kernel function: $kernel\n$bw_type bandwidth: " + f"$bw%.2f\n" +
       "******************************Summary  information*******************************\n"
-    shpRDDidx = shpRDD.collect().zipWithIndex
+    shpRDDidx = _shpRDD.collect().zipWithIndex
     shpRDDidx.foreach(t => t._1._2._2.clear())
     val reStr = new ArrayBuffer[Array[(String, Double, Double, Double)]]()
-    for (i <- 0 until _xcols) {
-      for (j <- i + 1 until _xcols) {
+    for (i <- 0 until _cols - 1) {
+      for (j <- i + 1 until _cols - 1) {
         reStr += calCorrelationSerial(i, j)
       }
     }
@@ -45,14 +45,14 @@ class GWCorrelation extends GWRbase {
       }
     })
     str += "*********************************************************************************\n"
-        print(str)
+    //    print(str)
     (shpRDDidx.map(t => t._1), str)
   }
 
-  private def calCorrelationSerial(ix1:Int,ix2:Int): Array[(String, Double, Double, Double)] = {
-    val x1 = _X(ix1)
-    val x2 = _X(ix2)
-    val w_i = spweight_dvec.map(t => {
+  private def calCorrelationSerial(ix1: Int, ix2: Int): Array[(String, Double, Double, Double)] = {
+    val x1 = _rawX(ix1)
+    val x2 = _rawX(ix2)
+    val w_i = _spWeight.collect().map(t => {
       val tmp = 1 / sum(t)
       t * tmp
     })
@@ -96,9 +96,9 @@ class GWCorrelation extends GWRbase {
       t._1._2._2 += ("corr_" + _nameX(ix1) + "_" + _nameX(ix2) -> corrmat(t._2))
       t._1._2._2 += ("scorr_" + _nameX(ix1) + "_" + _nameX(ix2) -> scorrmat(t._2))
     })
-//    println("cov_" + _nameX(ix1) + "_" + _nameX(ix2), covmat.toVector)
-//    println("corr_" + _nameX(ix1) + "_" + _nameX(ix2), corrmat.toVector)
-//    println("scorr_" + _nameX(ix1) + "_" + _nameX(ix2), scorrmat.toVector)
+    //    println("cov_" + _nameX(ix1) + "_" + _nameX(ix2), covmat.toVector)
+    //    println("corr_" + _nameX(ix1) + "_" + _nameX(ix2), corrmat.toVector)
+    //    println("scorr_" + _nameX(ix1) + "_" + _nameX(ix2), scorrmat.toVector)
     val mmmStr = new Array[(String, Double, Double, Double)](3)
     mmmStr(0) = findmmm("cov_" + _nameX(ix1) + "_" + _nameX(ix2), covmat)
     mmmStr(1) = findmmm("corr_" + _nameX(ix1) + "_" + _nameX(ix2), corrmat)
@@ -106,11 +106,11 @@ class GWCorrelation extends GWRbase {
     mmmStr
   }
 
-  private def covwt(x1: DenseVector[Double], x2: DenseVector[Double], w: DenseVector[Double]): Double  = {
+  private def covwt(x1: DenseVector[Double], x2: DenseVector[Double], w: DenseVector[Double]): Double = {
     val sqrtw = w.map(t => sqrt(t))
     val re1 = sqrtw * (x1 - sum(x1 * w))
     val re2 = sqrtw * (x2 - sum(x2 * w))
-    val sumww = - sum(w.map(t => t * t)) + 1.0
+    val sumww = -sum(w.map(t => t * t)) + 1.0
     sum(re1 * re2 * (1 / sumww))
   }
 
@@ -141,8 +141,7 @@ object GWCorrelation {
   def cal(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String,
           bandwidth: Double = 10, kernel: String = "gaussian", adaptive: Boolean = true)
   : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
-    val model = new GWCorrelation
-    model.init(featureRDD)
+    val model = new GWCorrelation(featureRDD)
     model.setX(propertiesX)
     model.setY(propertyY)
     val r = model.calCorrelation(bandwidth, kernel, adaptive)
