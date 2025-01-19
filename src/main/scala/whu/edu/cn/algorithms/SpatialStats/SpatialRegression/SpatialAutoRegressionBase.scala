@@ -3,6 +3,7 @@ package whu.edu.cn.algorithms.SpatialStats.SpatialRegression
 import breeze.linalg._
 import org.apache.spark.rdd.RDD
 import org.locationtech.jts.geom.Geometry
+import whu.edu.cn.algorithms.SpatialStats.GWModels.SpatialAlgorithm
 import whu.edu.cn.algorithms.SpatialStats.Utils.FeatureDistance._
 import whu.edu.cn.algorithms.SpatialStats.Utils.FeatureSpatialWeight._
 
@@ -10,23 +11,13 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
-//抽象类，不可以被初始化
-abstract class SpatialAutoRegressionBase {
-
-  protected var shpRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))] = _
-  protected var _X: Array[DenseVector[Double]] = _
-  protected var _Y: DenseVector[Double] = _
-
-  protected var _nameX: Array[String] = _
-  protected var geom: RDD[Geometry] = _
+abstract class SpatialAutoRegressionBase(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]) extends SpatialAlgorithm(inputRDD) {
+  
   protected var spweight_dvec: Array[DenseVector[Double]] = _
   protected var spweight_dmat: DenseMatrix[Double] = _
 
-  var _xrows = 0
-  var _xcols = 0
-  protected var _df = _xcols
-  protected var _dX: DenseMatrix[Double] = _
-  protected var _1X: DenseMatrix[Double] = _
+  protected var _df = 0
+  protected var _rawdX: DenseMatrix[Double] = _
 
   /**
    * 拟合值
@@ -34,6 +25,22 @@ abstract class SpatialAutoRegressionBase {
   var fitvalue: Array[Double] = _
 
   def SARmodels() {
+
+  }
+
+  override def setX(properties: String, split: String = ","): Unit = {
+    _nameX = properties.split(split)
+    val x = _nameX.map(s => {
+      DenseVector(_shpRDD.map(t => t._2._2(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
+    })
+    _rawX = x
+    _rawdX = DenseMatrix.create(rows = _rows, cols = _rawX.length, data = _rawX.flatMap(t => t.toArray))
+
+    _rows = x(0).length
+    _cols = x.length + 1
+    val onesVector = DenseVector.ones[Double](_rows)
+    _dvecX = onesVector +: x
+    _dmatX = DenseMatrix.create(rows = _rows, cols = _cols, data = _dvecX.flatMap(_.toArray))
 
   }
 
@@ -56,38 +63,12 @@ abstract class SpatialAutoRegressionBase {
    * @param inputRDD RDD形式的shpfile
    * @param style    非必选参数，邻接矩阵的类型，默认为W
    */
-  def init(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], style: String = "W"): Unit = {
-    geom = getGeometry(inputRDD)
-    shpRDD = inputRDD
-    setweight(style = style)
-  }
+//  def initWeight(style: String = "W"): Unit = {
+//    setWeight(style = style)
+//    _df = _cols + 1
+//  }
 
-  /** set x
-   *
-   * @param properties String
-   * @param split      default:","
-   */
-  protected def setX(properties: String, split: String = ","): Unit = {
-    _nameX = properties.split(split)
-    val x = _nameX.map(s => {
-      DenseVector(shpRDD.map(t => t._2._2(s).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
-    })
-    _X = x
-    _xcols = x.length
-    _xrows = _X(0).length
-    _dX = DenseMatrix.create(rows = _xrows, cols = _X.length, data = _X.flatMap(t => t.toArray))
-    val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, x.flatMap(t => t.toArray))
-    _1X = DenseMatrix.create(rows = _xrows, cols = x.length + 1, data = ones_x.flatten)
-    _df = _xcols + 1 + 1
-  }
 
-  /** set y
-   *
-   * @param property String
-   */
-  protected def setY(property: String): Unit = {
-    _Y = DenseVector(shpRDD.map(t => t._2._2(property).asInstanceOf[java.math.BigDecimal].doubleValue).collect())
-  }
 
   /**
    * 提供更改、设置经纬度信息的函数
@@ -96,12 +77,12 @@ abstract class SpatialAutoRegressionBase {
    * @param lon longitude
    */
   def setcoords(lat: Array[Double], lon: Array[Double]): Unit = {
-    val geomcopy = geom.zipWithIndex()
+    val geomcopy = _geom.zipWithIndex()
     geomcopy.map(t => {
       t._1.getCoordinate.x = lat(t._2.toInt)
       t._1.getCoordinate.y = lon(t._2.toInt)
     })
-    geom = geomcopy.map(t => t._1)
+    _geom = geomcopy.map(t => t._1)
   }
 
   /**
@@ -111,13 +92,14 @@ abstract class SpatialAutoRegressionBase {
    * @param k        如果不使用邻接矩阵形式，输入最近邻个数，默认为0
    * @param style    非必选参数，邻接矩阵的类型，默认为W
    */
-  def setweight(neighbor: Boolean = true, k: Double = 0, style: String = "W"): Unit = {
-    if (neighbor && !geom.isEmpty()) {
-      //      val nb_bool = getNeighborBool(geom)
+  def setWeight(neighbor: Boolean = true, k: Double = 0, style: String = "W"): Unit = {
+    _df = _cols + 1
+    if (neighbor && !_geom.isEmpty()) {
+      //      val nb_bool = getNeighborBool(_geom)
       //      spweight_dvec = boolNeighborWeight(nb_bool).map(t => t * (t / t.sum)).collect()
-      spweight_dvec = getNeighborWeight(shpRDD, style = style).collect()
-    } else if (!neighbor && !geom.isEmpty() && k >= 0) {
-      val dist = getDist(shpRDD).map(t => Array2DenseVector(t))
+      spweight_dvec = getNeighborWeight(_shpRDD, style = style).collect()
+    } else if (!neighbor && !_geom.isEmpty() && k >= 0) {
+      val dist = getDist(_shpRDD).map(t => Array2DenseVector(t))
       spweight_dvec = dist.map(t => getSpatialweightSingle(t, k, kernel = "boxcar", adaptive = true))
     }
     spweight_dmat = DenseMatrix.create(rows = spweight_dvec(0).length, cols = spweight_dvec.length, data = spweight_dvec.flatMap(t => t.toArray))
@@ -150,7 +132,7 @@ abstract class SpatialAutoRegressionBase {
     val betas_map: mutable.Map[String, Double] = mutable.Map()
     for (i <- 0 until coef.length) {
       val coefi = coefvalue(i).formatted("%.6f").toDouble
-//      betas_map += (coefname(i) -> coefvalue(i))
+      //      betas_map += (coefname(i) -> coefvalue(i))
       betas_map += (coefname(i) -> coefi)
     }
     //    println(betas_map)
@@ -160,7 +142,7 @@ abstract class SpatialAutoRegressionBase {
   protected def betasPrint(coef: DenseVector[Double]): String = {
     val coefname = Array("Intercept") ++ _nameX
     val coefvalue = coef.toArray
-    var str: String = ""
+    var str:String=""
     for (i <- 0 until coef.length) {
       str += coefname(i) + ":" + coefvalue(i).formatted("%.6g").toString + "    "
     }

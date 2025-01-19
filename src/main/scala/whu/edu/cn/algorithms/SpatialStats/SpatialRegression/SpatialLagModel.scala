@@ -14,7 +14,7 @@ import scala.collection.mutable
 /**
  * 空间滞后模型，考虑因变量滞后项ρ。
  */
-class SpatialLagModel extends SpatialAutoRegressionBase {
+class SpatialLagModel(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))]) extends SpatialAutoRegressionBase(inputRDD) {
 
   private var _lagY: DenseVector[Double] = _
 
@@ -36,30 +36,30 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
       case e: IllegalArgumentException => throw new IllegalArgumentException("spatial weight error to calculate eigen matrix")
     }
     val rho = goldenSelection(interval._1, interval._2, function = rho4optimize)._1
-    _lagY = _Y - rho * _wy
-    val betas = get_betas(X = _1X, Y = _lagY)
-    val betas_map = betasPrint(betas)
-    val res = get_res(X = _1X, Y = _lagY)
+    _lagY = _dvecY - rho * _wy
+    val betas = get_betas(X = _dmatX, Y = _lagY)
+    val betas_map = betasMap(betas)
+    val res = get_res(X = _dmatX, Y = _lagY)
     //log likelihood
-    val lly = get_logLik(get_res(X = _1X))
-    val llx = get_logLik(get_res(X = _1X, Y = _lagY))
+    val lly = get_logLik(get_res(X = _dmatX))
+    val llx = get_logLik(get_res(X = _dmatX, Y = _lagY))
     val llrho = rho4optimize(rho)
 
-    fitvalue = (_Y - res).toArray
+    fitvalue = (_dvecY - res).toArray
     var printStr = "\n------------------------------Spatial Lag Model------------------------------\n" +
       f"rho is $rho%.6f\n"
     printStr += try_LRtest(-llrho, lly)
     printStr += f"coeffients:\n$betas_map\n"
-    printStr += calDiagnostic(X = _dX, Y = _Y, residuals = res, loglikelihood = llrho, df = _df)
+    printStr += calDiagnostic(X = _rawdX, Y = _dvecY, residuals = res, loglikelihood = llrho, df = _df)
     printStr += "------------------------------------------------------------------------------"
     //    println("--------------------------------spatial Lag model--------------------------------")
     //    println(s"rho is $rho")
     //    try_LRtest(llrho, lly)
     //    println(s"coeffients:\n$betas_map")
-    //    calDiagnostic(X = _dX, Y = _Y, residuals = res, loglikelihood = llrho, df = _df)
+    //    calDiagnostic(X = _rawdX, Y = _dvecY, residuals = res, loglikelihood = llrho, df = _df)
     //    println("--------------------------------------------------------------------------------")
-    println(printStr)
-    val shpRDDidx = shpRDD.collect().zipWithIndex
+//    println(printStr)
+    val shpRDDidx = _shpRDD.collect().zipWithIndex
     shpRDDidx.foreach(t => t._1._2._2.clear())
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
@@ -68,7 +68,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     (shpRDDidx.map(t => t._1), printStr)
   }
 
-  def get_betas(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, W: DenseMatrix[Double] = DenseMatrix.eye(_xrows)): DenseVector[Double] = {
+  def get_betas(X: DenseMatrix[Double] = _rawdX, Y: DenseVector[Double] = _dvecY, W: DenseMatrix[Double] = DenseMatrix.eye(_rows)): DenseVector[Double] = {
     val xtw = X.t * W
     val xtwx = xtw * X
     val xtwy = xtw * Y
@@ -77,7 +77,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     betas
   }
 
-  def get_res(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, W: DenseMatrix[Double] = DenseMatrix.eye(_xrows)): DenseVector[Double] = {
+  def get_res(X: DenseMatrix[Double] = _rawdX, Y: DenseVector[Double] = _dvecY, W: DenseMatrix[Double] = DenseMatrix.eye(_rows)): DenseVector[Double] = {
     val xtw = X.t * W
     val xtwx = xtw * X
     val xtwy = xtw * Y
@@ -89,11 +89,11 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
 
   //添加一个判断X，Y为空的情况判断，抛出错误
   private def get_env(): Unit = {
-    if (_Y != null && _X != null) {
+    if (_dvecY != null && _rawX != null) {
       if (lm_null == null || lm_w == null || _wy == null) {
-        _wy = DenseVector(spweight_dvec.map(t => (t dot _Y)))
-        lm_null = get_res(X = _1X)
-        lm_w = get_res(X = _1X, Y = _wy)
+        _wy = DenseVector(spweight_dvec.map(t => (t dot _dvecY)))
+        lm_null = get_res(X = _dmatX)
+        lm_w = get_res(X = _dmatX, Y = _wy)
       }
       if (spweight_dmat != null) {
         if (_eigen == null) {
@@ -126,7 +126,7 @@ class SpatialLagModel extends SpatialAutoRegressionBase {
     val e_b = lm_w.t * lm_null
     val e_c = lm_w.t * lm_w
     val SSE = e_a - 2.0 * rho * e_b + rho * rho * e_c
-    val n = _xrows
+    val n = _rows
     val s2 = SSE / n
     val eigvalue = _eigen.eigenvalues.copy
     //    val eig_rho = eigvalue :*= rho
@@ -149,10 +149,10 @@ object SpatialLagModel {
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String)
   : RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
-    val mdl = new SpatialLagModel
-    mdl.init(featureRDD)
+    val mdl = new SpatialLagModel(featureRDD)
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
+    mdl.setWeight(neighbor = true)
     val re = mdl.fit()
     Service.print(re._2,"Spatial Lag Model","String")
     sc.makeRDD(re._1)

@@ -15,7 +15,7 @@ import scala.collection.mutable
 /**
  * 空间杜宾模型，同时考虑自变量误差项λ与因变量滞后项ρ。
  */
-class SpatialDurbinModel  extends SpatialAutoRegressionBase {
+class SpatialDurbinModel(inputRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))])  extends SpatialAutoRegressionBase(inputRDD) {
 
   private var _durbinX: DenseMatrix[Double] = _
   private var _durbinY: DenseVector[Double] = _
@@ -37,31 +37,31 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     //    optresult.foreach(println)
     val rho = optresult(0)
     val lambda = optresult(1)
-    _durbinX = _1X - lambda * _wx
-    _durbinY = _Y - rho * _wy - lambda * _wy + rho * lambda * _wwy
+    _durbinX = _dmatX - lambda * _wx
+    _durbinY = _dvecY - rho * _wy - lambda * _wy + rho * lambda * _wwy
     val betas = get_betas(X = _durbinX, Y = _durbinY)
     //    println(betas)
-    val betas_map = betasPrint(betas)
+    val betas_map = betasMap(betas)
     val res = get_res(X = _durbinX, Y = _durbinY)
     //log likelihood
     val llopt = paras4optimize(optresult)
-    val lly = get_logLik(get_res(X = _1X))
+    val lly = get_logLik(get_res(X = _dmatX))
 
-    fitvalue = (_Y - res).toArray
+    fitvalue = (_dvecY - res).toArray
     var printStr = "\n-----------------------------Spatial Durbin Model-----------------------------\n" +
       f"rho is $rho%.6f\nlambda is $lambda%.6f\n"
     printStr += try_LRtest(-llopt, lly, chi_pama = 2)
     printStr += f"coeffients:\n$betas_map\n"
-    printStr += calDiagnostic(X = _dX, Y = _Y, residuals = res, loglikelihood = -llopt, df = _df + 2)
+    printStr += calDiagnostic(X = _rawdX, Y = _dvecY, residuals = res, loglikelihood = -llopt, df = _df + 2)
     printStr += "------------------------------------------------------------------------------"
     //    println("---------------------------------spatial durbin model---------------------------------")
     //    println(s"rho is $rho\nlambda is $lambda")
     //    try_LRtest(-llopt, lly, chi_pama = 2)
     //    println(s"coeffients:\n$betas_map")
-    //    calDiagnostic(X = _dX, Y = _Y, residuals = res, loglikelihood = -llopt, df = _df + 2)
+    //    calDiagnostic(X = _rawdX, Y = _dvecY, residuals = res, loglikelihood = -llopt, df = _df + 2)
     //    println("--------------------------------------------------------------------------------------")
-    println(printStr)
-    val shpRDDidx = shpRDD.collect().zipWithIndex
+//    println(printStr)
+    val shpRDDidx = _shpRDD.collect().zipWithIndex
     shpRDDidx.map(t => {
       t._1._2._2 += ("fitValue" -> fitvalue(t._2))
       t._1._2._2 += ("residual" -> res(t._2))
@@ -69,7 +69,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     (shpRDDidx.map(t => t._1), printStr)
   }
 
-  def get_betas(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, W: DenseMatrix[Double] = DenseMatrix.eye(_xrows)): DenseVector[Double] = {
+  def get_betas(X: DenseMatrix[Double] = _rawdX, Y: DenseVector[Double] = _dvecY, W: DenseMatrix[Double] = DenseMatrix.eye(_rows)): DenseVector[Double] = {
     val xtw = X.t * W
     val xtwx = xtw * X
     val xtwy = xtw * Y
@@ -78,7 +78,7 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     betas
   }
 
-  def get_res(X: DenseMatrix[Double] = _dX, Y: DenseVector[Double] = _Y, W: DenseMatrix[Double] = DenseMatrix.eye(_xrows)): DenseVector[Double] = {
+  def get_res(X: DenseMatrix[Double] = _rawdX, Y: DenseVector[Double] = _dvecY, W: DenseMatrix[Double] = DenseMatrix.eye(_rows)): DenseVector[Double] = {
     val xtw = X.t * W
     val xtwx = xtw * X
     val xtwy = xtw * Y
@@ -89,15 +89,15 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
   }
 
   private def get_env(): Unit = {
-    if (_Y != null && _X != null) {
+    if (_dvecY != null && _rawX != null) {
       if (_wy == null || _wwy == null) {
-        _wy = DenseVector(spweight_dvec.map(t => (t dot _Y)))
+        _wy = DenseVector(spweight_dvec.map(t => (t dot _dvecY)))
         _wwy = DenseVector(spweight_dvec.map(t => (t dot _wy)))
       }
       if (_wx == null) {
-        val _dvecWx = _X.map(t => DenseVector(spweight_dvec.map(i => (i dot t))))
-        val ones_x = Array(DenseVector.ones[Double](_xrows).toArray, _dvecWx.flatMap(t => t.toArray))
-        _wx = DenseMatrix.create(rows = _xrows, cols = _dvecWx.length + 1, data = ones_x.flatten)
+        val _dvecWx = _rawX.map(t => DenseVector(spweight_dvec.map(i => (i dot t))))
+        val ones_x = Array(DenseVector.ones[Double](_rows).toArray, _dvecWx.flatMap(t => t.toArray))
+        _wx = DenseMatrix.create(rows = _rows, cols = _dvecWx.length + 1, data = ones_x.flatten)
       }
       if (spweight_dmat != null) {
         if (_eigen == null) {
@@ -132,13 +132,13 @@ class SpatialDurbinModel  extends SpatialAutoRegressionBase {
     if (optarr.length == 2) {
       val rho = optarr(0)
       val lambda = optarr(1)
-      val yl = _Y - rho * _wy - lambda * _wy + rho * lambda * _wwy
-      val xl = (_1X - lambda * _wx)
+      val yl = _dvecY - rho * _wy - lambda * _wy + rho * lambda * _wwy
+      val xl = (_dmatX - lambda * _wx)
       val xl_qr = qr(xl)
-      val xl_qr_q = xl_qr.q(::, 0 to _xcols)
+      val xl_qr_q = xl_qr.q(::, 0 until _cols)
       val xl_q_yl = xl_qr_q.t * yl
       val SSE = yl.t * yl - xl_q_yl.t * xl_q_yl
-      val n = _xrows
+      val n = _rows
       val s2 = SSE / n
       val eigvalue = _eigen.eigenvalues.copy
       val ldet_rho = sum(breeze.numerics.log(-eigvalue * rho + 1.0))
@@ -163,10 +163,10 @@ object SpatialDurbinModel {
    */
   def fit(sc: SparkContext, featureRDD: RDD[(String, (Geometry, mutable.Map[String, Any]))], propertyY: String, propertiesX: String)
   : RDD[(String, (Geometry, mutable.Map[String, Any]))]= {
-    val mdl = new SpatialDurbinModel
-    mdl.init(featureRDD)
+    val mdl = new SpatialDurbinModel(featureRDD)
     mdl.setX(propertiesX)
     mdl.setY(propertyY)
+    mdl.setWeight(neighbor = true)
     val re = mdl.fit()
     Service.print(re._2,"Spatial Durbin Model","String")
     sc.makeRDD(re._1)
