@@ -1,12 +1,20 @@
 package whu.edu.cn.algorithms.MLlib
+import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, TileLayerMetadata}
+import geotrellis.raster.TileLayout
+import geotrellis.vector.Extent
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.ml._
 import org.apache.spark.ml.clustering
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
-import whu.edu.cn.algorithms.MLlib.util.{makeRasterDataFrameFromRDD, makeRasterRDDFromDataFrame}
+import whu.edu.cn.algorithms.MLlib.util.{calculateTileLayerMetadata, makeFeatureDataFrameFromRDD, makePropertyRDDFromDataFrame, makeRasterDataFrameFromRDD, makeRasterRDDFromDataFrame}
 import whu.edu.cn.algorithms.terrain.core.RDDTransformerUtil.{makeChangedRasterRDDFromTif, saveRasterRDDToTif}
 
+import java.time.Instant
+import scala.collection.mutable
+import scala.collection.mutable.Map
 import scala.util.Random
 
 
@@ -19,6 +27,10 @@ class Clusterer(ml: Estimator[_]){
   def train(spark: SparkSession, featuresCoverage: RDDImage, featuresCol: List[Int]): Model[_] = {
     val df: DataFrame = makeRasterDataFrameFromRDD(spark, featuresCoverage, featuresCol)
     this.ml.fit(df).asInstanceOf[Model[_]]
+  }
+  def train(spark: SparkSession, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresCol: List[String]): Model[_] = {
+    val assembledDF = makeFeatureDataFrameFromRDD(spark, feature, featuresCol)
+    this.ml.fit(assembledDF).asInstanceOf[Model[_]]
   }
 }
 object Clusterer {
@@ -76,27 +88,46 @@ object Clusterer {
     val df: DataFrame = makeRasterDataFrameFromRDD(spark, coverage)
     val predictionDF: DataFrame = model.transform(df)
     var map: Map[String,RDDImage] = Map.empty[String,RDDImage]
+    //bounds, layout, extent这些可能有所改变，需要重新生成TileLayerMetadata
+    val rasterRdd = makeRasterRDDFromDataFrame(predictionDF, predictionCol=true, predictedLabelCol=false)
+    val newMetadata = calculateTileLayerMetadata(rasterRdd, coverage)
     map += ("features" -> coverage)
-    if(predictionDF.columns.contains("prediction")) map += ("prediction" -> (makeRasterRDDFromDataFrame(predictionDF, predictionCol=true, predictedLabelCol=false), coverage._2)) //TODO coverage._2应该还需要改下，不能完全照搬
-    if(predictionDF.columns.contains("probability")) map += ("probability" -> (makeRasterRDDFromDataFrame(predictionDF, probabilityCol=true, predictedLabelCol=false), coverage._2))
-    if(predictionDF.columns.contains("topicDistribution")) map += ("topicDistribution" -> (makeRasterRDDFromDataFrame(predictionDF, topicDistributionCol=true, predictedLabelCol=false), coverage._2))
+    if(predictionDF.columns.contains("prediction")) map += ("prediction" -> (makeRasterRDDFromDataFrame(predictionDF, predictionCol=true, predictedLabelCol=false), newMetadata))
+    if(predictionDF.columns.contains("probability")) map += ("probability" -> (makeRasterRDDFromDataFrame(predictionDF, probabilityCol=true, predictedLabelCol=false), newMetadata))
+    if(predictionDF.columns.contains("topicDistribution")) map += ("topicDistribution" -> (makeRasterRDDFromDataFrame(predictionDF, topicDistributionCol=true, predictedLabelCol=false), newMetadata))
     map
   }
   def cluster(implicit spark: SparkSession, coverage: RDDImage, model: Model[_], featuresCol: List[Int]): Map[String, RDDImage] = {
     val df: DataFrame = makeRasterDataFrameFromRDD(spark, coverage, featuresCol)
     val predictionDF: DataFrame = model.transform(df)
     var map: Map[String,RDDImage] = Map.empty[String,RDDImage]
-    if(predictionDF.columns.contains("features")) map += ("features" -> (makeRasterRDDFromDataFrame(predictionDF, featuresCol = true, predictedLabelCol=false), coverage._2))
-    if(predictionDF.columns.contains("prediction")) map += ("prediction" -> (makeRasterRDDFromDataFrame(predictionDF, predictionCol=true, predictedLabelCol=false), coverage._2)) //TODO coverage._2应该还需要改下，不能完全照搬
-    if(predictionDF.columns.contains("probability")) map += ("probability" -> (makeRasterRDDFromDataFrame(predictionDF, probabilityCol=true, predictedLabelCol=false), coverage._2))
-    if(predictionDF.columns.contains("topicDistribution")) map += ("topicDistribution" -> (makeRasterRDDFromDataFrame(predictionDF, topicDistributionCol=true, predictedLabelCol=false), coverage._2))
+    //bounds, layout, extent这些可能有所改变，需要重新生成TileLayerMetadata
+    val rasterRdd = makeRasterRDDFromDataFrame(predictionDF, predictionCol=true, predictedLabelCol=false)
+    val newMetadata = calculateTileLayerMetadata(rasterRdd, coverage)
+    if(predictionDF.columns.contains("features")) map += ("features" -> (makeRasterRDDFromDataFrame(predictionDF, featuresCol = true, predictedLabelCol=false), newMetadata))
+    if(predictionDF.columns.contains("prediction")) map += ("prediction" -> (rasterRdd, newMetadata))
+    if(predictionDF.columns.contains("probability")) map += ("probability" -> (makeRasterRDDFromDataFrame(predictionDF, probabilityCol=true, predictedLabelCol=false), newMetadata))
+    if(predictionDF.columns.contains("topicDistribution")) map += ("topicDistribution" -> (makeRasterRDDFromDataFrame(predictionDF, topicDistributionCol=true, predictedLabelCol=false), newMetadata))
     map
+  }
+  def cluster(spark: SparkSession, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], model: Model[_]): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val featureColNames = feature.first()._2._2.keys.toList
+    val df: DataFrame = makeFeatureDataFrameFromRDD(spark, feature, featureColNames)
+    val predictionDF: DataFrame = model.transform(df)
+    feature.map(t=>(t._1, t._2._1)).join(makePropertyRDDFromDataFrame(predictionDF))
+  }
+  def cluster(spark: SparkSession, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], model: Model[_], featuresCol: List[String]): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val df: DataFrame = makeFeatureDataFrameFromRDD(spark, feature, featuresCol)
+    val predictionDF: DataFrame = model.transform(df)
+    val propertyRDD: RDD[(String, Map[String, Any])] = makePropertyRDDFromDataFrame(predictionDF)
+    val result: RDD[(String, (Geometry, mutable.Map[String, Any]))] = feature.map(t=>(t._1, t._2._1)).join(propertyRDD)
+    result
   }
 
   def main(args: Array[String]): Unit = {
     val conf: SparkConf = new SparkConf().setAppName("HE").setMaster("local")
     val sc = new SparkContext(conf)
-    val spark = SparkSession.builder().appName("SparkStatCleanJob").getOrCreate() //TODO ?
+    val spark = SparkSession.builder().appName("SparkStatCleanJob").getOrCreate()
 
     val features: RDDImage = makeChangedRasterRDDFromTif(sc: SparkContext,"C:\\Users\\HUAWEI\\Desktop\\毕设\\应用_监督分类结果\\RGB_Mean.tif")
 

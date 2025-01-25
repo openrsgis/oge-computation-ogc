@@ -266,6 +266,45 @@ object Sheet{
     new JSONObject().fluentPut("type", "FeatureCollection").fluentPut("features", jsonArray).toString
   }
 
+  //将sheet转化为仅包含属性的Feature(FeatureCollection)，可以调用ML进行机器学习
+  def sheetToFeatureProperties(implicit sc: SparkContext,csvData: CsvData): RDD[(String, (Geometry, Map[String, Any]))] = {
+    val propertyKeys = csvData.header
+    val data = csvData.data
+    // 创建一个 JSONArray 用于存放 features
+    val features = new JSONArray()
+    // 遍历数据列表
+    data.foreach { row =>
+      // 将 keys 和当前行的数据组合成一个 Map
+      val property_row = propertyKeys.zip(row).toMap
+      // 创建一个 JSONObject 用于表示 feature
+      val feature = new JSONObject()
+      // 创建一个 JSONObject 用于表示 geometry
+      val geometry = null //不考虑csv含有坐标列，全部当属性处理
+      // 向 feature 中添加 geometry 和 type 键值对
+      feature.put("geometry", geometry)
+      feature.put("type", "Feature")
+      // 创建一个 JSONObject 用于表示 properties
+      val properties = new JSONObject()
+      // 遍历所有的属性键，添加到 properties 中
+      propertyKeys.foreach { propertyKey =>
+        properties.put(propertyKey, property_row.getOrElse(propertyKey, ""))
+      }
+      feature.put("properties", properties)
+      features.add(feature)
+    }
+
+    // 创建一个 JSONObject 用于表示整个 GeoJSON
+    val geoJson = new JSONObject()
+    // 向 geoJson 中添加 features 和 type 键值对
+    geoJson.put("type", "FeatureCollection")
+    geoJson.put("features", features)
+
+    // 将整个 geoJson 转换为 JSON 字符串并返回
+    val geoJson_string = geoJson.toJSONString
+    println(geoJson_string)
+    geometry(sc, geoJson_string, "EPSG:4326")
+  }
+
   def main(args: Array[String]): Unit = {
     val filePath = "C:\\Users\\17510\\Desktop\\ICESat_test.csv"
     // 读取CSV文件

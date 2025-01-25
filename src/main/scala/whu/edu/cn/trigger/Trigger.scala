@@ -41,11 +41,9 @@ import whu.edu.cn.algorithms.gmrc.colorbalance.ColorBalance
 import whu.edu.cn.algorithms.gmrc.colorbalanceRef.scala.ColorBalanceWithRef
 import whu.edu.cn.entity.cube.CubeTileKey
 import whu.edu.cn.oge.CoverageArray.{CoverageList, funcArgs, funcNameList, process}
-import whu.edu.cn.algorithms.MLlib.algorithms.{randomForestClassifierModel,logisticRegressionClassifierModel,decisionTreeClassifierModel,gbtClassifierClassifierModel,multilayerPerceptronClassifierModel,linearSVCClassifierModel,naiveBayesClassifierModel,fmClassifierModel,oneVsRestClassifierModel,modelClassify,
-  randomForestRegressionModel,linearRegressionModel,generalizedLinearRegressionModel,decisionTreeRegressionModel,gbtRegressionModel,isotonicRegressionModel,fmRegressionModel,modelRegress,
-  kMeans => mlKMeans, latentDirichletAllocation, bisectingKMeans, gaussianMixture,
-  multiclassClassificationEvaluator,clusteringEvaluator,multilabelClassificationEvaluator,binaryClassificationEvaluator,regressionEvaluator,rankingEvaluator,
-  saveModelBatch, loadModelFromUpload}
+import whu.edu.cn.algorithms.MLlib.algorithms.{binaryClassificationEvaluator_coverage, binaryClassificationEvaluator_feature, bisectingKMeans_coverage, bisectingKMeans_feature, clusteringEvaluator_coverage, clusteringEvaluator_feature, decisionTreeClassifierModel_coverage, decisionTreeClassifierModel_feature, decisionTreeRegressionModel_coverage, decisionTreeRegressionModel_feature, fmClassifierModel_coverage, fmClassifierModel_feature, fmRegressionModel_coverage, fmRegressionModel_feature, gaussianMixture_coverage, gaussianMixture_feature, gbtClassifierClassifierModel_coverage, gbtClassifierClassifierModel_feature,
+  gbtRegressionModel_coverage, gbtRegressionModel_feature, generalizedLinearRegressionModel_coverage, generalizedLinearRegressionModel_feature, isotonicRegressionModel_coverage, isotonicRegressionModel_feature, latentDirichletAllocation_coverage, latentDirichletAllocation_feature, linearRegressionModel_coverage, linearRegressionModel_feature, linearSVCClassifierModel_coverage, linearSVCClassifierModel_feature, loadModelFromUpload, logisticRegressionClassifierModel_coverage, logisticRegressionClassifierModel_feature, modelClassify, modelRegress, multiclassClassificationEvaluator_coverage, multiclassClassificationEvaluator_feature, multilabelClassificationEvaluator_coverage, multilabelClassificationEvaluator_feature,
+  multilayerPerceptronClassifierModel_coverage, multilayerPerceptronClassifierModel_feature, naiveBayesClassifierModel_coverage, naiveBayesClassifierModel_feature, oneVsRestClassifierModel_coverage, oneVsRestClassifierModel_feature, randomForestClassifierModel_coverage, randomForestClassifierModel_feature, randomForestRegressionModel_coverage, randomForestRegressionModel_feature, rankingEvaluator_coverage, rankingEvaluator_feature, regressionEvaluator_coverage, regressionEvaluator_feature, saveModelBatch, kMeans_coverage => mlKMeans_coverage, kMeans_feature => mlKMeans_feature}
 
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer, Map}
@@ -1466,69 +1464,147 @@ object Trigger {
       println("args:", funcName + args)
       funcName match {
         // MLlib 分类
-        case "MLmodel.randomForestClassifierModel" =>
-          mlmodelRddList += (UUID -> randomForestClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
-        case "MLmodel.logisticRegressionClassifierModel" =>
-          mlmodelRddList += (UUID -> logisticRegressionClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble, args("elasticNetParam").toDouble, args("family"), args("fitIntercept").toBoolean, args("standardization").toBoolean, args("threshold").toDouble, args("tol").toDouble))
-        case "MLmodel.decisionTreeClassifierModel" =>
-          mlmodelRddList += (UUID -> decisionTreeClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong))
-        case "MLmodel.gbtClassifierClassifierModel" =>
-          mlmodelRddList += (UUID -> gbtClassifierClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("featureSubsetStrategy"), args("checkpointInterval").toInt, args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subSamplingRate").toDouble))
-        case "MLmodel.multilayerPerceptronClassifierModel" =>
-          mlmodelRddList += (UUID -> multilayerPerceptronClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("layers").slice(1, args("layers").length - 1).split(',').map(_.toInt), args("blockSize").toInt, args("seed").toLong, args("maxIter").toInt, args("stepSize").toDouble, args("tol").toDouble))
-        case "MLmodel.linearSVCClassifierModel" =>
-          mlmodelRddList += (UUID -> linearSVCClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble))
-        case "MLmodel.naiveBayesClassifierModel" =>
-          mlmodelRddList += (UUID -> naiveBayesClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("modelType"), args("smoothing").toDouble))
-        case "MLmodel.fmClassifierModel" =>
-          mlmodelRddList += (UUID -> fmClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("stepSize").toDouble, args("factorSize").toInt, args("fitIntercept").toBoolean, args("fitLinear").toBoolean, args("initStd").toDouble, args("maxIter").toInt, args("minBatchFraction").toDouble, args("regParam").toDouble, args("seed").toLong, args("solver"), args("tol").toDouble))
-        case "MLmodel.oneVsRestClassifierModel" =>
-          mlmodelRddList += (UUID -> oneVsRestClassifierModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("classifier")))
-        case "MLmodel.modelClassify" =>
+        case "Coverage.randomForestClassifierModel" =>
+          mlmodelRddList += (UUID -> randomForestClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
+        case "Feature.randomForestClassifierModel" =>
+          mlmodelRddList += (UUID -> randomForestClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
+        case "Coverage.logisticRegressionClassifierModel" =>
+          mlmodelRddList += (UUID -> logisticRegressionClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble, args("elasticNetParam").toDouble, args("family"), args("fitIntercept").toBoolean, args("standardization").toBoolean, args("threshold").toDouble, args("tol").toDouble))
+        case "Feature.logisticRegressionClassifierModel" =>
+          mlmodelRddList += (UUID -> logisticRegressionClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("maxIter").toInt, args("regParam").toDouble, args("elasticNetParam").toDouble, args("family"), args("fitIntercept").toBoolean, args("standardization").toBoolean, args("threshold").toDouble, args("tol").toDouble))
+        case "Coverage.decisionTreeClassifierModel" =>
+          mlmodelRddList += (UUID -> decisionTreeClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong))
+        case "Feature.decisionTreeClassifierModel" =>
+          mlmodelRddList += (UUID -> decisionTreeClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("checkpointInterval").toInt, args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong))
+        case "Coverage.gbtClassifierClassifierModel" =>
+          mlmodelRddList += (UUID -> gbtClassifierClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("featureSubsetStrategy"), args("checkpointInterval").toInt, args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subSamplingRate").toDouble))
+        case "Feature.gbtClassifierClassifierModel" =>
+          mlmodelRddList += (UUID -> gbtClassifierClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("maxIter").toInt, args("featureSubsetStrategy"), args("checkpointInterval").toInt, args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subSamplingRate").toDouble))
+        case "Coverage.multilayerPerceptronClassifierModel" =>
+          mlmodelRddList += (UUID -> multilayerPerceptronClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("layers").slice(1, args("layers").length - 1).split(',').map(_.toInt), args("blockSize").toInt, args("seed").toLong, args("maxIter").toInt, args("stepSize").toDouble, args("tol").toDouble))
+        case "Feature.multilayerPerceptronClassifierModel" =>
+          mlmodelRddList += (UUID -> multilayerPerceptronClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("layers").slice(1, args("layers").length - 1).split(',').map(_.toInt), args("blockSize").toInt, args("seed").toLong, args("maxIter").toInt, args("stepSize").toDouble, args("tol").toDouble))
+        case "Coverage.linearSVCClassifierModel" =>
+          mlmodelRddList += (UUID -> linearSVCClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble))
+        case "Feature.linearSVCClassifierModel" =>
+          mlmodelRddList += (UUID -> linearSVCClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("maxIter").toInt, args("regParam").toDouble))
+        case "Coverage.naiveBayesClassifierModel" =>
+          mlmodelRddList += (UUID -> naiveBayesClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("modelType"), args("smoothing").toDouble))
+        case "Feature.naiveBayesClassifierModel" =>
+          mlmodelRddList += (UUID -> naiveBayesClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("modelType"), args("smoothing").toDouble))
+        case "Coverage.fmClassifierModel" =>
+          mlmodelRddList += (UUID -> fmClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("stepSize").toDouble, args("factorSize").toInt, args("fitIntercept").toBoolean, args("fitLinear").toBoolean, args("initStd").toDouble, args("maxIter").toInt, args("minBatchFraction").toDouble, args("regParam").toDouble, args("seed").toLong, args("solver"), args("tol").toDouble))
+        case "Feature.fmClassifierModel" =>
+          mlmodelRddList += (UUID -> fmClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("stepSize").toDouble, args("factorSize").toInt, args("fitIntercept").toBoolean, args("fitLinear").toBoolean, args("initStd").toDouble, args("maxIter").toInt, args("minBatchFraction").toDouble, args("regParam").toDouble, args("seed").toLong, args("solver"), args("tol").toDouble))
+        case "Coverage.oneVsRestClassifierModel" =>
+          mlmodelRddList += (UUID -> oneVsRestClassifierModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("classifier")))
+        case "Feature.oneVsRestClassifierModel" =>
+          mlmodelRddList += (UUID -> oneVsRestClassifierModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("classifier")))
+        case "Coverage.modelClassify" =>
           coverageRddList += (UUID -> modelClassify(sc, coverage = coverageRddList(args("coverage")), model = mlmodelRddList(args("model"))))
+        case "Feature.modelClassify" =>
+          featureRddList += (UUID -> modelClassify(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], model = mlmodelRddList(args("model")), featuresCol = args("featuresCol").stripPrefix("[").stripSuffix("]").split(",").toList))
         // 回归
-        case "MLmodel.randomForestRegressionModel" =>
-          mlmodelRddList += (UUID -> randomForestRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
-        case "MLmodel.linearRegressionModel" =>
-          mlmodelRddList += (UUID -> linearRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble, args("elasticNetParam").toDouble, args("fitIntercept").toBoolean, args("loss"), args("solver"), args("standardization").toBoolean, args("tol").toDouble))
-        case "MLmodel.generalizedLinearRegressionModel" =>
-          mlmodelRddList += (UUID -> generalizedLinearRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("regParam").toDouble, args("family"), args("link"), args("maxIter").toInt, args("fitIntercept").toBoolean, args("linkPower").toDouble, args("solver"), args("tol").toDouble, args("variancePower").toDouble))
-        case "MLmodel.decisionTreeRegressionModel" =>
-          mlmodelRddList += (UUID -> decisionTreeRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong))
-        case "MLmodel.gbtRegressionModel" =>
-          mlmodelRddList += (UUID -> gbtRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("maxIter").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subsamplingRate").toDouble))
-        case "MLmodel.isotonicRegressionModel" =>
-          mlmodelRddList += (UUID -> isotonicRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("isotonic").toBoolean))
-        case "MLmodel.fmRegressionModel" =>
-          mlmodelRddList += (UUID -> fmRegressionModel(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("factorSize").toInt, args("fitIntercept").toBoolean, args("fitLinear").toBoolean, args("initStd").toDouble, args("maxIter").toInt, args("minBatchFraction").toDouble, args("regParam").toDouble, args("seed").toLong, args("solver"), args("stepSize").toDouble, args("tol").toDouble))
-        case "MLmodel.modelRegress" =>
+        case "Coverage.randomForestRegressionModel" =>
+          mlmodelRddList += (UUID -> randomForestRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
+        case "Feature.randomForestRegressionModel" =>
+          mlmodelRddList += (UUID -> randomForestRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("numTrees").toInt, args("seed").toLong, args("subsamplingRate").toDouble))
+
+        case "Coverage.linearRegressionModel" =>
+          mlmodelRddList += (UUID -> linearRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("maxIter").toInt, args("regParam").toDouble, args("elasticNetParam").toDouble, args("fitIntercept").toBoolean, args("loss"), args("solver"), args("standardization").toBoolean, args("tol").toDouble))
+        case "Feature.linearRegressionModel" =>
+          mlmodelRddList += (UUID -> linearRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("maxIter").toInt, args("regParam").toDouble, args("elasticNetParam").toDouble, args("fitIntercept").toBoolean, args("loss"), args("solver"), args("standardization").toBoolean, args("tol").toDouble))
+
+        case "Coverage.generalizedLinearRegressionModel" =>
+          mlmodelRddList += (UUID -> generalizedLinearRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("regParam").toDouble, args("family"), args("link"), args("maxIter").toInt, args("fitIntercept").toBoolean, args("linkPower").toDouble, args("solver"), args("tol").toDouble, args("variancePower").toDouble))
+        case "Feature.generalizedLinearRegressionModel" =>
+          mlmodelRddList += (UUID -> generalizedLinearRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("regParam").toDouble, args("family"), args("link"), args("maxIter").toInt, args("fitIntercept").toBoolean, args("linkPower").toDouble, args("solver"), args("tol").toDouble, args("variancePower").toDouble))
+
+        case "Coverage.decisionTreeRegressionModel" =>
+          mlmodelRddList += (UUID -> decisionTreeRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong))
+        case "Feature.decisionTreeRegressionModel" =>
+          mlmodelRddList += (UUID -> decisionTreeRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("checkpointInterval").toInt, args("impurity"), args("maxBins").toInt, args("maxDepth").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong))
+
+        case "Coverage.gbtRegressionModel" =>
+          mlmodelRddList += (UUID -> gbtRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("maxIter").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subsamplingRate").toDouble))
+        case "Feature.gbtRegressionModel" =>
+          mlmodelRddList += (UUID -> gbtRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("checkpointInterval").toInt, args("featureSubsetStrategy"), args("impurity"), args("lossType"), args("maxBins").toInt, args("maxDepth").toInt, args("maxIter").toInt, args("minInfoGain").toDouble, args("minInstancesPerNode").toInt, args("minWeightFractionPerNode").toDouble, args("seed").toLong, args("stepSize").toDouble, args("subsamplingRate").toDouble))
+
+        case "Coverage.isotonicRegressionModel" =>
+          mlmodelRddList += (UUID -> isotonicRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("isotonic").toBoolean))
+        case "Feature.isotonicRegressionModel" =>
+          mlmodelRddList += (UUID -> isotonicRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("isotonic").toBoolean))
+
+        case "Coverage.fmRegressionModel" =>
+          mlmodelRddList += (UUID -> fmRegressionModel_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), labelCoverage = coverageRddList(args("labelCoverage")), args("factorSize").toInt, args("fitIntercept").toBoolean, args("fitLinear").toBoolean, args("initStd").toDouble, args("maxIter").toInt, args("minBatchFraction").toDouble, args("regParam").toDouble, args("seed").toLong, args("solver"), args("stepSize").toDouble, args("tol").toDouble))
+        case "Feature.fmRegressionModel" =>
+          mlmodelRddList += (UUID -> fmRegressionModel_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], classProperties = args("classProperties").stripPrefix("[").stripSuffix("]").split(",").toList, inputProperties = args("inputProperties").stripPrefix("[").stripSuffix("]").split(",").toList, args("factorSize").toInt, args("fitIntercept").toBoolean, args("fitLinear").toBoolean, args("initStd").toDouble, args("maxIter").toInt, args("minBatchFraction").toDouble, args("regParam").toDouble, args("seed").toLong, args("solver"), args("stepSize").toDouble, args("tol").toDouble))
+
+        case "Coverage.modelRegress" =>
           coverageRddList += (UUID -> modelRegress(sc, coverage = coverageRddList(args("coverage")), model = mlmodelRddList(args("model"))))
+        case "Feature.modelRegress" =>
+          featureRddList += (UUID -> modelRegress(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], model = mlmodelRddList(args("model")), featuresCol = args("featuresCol").stripPrefix("[").stripSuffix("]").split(",").toList))
+
         // 聚类
-        case "MLmodel.mlKMeans" =>
-          coverageRddList += (UUID -> mlKMeans(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
-        case "MLmodel.latentDirichletAllocation" =>
-          coverageRddList += (UUID -> latentDirichletAllocation(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("checkpointInterval").toInt, args("k").toInt, args("maxIter").toInt, args("optimizer"), args("seed").toLong, args("subsamplingRate").toDouble, args("topicConcentration").toDouble))
-        case "MLmodel.bisectingKMeans" =>
-          coverageRddList += (UUID -> bisectingKMeans(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("distanceMeasure"), args("k").toInt, args("maxIter").toInt, args("seed").toLong))
-        case "MLmodel.gaussianMixture" =>
-          coverageRddList += (UUID -> gaussianMixture(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
+        case "Coverage.mlKMeans" =>
+          coverageRddList += (UUID -> mlKMeans_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
+        case "Feature.mlKMeans" =>
+          featureRddList += (UUID -> mlKMeans_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], featuresCol = args("featuresCol").stripPrefix("[").stripSuffix("]").split(",").toList, args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
+
+        case "Coverage.latentDirichletAllocation" =>
+          coverageRddList += (UUID -> latentDirichletAllocation_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("checkpointInterval").toInt, args("k").toInt, args("maxIter").toInt, args("optimizer"), args("seed").toLong, args("subsamplingRate").toDouble, args("topicConcentration").toDouble))
+        case "Feature.latentDirichletAllocation" =>
+          featureRddList += (UUID -> latentDirichletAllocation_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], featuresCol = args("featuresCol").stripPrefix("[").stripSuffix("]").split(",").toList, args("checkpointInterval").toInt, args("k").toInt, args("maxIter").toInt, args("optimizer"), args("seed").toLong, args("subsamplingRate").toDouble, args("topicConcentration").toDouble))
+
+        case "Coverage.bisectingKMeans" =>
+          coverageRddList += (UUID -> bisectingKMeans_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("distanceMeasure"), args("k").toInt, args("maxIter").toInt, args("seed").toLong))
+        case "Feature.bisectingKMeans" =>
+          featureRddList += (UUID -> bisectingKMeans_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], featuresCol = args("featuresCol").stripPrefix("[").stripSuffix("]").split(",").toList, args("distanceMeasure"), args("k").toInt, args("maxIter").toInt, args("seed").toLong))
+
+        case "Coverage.gaussianMixture" =>
+          coverageRddList += (UUID -> gaussianMixture_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
+        case "Feature.gaussianMixture" =>
+          featureRddList += (UUID -> gaussianMixture_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], featuresCol = args("featuresCol").stripPrefix("[").stripSuffix("]").split(",").toList, args("k").toInt, args("maxIter").toInt, args("seed").toLong, args("tol").toDouble))
+
         // 精度评估
-        case "MLmodel.multiclassClassificationEvaluator" =>
-          stringList += (UUID -> multiclassClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString), args("metricLabel").toDouble).toString)
-        case "MLmodel.clusteringEvaluator" =>
-          stringList += (UUID -> clusteringEvaluator(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName"), args("distanceMeasure")).toString)
-        case "MLmodel.multilabelClassificationEvaluator" =>
-          stringList += (UUID -> multilabelClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel.binaryClassificationEvaluator" =>
-          stringList += (UUID -> binaryClassificationEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel.regressionEvaluator" =>
-          stringList += (UUID -> regressionEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
-        case "MLmodel.rankingEvaluator" =>
-          stringList += (UUID -> rankingEvaluator(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "Coverage.multiclassClassificationEvaluator" =>
+          stringList += (UUID -> multiclassClassificationEvaluator_coverage(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString), args("metricLabel").toDouble).toString)
+        case "Feature.multiclassClassificationEvaluator" =>
+          stringList += (UUID -> multiclassClassificationEvaluator_feature(sc, labelFeature = featureRddList(args("labelFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predictionFeature = featureRddList(args("predictionFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], labelCol = args("labelCol"), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString), args("metricLabel").toDouble).toString)
+
+        case "Coverage.clusteringEvaluator" =>
+          stringList += (UUID -> clusteringEvaluator_coverage(sc, featuresCoverage = coverageRddList(args("featuresCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName"), args("distanceMeasure")).toString)
+        case "Feature.clusteringEvaluator" =>
+          stringList += (UUID -> clusteringEvaluator_feature(sc, feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], featuresColNames = args("featuresColNames").stripPrefix("[").stripSuffix("]").split(",").toList, args("metricName"), args("distanceMeasure")).toString)
+
+        case "Coverage.multilabelClassificationEvaluator" =>
+          stringList += (UUID -> multilabelClassificationEvaluator_coverage(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "Feature.multilabelClassificationEvaluator" =>
+          stringList += (UUID -> multilabelClassificationEvaluator_feature(sc, labelFeature = featureRddList(args("labelFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predictionFeature = featureRddList(args("predictionFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], labelColNames = args("labelColNames").stripPrefix("[").stripSuffix("]").split(",").toList, predictionColNames = args("predictionColNames").stripPrefix("[").stripSuffix("]").split(",").toList, args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+
+        case "Coverage.binaryClassificationEvaluator" =>
+          stringList += (UUID -> binaryClassificationEvaluator_coverage(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "Feature.binaryClassificationEvaluator" =>
+          stringList += (UUID -> binaryClassificationEvaluator_feature(sc, labelFeature = featureRddList(args("labelFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predictionFeature = featureRddList(args("predictionFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], labelCol = args("labelCol"), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+
+        case "Coverage.regressionEvaluator" =>
+          stringList += (UUID -> regressionEvaluator_coverage(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "Feature.regressionEvaluator" =>
+          stringList += (UUID -> regressionEvaluator_feature(sc, labelFeature = featureRddList(args("labelFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predictionFeature = featureRddList(args("predictionFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], labelCol = args("labelCol"), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+
+        case "Coverage.rankingEvaluator" =>
+          stringList += (UUID -> rankingEvaluator_coverage(sc, labelCoverage = coverageRddList(args("labelCoverage")), predictionCoverage = coverageRddList(args("predictionCoverage")), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+        case "Feature.rankingEvaluator" =>
+          stringList += (UUID -> rankingEvaluator_feature(sc, labelFeature = featureRddList(args("labelFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], predictionFeature = featureRddList(args("predictionFeature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], labelCol = args("labelCol"), args("metricName").slice(1, args("metricName").length - 1).split(',').toList.map(_.toString)).toString)
+
         case "MLmodel.export" =>
           saveModelBatch(sc, model = mlmodelRddList(args("model")), batchParam = batchParam, dagId)
         case "Coverage.randomSample" =>
           coverageRddList += (UUID ->Coverage.randomSample(coverage = coverageRddList(args("coverage")), args("sampleRate").toDouble, args("seed").toLong, args("useSampleRatePart").toBoolean))
+        case "Coverage.sampleRegions" =>
+          featureRddList += (UUID -> Coverage.sampleRegions(coverage = coverageRddList(args("coverage")), feature = featureRddList(args("feature")).asInstanceOf[RDD[(String, (Geometry, mutable.Map[String, Any]))]], properties = args("properties").slice(1, args("properties").length - 1).split(',').toList, scale = if(args("scale")!="None") Some(args("scale").toDouble) else None, projection = if(args("projection")!="None") Some(args("projection")) else None))
+        case "Sheet.sheetToFeatureProperties" =>
+          featureRddList += (UUID -> Sheet.sheetToFeatureProperties(sc, csvData = SheetList(args("csvData"))))
       }
     } catch {
       case e: Throwable =>
@@ -1999,7 +2075,7 @@ object Trigger {
   def main(args: Array[String]): Unit = {
 
     workTaskJson = {
-      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/oge_meanfilter.json")
+      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/feature_test3.json")
       //      val fileSource: BufferedSource = Source.fromFile("src/main/scala/whu/edu/cn/testjson/coveragearray.json")
       //      val fileSource: BufferedSource = Source.fromFile("/mnt/storage/data/thirdTest.json")
       val line: String = fileSource.mkString
@@ -2009,7 +2085,7 @@ object Trigger {
 
     dagId = Random.nextInt().toString
     dagId = "12345678"
-    userId = "96787d4b-9b13-4f1c-af39-9f4f1ea75299"
+    userId = "d2cec4be-13a0-4989-aaf6-d0372d4cbd71"
     // 点击整个run的唯一标识，来自boot
 
     val conf: SparkConf = new SparkConf()
