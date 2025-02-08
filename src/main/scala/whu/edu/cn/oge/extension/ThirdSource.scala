@@ -148,41 +148,54 @@ object ThirdSource {
     val format: ThirdOperationDataType = ThirdOperationDataType.withNameInsensitive(param.getString("format"))
 
     format match {
-      case ThirdOperationDataType.TIF => {
+      case ThirdOperationDataType.TIF =>
 
         Trigger.coverageRddList += (
           UUID ->
             Converter.convert[String, (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey])](
               outFile,
-              ThirdOperationDataType.TIF,
+              format,
               sc
             )
           )
-
-      }
-      case ThirdOperationDataType.SHP => {
+      case ThirdOperationDataType.SHP | ThirdOperationDataType.GEOJSON =>
         Trigger.featureRddList += (
           UUID ->
             Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
               outFile,
-              ThirdOperationDataType.SHP,
+              format,
               sc
             )
           )
-      }
-      case ThirdOperationDataType.GEOJSON => {
-        Trigger.featureRddList += (
+      case ThirdOperationDataType.STRING =>
+        Trigger.stringList += (
           UUID ->
-            Converter.convert[String, RDD[(String, (Geometry, mutable.Map[String, Any]))]](
+            Converter.convert[String, String](
               outFile,
-              ThirdOperationDataType.GEOJSON,
+              format,
               sc
             )
           )
-      }
-      case _ => {
+      case ThirdOperationDataType.INT =>
+        Trigger.intList += (
+          UUID ->
+            Converter.convert[String, Int](
+              outFile,
+              format,
+              sc
+            )
+          )
+      case ThirdOperationDataType.DOUBLE =>
+        Trigger.doubleList += (
+          UUID ->
+            Converter.convert[String, Double](
+              outFile,
+              format,
+              sc
+            )
+          )
+      case _ =>
         throw new IllegalArgumentException("不支持的文件类型")
-      }
     }
 
   }
