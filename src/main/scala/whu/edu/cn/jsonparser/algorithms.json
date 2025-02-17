@@ -147,7 +147,7 @@
       },
       {
         "name": "filter",
-        "type": "Filter",
+        "type": "String",
         "description": "The filter to apply to the collection. "
       }
     ]
@@ -6597,7 +6597,7 @@
       "default": 0
     }, {
       "name": "strategy",
-     "type": "String",
+      "type": "String",
       "description": "[Set samples count for each class|Set the same samples counts for all classes| Use a percentage of the samples available for each class|Set the total number of samples to generate, and use class proportions.|Set the same number of samples for all classes, with the smallest class fully sampled|Use all samples]",
       "default": "smallest"
     }, {
@@ -6654,329 +6654,6 @@
       "default": 256
     }]
   },
-  "String.TrainImagesClassifierByOTB": {
-    "description": "Train a classifier from multiple pairs of images and training vector data. Samples are composed of pixel values in each band optionally centered and reduced using an XML statistics file produced by the ComputeImagesStatistics application.",
-    "returns": "String",
-    "args": [{
-      "name": "io.il",
-      "type": "List<Coverage>",
-      "description": "A list of input images.",
-      "optional": "True"
-    }, {
-      "name": "io.vd",
-      "type": "List<Feature>",
-      "description": "A list of vector data to select the training samples.",
-      "optional": "True"
-    }, {
-      "name": "io.valid",
-      "type": "List<Feature>",
-      "description": "A list of vector data to select the validation samples."
-    }, {
-      "name": "io.imstat",
-      "type": "String",
-      "description": "XML file containing mean and variance of each feature."
-    }, {
-      "name": "io.confmatout",
-      "type": "String",
-      "description": "Output file containing the confusion matrix or contingency table (.csv format).The contingency table is output when we unsupervised algorithms is used otherwise the confusion matrix is output."
-    }, {
-      "name": "cleanup",
-      "type": "Boolean",
-      "description": "If activated, the application will try to clean all temporary files it created",
-      "default": "true"
-    }, {
-      "name": "sample.mt",
-      "type": "Int",
-      "description": "Maximum size per class (in pixels) of the training sample list (default = 1000) (no limit = -1). If equal to -1, then the maximal size of the available training sample list per class will be equal to the surface area of the smallest class multiplied by the training sample ratio.",
-      "default": 1000
-    }, {
-      "name": "sample.mv",
-      "type": "Int",
-      "description": "Maximum size per class (in pixels) of the validation sample list (default = 1000) (no limit = -1). If equal to -1, then the maximal size of the available validation sample list per class will be equal to the surface area of the smallest class multiplied by the validation sample ratio.",
-      "default": 1000
-    }, {
-      "name": "sample.bm",
-      "type": "Int",
-      "description": "Bound the number of samples for each class by the number of available samples by the smaller class. Proportions between training and validation are respected. Default is true (=1).",
-      "default": 1
-    }, {
-      "name": "sample.vtr",
-      "type": "Float",
-      "description": "Ratio between training and validation samples (0.0 = all training, 1.0 = all validation) (default = 0.5).",
-      "default": "0.5"
-    }, {
-      "name": "sample.vfn",
-      "type": "String",
-      "description": "Field containing the class id for supervision. The values in this field shall be cast into integers."
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }, {
-      "name": "elev.dem",
-      "type": "String",
-      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
-    }, {
-      "name": "elev.geoid",
-      "type": "String",
-      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
-    }, {
-      "name": "elev.default",
-      "type": "Float",
-      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
-      "default": 0
-    }, {
-      "name": "classifier",
-      "type": "String",
-      "description": "Choice of the classifier to use for the training.",
-      "default": "libsvm"
-    }, {
-      "name": "classifier.libsvm.k",
-      "type": "String",
-      "description": "SVM Kernel Type.",
-      "default": "linear"
-    }, {
-      "name": "classifier.libsvm.m",
-      "type": "String",
-      "description": "Type of SVM formulation.",
-      "default": "csvc"
-    }, {
-      "name": "classifier.libsvm.c",
-      "type": "Float",
-      "description": "SVM models have a cost parameter C (1 by default) to control the trade-off between training errors and forcing rigid margins.",
-      "default": 1
-    }, {
-      "name": "classifier.libsvm.gamma",
-      "type": "Float",
-      "description": "Set gamma parameter in poly/rbf/sigmoid kernel function",
-      "default": 1
-    }, {
-      "name": "classifier.libsvm.coef0",
-      "type": "Float",
-      "description": "Set coef0 parameter in poly/sigmoid kernel function",
-      "default": 0
-    }, {
-      "name": "classifier.libsvm.degree",
-      "type": "Int",
-      "description": "Set polynomial degree in poly kernel function",
-      "default": 3
-    }, {
-      "name": "classifier.libsvm.nu",
-      "type": "Float",
-      "description": "Cost parameter Nu, in the range 0..1, the larger the value, the smoother the decision.",
-      "default": 0.5
-    }, {
-      "name": "classifier.libsvm.opt",
-      "type": "Boolean",
-      "description": "SVM parameters optimization flag.",
-      "default": "false"
-    }, {
-      "name": "classifier.libsvm.prob",
-      "type": "Boolean",
-      "description": "Probability estimation flag.",
-      "default": "false"
-    }, {
-      "name": "classifier.boost.t",
-      "type": "String",
-      "description": "Type of Boosting algorithm.",
-      "default": "real"
-    }, {
-      "name": "classifier.boost.w",
-      "type": "Int",
-      "description": "The number of weak classifiers.",
-      "default": 100
-    }, {
-      "name": "classifier.boost.r",
-      "type": "Float",
-      "description": "A threshold between 0 and 1 used to save computational time. Samples with summary weight <= (1 - weight_trim_rate) do not participate in the next iteration of training. Set this parameter to 0 to turn off this functionality.",
-      "default": 0.95
-    }, {
-      "name": "classifier.boost.m",
-      "type": "Int",
-      "description": "Maximum depth of the tree.",
-      "default": 1
-    }, {
-      "name": "classifier.dt.max",
-      "type": "Int",
-      "description": "The training algorithm attempts to split each node while its depth is smaller than the maximum possible depth of the tree. The actual depth may be smaller if the other termination criteria are met, and/or if the tree is pruned.",
-      "default": 10
-    }, {
-      "name": "classifier.dt.min",
-      "type": "Int",
-      "description": "If the number of samples in a node is smaller than this parameter, then this node will not be split.",
-      "default": 10
-    }, {
-      "name": "classifier.dt.ra",
-      "type": "Float",
-      "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split further.",
-      "default": 0.01
-    }, {
-      "name": "classifier.dt.cat",
-      "type": "Int",
-      "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
-      "default": 10
-    }, {
-      "name": "classifier.dt.r",
-      "type": "Boolean",
-      "description": "If true, then a pruning will be harsher. This will make a tree more compact and more resistant to the training data noise but a bit less accurate."
-    }, {
-      "name": "classifier.dt.t",
-      "type": "Boolean",
-      "description": "If true, then pruned branches are physically removed from the tree."
-    }, {
-      "name": "classifier.ann.t",
-      "type": "String",
-      "description": "Type of training method for the multilayer perceptron (MLP) neural network.",
-      "default": "reg"
-    }, {
-      "name": "classifier.ann.sizes",
-      "type": "List<String>",
-      "description": "The number of neurons in each intermediate layer (excluding input and output layers).",
-      "optional": "True"
-    }, {
-      "name": "classifier.ann.f",
-      "type": "String",
-      "description": "This function determine whether the output of the node is positive or not depending on the output of the transfer function.",
-      "default": "sig"
-    }, {
-      "name": "classifier.ann.a",
-      "type": "Float",
-      "description": "Alpha parameter of the activation function (used only with sigmoid and gaussian functions).",
-      "default": 1
-    }, {
-      "name": "classifier.ann.b",
-      "type": "Float",
-      "description": "Beta parameter of the activation function (used only with sigmoid and gaussian functions).",
-      "default": 1
-    }, {
-      "name": "classifier.ann.bpdw",
-      "type": "Float",
-      "description": "Strength of the weight gradient term in the BACKPROP method. The recommended value is about 0.1.",
-      "default": 0.1
-    }, {
-      "name": "classifier.ann.bpms",
-      "type": "Float",
-      "description": "Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough.",
-      "default": 0.1
-    }, {
-      "name": "classifier.ann.rdw",
-      "type": "Float",
-      "description": "Initial value Delta_0 of update-values Delta_{ij} in RPROP method (default = 0.1).",
-      "default": 0.1
-    }, {
-      "name": "classifier.ann.rdwm",
-      "type": "Float",
-      "description": "Update-values lower limit Delta_{min} in RPROP method. It must be positive (default = 1e-7).",
-      "default": 1e-07
-    }, {
-      "name": "classifier.ann.term",
-      "type": "null",
-      "description": "Termination criteria.",
-      "default": "all"
-    }, {
-      "name": "classifier.ann.eps",
-      "type": "Float",
-      "description": "Epsilon value used in the Termination criteria.",
-      "default": "0.01"
-    }, {
-      "name": "classifier.ann.iter",
-      "type": "Int",
-      "description": "Maximum number of iterations used in the Termination criteria.",
-      "default": 1000
-    }, {
-      "name": "classifier.rf.max",
-      "type": "Int",
-      "description": "The depth of the tree. A low value will likely underfit and conversely a high value will likely overfit. The optimal value can be obtained using cross validation or other suitable methods.",
-      "default": 5
-    }, {
-      "name": "classifier.rf.min",
-      "type": "Int",
-      "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
-      "default": 10
-    }, {
-      "name": "classifier.rf.ra",
-      "type": "Float",
-      "description": "If all absolute differences between an estimated value in a node and the values of the train samples in this node are smaller than this regression accuracy parameter, then the node will not be split.",
-      "default": 0
-    }, {
-      "name": "classifier.rf.cat",
-      "type": "Int",
-      "description": "Cluster possible values of a categorical variable into K <= cat clusters to find a suboptimal split.",
-      "default": 10
-    }, {
-      "name": "classifier.rf.var",
-      "type": "Int",
-      "description": "The size of the subset of features, randomly selected at each tree node, that are used to find the best split(s). If you set it to 0, then the size will be set to the square root of the total number of features.",
-      "default": 0
-    }, {
-      "name": "classifier.rf.nbtrees",
-      "type": "Int",
-      "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
-      "default": 100
-    }, {
-      "name": "classifier.rf.acc",
-      "type": "Float",
-      "description": "Sufficient accuracy (OOB error).",
-      "default": "0.01"
-    }, {
-      "name": "classifier.knn.k",
-      "type": "Int",
-      "description": "The number of neighbors to use.",
-      "default": 32
-    }, {
-      "name": "classifier.sharkrf.nbtrees",
-      "type": "Int",
-      "description": "The maximum number of trees in the forest. Typically, the more trees you have, the better the accuracy. However, the improvement in accuracy generally diminishes and reaches an asymptote for a certain number of trees. Also to keep in mind, increasing the number of trees increases the prediction time linearly.",
-      "default": 100
-    }, {
-      "name": "classifier.sharkrf.nodesize",
-      "type": "Int",
-      "description": "If the number of samples in a node is smaller than this parameter, then the node will not be split. A reasonable value is a small percentage of the total data e.g. 1 percent.",
-      "default": 25
-    }, {
-      "name": "classifier.sharkrf.mtry",
-      "type": "Int",
-      "description": "The number of features (variables) which will be tested at each node in order to compute the split. If set to zero, the square root of the number of features is used.",
-      "default": 0
-    }, {
-      "name": "classifier.sharkrf.oobr",
-      "type": "Float",
-      "description": "Set the fraction of the original training dataset to use as the out of bag sample.A good default value is 0.66.",
-      "default": "0.66"
-    }, {
-      "name": "classifier.sharkkm.maxiter",
-      "type": "Int",
-      "description": "The maximum number of iterations for the kmeans algorithm. 0=unlimited",
-      "default": 10
-    }, {
-      "name": "classifier.sharkkm.k",
-      "type": "Int",
-      "description": "The number of classes used for the kmeans algorithm. Default set to 2 class",
-      "default": 2
-    }, {
-      "name": "classifier.sharkkm.incentroids",
-      "type": "String",
-      "description": "Input text file containing centroid posistions used to initialize the algorithm. Each centroid must be described by p parameters, p being the number of features in the input vector data, and the number of centroids must be equal to the number of classes (one centroid per line with values separated by spaces).",
-      "optional": "False"
-    }, {
-      "name": "classifier.sharkkm.cstats",
-      "type": "String",
-      "description": "A XML file containing mean and standard deviation to centerand reduce the input centroids before the KMeans algorithm, produced by ComputeImagesStatistics application.",
-      "optional": "False"
-    }, {
-      "name": "classifier.sharkkm.outcentroids",
-      "type": "String",
-      "description": "Output text file containing centroids after the kmean algorithm.",
-      "optional": "False"
-    }, {
-      "name": "rand",
-      "type": "Int",
-      "description": "Set a specific random seed with integer value.",
-      "optional": "False"
-    }]
-  },
-
   "Coverage.segmentationMprofilesdVectorByOTB": {
     "description": "Performs segmentation of an image, and output a vector file.Segmentation based on morphological profiles.",
     "returns": "Feature",
@@ -7375,327 +7052,6 @@
         "default": 0.66
       }
     ]
-  },
-  "Feature.ComputeOGRLayersFeaturesStatisticsByOTB": {
-    "description": "Compute statistics (mean and standard deviation) of the features in a set of OGR Layers, and write them in an XML file. The resulting XML file can then be used by the training application.",
-    "returns": "string",
-    "args": [
-      {
-        "name": "inshp",
-        "type": "Feature",
-        "optional": "True",
-        "description": "Name of the input shapefile"
-      },
-      {
-        "name": "feat",
-        "type": "List<String>",
-        "description": "List of features to consider for statistics.",
-        "default": "['perimeter']"
-      }
-    ]
-  },
-  "Coverage.KMeansClassificationByOTB": {
-    "description": "Unsupervised KMeans image classification. This is a composite application, using existing training and classification applications. The SharkKMeans model is used.",
-    "returns": "Coverage",
-    "args": [{
-      "name": "in",
-      "type": "Coverage",
-      "description": "Input image filename.",
-      "optional": "True"
-    }, {
-      "name": "nc",
-      "type": "Int",
-      "description": "Number of modes, which will be used to generate class membership.",
-      "default": 5
-    }, {
-      "name": "ts",
-      "type": "Int",
-      "description": "Size of the training set (in pixels).",
-      "default": 100
-    }, {
-      "name": "maxit",
-      "type": "Int",
-      "description": "Maximum number of iterations for the learning step. If this parameter is set to 0, the KMeans algorithm will not stop until convergence",
-      "default": 1000
-    }, {
-      "name": "centroids.in",
-      "type": "String",
-      "description": "Input text file containing centroid positions used to initialize the algorithm. Each centroid must be described by p parameters, p being the number of bands in the input image, and the number of centroids must be equal to the number of classes (one centroid per line with values separated by spaces).",
-      "optional": "False"
-    }, {
-      "name": "centroids.out",
-      "type": "String",
-      "description": "Output text file containing centroids after the kmean algorithm.",
-      "optional": "False"
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }, {
-      "name": "sampler",
-      "type": "null",
-      "description": "Type of sampling (periodic, pattern based, random)",
-      "default": "periodic"
-    }, {
-      "name": "sampler.periodic.jitter",
-      "type": "Int",
-      "description": "Jitter amplitude added during sample selection (0 = no jitter)",
-      "default": 0
-    }, {
-      "name": "vm",
-      "type": "Coverage",
-      "description": "Validity mask, only non-zero pixels will be used to estimate KMeans modes.",
-      "optional": "False"
-    }, {
-      "name": "nodatalabel",
-      "type": "Int",
-      "description": "By default, hidden pixels will have the assigned label 0 in the output image. It’s possible to define the label mask by another value, but be careful to not take a label from another class. This application initializes the labels from 0 to N-1, N is the number of class (defined by ‘nc’ parameter).",
-      "default": 0
-    }, {
-      "name": "cleanup",
-      "type": "Boolean",
-      "description": "If activated, the application will try to clean all temporary files it created",
-      "default": "true"
-    }, {
-      "name": "rand",
-      "type": "Int",
-      "description": "Set a specific random seed with integer value.",
-      "optional": "False"
-    }]
-  },
-  "Coverage.SOMClassificationByOTB": {
-    "description": "SOM image classification.",
-    "returns": "Coverage",
-    "args": [
-      {
-        "name": "in",
-        "type": "Coverage",
-        "optional": "True",
-        "description": "Input image to classify"
-      },
-      {
-        "name": "vm",
-        "type": "Coverage",
-        "description": "Validity mask (only pixels corresponding to a mask value greater than 0 will be used for learning)."
-      },
-      {
-        "name": "tp",
-        "type": "Float",
-        "description": "Probability for a sample to be selected in the training set.",
-        "default": 1
-      },
-      {
-        "name": "som",
-        "type": "Coverage",
-        "description": "Output image containing the Self-Organizing Map."
-      },
-      {
-        "name": "ts",
-        "type": "Int",
-        "description": "Maximum training set size (in pixels)."
-      },
-      {
-        "name": "sx",
-        "type": "Int",
-        "description": "X size of the SOM map.",
-        "default": 32
-      },
-      {
-        "name": "sy",
-        "type": "Int",
-        "description": "Y size of the SOM map.",
-        "default": 32
-      },
-      {
-        "name": "nx",
-        "type": "Int",
-        "description": "X size of the initial neighborhood in the SOM map.",
-        "default": 10
-      },
-      {
-        "name": "ny",
-        "type": "Int",
-        "description": "Y size of the initial neighborhood in the SOM map.",
-        "default": 10
-      },
-      {
-        "name": "ni",
-        "type": "Int",
-        "description": "Number of iterations for SOM learning.",
-        "default": 5
-      },
-      {
-        "name": "bi",
-        "type": "Float",
-        "description": "Initial learning coefficient.",
-        "default": 1
-      },
-      {
-        "name": "bf",
-        "type": "Float",
-        "description": "Final learning coefficient.",
-        "default": 0.1
-      },
-      {
-        "name": "iv",
-        "type": "Float",
-        "description": "Maximum initial neuron weight",
-        "default":0
-      },
-      {
-        "name": "rand",
-        "type": "Int",
-        "description": "Set a specific random seed with integer value."
-      },
-      {
-        "name": "ram",
-        "type": "Int",
-        "description": "Available memory for processing (in MB).",
-        "default":256
-      }
-    ]
-  },
-  "Coverage.SampleExtractionByOTB": {
-    "description": "The application extracts samples values from animage using positions contained in a vector data file.",
-    "returns": "Feature",
-    "args": [{
-      "name": "in",
-      "type": "Coverage",
-      "description": "Support image",
-      "optional": "True"
-    }, {
-      "name": "vec",
-      "type": "Feature",
-      "description": "Vector data file containing samplingpositions. (OGR format)",
-      "optional": "True"
-    }, {
-      "name": "outfield",
-      "type": "List<String>",
-      "description": "Choice between naming method for output fields",
-      "default": "prefix"
-    }, {
-      "name": "outfield.prefix.name",
-      "type": "String",
-      "description": "Prefix used to form the field names thatwill contain the extracted values.",
-      "default": "value_"
-    }, {
-      "name": "outfield.list.names",
-      "type": "List<String>",
-      "description": "Full list of output field names.",
-      "optional": "True"
-    }, {
-      "name": "field",
-      "type": "String",
-      "description": "Name of the field carrying the class name in the input vectors."
-    }, {
-      "name": "layer",
-      "type": "Int",
-      "description": "Layer index to read in the input vector file.",
-      "default": 0
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }]
-  },
-  "Feature.SampleSelectionByOTB": {
-    "description": "The application selects a set of samples from geometries intended for training (they should have a field giving the associated class).",
-    "returns": "Feature",
-    "args": [{
-      "name": "in",
-      "type": "Coverage",
-      "description": "Support image that will be classified",
-      "optional": "True"
-    }, {
-      "name": "mask",
-      "type": "Coverage",
-      "description": "Validity mask (only pixels corresponding to a mask value greater than 0 will be used for statistics)",
-      "optional": "False"
-    }, {
-      "name": "vec",
-      "type": "Feature",
-      "description": "Input geometries to analyse",
-      "optional": "True"
-    }, {
-      "name": "instats",
-      "type": "String",
-      "description": "Input file storing statistics (XML format)",
-      "optional": "True"
-    }, {
-      "name": "outrates",
-      "type": "String",
-      "description": "Output rates (CSV formatted)",
-      "optional": "False"
-    }, {
-      "name": "sampler",
-      "type": "List<String>",
-      "description": "Type of sampling (periodic, pattern based, random)",
-      "default": "periodic"
-    }, {
-      "name": "sampler.periodic.jitter",
-      "type": "Int",
-      "description": "Jitter amplitude added during sample selection (0 = no jitter)",
-      "default": 0
-    }, {
-      "name": "strategy",
-      "type": "String",
-      "description": "[Set samples count for each class|Set the same samples counts for all classes| Use a percentage of the samples available for each class|Set the total number of samples to generate, and use class proportions.|Set the same number of samples for all classes, with the smallest class fully sampled|Use all samples]",
-      "default": "smallest"
-    }, {
-      "name": "strategy.byclass.in",
-      "type": "String",
-      "description": "Number of samples by class (CSV format with class name in 1st column and required samples in the 2nd.",
-      "optional": "True"
-    }, {
-      "name": "strategy.constant.nb",
-      "type": "Int",
-      "description": "Number of samples for all classes",
-      "optional": "True"
-    }, {
-      "name": "strategy.percent.p",
-      "type": "Float",
-      "description": "The percentage to use",
-      "default": "0.5"
-    }, {
-      "name": "strategy.total.v",
-      "type": "Int",
-      "description": "The number of samples to generate",
-      "default": 1000
-    }, {
-      "name": "field",
-      "type": "String",
-      "description": "Name of the field carrying the class name in the input vectors."
-    }, {
-      "name": "layer",
-      "type": "Int",
-      "description": "Layer index to read in the input vector file.",
-      "default": 0
-    }, {
-      "name": "elev.dem",
-      "type": "String",
-      "description": "This parameter allows selecting a directory containing Digital Elevation Model files. Note that this directory should contain only DEM files. Unexpected behaviour might occurs if other images are found in this directory. Input DEM tiles should be in a raster format supported by GDAL."
-    }, {
-      "name": "elev.geoid",
-      "type": "String",
-      "description": "Use a geoid grid to get the height above the ellipsoid in case there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles. A version of the geoid can be found on the OTB website (egm96.grd and egm96.grd.hdr at)."
-    }, {
-      "name": "elev.default",
-      "type": "Float",
-      "description": "This parameter allows setting the default height above ellipsoid when there is no DEM available, no coverage for some points or pixels with no_data in the DEM tiles, and no geoid file has been set. This is also used by some application as an average elevation value.",
-      "default": 0
-    }, {
-      "name": "rand",
-      "type": "Int",
-      "description": "Set a specific random seed with integer value.",
-      "optional": "False"
-    }, {
-      "name": "ram",
-      "type": "Int",
-      "description": "Available memory for processing (in MB).",
-      "default": 256
-    }]
   },
   "String.TrainImagesClassifierByOTB": {
     "description": "Train a classifier from multiple pairs of images and training vector data. Samples are composed of pixel values in each band optionally centered and reduced using an XML statistics file produced by the ComputeImagesStatistics application.",
@@ -8485,7 +7841,6 @@
         "description": "Creates a latitude (degree decimal) map, or longitude if the parameter is true (default: false).",
         "optional": "True",
         "default": false
-
       }
     ]
   },
@@ -9051,6 +8406,55 @@
         "name": "location",
         "type": "String",
         "description": "Name for new location to create "
+      }
+    ]
+  },
+  "Coverage.gorwByGrass": {
+    "description": " Generates a raster map layer with contiguous areas grown by one cell.  ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map. "
+      }
+    ]
+  },
+  "Coverage.fillnullByGrass": {
+    "description": " Fills no-data areas in raster maps using spline interpolation. ",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map. "
+      }
+    ]
+  },
+  "Coverage.randomByGrass": {
+    "description": "Creates randomly placed raster cells or vector points.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map "
+      },
+      {
+        "name": "npoints",
+        "type": "String",
+        "description": "The number(%) of points/cells to generate."
+      }
+    ]
+  },
+  "Coverage.univarByGrass": {
+    "description": "Calculate univariate statistics from the non-null cells of a raster map.",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "input",
+        "type": "Coverage",
+        "description": "Name of input raster map "
       }
     ]
   },
@@ -10533,6 +9937,33 @@
       }
     ]
   },
+  "CoverageCollection.cat": {
+    "description": "cat the coverages",
+    "returns": "Coverage",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "CoverageCollection",
+        "description": "The coverage from which the left operand bands are taken"
+      }
+    ]
+  },
+  "CoverageCollection.visualizeOnTheFly": {
+    "description": "",
+    "returns": "Unit",
+    "args": [
+      {
+        "name": "coverageCollection",
+        "type": "collection",
+        "description": ""
+      },
+      {
+        "name": "visParam",
+        "type": "VisualizationParam",
+        "description": ""
+      }
+    ]
+  },
   "Coverage.addStyles": {
     "description": "Add the styles to the coverage.",
     "returns": "Coverage",
@@ -10722,8 +10153,8 @@
       {
         "name": "format",
         "type": "String",
-        "description": "png",
-        "default": "False",
+        "description": "",
+        "default": "png",
         "optional": "True"
       }
     ]
@@ -10831,13 +10262,13 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[Double]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
         "name": "properties",
         "type": "String",
-        "description": "键值对，通过:隔开"
+        "description": "Properties"
       },
       {
         "name": "crs",
@@ -10852,13 +10283,13 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[List[Double]]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
         "name": "properties",
         "type": "String",
-        "description": "键值对，通过:隔开"
+        "description": "Properties"
       },
       {
         "name": "crs",
@@ -10873,7 +10304,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[List[Double]]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
@@ -10894,13 +10325,13 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[List[Double]]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
         "name": "properties",
         "type": "String",
-        "description": "键值对，通过:隔开"
+        "description": "Properties"
       },
       {
         "name": "crs",
@@ -10915,7 +10346,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[List[Double]]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
@@ -10936,7 +10367,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[List[List[Double]]]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
@@ -10957,7 +10388,7 @@
     "args": [
       {
         "name": "coors",
-        "type": "List[List[List[List[Double]]]]",
+        "type": "String",
         "description": "Coordinates"
       },
       {
@@ -11812,9 +11243,11 @@
         "description": "the input coverage"
       },
       {
-        "name": "radius",
-        "type": "Int",
-        "description": "The radius"
+        "name": "Z_factor",
+        "type": "Float",
+        "description": "Vertical exaggeration",
+        "optional": "True",
+        "default": "1"
       }
     ]
   },
@@ -12458,7 +11891,7 @@
     ]
   },
   "Cube.NDVI": {
-    "description": "Compute NDWI of the Cube.",
+    "description": "Compute NDVI of the Cube.",
     "returns": "Cube",
     "args": [
       {
@@ -14861,7 +14294,7 @@
       }
     ]
   },
-  "MLmodel.randomForestClassifierModel": {
+  "Coverage.randomForestClassifierModel": {
     "description": "randomForestClassifierModel training method.",
     "returns": "MLmodel",
     "args": [
@@ -14947,7 +14380,100 @@
       }
     ]
   },
-  "MLmodel.logisticRegressionClassifierModel": {
+  "Feature.randomForestClassifierModel": {
+    "description": "randomForestClassifierModel training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Integer",
+        "description": "Specifies the number of iterations between each checkpoint during the training process. A checkpoint allows saving the current state of the model at intervals, which is useful for long-running training processes to resume from a certain point in case of interruptions.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name":"featureSubsetStrategy",
+        "type": "String",
+        "description": "Controls the strategy for selecting a subset of features to be used at each node split in the decision trees. Common options include 'auto' (default), 'sqrt', and 'log2'. Using a subset of features helps to decorrelate the trees and improve model robustness.",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "Defines the maximum number of bins used for discretizing continuous feature values. This parameter influences the splitting of decision nodes in each tree. A higher value results in more precise splits, but may increase computational complexity. The default value is 32.",
+        "optional": "True",
+        "default": "32"
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "Sets the maximum depth of each decision tree in the random forest. Deeper trees can capture more complex relationships in the data, but are also more likely to overfit. Shallow trees may underfit the data. The default value is 5, which balances complexity and overfitting risk.",
+        "optional": "True",
+        "default": "5"
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "Specifies the minimum information gain required to split a node. If the information gain from a split is below this threshold, the split is not made, and the node becomes a leaf. This helps to avoid creating overly specific splits that may not generalize well.",
+        "optional": "True",
+        "default": "0.0"
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "Sets the minimum number of instances (data points) that must be present in a node for it to be split. Increasing this value prevents the model from creating very deep trees with many small, overfitted branches. A small value leads to more granular splits, while a larger value prevents overly fine splits.",
+        "optional": "True",
+        "default": "1"
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "Defines the minimum fraction of the total weight that must be present in a node for it to be split. This is used when the training data has weighted samples. Setting a non-zero value ensures that the model does not make splits in nodes with very low weight, thus improving generalization.",
+        "optional": "True",
+        "default": "0.0"
+      },
+      {
+        "name": "numTrees",
+        "type": "Int",
+        "description": "Specifies the number of trees in the random forest. More trees generally improve model accuracy by reducing variance, though it also increases computational cost. The default value is 20 trees, which is often sufficient for many applications, but can be adjusted based on the dataset and performance needs.",
+        "optional": "True",
+        "default": "20"
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Sets the random seed for initialization. This ensures reproducibility of the model training process. Using the same seed will allow the model to be trained in the same way across different runs, which is useful for debugging and comparing results.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "subsamplingRate",
+        "type": "Double",
+        "description": "Defines the fraction of the training data to be used for building each tree. A value of 1.0 means that each tree is trained on the full dataset, while lower values (e.g., 0.8) use random subsampling, which can improve model generalization by reducing overfitting.",
+        "optional": "True",
+        "default": "1.0"
+      }
+    ]
+  },
+
+  "Coverage.logisticRegressionClassifierModel": {
     "description": "logisticRegressionClassifierModel training method.",
     "returns": "MLmodel",
     "args": [
@@ -15019,7 +14545,86 @@
       }
     ]
   },
-  "MLmodel.decisionTreeClassifierModel": {
+  "Feature.logisticRegressionClassifierModel": {
+    "description": "logisticRegressionClassifierModel training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations for the optimizer.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter for the model.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "elasticNetParam",
+        "type": "Double",
+        "description": "Elastic net mixing parameter (0: L2 regularization, 1: L1 regularization).",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "family",
+        "type": "String",
+        "description": "The family of logistic regression (e.g., 'auto', 'binomial', 'multinomial').",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "fitIntercept",
+        "type": "Boolean",
+        "description": "Whether to fit an intercept term in the model.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "standardization",
+        "type": "Boolean",
+        "description": "Whether to standardize features before training.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "threshold",
+        "type": "Double",
+        "description": "The threshold for binary classification prediction.",
+        "optional": "True",
+        "default": 0.5
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "The convergence tolerance for iterative algorithms.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
+
+  "Coverage.decisionTreeClassifierModel": {
     "description": "decisionTreeClassifierModel training method.",
     "returns": "MLmodel",
     "args": [
@@ -15084,7 +14689,79 @@
       }
     ]
   },
-  "MLmodel.gbtClassifierClassifierModel": {
+  "Feature.decisionTreeClassifierModel": {
+    "description": "decisionTreeClassifierModel training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "How often to checkpoint the model (in terms of iterations).",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "impurity",
+        "type": "String",
+        "description": "Criterion to measure the quality of a split (e.g., 'gini', 'entropy').",
+        "optional": "True",
+        "default": "gini"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "Maximum number of bins used when discretizing continuous features.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "The maximum depth of the tree.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "Minimum number of instances each node must have.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "Minimum fraction of the total weight of instances required to be at a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed used for deterministic behavior.",
+        "optional": "True",
+        "default": 0
+      }
+    ]
+  },
+
+  "Coverage.gbtClassifierClassifierModel": {
     "description": "Gradient Boosted Trees classifier model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15191,7 +14868,121 @@
       }
     ]
   },
-  "MLmodel.multilayerPerceptronClassifierModel": {
+  "Feature.gbtClassifierClassifierModel": {
+    "description": "Gradient Boosted Trees classifier model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations (boosting rounds).",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "featureSubsetStrategy",
+        "type": "String",
+        "description": "The number of features to consider for splits at each tree node.",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "Frequency of checkpointing the model.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "impurity",
+        "type": "String",
+        "description": "Criterion to measure the quality of a split (e.g., 'variance').",
+        "optional": "True",
+        "default": "variance"
+      },
+      {
+        "name": "lossType",
+        "type": "String",
+        "description": "Loss function to be minimized (e.g., 'logistic').",
+        "optional": "True",
+        "default": "logistic"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "Maximum number of bins used for discretizing continuous features.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "The maximum depth of the tree.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "Minimum information gain for a split to be considered at a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "Minimum number of instances each node must have.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "Minimum fraction of the total weight required at a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "stepSize",
+        "type": "Double",
+        "description": "Step size for each iteration of boosting (learning rate).",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "subSamplingRate",
+        "type": "Double",
+        "description": "Fraction of the data to be used for training each tree.",
+        "optional": "True",
+        "default": 1.0
+      }
+    ]
+  },
+
+  "Coverage.multilayerPerceptronClassifierModel": {
     "description": "Multilayer Perceptron classifier model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15247,7 +15038,70 @@
       }
     ]
   },
-  "MLmodel.linearSVCClassifierModel": {
+  "Feature.multilayerPerceptronClassifierModel": {
+    "description": "Multilayer Perceptron classifier model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "layers",
+        "type": "Array[Int]",
+        "description": "The array representing the number of nodes in each layer."
+      },
+      {
+        "name": "blockSize",
+        "type": "Int",
+        "description": "The number of training examples per block.",
+        "optional": "True",
+        "default": 128
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "stepSize",
+        "type": "Double",
+        "description": "Step size for gradient descent.",
+        "optional": "True",
+        "default": 0.03
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for stopping criteria.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
+
+  "Coverage.linearSVCClassifierModel": {
     "description": "Linear Support Vector Classifier (SVC) model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15277,7 +15131,44 @@
       }
     ]
   },
-  "MLmodel.naiveBayesClassifierModel": {
+  "Feature.linearSVCClassifierModel": {
+    "description": "Linear Support Vector Classifier (SVC) model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations for training.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter to prevent overfitting.",
+        "optional": "True",
+        "default": 0.1
+      }
+    ]
+  },
+
+  "Coverage.naiveBayesClassifierModel": {
     "description": "Naive Bayes classifier model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15307,7 +15198,44 @@
       }
     ]
   },
-  "MLmodel.fmClassifierModel": {
+  "Feature.naiveBayesClassifierModel": {
+    "description": "Naive Bayes classifier model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "modelType",
+        "type": "String",
+        "description": "The type of Naive Bayes model ('multinomial', 'bernoulli').",
+        "optional": "True",
+        "default": "multinomial"
+      },
+      {
+        "name": "smoothing",
+        "type": "Double",
+        "description": "Smoothing parameter to avoid zero probabilities.",
+        "optional": "True",
+        "default": 1.0
+      }
+    ]
+  },
+
+  "Coverage.fmClassifierModel": {
     "description": "Factorization Machines classifier model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15400,7 +15328,107 @@
       }
     ]
   },
-  "MLmodel.oneVsRestClassifierModel": {
+  "Feature.fmClassifierModel": {
+    "description": "Factorization Machines classifier model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "stepSize",
+        "type": "Double",
+        "description": "Step size for each iteration.",
+        "optional": "True",
+        "default": 1.0
+      },
+      {
+        "name": "factorSize",
+        "type": "Int",
+        "description": "Dimensionality of the factorization.",
+        "optional": "True",
+        "default": 8
+      },
+      {
+        "name": "fitIntercept",
+        "type": "Boolean",
+        "description": "Whether to fit the intercept term.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "fitLinear",
+        "type": "Boolean",
+        "description": "Whether to fit the linear term.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "initStd",
+        "type": "Double",
+        "description": "Initial standard deviation for the factorization.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "minBatchFraction",
+        "type": "Double",
+        "description": "Fraction of data used for mini-batch gradient descent.",
+        "optional": "True",
+        "default": 1.0
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "solver",
+        "type": "String",
+        "description": "Optimization solver to use ('adamW', etc.).",
+        "optional": "True",
+        "default": "adamW"
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for stopping criteria.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
+
+  "Coverage.oneVsRestClassifierModel": {
     "description": "One-vs-Rest (OvR) classifier model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15423,7 +15451,37 @@
       }
     ]
   },
-  "MLmodel.modelClassify": {
+  "Feature.oneVsRestClassifierModel": {
+    "description": "One-vs-Rest (OvR) classifier model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "classifier",
+        "type": "String",
+        "description": "The base classifier used for each binary classification ('logisticRegression', etc.).",
+        "optional": "True",
+        "default": "logisticRegression"
+      }
+    ]
+  },
+
+  "Coverage.modelClassify": {
     "description": "classifying method.",
     "returns": "Coverage",
     "args": [
@@ -15439,8 +15497,52 @@
       }
     ]
   },
+  "Feature.gaussianMixture": {
+    "description": "Gaussian Mixture Model (GMM) training method.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be clustered."
+      },
+      {
+        "name": "featuresCol",
+        "type": "List<String>",
+        "description": "Feature columns involved in cluster in properties."
+      },
+      {
+        "name": "k",
+        "type": "Int",
+        "description": "Number of Gaussian components.",
+        "optional": "True",
+        "default": 2
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Seed for random number generation.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for convergence.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
 
-  "MLmodel.randomForestRegressionModel": {
+  "Coverage.randomForestRegressionModel": {
     "description": "Random Forest regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15533,7 +15635,106 @@
       }
     ]
   },
-  "MLmodel.linearRegressionModel": {
+  "Feature.randomForestRegressionModel": {
+    "description": "Random Forest regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "Checkpoint interval for caching intermediate models.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "featureSubsetStrategy",
+        "type": "String",
+        "description": "Strategy to choose a subset of features ('auto', 'sqrt', etc.).",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "impurity",
+        "type": "String",
+        "description": "Criterion used for information gain calculation ('variance').",
+        "optional": "True",
+        "default": "variance"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "Maximum number of bins used for splitting features.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "Maximum depth of the trees.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "Minimum information gain required for splitting a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "Minimum number of instances required to split a node.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "Minimum fraction of the total weight needed to split a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "numTrees",
+        "type": "Int",
+        "description": "Number of trees in the forest.",
+        "optional": "True",
+        "default": 20
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "subsamplingRate",
+        "type": "Double",
+        "description": "Fraction of data used for training each tree.",
+        "optional": "True",
+        "default": 1.0
+      }
+    ]
+  },
+  "Coverage.linearRegressionModel": {
     "description": "Linear regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15605,7 +15806,85 @@
       }
     ]
   },
-  "MLmodel.generalizedLinearRegressionModel": {
+  "Feature.linearRegressionModel": {
+    "description": "Linear regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter (lambda).",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "elasticNetParam",
+        "type": "Double",
+        "description": "Elastic net mixing parameter (0 = L2, 1 = L1).",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "fitIntercept",
+        "type": "Boolean",
+        "description": "Whether to fit the intercept term.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "loss",
+        "type": "String",
+        "description": "Loss function to minimize ('squaredError').",
+        "optional": "True",
+        "default": "squaredError"
+      },
+      {
+        "name": "solver",
+        "type": "String",
+        "description": "Solver algorithm used ('auto').",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "standardization",
+        "type": "Boolean",
+        "description": "Whether to standardize features before fitting.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for stopping criteria.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
+  "Coverage.generalizedLinearRegressionModel": {
     "description": "Generalized linear regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15684,7 +15963,93 @@
       }
     ]
   },
-  "MLmodel.decisionTreeRegressionModel": {
+  "Feature.generalizedLinearRegressionModel": {
+    "description": "Generalized linear regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter (lambda).",
+        "optional": "True",
+        "default": 0.3
+      },
+      {
+        "name": "family",
+        "type": "String",
+        "description": "Distribution family ('gaussian', 'binomial', etc.).",
+        "optional": "True",
+        "default": "gaussian"
+      },
+      {
+        "name": "link",
+        "type": "String",
+        "description": "Link function ('identity', 'log').",
+        "optional": "True",
+        "default": "identity"
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "fitIntercept",
+        "type": "Boolean",
+        "description": "Whether to fit the intercept term.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "linkPower",
+        "type": "Double",
+        "description": "The index for the power link function.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "solver",
+        "type": "String",
+        "description": "Optimization solver to use ('irls').",
+        "optional": "True",
+        "default": "irls"
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for stopping criteria.",
+        "optional": "True",
+        "default": 1E-6
+      },
+      {
+        "name": "variancePower",
+        "type": "Double",
+        "description": "The power of the variance function.",
+        "optional": "True",
+        "default": 0.0
+      }
+    ]
+  },
+
+  "Coverage.decisionTreeRegressionModel": {
     "description": "Decision tree regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15756,7 +16121,86 @@
       }
     ]
   },
-  "MLmodel.gbtRegressionModel": {
+  "Feature.decisionTreeRegressionModel": {
+    "description": "Decision tree regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "Checkpoint interval for caching intermediate models.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "impurity",
+        "type": "String",
+        "description": "Criterion used for information gain calculation ('variance').",
+        "optional": "True",
+        "default": "variance"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "Maximum number of bins used for splitting features.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "Maximum depth of the tree.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "Minimum information gain required for splitting a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "Minimum number of instances required to split a node.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "Minimum fraction of the total weight needed to split a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      }
+    ]
+  },
+
+  "Coverage.gbtRegressionModel": {
     "description": "Gradient Boosted Trees (GBT) regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15863,7 +16307,121 @@
       }
     ]
   },
-  "MLmodel.isotonicRegressionModel": {
+  "Feature.gbtRegressionModel": {
+    "description": "Gradient Boosted Trees (GBT) regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "Checkpoint interval for caching intermediate models.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "featureSubsetStrategy",
+        "type": "String",
+        "description": "Strategy to choose a subset of features ('auto').",
+        "optional": "True",
+        "default": "auto"
+      },
+      {
+        "name": "impurity",
+        "type": "String",
+        "description": "Criterion used for information gain calculation ('variance').",
+        "optional": "True",
+        "default": "variance"
+      },
+      {
+        "name": "lossType",
+        "type": "String",
+        "description": "Type of loss function ('squared').",
+        "optional": "True",
+        "default": "squared"
+      },
+      {
+        "name": "maxBins",
+        "type": "Int",
+        "description": "Maximum number of bins used for splitting features.",
+        "optional": "True",
+        "default": 32
+      },
+      {
+        "name": "maxDepth",
+        "type": "Int",
+        "description": "Maximum depth of the trees.",
+        "optional": "True",
+        "default": 5
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "minInfoGain",
+        "type": "Double",
+        "description": "Minimum information gain required for splitting a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "minInstancesPerNode",
+        "type": "Int",
+        "description": "Minimum number of instances required to split a node.",
+        "optional": "True",
+        "default": 1
+      },
+      {
+        "name": "minWeightFractionPerNode",
+        "type": "Double",
+        "description": "Minimum fraction of the total weight needed to split a node.",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "stepSize",
+        "type": "Double",
+        "description": "Step size (learning rate) for gradient descent.",
+        "optional": "True",
+        "default": 0.1
+      },
+      {
+        "name": "subsamplingRate",
+        "type": "Double",
+        "description": "Fraction of data used for training each tree.",
+        "optional": "True",
+        "default": 1.0
+      }
+    ]
+  },
+
+  "Coverage.isotonicRegressionModel": {
     "description": "Isotonic regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15886,7 +16444,37 @@
       }
     ]
   },
-  "MLmodel.fmRegressionModel": {
+  "Feature.isotonicRegressionModel": {
+    "description": "Isotonic regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "isotonic",
+        "type": "Boolean",
+        "description": "If true, fits an isotonic (increasing) regression, otherwise fits an antitonic (decreasing) regression.",
+        "optional": "True",
+        "default": true
+      }
+    ]
+  },
+
+  "Coverage.fmRegressionModel": {
     "description": "Factorization Machines (FM) regression model training method.",
     "returns": "MLmodel",
     "args": [
@@ -15979,7 +16567,107 @@
       }
     ]
   },
-  "MLmodel.modelRegress": {
+  "Feature.fmRegressionModel": {
+    "description": "Factorization Machines (FM) regression model training method.",
+    "returns": "MLmodel",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature."
+      },
+      {
+        "name": "classProperties",
+        "type": "List<String>",
+        "description": "The name of the property containing the class value. Each feature must have this property and its value must be numeric."
+      },
+      {
+        "name": "inputProperties",
+        "type": "List<String>",
+        "description": "The list of property names to include as training data. Each feature must have all these properties and their values must be numeric. This argument is optional if the input collection contains a 'band_order' like property.",
+        "default": [""]
+      },
+      {
+        "name": "factorSize",
+        "type": "Int",
+        "description": "The dimensionality of the factorization.",
+        "optional": "True",
+        "default": 8
+      },
+      {
+        "name": "fitIntercept",
+        "type": "Boolean",
+        "description": "Whether to fit an intercept term.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "fitLinear",
+        "type": "Boolean",
+        "description": "Whether to fit linear terms.",
+        "optional": "True",
+        "default": true
+      },
+      {
+        "name": "initStd",
+        "type": "Double",
+        "description": "Standard deviation of initial random weights.",
+        "optional": "True",
+        "default": 0.01
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 100
+      },
+      {
+        "name": "minBatchFraction",
+        "type": "Double",
+        "description": "Fraction of data to use for each mini-batch during stochastic gradient descent.",
+        "optional": "True",
+        "default": 1.0
+      },
+      {
+        "name": "regParam",
+        "type": "Double",
+        "description": "Regularization parameter (lambda).",
+        "optional": "True",
+        "default": 0.0
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Random seed for reproducibility.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "solver",
+        "type": "String",
+        "description": "Solver to use for optimization ('adamW').",
+        "optional": "True",
+        "default": "adamW"
+      },
+      {
+        "name": "stepSize",
+        "type": "Double",
+        "description": "Step size (learning rate) for gradient descent.",
+        "optional": "True",
+        "default": 1.0
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for stopping criteria.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
+
+  "Coverage.modelRegress": {
     "description": "regression method.",
     "returns": "Coverage",
     "args": [
@@ -15995,8 +16683,29 @@
       }
     ]
   },
+  "Feature.modelClassify": {
+    "description": "classifying method.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be predicted."
+      },
+      {
+        "name": "model",
+        "type": "MLmodel",
+        "description": "The model."
+      },
+      {
+        "name": "featuresCol",
+        "type": "List<String>",
+        "description": "Feature columns involved in classification in properties."
+      }
+    ]
+  },
 
-  "MLmodel.mlKMeans": {
+  "Coverage.mlKMeans": {
     "description": "K-means clustering model training method.",
     "returns": "Coverage",
     "args": [
@@ -16035,7 +16744,52 @@
       }
     ]
   },
-  "MLmodel.latentDirichletAllocation": {
+  "Feature.mlKMeans": {
+    "description": "K-means clustering model training method.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be clustered."
+      },
+      {
+        "name": "featuresCol",
+        "type": "List<String>",
+        "description": "Feature columns involved in cluster in properties."
+      },
+      {
+        "name": "k",
+        "type": "Int",
+        "description": "Number of clusters.",
+        "optional": "True",
+        "default": 2
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Seed for random number generation.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "tol",
+        "type": "Double",
+        "description": "Tolerance for convergence.",
+        "optional": "True",
+        "default": 1E-6
+      }
+    ]
+  },
+
+  "Coverage.latentDirichletAllocation": {
     "description": "Latent Dirichlet Allocation (LDA) model training method.",
     "returns": "Coverage",
     "args": [
@@ -16095,7 +16849,73 @@
       }
     ]
   },
-  "MLmodel.bisectingKMeans": {
+  "Feature.latentDirichletAllocation": {
+    "description": "Latent Dirichlet Allocation (LDA) model training method.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be clustered."
+      },
+      {
+        "name": "featuresCol",
+        "type": "List<String>",
+        "description": "Feature columns involved in cluster in properties."
+      },
+      {
+        "name": "checkpointInterval",
+        "type": "Int",
+        "description": "How often to checkpoint the model.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "k",
+        "type": "Int",
+        "description": "Number of topics.",
+        "optional": "True",
+        "default": 2
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "optimizer",
+        "type": "String",
+        "description": "Optimizer to be used ('online' or 'em').",
+        "optional": "True",
+        "default": "online"
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Seed for random number generation.",
+        "optional": "True",
+        "default": 0
+      },
+      {
+        "name": "subsamplingRate",
+        "type": "Double",
+        "description": "Fraction of the data to use for training.",
+        "optional": "True",
+        "default": 0.05
+      },
+      {
+        "name": "topicConcentration",
+        "type": "Double",
+        "description": "Concentration parameter for the topics.",
+        "optional": "True",
+        "default": -1
+      }
+    ]
+  },
+
+  "Coverage.bisectingKMeans": {
     "description": "Bisecting K-means clustering model training method.",
     "returns": "Coverage",
     "args": [
@@ -16134,7 +16954,52 @@
       }
     ]
   },
-  "MLmodel.gaussianMixture": {
+  "Feature.bisectingKMeans": {
+    "description": "Bisecting K-means clustering model training method.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be clustered."
+      },
+      {
+        "name": "featuresCol",
+        "type": "List<String>",
+        "description": "Feature columns involved in cluster in properties."
+      },
+      {
+        "name": "distanceMeasure",
+        "type": "String",
+        "description": "Distance measure to be used (e.g., 'euclidean').",
+        "optional": "True",
+        "default": "euclidean"
+      },
+      {
+        "name": "k",
+        "type": "Int",
+        "description": "Number of clusters.",
+        "optional": "True",
+        "default": 4
+      },
+      {
+        "name": "maxIter",
+        "type": "Int",
+        "description": "Maximum number of iterations.",
+        "optional": "True",
+        "default": 10
+      },
+      {
+        "name": "seed",
+        "type": "Long",
+        "description": "Seed for random number generation.",
+        "optional": "True",
+        "default": 0
+      }
+    ]
+  },
+
+  "Coverage.gaussianMixture": {
     "description": "Gaussian Mixture Model (GMM) training method.",
     "returns": "Coverage",
     "args": [
@@ -16173,8 +17038,30 @@
       }
     ]
   },
+  "Feature.modelRegress": {
+    "description": "regression method.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be predicted."
+      },
+      {
+        "name": "model",
+        "type": "MLmodel",
+        "description": "The model."
+      },
+      {
+        "name": "featuresCol",
+        "type": "List<String>",
+        "description": "Feature columns involved in regression in properties."
+      }
+    ]
+  },
 
-  "MLmodel.multiclassClassificationEvaluator": {
+
+  "Coverage.multiclassClassificationEvaluator": {
     "description": "Multiclass classification evaluator method.",
     "returns": "String",
     "args": [
@@ -16193,7 +17080,7 @@
         "type": "List[String]",
         "description": "List of metric names to evaluate.",
         "optional": "True",
-        "default": "['f1']"
+        "default": "[f1]"
       },
       {
         "name": "metricLabel",
@@ -16204,7 +17091,44 @@
       }
     ]
   },
-  "MLmodel.clusteringEvaluator": {
+  "Feature.multiclassClassificationEvaluator": {
+    "description": "Multiclass classification evaluator method.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "labelFeature",
+        "type": "Feature",
+        "description": "The feature containing label property to be evaluated."
+      },
+      {
+        "name": "predictionFeature",
+        "type": "Feature",
+        "description": "The feature containing prediction property to be evaluated."
+      },
+      {
+        "name": "labelCol",
+        "type": "String",
+        "description": "The name of label property.",
+        "default": "label"
+      },
+      {
+        "name": "metricName",
+        "type": "List[String]",
+        "description": "List of metric names to evaluate.",
+        "optional": "True",
+        "default": "[f1]"
+      },
+      {
+        "name": "metricLabel",
+        "type": "Double",
+        "description": "The class label for which the metric will be evaluated.",
+        "optional": "True",
+        "default": 0.0
+      }
+    ]
+  },
+
+  "Coverage.clusteringEvaluator": {
     "description": "Clustering evaluator method.",
     "returns": "String",
     "args": [
@@ -16234,7 +17158,38 @@
       }
     ]
   },
-  "MLmodel.multilabelClassificationEvaluator": {
+  "Feature.clusteringEvaluator": {
+    "description": "Clustering evaluator method.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The feature to be evaluated."
+      },
+      {
+        "name": "featuresColNames",
+        "type": "List<String>",
+        "description": "Feature columns involved in cluster in properties."
+      },
+      {
+        "name": "metricName",
+        "type": "String",
+        "description": "The metric to evaluate, e.g., 'silhouette'.",
+        "optional": "True",
+        "default": "silhouette"
+      },
+      {
+        "name": "distanceMeasure",
+        "type": "String",
+        "description": "Distance measure to use, e.g., 'squaredEuclidean'.",
+        "optional": "True",
+        "default": "squaredEuclidean"
+      }
+    ]
+  },
+
+  "Coverage.multilabelClassificationEvaluator": {
     "description": "Multilabel classification evaluator method.",
     "returns": "String",
     "args": [
@@ -16253,11 +17208,45 @@
         "type": "List[String]",
         "description": "List of metric names to evaluate.",
         "optional": "True",
-        "default": "['f1Measure']"
+        "default": "[f1Measure]"
       }
     ]
   },
-  "MLmodel.binaryClassificationEvaluator": {
+  "Feature.multilabelClassificationEvaluator": {
+    "description": "Multilabel classification evaluator method.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "labelFeature",
+        "type": "Feature",
+        "description": "The feature containing label property to be evaluated."
+      },
+      {
+        "name": "predictionFeature",
+        "type": "Feature",
+        "description": "The feature containing prediction property to be evaluated."
+      },
+      {
+        "name": "labelColNames",
+        "type": "List<String>",
+        "description": "Label columns involved in classification in properties."
+      },
+      {
+        "name": "predictioinColNames",
+        "type": "List<String>",
+        "description": "Prediction columns involved in classification in properties."
+      },
+      {
+        "name": "metricName",
+        "type": "List[String]",
+        "description": "List of metric names to evaluate.",
+        "optional": "True",
+        "default": "[f1Measure]"
+      }
+    ]
+  },
+
+  "Coverage.binaryClassificationEvaluator": {
     "description": "Binary classification evaluator method.",
     "returns": "String",
     "args": [
@@ -16276,11 +17265,41 @@
         "type": "List[String]",
         "description": "List of metric names to evaluate.",
         "optional": "True",
-        "default": "['areaUnderROC']"
+        "default": "[areaUnderROC]"
       }
     ]
   },
-  "MLmodel.regressionEvaluator": {
+  "Feature.binaryClassificationEvaluator": {
+    "description": "Binary classification evaluator method.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "labelFeature",
+        "type": "Feature",
+        "description": "The feature containing label property to be evaluated."
+      },
+      {
+        "name": "predictionFeature",
+        "type": "Feature",
+        "description": "The feature containing prediction property to be evaluated."
+      },
+      {
+        "name": "labelCol",
+        "type": "String",
+        "description": "The name of label property.",
+        "default": "label"
+      },
+      {
+        "name": "metricName",
+        "type": "List[String]",
+        "description": "List of metric names to evaluate.",
+        "optional": "True",
+        "default": "[areaUnderROC]"
+      }
+    ]
+  },
+
+  "Coverage.regressionEvaluator": {
     "description": "Regression evaluator method.",
     "returns": "String",
     "args": [
@@ -16299,11 +17318,41 @@
         "type": "List[String]",
         "description": "List of metric names to evaluate.",
         "optional": "True",
-        "default": "['rmse']"
+        "default": "[rmse]"
       }
     ]
   },
-  "MLmodel.rankingEvaluator": {
+  "Feature.regressionEvaluator": {
+    "description": "Regression evaluator method.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "labelFeature",
+        "type": "Feature",
+        "description": "The feature containing label property to be evaluated."
+      },
+      {
+        "name": "predictionFeature",
+        "type": "Feature",
+        "description": "The feature containing prediction property to be evaluated."
+      },
+      {
+        "name": "labelCol",
+        "type": "String",
+        "description": "The name of label property.",
+        "default": "label"
+      },
+      {
+        "name": "metricName",
+        "type": "List[String]",
+        "description": "List of metric names to evaluate.",
+        "optional": "True",
+        "default": "[rmse]"
+      }
+    ]
+  },
+
+  "Coverage.rankingEvaluator": {
     "description": "Ranking evaluator method.",
     "returns": "String",
     "args": [
@@ -16322,10 +17371,41 @@
         "type": "List[String]",
         "description": "List of metric names to evaluate.",
         "optional": "True",
-        "default": "['meanAveragePrecision']"
+        "default": "[meanAveragePrecision]"
       }
     ]
   },
+  "Feature.rankingEvaluator": {
+    "description": "Ranking evaluator method.",
+    "returns": "String",
+    "args": [
+      {
+        "name": "labelFeature",
+        "type": "Feature",
+        "description": "The feature containing label property to be evaluated."
+      },
+      {
+        "name": "predictionFeature",
+        "type": "Feature",
+        "description": "The feature containing prediction property to be evaluated."
+      },
+      {
+        "name": "labelCol",
+        "type": "String",
+        "description": "The name of label property.",
+        "default": "label"
+      },
+      {
+        "name": "metricName",
+        "type": "List[String]",
+        "description": "List of metric names to evaluate.",
+        "optional": "True",
+        "default": "[meanAveragePrecision]"
+      }
+    ]
+  },
+
+
   "Coverage.randomSample": {
     "description": "This function is used to randomly sample images.",
     "returns": "Coverage",
@@ -16404,6 +17484,50 @@
         "name": "modelID",
         "type": "String",
         "description": "The id of mlmodel product."
+      }
+    ]
+  },
+  "Coverage.sampleRegions" : {
+    "description": "Converts each pixel of a coverage that intersects one or more regions to a Feature, returning them as a Feature(Collection). Each output feature will have one property per band of the input coverage, as well as any specified properties copied from the input feature.",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "coverage",
+        "type": "Coverage",
+        "description": "The coverage to sample."
+      },
+      {
+        "name": "feature",
+        "type": "Feature",
+        "description": "The regions to sample over."
+      },
+      {
+        "name": "properties",
+        "type": "List<String>",
+        "description": "The list of properties to copy from each input feature. Defaults to all non-system properties."
+      },
+      {
+        "name": "scale",
+        "type": "Double",
+        "description": "The resolution to sample in. If unspecified, the coverage will not be reprojected or resampled.",
+        "default": "None"
+      },
+      {
+        "name": "projection",
+        "type": "String",
+        "description": "The projection in which to sample. If unspecified, the projection of the original coverage is used. If specified in addition to scale, rescaled to the specified scale.",
+        "default": "None"
+      }
+    ]
+  },
+  "Sheet.sheetToFeatureProperties": {
+    "description": "convert sheet without location properties to feature .",
+    "returns": "Feature",
+    "args": [
+      {
+        "name": "csvData",
+        "type": "Sheet",
+        "description": "The sheet to convert."
       }
     ]
   }
