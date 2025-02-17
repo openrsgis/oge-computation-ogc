@@ -337,18 +337,46 @@ object Feature {
 
   def geometry(implicit sc: SparkContext, gjson: String, crs: String = "EPSG:4326"): RDD[(String, (Geometry, Map[String, Any]))] = {
     //异常处理，报错信息统一格式
+//    val escapedJson = gjson.replace("\\", "")//去除转义符
+//    val jsonobject: JSONObject = JSON.parseObject(escapedJson)
+//    val array = jsonobject.getJSONArray("features")
+//    var list: List[(Geometry, String)] = List.empty
+//    for (i <- 0 until (array.size())) {
+//      val geom = Geometry.geometry(array.getJSONObject(i), crs)
+//      list = list :+ (geom, array.getJSONObject(i).get("properties").toString)
+//    }
+//    val geomRDD = sc.parallelize(list)
+//    geomRDD.map(t => {
+//      (UUID.randomUUID().toString, (t._1, getMapFromJsonStr(t._2)))
+//    })
     val escapedJson = gjson.replace("\\", "")//去除转义符
     val jsonobject: JSONObject = JSON.parseObject(escapedJson)
     val array = jsonobject.getJSONArray("features")
-    var list: List[(Geometry, String)] = List.empty
-    for (i <- 0 until (array.size())) {
-      val geom = Geometry.geometry(array.getJSONObject(i), crs)
-      list = list :+ (geom, array.getJSONObject(i).get("properties").toString)
-    }
-    val geomRDD = sc.parallelize(list)
-    geomRDD.map(t => {
-      (UUID.randomUUID().toString, (t._1, getMapFromJsonStr(t._2)))
-    })
+    val geomRDD: RDD[(String,(Geometry, mutable.Map[String, Any]))] =
+      if(array.getJSONObject(0).containsKey("id")){ //如果Json体中包含id属性，则使用id作为矢量的key
+        var list: List[(String,(Geometry, mutable.Map[String, Any]))] = List.empty
+        for (i <- 0 until (array.size())) {
+          val geom =
+            if(array.getJSONObject(i).containsKey("geometry")) Geometry.geometry(array.getJSONObject(i), crs)
+            else null //有时候创建Feature仅仅想作为特征参与机器学习，因此允许不包含几何体
+          val id = array.getJSONObject(i).get("id").toString
+          list = list :+ (id, (geom, getMapFromJsonStr(array.getJSONObject(i).get("properties").toString)))
+        }
+        sc.parallelize(list)
+      }
+      else{ //如果Json体中不包含id属性，则每条记录分配一个自增索引作为key
+        var list: List[(Geometry, mutable.Map[String, Any])] = List.empty
+        for (i <- 0 until (array.size())) {
+          val geom =
+            if(array.getJSONObject(i).containsKey("geometry")) Geometry.geometry(array.getJSONObject(i), crs)
+            else null //有时候创建Feature仅仅想作为特征参与机器学习，因此允许不包含几何体
+          list = list :+ (geom, getMapFromJsonStr(array.getJSONObject(i).get("properties").toString))
+        }
+        sc.parallelize(list.zipWithIndex.map { case ((geometry, propertiesMap), index) =>
+          (index.toString, (geometry, propertiesMap))
+        })
+      }
+    geomRDD
   }
 
   def feature(implicit sc: SparkContext, geom: Geometry, properties: String = null): RDD[(String, (Geometry, Map[String, Any]))] = {

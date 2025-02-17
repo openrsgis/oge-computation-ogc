@@ -4,27 +4,33 @@ import java.io._
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.zip.{ZipEntry, ZipFile, ZipInputStream, ZipOutputStream}
-
-import geotrellis.layer.SpaceTimeKey
-import geotrellis.raster.{CellType, DoubleArrayTile, MultibandTile, Tile}
-import org.apache.spark.ml.feature.VectorAssembler
+import geotrellis.layer.{Bounds, LayoutDefinition, SpaceTimeKey, TileLayerMetadata}
+import geotrellis.raster.{CellType, DoubleArrayTile, MultibandTile, Tile, TileLayout}
+import geotrellis.vector.Extent
+import org.apache.spark.ml.feature.{VectorAssembler, VectorIndexer}
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
+import org.apache.spark.sql.types.{DoubleType, StringType, StructField, StructType}
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.entity.SpaceTimeBandKey
 
 import scala.collection.mutable
+import scala.collection.mutable.Map
 import scala.collection.mutable.ListBuffer
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
 import whu.edu.cn.util.CoverageUtil.checkProjResoExtent
 
+import java.time.Instant
+import scala.collection.immutable.List
+import scala.util.matching.Regex
+
 
 object util {
-  // DataFrame -> RDD
+  // RDD -> DataFrame
   //TODO 这个函数及其有关重载，后面得基于标注样本的逻辑重新改，标签和特征放在同一个coverage中不太合理
   def makeRasterDataFrameFromRDD(implicit ss: SparkSession, coverage: RDDImage, features: List[Int], label: Int): DataFrame = {
     //TODO label暂时先改为必须有值，即这个函数只适用于分类（带标签的情况）
@@ -170,9 +176,9 @@ object util {
     for (i <- 1 to bandCount) {
       colNames.append(s"feature$i")
     }
-    val labelColNames = List("loc1", "loc2", "loc3", "loc4") ::: colNames.toList //TODO 暂时label列一定在最后一个波段
+    val labelColNames = List("loc1", "loc2", "loc3", "loc4") ::: colNames.toList
     //设置字段类型
-    val fieldTypes = List.fill(bandCount + 4)(DoubleType) //TODO 把上面Int类型的label转成Double，这里设为Double，是因为我只会把所有字段设成一种类型
+    val fieldTypes = List.fill(bandCount + 4)(DoubleType)
     val fields = labelColNames.zip(fieldTypes).map { case (name, dataType) =>
       StructField(name, dataType)
     }
@@ -187,13 +193,85 @@ object util {
     assemblerDF
   }
 
+  // FeatureRDD -> DataFrame
+  def makeFeatureDataFrameFromRDD(implicit ss: SparkSession, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresColNames: List[String], labelColName: String): DataFrame = {
+    //设置字段类型
+    val trueColNames = List("UUID") ::: List("label") ::: featuresColNames
+    val fieldTypes = List.fill(1)(StringType) ::: List.fill(1+featuresColNames.size)(DoubleType)// ::: List(StringType)
+    val fields = trueColNames.zip(fieldTypes).map { case (name, dataType) =>
+      StructField(name, dataType)
+    }
+    val schema = StructType(fields)
+    //转换RDD到DataFrame
+    val rowRdd: RDD[Row] = feature.map(t => {
+      val featuresList: List[Double] =  featuresColNames.map(key => t._2._2.get(key) match{
+        case Some(value: Int) => value.toDouble
+        case Some(value: Double) => value
+        case Some(value: Number) => value.doubleValue()
+        case Some(value: String) => value.toDouble
+        case Some(_) => throw new IllegalArgumentException("Error: feature特征列的值类型不是数值类型或暂不支持")
+        case None => throw new IllegalArgumentException("Error: feature部分特征列的值为空")
+      }) //TODO 暂不支持特征为非数值类型
+      //TODO 其实对于分类而言，标签应该能够允许字符串，后面可以为分类和回归分别写一个makeFeatureDataFrameFromRDD函数
+      val label: Double = t._2._2.get(labelColName) match {
+        case Some(value: Int) => value.toDouble
+        case Some(value: Double) => value
+        case Some(value: Number) => value.doubleValue()
+        case Some(value: String) => value.toDouble
+        case Some(_) => throw new IllegalArgumentException("Error: feature标签列的值类型不是数值类型或暂不支持")
+        case None => throw new IllegalArgumentException("Error: feature部分标签列的值为空")
+      }
+      val list: List[Any] = List(t._1)::: List(label) ::: featuresList
+      Row(list:_*)
+    })
+    val df = ss.createDataFrame(rowRdd, schema).toDF(trueColNames: _*)
+    val assembler = new VectorAssembler()
+      .setInputCols(featuresColNames.toArray)
+      .setOutputCol("features")
+      .setHandleInvalid("skip")
+    val assemblerDF =assembler.transform(df)
+    assemblerDF
+  }
+  def makeFeatureDataFrameFromRDD(implicit ss: SparkSession, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featureColNames: List[String]): DataFrame = {
+    //设置字段类型
+    val trueColNames = List("UUID") ::: featureColNames
+    val fieldTypes = StringType :: List.fill(featureColNames.size)(DoubleType)
+    val fields = trueColNames.zip(fieldTypes).map { case (name, dataType) =>
+      StructField(name, dataType)
+    }
+    val schema = StructType(fields)
+    //转换RDD到DataFrame
+    val rowRdd: RDD[Row] = feature.map(t => {
+      val featuresList: List[Double] = featureColNames.map(key => t._2._2.get(key) match{
+        case Some(value: Int) => value.toDouble
+        case Some(value: Double) => value
+        case Some(value: Number) => value.doubleValue()
+        case Some(value: String) => value.toDouble
+        case Some(_) => throw new IllegalArgumentException("Error: feature特征列的值类型不是数值类型")
+        case None => throw new IllegalArgumentException("Error: feature部分特征列的值为空")
+      }) //TODO 暂不支持特征为非数值类型
+      val list: List[Any] = List(t._1)::: featuresList
+
+      Row(list: _*)
+    })
+    val df = ss.createDataFrame(rowRdd, schema).toDF(trueColNames: _*)
+    val assembler = new VectorAssembler()
+      .setInputCols(featureColNames.toArray)
+      .setOutputCol("features")
+      .setHandleInvalid("skip")
+    val assemblerDF =assembler.transform(df)
+    assemblerDF
+  }
+
+
+
   //  def makeRasterDataFrameFormRDDMap(implicit ss: SparkSession, coverageMap: Map[String,RDDImage]): DataFrame = {
   //    val featuresCoverage: RDDImage = coverageMap("features")
   //    val featuresCount: Int = featuresCoverage._1.first()._2.bandCount
   //    val labelCoverage: RDDImage = coverageMap("label")
   //  }
 
-  // RDD -> DataFrame
+  // DataFrame -> CoverageRDD
   def makeRasterRDDFromDataFrame(coverage: DataFrame, featuresCol: Boolean = false, labelCol: Boolean = false, predictionCol: Boolean = false, predictedLabelCol: Boolean = true, rawPredictionCol: Boolean = false, probabilityCol: Boolean = false, varianceCol: Boolean = false, topicDistributionCol: Boolean = false): RDD[(SpaceTimeBandKey, MultibandTile)] ={
     //featureCol表示是否需要特征列；labelCol表示是否需要原始标签列
     //把DataFrame中用户需要的每个特征列都转换成一个波段
@@ -228,7 +306,7 @@ object util {
       colSelect.map(t => {
         val colValues: ListBuffer[Double] = ListBuffer.empty[Double]
         for (i <- 0 until bandGroupCount){
-          //TODO 目前仅实现如下四类，因为MLlib返回的DataFrame数据类型基本都为如下四类
+          //目前仅实现如下四类，因为MLlib返回的DataFrame数据类型基本都为如下四类
           if (t.get(i+4).isInstanceOf[Double]) colValues.append(t.getDouble(i+4))
           else if (t.get(i+4).isInstanceOf[Int]) colValues.append(t.getInt(i+4))
           else if (t.get(i+4).isInstanceOf[SparseVector]){
@@ -250,11 +328,11 @@ object util {
       //定位瓦片
       val row = t._1._1.toInt
       val col = t._1._2.toInt
-      val newBand: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String] //TODO 需要改成新的波段列表
+      val newBand: mutable.ListBuffer[String] = mutable.ListBuffer.empty[String]
       val arr: Iterable[((Double, Double), ListBuffer[Double])] = t._2 // 取消 新增.toArray ; java.util.List ; DenseVector[Double] ; Vector
       //分波段计算新像素值
       for (bandIndex <- 0 until bandCount) {
-        newBand.append(bandIndex.toString()) //TODO 波段名称用波段序号命，后面是否要改成用特征命名
+        newBand.append(s"B${bandIndex+1}") //TODO 波段名称用波段序号命，后面是否要改成用特征命名
         val doubleArrayTile: DoubleArrayTile = DoubleArrayTile.empty(256, 256)
         doubleArrayTile.fill(Double.NaN)
         for (list <- arr) {
@@ -265,6 +343,43 @@ object util {
       (SpaceTimeBandKey(SpaceTimeKey(col, row, time), newBand), MultibandTile(multibandTileArray))
     })
     newCoverageRdd
+  }
+  // DataFrame -> FeatureRDD
+  def makePropertyRDDFromDataFrame(feature: DataFrame): RDD[(String, mutable.Map[String, Any])] = {
+    //对于矢量，每个特征都默认需要
+    val featureAddOneColumn: DataFrame =
+      if(feature.columns.contains("predictedLabel")){
+        feature.withColumn("predictedLabelDouble", col("predictedLabel").cast("double"))
+      }
+      else feature
+    val now = "1000-01-01 00:00:00"
+    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val time = sdf.parse(now).getTime //TODO 时间暂时这么写，后面肯定要改的
+    val colNamesType: Array[(String, String)] = featureAddOneColumn.dtypes //(列名, 列的数据类型）
+    val colNames: List[String] = colNamesType.map({case (s1, s2) => s1}).toList
+    val remainingCols = colNames.filter(_ != "UUID")  // 获取除 "UUID" 之外的其他列名
+    val newColNames: List[String] = "UUID" +: remainingCols// 将 "UUID" 放到最前面
+    val colRdd: RDD[Row] = featureAddOneColumn.select(newColNames.map(newColNames => featureAddOneColumn(newColNames)):_*).rdd //使DataFrame列顺序与colNames一致
+    val newPropertyRdd: RDD[(String, mutable.Map[String, Any])]  = colRdd.map(t => {
+      val colValues: ListBuffer[Any] = ListBuffer.empty[Any]
+      for (i <- 1 until newColNames.size){
+        //目前仅实现如下几类，因为MLlib返回的DataFrame数据类型基本都为如下四类
+        t.get(i) match {
+          case _: Double => colValues.append(t.getDouble(i))
+          case _: Int => colValues.append(t.getInt(i))
+          case _: Number => colValues.append(t.getAs[Number](i).doubleValue())
+          case _: String => colValues.append(t.getString(i))
+          case _: Vector[_] => colValues.append(t.getAs[Vector[_]](i).toArray)
+          case _: SparseVector => colValues.append(t.getAs[SparseVector](i).toArray)
+          case _: DenseVector => colValues.append(t.getAs[DenseVector](i).toArray)
+          case _ => throw new IllegalArgumentException("DataFrame转换到RDD时存在不支持的数据类型")
+        }
+      }
+      val resultMap: mutable.Map[String, Any] = mutable.Map(remainingCols.zip(colValues):_*)
+      val uuid: String = t.getString(0)
+      (uuid, resultMap)
+    })
+    newPropertyRdd
   }
 
   def joinTwoCoverage(coverage1: RDDImage, coverage2: RDDImage, col1: List[Int], col2: List[Int]): RDD[Row] = {
@@ -428,6 +543,36 @@ object util {
     }
     zipInput.closeEntry()
     zipInput.close()
+  }
+  /**
+   * 当RDD影像转DataFrame又转回RDD时，如果过程中过滤掉了很多像素，转换回的RDD可能只在原先的部分瓦片上存在数据，
+   * 因此其地理范围extent，布局layout和bounds都可能会改变，需要重新生成TileLayerMetadata
+   * @param rasterRdd   转回的RDD.
+   * @param originalCoverage   原始RDD影像
+   * @return
+   */
+  def calculateTileLayerMetadata(rasterRdd: RDD[(SpaceTimeBandKey, MultibandTile)], originalCoverage: RDDImage): TileLayerMetadata[SpaceTimeKey] = {
+    //bounds, layout, extent这些可能有所改变，需要重新生成TileLayerMetadata
+    val rowCol: RDD[(Int, Int)] = rasterRdd.map(t => {
+      val row: Int = t._1.spaceTimeKey.spatialKey.row
+      val col: Int = t._1.spaceTimeKey.spatialKey.col
+      (row, col)
+    })
+    val (rowMax, colMax): (Int, Int) = rowCol.reduce((a, b) => {
+      (math.max(a._1, b._1), math.max(a._2, b._2))
+    })
+    val (layoutRows, layoutCols) = (rowMax + 1, colMax + 1) //新影像的瓦片行数和列数
+    val resampleTime = Instant.now.getEpochSecond
+    val newBounds = Bounds(SpaceTimeKey(0, 0, resampleTime), SpaceTimeKey(layoutCols, layoutRows, resampleTime))
+    val newExtent: Extent = originalCoverage._1.map(t=>{
+        if (t._1.spaceTimeKey.col<layoutCols && t._1.spaceTimeKey.row<layoutRows) Some(originalCoverage._2.mapTransform(t._1.spaceTimeKey))
+        else None
+      }).filter(_.isDefined).map(t=>t.get)
+      .reduce((a, b)=>{a.combine(b)})
+    val tl = TileLayout(layoutCols, layoutRows, 256, 256)
+    val ld = LayoutDefinition(newExtent, tl)
+    val newMetadata = TileLayerMetadata(originalCoverage._2.cellType, ld, newExtent, originalCoverage._2.crs, newBounds)
+    newMetadata
   }
 
 }

@@ -313,36 +313,36 @@ object algorithms_edu {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val labelCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, labelPath)
     val predictionCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, predictionPath)
-    Evaluator.multiclassClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.multiclassClassificationEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
   }
   def clusteringEvaluator(implicit sc: SparkContext, featuresPath: String, predictionPath: String, metricName: String = "silhouette", distanceMeasure: String = "squaredEuclidean"): Double = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val featuresCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, featuresPath)
     val predictionCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, predictionPath)
-    Evaluator.clusteringEvaluator(spark, featuresCoverage, predictionCoverage, metricName, distanceMeasure, 0)
+    Evaluator.clusteringEvaluator_coverage(spark, featuresCoverage, predictionCoverage, metricName, distanceMeasure, 0)
   }
   def multilabelClassificationEvaluator(implicit sc: SparkContext, labelPath: String, predictionPath: String, metricName: List[String] = List("f1Measure")): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val labelCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, labelPath)
     val predictionCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, predictionPath)
-    Evaluator.multilabelClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName)
+    Evaluator.multilabelClassificationEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName)
   }
   def binaryClassificationEvaluator(implicit sc: SparkContext, labelPath: String, predictionPath: String, metricName: List[String] = List("areaUnderROC")): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val labelCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, labelPath)
     val predictionCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, predictionPath)
-    Evaluator.binaryClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.binaryClassificationEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
   }
   def regressionEvaluator(implicit sc: SparkContext, labelPath: String, predictionPath: String, metricName: List[String] = List("rmse")): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val labelCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, labelPath)
     val predictionCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, predictionPath)
-    Evaluator.regressionEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.regressionEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
   }
   def rankingEvaluator(implicit sc: SparkContext, labelPath: String, predictionPath: String, metricName: List[String] = List("meanAveragePrecision")): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val labelCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, labelPath)
     val predictionCoverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = makeChangedRasterRDDFromTif(sc, predictionPath)
-    Evaluator.rankingEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.rankingEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
   }
 }

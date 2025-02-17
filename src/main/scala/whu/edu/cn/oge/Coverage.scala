@@ -19,12 +19,12 @@ import geotrellis.spark.store.file.FileLayerWriter
 import geotrellis.store.LayerId
 import geotrellis.store.file.FileAttributeStore
 import geotrellis.store.index.ZCurveKeyIndexMethod
-import geotrellis.vector.Extent
+import geotrellis.vector.{Extent, Feature, Point}
 import javafx.scene.paint.Color
 import org.apache.commons.math3.distribution.FDistribution
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
-import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}
 import redis.clients.jedis.Jedis
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.ClientConf.{CLIENT_NAME, USER_BUCKET_NAME}
@@ -59,7 +59,12 @@ import java.io.File
 import sys.process._
 import scala.util.Random
 import whu.edu.cn.algorithms.ImageProcess.core.MathTools.findSpatialKeyMinMax
+
 import scala.collection.mutable.ArrayBuffer
+import java.util.UUID
+import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks.{break, breakable}
+import geotrellis.raster.CellFeatures.multibandRasterDoubleInstance
 
 // TODO lrx: 后面和GEE一个一个的对算子，看看哪些能力没有，哪些算子考虑的还较少
 // TODO lrx: 要考虑数据类型，每个函数一般都会更改数据类型
@@ -3953,6 +3958,86 @@ object Coverage {
     dockerFilePath
   }
 
+  /**
+   * Converts each pixel of a coverage that intersects one or more regions to a Feature, returning them as a Feature(Collection). Each output feature will have
+   * one property per band of the input coverage, as well as any specified properties copied from the input feature.
+   *
+   * @param coverage   The coverage to sample.
+   * @param feature    The regions to sample over.
+   * @param properties The list of properties to copy from each input feature. Defaults to all non-system properties.
+   * @param scale The resolution to sample in. If unspecified, the coverage will not be reprojected or resampled.
+   * @param projection The projection in which to sample. If unspecified, the projection of the original coverage is used. If specified in addition to scale, rescaled to the specified scale.
+   * @return
+   */
+  def sampleRegions(coverage: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]), feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], properties: List[String], scale: Option[Double] = None, projection: Option[String] = None): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    //先忽略参数geometries: Boolean=false，因为当前矢量结构好像不允许Geometry为空
+    //如果指定了scale，则对栅格进行重投影
+    val crs_coverage: Int = projection match {
+      case Some(value) => value.split(":")(1).toInt
+      case None => coverage._2.crs.epsgCode.getOrElse(-1)
+    }
+    if(crs_coverage == -1) throw new IllegalArgumentException("The crs of coverage is not defined.")
+    //这里目前判断的是即使coverage和feature坐标系不同也能正确处理
+    val coverageReprojected: (RDD[(SpaceTimeBandKey, MultibandTile)], TileLayerMetadata[SpaceTimeKey]) = scale match {
+      case None => coverage
+      case Some(value) => reproject(coverage, CRS.fromEpsgCode(crs_coverage), value)
+    }
+    //栅格矢量化
+    val featureArray = feature.collect //把feature收集到一个集合中，暂时使用简单策略，后面可以考虑优化
+    //唯一的自增索引，作为返回的feature的key
+    var uniqueId = 0 //TODO 检查在内部是否能够正常递增
+    val pixelRdd: RDD[(String, (Geometry, mutable.Map[String, Any]))] = coverageReprojected._1.flatMap(t => {
+      //定位瓦片
+      val bandCount = t._2.bandCount
+      val measurementNames: ListBuffer[String] = t._1.measurementName
+
+      val extent = coverageReprojected._2.mapTransform(t._1.spaceTimeKey) //这是单张瓦片的extent
+      val raster: Raster[MultibandTile] = Raster(t._2, extent)
+
+      val tilePoints: ListBuffer[(Geometry, mutable.Map[String, Any])] = ListBuffer.empty[(Geometry, mutable.Map[String, Any])]
+      featureArray.map(f => {
+        val geometry = f._2._1 //当前矢量
+        //只有当前矢量与瓦片相交，才有接下来的处理，否则直接返回空
+        val pointsList: List[(Geometry, mutable.Map[String, Any])] =
+          if (geometry.intersects(extent)) { //如果当前矢量与瓦片相交，则对相交部分的栅格进行转点
+            //计算矢量的特征部分
+            val featureProperties = mutable.Map.empty[String, Any]
+            for(property <- properties){
+              if(f._2._2.contains(property)) {
+                val value = f._2._2.get(property) match {
+                  case Some(value) => value
+                  case None => throw new IllegalArgumentException("Error: feature部分特征列的值为空")
+                }
+                featureProperties += (property -> value)
+              }
+              else throw new IllegalArgumentException("The specified properties are not present in the feature.")
+            }
+            //栅格转点
+            val cellPoints: Iterator[Feature[Point, Array[Double]]] = raster.cellFeaturesAsPoint[Array[Double]](geometry)(multibandRasterDoubleInstance)
+            cellPoints.toList.map(p=>{
+              val point: Geometry = p.geom //几何体
+              //计算影像的特征（波段）
+              val immutableMap: Map[String, Any] = {
+                if(measurementNames.size == bandCount) measurementNames.zip(p.data).toMap
+                else p.data.zipWithIndex.map { case (value, index) => (s"B${index+1}", value) }.toMap
+              }
+              //整合影像特征和矢量特征
+              val properties: mutable.Map[String, Any] = mutable.Map(immutableMap.toSeq: _*) ++ featureProperties //TODO 注意特征重名的可能
+              (point, properties)
+            })
+          }
+          else List.empty[(Geometry, mutable.Map[String, Any])]
+        tilePoints ++= pointsList
+      })
+      val result: List[(String, (Geometry, mutable.Map[String, Any]))] = tilePoints.toList.map{ case(geometry, properties) =>
+        val currentId = uniqueId.toString
+        uniqueId += 1                     // 增加 uniqueId
+        (currentId, (geometry, properties))
+      }
+      result
+    })
+    pixelRdd
+  }
 }
 
 object Relection extends App {

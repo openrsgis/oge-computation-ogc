@@ -11,6 +11,7 @@ import org.apache.spark.ml.{Model, PipelineModel, regression}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.jpmml.sparkml.PipelineModelUtil
+import org.locationtech.jts.geom.Geometry
 import whu.edu.cn.algorithms.ImageProcess.core.TypeAliases.RDDImage
 import whu.edu.cn.config.GlobalConfig
 import whu.edu.cn.config.GlobalConfig.ClientConf.{CLIENT_NAME, USER_BUCKET_NAME}
@@ -25,52 +26,92 @@ import whu.edu.cn.util.RDDTransformerUtil.makeChangedRasterRDDFromTif
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import scala.util.Random
+import scala.collection.mutable
 
 object algorithms {
     //暂时不提供筛选波段，前端可以使用Coverage.selectBands选
   //分类
-  def randomForestClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel = {
+  def randomForestClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, featuresCoverage, labelCoverage)
-    //    val model: PipelineModel = Classifier.randomForest(checkpointInterval, "auto", 32, 5, 0.0, 1, 0.0, 20, 123L, 1.0).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def logisticRegressionClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, family: String = "auto", fitIntercept: Boolean = true, standardization: Boolean = true, threshold: Double = 0.5, tol: Double = 1E-6): PipelineModel = {
+  def randomForestClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.randomForest(checkpointInterval, featureSubsetStrategy, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, feature, inputProperties, classProperties.head) //TODO 暂时仅允许一个类标签
+    model
+  }
+  def logisticRegressionClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, family: String = "auto", fitIntercept: Boolean = true, standardization: Boolean = true, threshold: Double = 0.5, tol: Double = 1E-6): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.logisticRegression(maxIter, regParam, elasticNetParam, family, fitIntercept, standardization, threshold, tol).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def decisionTreeClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, impurity: String = "gini", maxBins: Int = 32, maxDepth: Int = 5, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong()): PipelineModel = {
+  def logisticRegressionClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, family: String = "auto", fitIntercept: Boolean = true, standardization: Boolean = true, threshold: Double = 0.5, tol: Double = 1E-6): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.logisticRegression(maxIter, regParam, elasticNetParam, family, fitIntercept, standardization, threshold, tol).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def decisionTreeClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, impurity: String = "gini", maxBins: Int = 32, maxDepth: Int = 5, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong()): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.decisionTree(checkpointInterval, impurity, maxBins, maxDepth, minInstancesPerNode, minWeightFractionPerNode, seed).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def gbtClassifierClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 10, featureSubsetStrategy: String = "auto", checkpointInterval: Int = 10, impurity: String = "variance", lossType: String = "logistic", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong(), stepSize: Double = 0.1, subSamplingRate: Double = 1.0): PipelineModel = {
+  def decisionTreeClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), checkpointInterval: Int = 10, impurity: String = "gini", maxBins: Int = 32, maxDepth: Int = 5, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong()): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.decisionTree(checkpointInterval, impurity, maxBins, maxDepth, minInstancesPerNode, minWeightFractionPerNode, seed).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def gbtClassifierClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 10, featureSubsetStrategy: String = "auto", checkpointInterval: Int = 10, impurity: String = "variance", lossType: String = "logistic", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong(), stepSize: Double = 0.1, subSamplingRate: Double = 1.0): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.gbtClassifier(maxIter, featureSubsetStrategy, checkpointInterval, impurity, lossType, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed, stepSize, subSamplingRate).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def multilayerPerceptronClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, layers: Array[Int] = Array[Int](4, 5, 4, 7), blockSize: Int = 128, seed: Long = Random.nextLong(), maxIter: Int = 100, stepSize: Double = 0.03, tol: Double = 1E-6): PipelineModel = {
+  def gbtClassifierClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), maxIter: Int = 10, featureSubsetStrategy: String = "auto", checkpointInterval: Int = 10, impurity: String = "variance", lossType: String = "logistic", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode:Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong(), stepSize: Double = 0.1, subSamplingRate: Double = 1.0): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.gbtClassifier(maxIter, featureSubsetStrategy, checkpointInterval, impurity, lossType, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed, stepSize, subSamplingRate).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def multilayerPerceptronClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, layers: Array[Int] = Array[Int](4, 5, 4, 7), blockSize: Int = 128, seed: Long = Random.nextLong(), maxIter: Int = 100, stepSize: Double = 0.03, tol: Double = 1E-6): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.multilayerPerceptronClassifier(layers, blockSize, seed, maxIter, stepSize, tol).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def linearSVCClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 10, regParam: Double = 0.1): PipelineModel = {
+  def multilayerPerceptronClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), layers: Array[Int] = Array[Int](4, 5, 4, 7), blockSize: Int = 128, seed: Long = Random.nextLong(), maxIter: Int = 100, stepSize: Double = 0.03, tol: Double = 1E-6): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.multilayerPerceptronClassifier(layers, blockSize, seed, maxIter, stepSize, tol).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def linearSVCClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 10, regParam: Double = 0.1): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.linearSVC(maxIter, regParam).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def naiveBayesClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, modelType: String = "multinomial", smoothing: Double = 1.0): PipelineModel = {
+  def linearSVCClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), maxIter: Int = 10, regParam: Double = 0.1): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.linearSVC(maxIter, regParam).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def naiveBayesClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, modelType: String = "multinomial", smoothing: Double = 1.0): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.naiveBayes(modelType, smoothing).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def fmClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, stepSize: Double = 1.0, factorSize: Int = 8, fitIntercept: Boolean = true, fitLinear: Boolean = true, initStd: Double = 0.01, maxIter: Int = 100, minBatchFraction: Double = 1.0, regParam: Double = 0.0, seed: Long = Random.nextLong(), solver: String = "adamW", tol: Double = 1E-6): PipelineModel = {
+  def naiveBayesClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), modelType: String = "multinomial", smoothing: Double = 1.0): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.naiveBayes(modelType, smoothing).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def fmClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, stepSize: Double = 1.0, factorSize: Int = 8, fitIntercept: Boolean = true, fitLinear: Boolean = true, initStd: Double = 0.01, maxIter: Int = 100, minBatchFraction: Double = 1.0, regParam: Double = 0.0, seed: Long = Random.nextLong(), solver: String = "adamW", tol: Double = 1E-6): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Classifier.fmClassifier(stepSize, factorSize, fitIntercept, fitLinear, initStd, maxIter, minBatchFraction, regParam, seed, solver, tol).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def oneVsRestClassifierModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, classifier: String = "logisticRegression"): PipelineModel = {
+  def fmClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), stepSize: Double = 1.0, factorSize: Int = 8, fitIntercept: Boolean = true, fitLinear: Boolean = true, initStd: Double = 0.01, maxIter: Int = 100, minBatchFraction: Double = 1.0, regParam: Double = 0.0, seed: Long = Random.nextLong(), solver: String = "adamW", tol: Double = 1E-6): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Classifier.fmClassifier(stepSize, factorSize, fitIntercept, fitLinear, initStd, maxIter, minBatchFraction, regParam, seed, solver, tol).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def oneVsRestClassifierModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, classifier: String = "logisticRegression"): PipelineModel = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val classif = classifier match {
       case "logisticRegression" => Classifier.logisticRegression()
@@ -86,47 +127,103 @@ object algorithms {
     val model: PipelineModel = Classifier.oneVsRest(classif.asInstanceOf[Classifier]).train(spark, featuresCoverage, labelCoverage)
     model
   }
+  def oneVsRestClassifierModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), classifier: String = "logisticRegression"): PipelineModel = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val classif = classifier match {
+      case "logisticRegression" => Classifier.logisticRegression()
+      case "decisionTree" => Classifier.decisionTree()
+      case "randomForest" => Classifier.randomForest()
+      case "gbtClassifier" => Classifier.gbtClassifier()
+      case "multilayerPerceptronClassifier" => Classifier.multilayerPerceptronClassifier()
+      case "linearSVC" => Classifier.linearSVC()
+      case "naiveBayes" => Classifier.naiveBayes()
+      case "fmClassifier" => Classifier.fmClassifier()
+      case _ => new IllegalArgumentException("不支持输入的分类器！")
+    }
+    val model: PipelineModel = Classifier.oneVsRest(classif.asInstanceOf[Classifier]).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
   def modelClassify(implicit sc: SparkContext, coverage: RDDImage, model: PipelineModel): RDDImage = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val classifiedCoverage: RDDImage = Classifier.classify(spark, coverage, model)("prediction")
     classifiedCoverage
   }
-
+  def modelClassify(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], model: PipelineModel, featuresCol: List[String]): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    //返回包含全部结果属性的矢量
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val classifiedFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))] = Classifier.classify(spark, feature, model, featuresCol)
+    classifiedFeature
+  }
 
   //回归
-  def randomForestRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel ={
+  def randomForestRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.randomForestRegression(checkpointInterval, featureSubsetStrategy, impurity, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def linearRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, fitIntercept: Boolean = true, loss: String = "squaredError", solver: String = "auto", standardization: Boolean = true, tol: Double = 1E-6): PipelineModel ={
+  def randomForestRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, numTrees: Int = 20, seed: Long = Random.nextLong(), subsamplingRate: Double = 1.0): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.randomForestRegression(checkpointInterval, featureSubsetStrategy, impurity, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, numTrees, seed, subsamplingRate).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def linearRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, fitIntercept: Boolean = true, loss: String = "squaredError", solver: String = "auto", standardization: Boolean = true, tol: Double = 1E-6): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.linearRegression(maxIter, regParam, elasticNetParam, fitIntercept, loss, solver, standardization, tol).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def generalizedLinearRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, regParam: Double = 0.3, family: String = "gaussian", link: String = "identity", maxIter: Int = 10, fitIntercept: Boolean = true, linkPower: Double = 1, solver: String = "irls", tol: Double = 1E-6, variancePower: Double = 0.0): PipelineModel ={
+  def linearRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), maxIter: Int = 100, regParam: Double = 0.0, elasticNetParam: Double = 0.0, fitIntercept: Boolean = true, loss: String = "squaredError", solver: String = "auto", standardization: Boolean = true, tol: Double = 1E-6): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.linearRegression(maxIter, regParam, elasticNetParam, fitIntercept, loss, solver, standardization, tol).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def generalizedLinearRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, regParam: Double = 0.3, family: String = "gaussian", link: String = "identity", maxIter: Int = 10, fitIntercept: Boolean = true, linkPower: Double = 1, solver: String = "irls", tol: Double = 1E-6, variancePower: Double = 0.0): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.generalizedLinearRegression(regParam, family, link, maxIter, fitIntercept, linkPower, solver, tol, variancePower).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def decisionTreeRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong()): PipelineModel ={
+  def generalizedLinearRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), regParam: Double = 0.3, family: String = "gaussian", link: String = "identity", maxIter: Int = 10, fitIntercept: Boolean = true, linkPower: Double = 1, solver: String = "irls", tol: Double = 1E-6, variancePower: Double = 0.0): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.generalizedLinearRegression(regParam, family, link, maxIter, fitIntercept, linkPower, solver, tol, variancePower).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def decisionTreeRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong()): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.decisionTreeRegression(checkpointInterval, impurity, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def gbtRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", lossType: String = "squared", maxBins: Int = 32, maxDepth: Int = 5, maxIter: Int = 10, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong(), stepSize: Double = 0.1, subsamplingRate: Double = 1.0): PipelineModel ={
+  def decisionTreeRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), checkpointInterval: Int = 10, impurity: String = "variance", maxBins: Int = 32, maxDepth: Int = 5, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong()): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.decisionTreeRegression(checkpointInterval, impurity, maxBins, maxDepth, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def gbtRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", lossType: String = "squared", maxBins: Int = 32, maxDepth: Int = 5, maxIter: Int = 10, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong(), stepSize: Double = 0.1, subsamplingRate: Double = 1.0): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.gbtRegression(checkpointInterval, featureSubsetStrategy, impurity, lossType, maxBins, maxDepth, maxIter, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed, stepSize, subsamplingRate).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def isotonicRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, isotonic: Boolean = true): PipelineModel ={
+  def gbtRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), checkpointInterval: Int = 10, featureSubsetStrategy: String = "auto", impurity: String = "variance", lossType: String = "squared", maxBins: Int = 32, maxDepth: Int = 5, maxIter: Int = 10, minInfoGain: Double = 0.0, minInstancesPerNode: Int = 1, minWeightFractionPerNode: Double = 0.0, seed: Long = Random.nextLong(), stepSize: Double = 0.1, subsamplingRate: Double = 1.0): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.gbtRegression(checkpointInterval, featureSubsetStrategy, impurity, lossType, maxBins, maxDepth, maxIter, minInfoGain, minInstancesPerNode, minWeightFractionPerNode, seed, stepSize, subsamplingRate).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def isotonicRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, isotonic: Boolean = true): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.isotonicRegression(isotonic).train(spark, featuresCoverage, labelCoverage)
     model
   }
-  def fmRegressionModel(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, factorSize: Int = 8, fitIntercept: Boolean = true, fitLinear: Boolean = true, initStd: Double = 0.01, maxIter: Int = 100, minBatchFraction: Double = 1.0, regParam: Double = 0.0, seed: Long = Random.nextLong(), solver: String = "adamW", stepSize: Double = 1.0, tol: Double = 1E-6): PipelineModel ={
+  def isotonicRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), isotonic: Boolean = true): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.isotonicRegression(isotonic).train(spark, feature, inputProperties, classProperties.head)
+    model
+  }
+  def fmRegressionModel_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, labelCoverage: RDDImage, factorSize: Int = 8, fitIntercept: Boolean = true, fitLinear: Boolean = true, initStd: Double = 0.01, maxIter: Int = 100, minBatchFraction: Double = 1.0, regParam: Double = 0.0, seed: Long = Random.nextLong(), solver: String = "adamW", stepSize: Double = 1.0, tol: Double = 1E-6): PipelineModel ={
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: PipelineModel = Regressor.fmRegressor(factorSize, fitIntercept, fitLinear, initStd, maxIter, minBatchFraction, regParam, seed, solver, stepSize, tol).train(spark, featuresCoverage, labelCoverage)
+    model
+  }
+  def fmRegressionModel_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], classProperties: List[String], inputProperties: List[String] = List(""), factorSize: Int = 8, fitIntercept: Boolean = true, fitLinear: Boolean = true, initStd: Double = 0.01, maxIter: Int = 100, minBatchFraction: Double = 1.0, regParam: Double = 0.0, seed: Long = Random.nextLong(), solver: String = "adamW", stepSize: Double = 1.0, tol: Double = 1E-6): PipelineModel ={
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: PipelineModel = Regressor.fmRegressor(factorSize, fitIntercept, fitLinear, initStd, maxIter, minBatchFraction, regParam, seed, solver, stepSize, tol).train(spark, feature, inputProperties, classProperties.head)
     model
   }
   def modelRegress(implicit sc: SparkContext, coverage: RDDImage, model: PipelineModel): RDDImage = {
@@ -134,62 +231,119 @@ object algorithms {
     val regressCoverage: RDDImage = Regressor.regress(spark, coverage, model)("prediction")
     regressCoverage
   }
+  def modelRegress(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], model: PipelineModel, featuresCol: List[String]): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val regressCoverage: RDD[(String, (Geometry, mutable.Map[String, Any]))] = Regressor.regress(spark, feature, model, featuresCol)
+    regressCoverage
+  }
 
   //聚类
-  def kMeans(implicit sc: SparkContext, featuresCoverage: RDDImage, k: Int = 2, maxIter: Int = 10, seed: Long = Random.nextLong(), tol: Double = 1E-6): RDDImage = {
+  def kMeans_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, k: Int = 2, maxIter: Int = 10, seed: Long = Random.nextLong(), tol: Double = 1E-6): RDDImage = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: Model[_] = Clusterer.kMeans(k, maxIter, seed, tol)
       .train(spark, featuresCoverage)
     val predictedCoverage = Clusterer.cluster(spark, featuresCoverage, model)("prediction")
     predictedCoverage
   }
-  def latentDirichletAllocation(implicit sc: SparkContext, featuresCoverage: RDDImage, checkpointInterval: Int = 10, k: Int = 2, maxIter: Int = 10, optimizer: String = "online", seed: Long = Random.nextLong(), subsamplingRate: Double = 0.05, topicConcentration: Double = -1): RDDImage = {
+  def kMeans_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresCol: List[String], k: Int = 2, maxIter: Int = 10, seed: Long = Random.nextLong(), tol: Double = 1E-6): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: Model[_] = Clusterer.kMeans(k, maxIter, seed, tol)
+      .train(spark, feature, featuresCol)
+    val predictedFeature = Clusterer.cluster(spark, feature, model, featuresCol)
+    predictedFeature
+  }
+  def latentDirichletAllocation_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, checkpointInterval: Int = 10, k: Int = 2, maxIter: Int = 10, optimizer: String = "online", seed: Long = Random.nextLong(), subsamplingRate: Double = 0.05, topicConcentration: Double = -1): RDDImage = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: Model[_] = Clusterer.latentDirichletAllocation(checkpointInterval, k, maxIter, optimizer, seed, subsamplingRate, topicConcentration)
       .train(spark, featuresCoverage)
     val predictedCoverage = Clusterer.cluster(spark, featuresCoverage, model)("topicDistribution")
     predictedCoverage
   }
-  def bisectingKMeans(implicit sc: SparkContext, featuresCoverage: RDDImage, distanceMeasure: String = "euclidean", k: Int = 4, maxIter: Int = 10, seed: Long = Random.nextLong()): RDDImage = {
+  def latentDirichletAllocation_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresCol: List[String], checkpointInterval: Int = 10, k: Int = 2, maxIter: Int = 10, optimizer: String = "online", seed: Long = Random.nextLong(), subsamplingRate: Double = 0.05, topicConcentration: Double = -1): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: Model[_] = Clusterer.latentDirichletAllocation(checkpointInterval, k, maxIter, optimizer, seed, subsamplingRate, topicConcentration)
+      .train(spark, feature, featuresCol)
+    val predictedCoverage = Clusterer.cluster(spark, feature, model, featuresCol)
+    predictedCoverage
+  }
+  def bisectingKMeans_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, distanceMeasure: String = "euclidean", k: Int = 4, maxIter: Int = 10, seed: Long = Random.nextLong()): RDDImage = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: Model[_] = Clusterer.bisectingKMeans(distanceMeasure, k, maxIter, seed)
       .train(spark, featuresCoverage)
     val predictedCoverage = Clusterer.cluster(spark, featuresCoverage, model)("prediction")
     predictedCoverage
   }
-  def gaussianMixture(implicit sc: SparkContext, featuresCoverage: RDDImage, k: Int = 2, maxIter: Int = 10, seed: Long = Random.nextLong(), tol: Double = 1E-6): RDDImage = {
+  def bisectingKMeans_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresCol: List[String], distanceMeasure: String = "euclidean", k: Int = 4, maxIter: Int = 10, seed: Long = Random.nextLong()): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: Model[_] = Clusterer.bisectingKMeans(distanceMeasure, k, maxIter, seed)
+      .train(spark, feature, featuresCol)
+    val predictedCoverage = Clusterer.cluster(spark, feature, model, featuresCol)
+    predictedCoverage
+  }
+  def gaussianMixture_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, k: Int = 2, maxIter: Int = 10, seed: Long = Random.nextLong(), tol: Double = 1E-6): RDDImage = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
     val model: Model[_] = Clusterer.gaussianMixture(k, maxIter, seed, tol)
       .train(spark, featuresCoverage)
     val predictedCoverage = Clusterer.cluster(spark, featuresCoverage, model)("prediction")
     predictedCoverage
   }
+  def gaussianMixture_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresCol: List[String], k: Int = 2, maxIter: Int = 10, seed: Long = Random.nextLong(), tol: Double = 1E-6): RDD[(String, (Geometry, mutable.Map[String, Any]))] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    val model: Model[_] = Clusterer.gaussianMixture(k, maxIter, seed, tol)
+      .train(spark, feature, featuresCol)
+    val predictedCoverage = Clusterer.cluster(spark, feature, model, featuresCol)
+    predictedCoverage
+  }
 
   //精度评估
   //暂时不提供筛选波段，前端可以使用Coverage.selectBands选
-  def multiclassClassificationEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1"), metricLabel: Double = 0.0): List[Double] = {
+  def multiclassClassificationEvaluator_coverage(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1"), metricLabel: Double = 0.0): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.multiclassClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0, metricLabel)
+    Evaluator.multiclassClassificationEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0, metricLabel)
   }
-  def clusteringEvaluator(implicit sc: SparkContext, featuresCoverage: RDDImage, predictionCoverage: RDDImage, metricName: String = "silhouette", distanceMeasure: String = "squaredEuclidean"): Double = {
+  def multiclassClassificationEvaluator_feature(implicit sc: SparkContext, labelFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], predictionFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], labelCol: String, metricName: List[String] = List("f1"), metricLabel: Double = 0.0): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.clusteringEvaluator(spark, featuresCoverage, predictionCoverage, metricName, distanceMeasure, 0)
+    Evaluator.multiclassClassificationEvaluator_feature(spark, labelFeature, predictionFeature, labelCol, metricName, metricLabel)
   }
-  def multilabelClassificationEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1Measure")): List[Double] = {
+  def clusteringEvaluator_coverage(implicit sc: SparkContext, featuresCoverage: RDDImage, predictionCoverage: RDDImage, metricName: String = "silhouette", distanceMeasure: String = "squaredEuclidean"): Double = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.multilabelClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName)
+    Evaluator.clusteringEvaluator_coverage(spark, featuresCoverage, predictionCoverage, metricName, distanceMeasure, 0)
   }
-  def binaryClassificationEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("areaUnderROC")): List[Double] = {
+  def clusteringEvaluator_feature(implicit sc: SparkContext, feature: RDD[(String, (Geometry, mutable.Map[String, Any]))], featuresColNames: List[String], metricName: String = "silhouette", distanceMeasure: String = "squaredEuclidean"): Double = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.binaryClassificationEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.clusteringEvaluator_feature(spark, feature, featuresColNames, metricName, distanceMeasure)
   }
-  def regressionEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("rmse")): List[Double] = {
+  def multilabelClassificationEvaluator_coverage(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("f1Measure")): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.regressionEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.multilabelClassificationEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName)
   }
-  def rankingEvaluator(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("meanAveragePrecision")): List[Double] = {
+  def multilabelClassificationEvaluator_feature(implicit sc: SparkContext, labelFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], predictionFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], labelColNames: List[String], predictionColNames: List[String], metricName: List[String] = List("f1Measure")): List[Double] = {
     val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-    Evaluator.rankingEvaluator(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+    Evaluator.multilabelClassificationEvaluator_feature(spark, labelFeature, predictionFeature, labelColNames, predictionColNames, metricName)
+  }
+  def binaryClassificationEvaluator_coverage(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("areaUnderROC")): List[Double] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    Evaluator.binaryClassificationEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+  }
+  def binaryClassificationEvaluator_feature(implicit sc: SparkContext, labelFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], predictionFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], labelCol: String, metricName: List[String] = List("areaUnderROC")): List[Double] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    Evaluator.binaryClassificationEvaluator_feature(spark, labelFeature, predictionFeature, labelCol, metricName)
+  }
+  def regressionEvaluator_coverage(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("rmse")): List[Double] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    Evaluator.regressionEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+  }
+  def regressionEvaluator_feature(implicit sc: SparkContext, labelFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], predictionFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], labelCol: String, metricName: List[String] = List("rmse")): List[Double] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    Evaluator.regressionEvaluator_feature(spark, labelFeature, predictionFeature, labelCol, metricName)
+  }
+  def rankingEvaluator_coverage(implicit sc: SparkContext, labelCoverage: RDDImage, predictionCoverage: RDDImage, metricName: List[String] = List("meanAveragePrecision")): List[Double] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    Evaluator.rankingEvaluator_coverage(spark, labelCoverage, predictionCoverage, metricName, 0, 0)
+  }
+  def rankingEvaluator_feature(implicit sc: SparkContext, labelFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], predictionFeature: RDD[(String, (Geometry, mutable.Map[String, Any]))], labelCol: String, metricName: List[String] = List("meanAveragePrecision")): List[Double] = {
+    val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+    Evaluator.rankingEvaluator_feature(spark, labelFeature, predictionFeature, labelCol, metricName)
   }
 
   //以下是在OGE主版中保存模型
