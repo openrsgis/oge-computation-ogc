@@ -486,11 +486,6 @@
     "returns": "Coverage",
     "args": [
       {
-        "name": "baseUrl",
-        "type": "String",
-        "description": "The base url of service."
-      },
-      {
         "name": "productID",
         "type": "String",
         "description": "The id of target collection."
